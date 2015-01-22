@@ -127,7 +127,18 @@ void Load::setPropertyValue(const std::string &name, const std::string &value) {
         flattenVecOfVec(getProperty("Filename"));
     // If it's a single file load, then it's fine to change loader.
     if (fileNames.size() == 1) {
-      IAlgorithm_sptr loader = getFileLoader(getPropertyValue(name));
+      IAlgorithm_sptr loader;
+      try {
+        loader = getFileLoader(getPropertyValue(name));
+      } catch(std::exception& e) {
+        g_log.error() << std::string("It seems that this file contains errors "
+                                     "or is not well supported. Severe issue "
+                                     "found when trying to find an algorithm "
+                                     "that is able to load: '" + name +"'.\n "
+                                     "Please check that the file is a supported"
+                                     "type and is not corrupted: ") + e.what();
+        throw e;
+      }
       assert(loader); // (getFileLoader should throw if no loader is found.)
       declareLoaderProperties(loader);
     }

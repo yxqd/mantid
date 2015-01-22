@@ -8,6 +8,7 @@
 #include <Poco/Path.h>
 
 #include <cstring>
+#include <signal.h>
 
 namespace Mantid {
 namespace Kernel {
@@ -25,6 +26,13 @@ size_t NexusDescriptor::HDF5SignatureSize = 8;
 /// signature identifying a HDF5 file.
 const unsigned char NexusDescriptor::HDF5Signature[8] = {
     137, 'H', 'D', 'F', '\r', '\n', '\032', '\n'};
+
+/// a signal handler for potential libNeXus SIGSEGVs
+static void segvSignalHandler(int signal)
+{
+  if (SIGSEGV == signal)
+    throw std::runtime_error("SIGSEGV - severe issue: memory access violation!");
+}
 
 namespace {
 //---------------------------------------------------------------------------------------------------------------------------
@@ -119,11 +127,22 @@ NexusDescriptor::NexusDescriptor(const std::string &filename)
     throw std::invalid_argument("NexusDescriptor() - File '" + filename +
                                 "' does not exist");
   }
+
+  // be ready for potential SIGSEGV in libNeXus
+  void (*prevHandler)(int) = signal(SIGSEGV, segvSignalHandler);
   try {
     initialize(filename);
+    signal(SIGSEGV, prevHandler);
   } catch (::NeXus::Exception &) {
     throw std::invalid_argument("NexusDescriptor::initialize - File '" +
                                 filename + "' does not look like a HDF file.");
+    signal(SIGSEGV, prevHandler);
+  } catch (...) {
+    // this probably comes with a memory violation
+    throw std::runtime_error("NexusDescriptor::initialize - File '" +
+                             filename + "' in principle looks like a HDF "
+                             "file but an unexpected issue was found and "
+                             "it cannot be loaded as such.");
   }
 }
 
@@ -237,7 +256,17 @@ void NexusDescriptor::walkFile(::NeXus::File &file, const std::string &rootPath,
     }
   }
 
-  auto dirents = file.getEntries();
+  // getEntries from libNeXus can segfault on bad files, see example
+  // in ticket #5805
+  std::map<std::string, std::string> dirents;
+  try {
+    dirents = file.getEntries();
+  } catch(std::exception& e) {
+    throw std::runtime_error(std::string(e.what()) +
+                             "Severe failure while trying to get NeXus entries "
+                             "from file. Cannot continue.");
+  }
+
   auto itend = dirents.end();
   for (auto it = dirents.begin(); it != itend; ++it) {
     const std::string &entryName = it->first;
