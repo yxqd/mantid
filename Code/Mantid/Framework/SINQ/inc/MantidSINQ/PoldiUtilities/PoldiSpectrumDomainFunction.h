@@ -260,6 +260,8 @@ public:
 protected:
   virtual void init();
 
+  virtual double getPeakCenter(const Poldi2DHelper_sptr &poldi2DHelper) const;
+
   void initializeParametersFromWorkspace(
       const DataObjects::Workspace2D_const_sptr &workspace2D);
   void initializeInstrumentParameters(

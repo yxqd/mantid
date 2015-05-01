@@ -63,7 +63,7 @@ void PoldiSpectrumDomainFunction::function1DSpectrum(
     int domainSize = static_cast<int>(domain.size());
 
     double fwhm = m_profileFunction->fwhm();
-    double centre = m_profileFunction->centre();
+    double centre = getPeakCenter(helper);
 
     double dWidth = 2.0 * fwhm;
     double dCalcMin = centre - dWidth;
@@ -119,7 +119,7 @@ void PoldiSpectrumDomainFunction::functionDeriv1DSpectrum(
     size_t domainSize = domain.size();
 
     double fwhm = m_profileFunction->fwhm();
-    double centre = m_profileFunction->centre();
+    double centre = getPeakCenter(helper);
 
     double dWidth = 2.0 * fwhm;
     double dCalcMin = centre - dWidth;
@@ -184,6 +184,13 @@ IPeakFunction_sptr PoldiSpectrumDomainFunction::getProfileFunction() const {
 
 /// Does nothing.
 void PoldiSpectrumDomainFunction::init() {}
+
+/// Returns the centre parameter of the decorated profile function.
+double PoldiSpectrumDomainFunction::getPeakCenter(
+    const Poldi2DHelper_sptr &poldi2DHelper) const {
+  UNUSED_ARG(poldi2DHelper)
+  return m_profileFunction->centre();
+}
 
 /**
  * Extracts the time difference as well as instrument information
