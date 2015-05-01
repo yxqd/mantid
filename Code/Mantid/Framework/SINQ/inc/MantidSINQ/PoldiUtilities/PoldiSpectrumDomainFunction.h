@@ -41,8 +41,8 @@ namespace Poldi {
 struct MANTID_SINQ_DLL Poldi2DHelper {
   /// Default constructor
   Poldi2DHelper()
-      : dFractionalOffsets(), dOffsets(), domain(), values(), factors(), deltaD(),
-        minTOFN() {}
+      : dFractionalOffsets(), dOffsets(), domain(), values(), factors(),
+        deltaD(), deltaTwoTheta(), minTOFN() {}
 
   /// Transforms the chopper slit offsets for a given 2theta/distance pair.
   void setChopperSlitOffsets(double distance, double sinTheta, double deltaD,
@@ -95,6 +95,7 @@ struct MANTID_SINQ_DLL Poldi2DHelper {
   std::vector<double> factors;
 
   double deltaD;
+  double deltaTwoTheta;
   int minTOFN;
 };
 

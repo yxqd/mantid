@@ -229,6 +229,8 @@ void PoldiSpectrumDomainFunction::initializeInstrumentParameters(
   double dMin = Conversions::qToD(qLimits.second);
   double dMax = Conversions::dToQ(qLimits.first);
 
+  double centreTwoTheta = detector->twoTheta(detector->centralElement());
+
   for (int i = 0; i < static_cast<int>(detector->elementCount()); ++i) {
     double sinTheta = sin(detector->twoTheta(i) / 2.0);
     double distance =
@@ -239,6 +241,7 @@ void PoldiSpectrumDomainFunction::initializeInstrumentParameters(
     curr->setChopperSlitOffsets(distance, sinTheta, deltaD,
                                 m_chopperSlitOffsets);
     curr->setDomain(dMin, dMax, deltaD);
+    curr->deltaTwoTheta = (detector->twoTheta(i) - centreTwoTheta);
     curr->deltaD = deltaD;
     curr->minTOFN = static_cast<int>(
         Conversions::dtoTOF(dMin, distance, sinTheta) / m_deltaT);
