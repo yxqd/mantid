@@ -30,6 +30,7 @@ set ( SRC_FILES
 	src/PoldiUtilities/PoldiResidualCorrelationCore.cpp
         src/PoldiUtilities/PoldiSpectrumDomainFunction.cpp
         src/PoldiUtilities/PoldiSourceSpectrum.cpp
+	src/PoldiUtilities/PoldiSpectrumCalibrationFunction.cpp
 	src/PoldiUtilities/PoldiSpectrumConstantBackground.cpp
 	src/PoldiUtilities/PoldiSpectrumLinearBackground.cpp
 	src/PoldiUtilities/PoldiSpectrumPawleyFunction.cpp
@@ -76,6 +77,7 @@ set ( INC_FILES
 	inc/MantidSINQ/PoldiUtilities/PoldiPeak.h
 	inc/MantidSINQ/PoldiUtilities/PoldiPeakCollection.h
 	inc/MantidSINQ/PoldiUtilities/PoldiResidualCorrelationCore.h
+	inc/MantidSINQ/PoldiUtilities/PoldiSpectrumCalibrationFunction.h
 	inc/MantidSINQ/PoldiUtilities/PoldiSpectrumConstantBackground.h
         inc/MantidSINQ/PoldiUtilities/PoldiSpectrumDomainFunction.h
 	inc/MantidSINQ/PoldiUtilities/PoldiSpectrumLinearBackground.h
@@ -119,6 +121,7 @@ set ( TEST_FILES
 	PoldiResidualCorrelationCoreTest.h
         PoldiSourceSpectrumTest.h
         PoldiSpectrumDomainFunctionTest.h
+	PoldiSpectrumCalibrationFunctionTest.h
 	PoldiSpectrumConstantBackgroundTest.h
 	PoldiSpectrumLinearBackgroundTest.h
 	PoldiSpectrumPawleyFunctionTest.h
