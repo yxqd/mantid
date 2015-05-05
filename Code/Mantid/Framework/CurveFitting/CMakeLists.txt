@@ -75,6 +75,7 @@ set ( SRC_FILES
 	src/PawleyFunction.cpp
 	src/PeakParameterFunction.cpp
 	src/PlotPeakByLogValue.cpp
+        src/PoldiCalibrationProfile.cpp
 	src/Polynomial.cpp
 	src/ProcessBackground.cpp
 	src/ProductFunction.cpp
@@ -193,6 +194,7 @@ set ( INC_FILES
 	inc/MantidCurveFitting/PawleyFunction.h
 	inc/MantidCurveFitting/PeakParameterFunction.h
 	inc/MantidCurveFitting/PlotPeakByLogValue.h
+        inc/MantidCurveFitting/PoldiCalibrationProfile.h
 	inc/MantidCurveFitting/Polynomial.h
 	inc/MantidCurveFitting/ProcessBackground.h
 	inc/MantidCurveFitting/ProductFunction.h
@@ -302,6 +304,7 @@ set ( TEST_FILES
 	PawleyFunctionTest.h
 	PeakParameterFunctionTest.h
 	PlotPeakByLogValueTest.h
+        PoldiCalibrationProfileTest.h
 	PolynomialTest.h
 	ProcessBackgroundTest.h
 	ProductFunctionTest.h

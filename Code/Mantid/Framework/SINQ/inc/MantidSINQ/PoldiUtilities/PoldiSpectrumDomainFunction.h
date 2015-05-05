@@ -42,7 +42,7 @@ struct MANTID_SINQ_DLL Poldi2DHelper {
   /// Default constructor
   Poldi2DHelper()
       : dFractionalOffsets(), dOffsets(), domain(), values(), factors(),
-        deltaD(), deltaTwoTheta(), minTOFN() {}
+        deltaD(), deltaTwoTheta(), tofFactor(), minTOFN() {}
 
   /// Transforms the chopper slit offsets for a given 2theta/distance pair.
   void setChopperSlitOffsets(double distance, double sinTheta, double deltaD,
@@ -96,6 +96,7 @@ struct MANTID_SINQ_DLL Poldi2DHelper {
 
   double deltaD;
   double deltaTwoTheta;
+  double tofFactor;
   int minTOFN;
 };
 
@@ -260,7 +261,8 @@ public:
 protected:
   virtual void init();
 
-  virtual double getPeakCenter(const Poldi2DHelper_sptr &poldi2DHelper) const;
+  virtual void
+  functionModificationHook(const Poldi2DHelper_sptr &poldi2DHelper) const;
 
   void initializeParametersFromWorkspace(
       const DataObjects::Workspace2D_const_sptr &workspace2D);

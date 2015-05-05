@@ -60,10 +60,12 @@ void PoldiSpectrumDomainFunction::function1DSpectrum(
   Poldi2DHelper_sptr helper = m_2dHelpers[index];
 
   if (helper) {
+    functionModificationHook(helper);
+
     int domainSize = static_cast<int>(domain.size());
 
     double fwhm = m_profileFunction->fwhm();
-    double centre = getPeakCenter(helper);
+    double centre = m_profileFunction->centre();
 
     double dWidth = 2.0 * fwhm;
     double dCalcMin = centre - dWidth;
@@ -116,10 +118,12 @@ void PoldiSpectrumDomainFunction::functionDeriv1DSpectrum(
   Poldi2DHelper_sptr helper = m_2dHelpers[index];
 
   if (helper) {
+    functionModificationHook(helper);
+
     size_t domainSize = domain.size();
 
     double fwhm = m_profileFunction->fwhm();
-    double centre = getPeakCenter(helper);
+    double centre = m_profileFunction->centre();
 
     double dWidth = 2.0 * fwhm;
     double dCalcMin = centre - dWidth;
@@ -185,11 +189,9 @@ IPeakFunction_sptr PoldiSpectrumDomainFunction::getProfileFunction() const {
 /// Does nothing.
 void PoldiSpectrumDomainFunction::init() {}
 
-/// Returns the centre parameter of the decorated profile function.
-double PoldiSpectrumDomainFunction::getPeakCenter(
+void PoldiSpectrumDomainFunction::functionModificationHook(
     const Poldi2DHelper_sptr &poldi2DHelper) const {
-  UNUSED_ARG(poldi2DHelper)
-  return m_profileFunction->centre();
+    UNUSED_ARG(poldi2DHelper)
 }
 
 /**

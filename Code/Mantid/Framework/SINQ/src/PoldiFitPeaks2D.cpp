@@ -463,14 +463,14 @@ Poldi2DFunction_sptr PoldiFitPeaks2D::getFunctionIndividualPeaks(
     boost::shared_ptr<PoldiSpectrumDomainFunction> peakFunction =
         boost::dynamic_pointer_cast<PoldiSpectrumDomainFunction>(
             FunctionFactory::Instance().createFunction(
-                "PoldiSpectrumDomainFunction"));
+                "PoldiSpectrumCalibrationFunction"));
 
     if (!peakFunction) {
       throw std::invalid_argument(
           "Cannot process null pointer poldi function.");
     }
 
-    peakFunction->setDecoratedFunction(profileFunctionName);
+    //peakFunction->setDecoratedFunction(profileFunctionName);
 
     IPeakFunction_sptr wrappedProfile =
         boost::dynamic_pointer_cast<IPeakFunction>(
@@ -483,6 +483,12 @@ Poldi2DFunction_sptr PoldiFitPeaks2D::getFunctionIndividualPeaks(
     }
 
     mdFunction->addFunction(peakFunction);
+
+    if (i > 0) {
+      std::string paramName =
+          "f" + boost::lexical_cast<std::string>(i) + ".Slope";
+      mdFunction->tie(paramName, paramName + "=f0.Slope");
+    }
   }
 
   return mdFunction;
@@ -1166,6 +1172,12 @@ void PoldiFitPeaks2D::exec() {
   // The FitFunction is used to generate...
   IFunction_sptr fitFunction = getFunction(fitAlgorithm);
 
+  for (size_t i = 0; i < fitFunction->nParams(); ++i) {
+    std::cout << i << " " << fitFunction->parameterName(i) << " "
+              << fitFunction->getParameter(i) << " " << fitFunction->getError(i)
+              << std::endl;
+  }
+
   // ...a calculated 1D-spectrum...
   MatrixWorkspace_sptr outWs1D = get1DSpectrum(fitFunction, ws);
 
@@ -1173,8 +1185,8 @@ void PoldiFitPeaks2D::exec() {
   std::vector<PoldiPeakCollection_sptr> integralPeaks =
       getCountPeakCollections(fitFunction);
 
-  for(size_t i = 0; i < peakCollections.size(); ++i) {
-      assignMillerIndices(peakCollections[i], integralPeaks[i]);
+  for (size_t i = 0; i < peakCollections.size(); ++i) {
+    assignMillerIndices(peakCollections[i], integralPeaks[i]);
   }
 
   // Get the calculated 2D workspace

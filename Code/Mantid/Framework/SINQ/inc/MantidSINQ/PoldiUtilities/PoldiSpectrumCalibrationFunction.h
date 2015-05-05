@@ -43,7 +43,9 @@ public:
   }
 
 protected:
-  virtual getPeakCenter(const Poldi2DHelper_sptr &poldi2DHelper) const;
+  void init();
+
+  void functionModificationHook(const Poldi2DHelper_sptr &poldi2DHelper) const;
 };
 
 } // namespace Poldi
