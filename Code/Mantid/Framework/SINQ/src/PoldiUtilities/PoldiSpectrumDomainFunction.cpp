@@ -60,7 +60,7 @@ void PoldiSpectrumDomainFunction::function1DSpectrum(
   Poldi2DHelper_sptr helper = m_2dHelpers[index];
 
   if (helper) {
-    functionModificationHook(helper);
+    functionModificationPreHook(helper);
 
     int domainSize = static_cast<int>(domain.size());
 
@@ -86,10 +86,10 @@ void PoldiSpectrumDomainFunction::function1DSpectrum(
     size_t baseOffset = static_cast<size_t>(pos + helper->minTOFN);
 
     for (size_t i = 0; i < helper->dOffsets.size(); ++i) {
-      double newD = centre + helper->dFractionalOffsets[i];
       size_t offset = static_cast<size_t>(helper->dOffsets[i]) + baseOffset;
 
-      m_profileFunction->setCentre(newD);
+      setPeakCenter(centre, helper->dFractionalOffsets[i]);
+
       m_profileFunction->functionLocal(
           &localOut[0], helper->domain->getPointerAt(pos), dWidthN);
 
@@ -99,7 +99,8 @@ void PoldiSpectrumDomainFunction::function1DSpectrum(
       }
     }
 
-    m_profileFunction->setCentre(centre);
+    setPeakCenter(centre);
+    functionModificationPostHook(helper);
   }
 }
 
@@ -118,7 +119,7 @@ void PoldiSpectrumDomainFunction::functionDeriv1DSpectrum(
   Poldi2DHelper_sptr helper = m_2dHelpers[index];
 
   if (helper) {
-    functionModificationHook(helper);
+    functionModificationPreHook(helper);
 
     size_t domainSize = domain.size();
 
@@ -142,18 +143,18 @@ void PoldiSpectrumDomainFunction::functionDeriv1DSpectrum(
     size_t baseOffset = static_cast<size_t>(pos + helper->minTOFN);
 
     for (size_t i = 0; i < helper->dOffsets.size(); ++i) {
-      double newD = centre + helper->dFractionalOffsets[i];
       size_t offset = static_cast<size_t>(helper->dOffsets[i]) + baseOffset;
       WrapAroundJacobian smallJ(jacobian, offset, helper->factors, pos,
                                 domainSize);
 
-      m_profileFunction->setCentre(newD);
+      setPeakCenter(m_profileFunction->centre(), helper->dFractionalOffsets[i]);
 
       m_profileFunction->functionDerivLocal(
           &smallJ, helper->domain->getPointerAt(pos), dWidthN);
     }
 
-    m_profileFunction->setCentre(centre);
+    setPeakCenter(centre);
+    functionModificationPostHook(helper);
   }
 }
 
@@ -189,9 +190,23 @@ IPeakFunction_sptr PoldiSpectrumDomainFunction::getProfileFunction() const {
 /// Does nothing.
 void PoldiSpectrumDomainFunction::init() {}
 
-void PoldiSpectrumDomainFunction::functionModificationHook(
+void PoldiSpectrumDomainFunction::functionModificationPreHook(
     const Poldi2DHelper_sptr &poldi2DHelper) const {
-    UNUSED_ARG(poldi2DHelper)
+  UNUSED_ARG(poldi2DHelper)
+}
+
+void PoldiSpectrumDomainFunction::functionModificationPostHook(
+    const Poldi2DHelper_sptr &poldi2DHelper) const {
+  UNUSED_ARG(poldi2DHelper)
+}
+
+double PoldiSpectrumDomainFunction::getPeakCenter() const {
+  return m_profileFunction->centre();
+}
+
+void PoldiSpectrumDomainFunction::setPeakCenter(double newCenter,
+                                                double chopperOffset) const {
+  m_profileFunction->setCentre(newCenter + chopperOffset);
 }
 
 /**

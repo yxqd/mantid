@@ -262,7 +262,13 @@ protected:
   virtual void init();
 
   virtual void
-  functionModificationHook(const Poldi2DHelper_sptr &poldi2DHelper) const;
+  functionModificationPreHook(const Poldi2DHelper_sptr &poldi2DHelper) const;
+  virtual void
+  functionModificationPostHook(const Poldi2DHelper_sptr &poldi2DHelper) const;
+
+  virtual double getPeakCenter() const;
+  virtual void setPeakCenter(double newCenter,
+                             double chopperOffset = 0.0) const;
 
   void initializeParametersFromWorkspace(
       const DataObjects::Workspace2D_const_sptr &workspace2D);

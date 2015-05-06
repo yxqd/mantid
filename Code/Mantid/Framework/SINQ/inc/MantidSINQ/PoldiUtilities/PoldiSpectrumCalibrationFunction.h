@@ -45,7 +45,12 @@ public:
 protected:
   void init();
 
-  void functionModificationHook(const Poldi2DHelper_sptr &poldi2DHelper) const;
+  void
+  functionModificationPreHook(const Poldi2DHelper_sptr &poldi2DHelper) const;
+  void
+  functionModificationPostHook(const Poldi2DHelper_sptr &poldi2DHelper) const;
+
+  void setPeakCenter(double newCenter, double chopperOffset) const;
 };
 
 } // namespace Poldi

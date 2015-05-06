@@ -5,7 +5,7 @@
 
 #include "MantidSINQ/PoldiUtilities/PoldiSpectrumCalibrationFunction.h"
 
-using Mantid::SINQ::PoldiSpectrumCalibrationFunction;
+using Mantid::Poldi::PoldiSpectrumCalibrationFunction;
 using namespace Mantid::API;
 
 class PoldiSpectrumCalibrationFunctionTest : public CxxTest::TestSuite

@@ -73,6 +73,12 @@ std::map<std::string, std::string> PoldiFitPeaks2D::validateInputs() {
                                           "parameters must be supplied for "
                                           "PawleyFit.";
     }
+
+    bool isCalibrationRun = getProperty("CalibrationRun");
+    if (isCalibrationRun) {
+      errorMap["CalibrationRun"] =
+          "CalibrationRun can not be used in combination with PawleyFit.";
+    }
   }
 
   return errorMap;
@@ -438,6 +444,11 @@ Poldi2DFunction_sptr PoldiFitPeaks2D::getFunctionFromPeakCollection(
     return getFunctionPawley(profileFunctionName, peakCollection);
   }
 
+  bool calibrationRun = getProperty("CalibrationRun");
+  if (calibrationRun) {
+    return getFunctionCalibration(peakCollection);
+  }
+
   return getFunctionIndividualPeaks(profileFunctionName, peakCollection);
 }
 
@@ -447,6 +458,10 @@ Poldi2DFunction_sptr PoldiFitPeaks2D::getFunctionFromPeakCollection(
  * This function takes all peaks from the supplied peak collection and
  * generates an IPeakFunction of the type given in the name parameter, wraps
  * them in a Poldi2DFunction and returns it.
+ *
+ * If the profile function name is empty, it is assumed that a calibration
+ * function is to be created and does that.
+ *
  *
  * @param profileFunctionName :: Profile function name.
  * @param peakCollection :: Peak collection with peaks to be used in the fit.
@@ -460,17 +475,24 @@ Poldi2DFunction_sptr PoldiFitPeaks2D::getFunctionIndividualPeaks(
   for (size_t i = 0; i < peakCollection->peakCount(); ++i) {
     PoldiPeak_sptr peak = peakCollection->peak(i);
 
+    std::string spectrumDomainFunctionName = "PoldiSpectrumDomainFunction";
+    if (profileFunctionName == "") {
+      spectrumDomainFunctionName = "PoldiSpectrumCalibrationFunction";
+    }
+
     boost::shared_ptr<PoldiSpectrumDomainFunction> peakFunction =
         boost::dynamic_pointer_cast<PoldiSpectrumDomainFunction>(
             FunctionFactory::Instance().createFunction(
-                "PoldiSpectrumCalibrationFunction"));
+                spectrumDomainFunctionName));
 
     if (!peakFunction) {
       throw std::invalid_argument(
           "Cannot process null pointer poldi function.");
     }
 
-    //peakFunction->setDecoratedFunction(profileFunctionName);
+    if (profileFunctionName != "") {
+      peakFunction->setDecoratedFunction(profileFunctionName);
+    }
 
     IPeakFunction_sptr wrappedProfile =
         boost::dynamic_pointer_cast<IPeakFunction>(
@@ -483,15 +505,24 @@ Poldi2DFunction_sptr PoldiFitPeaks2D::getFunctionIndividualPeaks(
     }
 
     mdFunction->addFunction(peakFunction);
-
-    if (i > 0) {
-      std::string paramName =
-          "f" + boost::lexical_cast<std::string>(i) + ".Slope";
-      mdFunction->tie(paramName, paramName + "=f0.Slope");
-    }
   }
 
   return mdFunction;
+}
+
+/// Create a calibration function with
+Poldi2DFunction_sptr PoldiFitPeaks2D::getFunctionCalibration(
+    const PoldiPeakCollection_sptr &peakCollection) const {
+  Poldi2DFunction_sptr calibrationFunction =
+      getFunctionIndividualPeaks("", peakCollection);
+
+  for (size_t i = 1; i < calibrationFunction->nFunctions(); ++i) {
+    std::string paramName =
+        "f" + boost::lexical_cast<std::string>(i) + ".Slope";
+    calibrationFunction->tie(paramName, paramName + "=f0.Slope");
+  }
+
+  return calibrationFunction;
 }
 
 /**
@@ -1105,6 +1136,9 @@ void PoldiFitPeaks2D::init() {
   declareProperty("PeakProfileFunction", "Gaussian", peakFunctionValidator,
                   "Profile function to use for integrating the peak profiles "
                   "before calculating the spectrum.");
+
+  declareProperty("CalibrationRun", false,
+                  "This option is only for instrument calibration.");
 
   declareProperty("PawleyFit", false,
                   "Instead of refining individual peaks, "

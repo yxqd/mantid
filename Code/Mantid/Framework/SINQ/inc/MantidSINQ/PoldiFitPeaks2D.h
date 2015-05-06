@@ -101,6 +101,9 @@ protected:
       const PoldiPeakCollection_sptr &peakCollection) const;
 
   Poldi2DFunction_sptr
+  getFunctionCalibration(const PoldiPeakCollection_sptr &peakCollection) const;
+
+  Poldi2DFunction_sptr
   getFunctionPawley(std::string profileFunctionName,
                     const PoldiPeakCollection_sptr &peakCollection);
 
