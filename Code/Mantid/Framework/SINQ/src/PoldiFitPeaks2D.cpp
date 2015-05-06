@@ -1177,12 +1177,6 @@ void PoldiFitPeaks2D::exec() {
   // The FitFunction is used to generate...
   IFunction_sptr fitFunction = getFunction(fitAlgorithm);
 
-  for (size_t i = 0; i < fitFunction->nParams(); ++i) {
-    std::cout << i << " " << fitFunction->parameterName(i) << " "
-              << fitFunction->getParameter(i) << " " << fitFunction->getError(i)
-              << std::endl;
-  }
-
   // ...a calculated 1D-spectrum...
   MatrixWorkspace_sptr outWs1D = get1DSpectrum(fitFunction, ws);
 
