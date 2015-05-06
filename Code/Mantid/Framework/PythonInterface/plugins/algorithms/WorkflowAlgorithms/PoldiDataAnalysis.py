@@ -42,6 +42,10 @@ class PoldiDataAnalysis(PythonAlgorithm):
         self.declareProperty("ProfileFunction", "Gaussian", validator=allowedProfileFunctions,
                              direction=Direction.Input)
 
+        self.declareProperty("CalibrationRun", False, direction=Direction.Input,
+                             doc='In this mode, an additional parameter is fitted for calibration purposes. Can not '
+                                 'be used in combination with PawleyFit. Will automatically disable residual analysis.')
+
         self.declareProperty("PawleyFit", False, direction=Direction.Input,
                              doc='Should the 2D-fit determine lattice parameters?')
 
@@ -73,6 +77,9 @@ class PoldiDataAnalysis(PythonAlgorithm):
         self.inputWorkspace = self.getProperty("InputWorkspace").value
         self.expectedPeaks = self.getProperty("ExpectedPeaks").value
         self.profileFunction = self.getProperty("ProfileFunction").value
+        self.isCalibration = self.getProperty("CalibrationRun").value
+        self.analyseResiduals = self.getProperty("AnalyseResiduals").value and not self.isCalibration
+        self.isPawleyFit = self.getProperty("PawleyFit").value and not self.isCalibration
 
         correlationSpectrum = self.runCorrelation()
         self.outputWorkspaces.append(correlationSpectrum)
@@ -109,8 +116,7 @@ class PoldiDataAnalysis(PythonAlgorithm):
         indexedPeaks, unindexedPeaks = self.runIndex(refinedPeaks)
         outputWorkspaces.append(indexedPeaks)
 
-        pawleyFit = self.getProperty('PawleyFit').value
-        if pawleyFit:
+        if self.isPawleyFit:
             outputWorkspaces.append(unindexedPeaks)
 
         fitPeaks2DResult = self.runPeakFit2D(indexedPeaks)
@@ -119,8 +125,7 @@ class PoldiDataAnalysis(PythonAlgorithm):
         spectrum2D = fitPeaks2DResult[0]
         spectrum1D = fitPeaks2DResult[1]
 
-        analyseResiduals = self.getProperty('AnalyseResiduals').value
-        if analyseResiduals:
+        if self.analyseResiduals:
             residuals = self.runResidualAnalysis(spectrum2D)
             outputWorkspaces.append(residuals)
 
@@ -172,8 +177,7 @@ class PoldiDataAnalysis(PythonAlgorithm):
 
         # Remove unindexed peaks from group for pawley fit
         unindexedPeaks = indexedPeaks.getItem(indexedPeaks.getNumberOfEntries() - 1)
-        pawleyFit = self.getProperty('PawleyFit').value
-        if pawleyFit:
+        if self.isPawleyFit:
             indexedPeaks.remove(unindexedPeaks.getName())
 
         self._removeEmptyTablesFromGroup(indexedPeaks)
@@ -191,13 +195,11 @@ class PoldiDataAnalysis(PythonAlgorithm):
         if outputRawFitParameters:
             rawFitParametersWorkspaceName = self.baseName + "_raw_fit_parameters"
 
-
-        pawleyFit = self.getProperty('PawleyFit').value
-
         PoldiFitPeaks2D(InputWorkspace=self.inputWorkspace,
                         PoldiPeakWorkspace=peaks,
                         PeakProfileFunction=self.profileFunction,
-                        PawleyFit=pawleyFit,
+                        PawleyFit=self.isPawleyFit,
+                        CalibrationRun=self.isCalibration,
                         MaximumIterations=100,
                         OutputWorkspace=spectrum2DName,
                         Calculated1DSpectrum=spectrum1DName,
