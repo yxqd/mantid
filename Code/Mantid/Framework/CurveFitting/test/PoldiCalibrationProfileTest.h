@@ -3,6 +3,7 @@
 
 #include <cxxtest/TestSuite.h>
 
+#include "MantidCurveFitting/Jacobian.h"
 #include "MantidCurveFitting/PoldiCalibrationProfile.h"
 
 using namespace Mantid::CurveFitting;
@@ -25,19 +26,6 @@ public:
     gaussian.initialize();
 
     TS_ASSERT_EQUALS(fn.nParams(), gaussian.nParams() + 1);
-  }
-
-  void testDerivatives() {
-      PoldiCalibrationProfile fn;
-      fn.initialize();
-
-      fn.setParameter("Height", 2.0);
-      fn.setParameter("PeakCentre", 1.1);
-      fn.setParameter("Sigma", 0.01);
-      fn.setParameter("Slope", 0.001);
-      fn.setAttribute("DeltaTheta", IFunction::Attribute(0.01));
-
-
   }
 };
 

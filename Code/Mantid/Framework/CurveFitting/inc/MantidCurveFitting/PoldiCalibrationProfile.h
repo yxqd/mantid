@@ -47,15 +47,10 @@ public:
 
   std::string name() const { return "PoldiCalibrationProfile"; }
 
-  double centre() const;
-
   void functionLocal(double *out, const double *xValues,
                      const size_t nData) const;
   void functionDerivLocal(API::Jacobian *out, const double *xValues,
                           const size_t nData);
-
-  // void functionDerivLocal(API::Jacobian *out, const double *xValues, const
-  // size_t nData);
 
 protected:
   double getAbsoluteShift() const;
