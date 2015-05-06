@@ -3,6 +3,7 @@ from mantid.simpleapi import *
 from mantid.api import *
 from mantid.kernel import *
 
+
 class PoldiDataAnalysis(PythonAlgorithm):
     """
     This workflow algorithm uses all of the POLDI specific algorithms to perform a complete data analysis,
@@ -43,6 +44,11 @@ class PoldiDataAnalysis(PythonAlgorithm):
 
         self.declareProperty("PawleyFit", False, direction=Direction.Input,
                              doc='Should the 2D-fit determine lattice parameters?')
+
+        self.declareProperty("AnalyseResiduals", True, direction=Direction.Input,
+                             doc=('If this option is chosen, the residuals are calculated. The PlotResult option is '
+                                  'ignored if the residual analysis is disabled. The MultipleRun option only works '
+                                  'when AnalyseResiduals is active.'))
 
         self.declareProperty("MultipleRuns", False, direction=Direction.Input,
                              doc=('If this is activated, peaks are searched again in the'
@@ -109,22 +115,24 @@ class PoldiDataAnalysis(PythonAlgorithm):
         spectrum2D = fitPeaks2DResult[0]
         spectrum1D = fitPeaks2DResult[1]
 
-        residuals = self.runResidualAnalysis(spectrum2D)
-        outputWorkspaces.append(residuals)
+        analyseResiduals = self.getProperty('AnalyseResiduals').value
+        if analyseResiduals:
+            residuals = self.runResidualAnalysis(spectrum2D)
+            outputWorkspaces.append(residuals)
 
-        totalName = self.baseName + "_sum"
-        Plus(LHSWorkspace=spectrum1D, RHSWorkspace=residuals, OutputWorkspace=totalName)
-        total = AnalysisDataService.retrieve(totalName)
-        outputWorkspaces.append(total)
+            totalName = self.baseName + "_sum"
+            Plus(LHSWorkspace=spectrum1D, RHSWorkspace=residuals, OutputWorkspace=totalName)
+            total = AnalysisDataService.retrieve(totalName)
+            outputWorkspaces.append(total)
 
-        if self.numberOfExecutions == 1:
-            self._plotResult(total, spectrum1D, residuals)
+            if self.numberOfExecutions == 1:
+                self._plotResult(total, spectrum1D, residuals)
 
-        runTwice = self.getProperty('MultipleRuns').value
-        if runTwice and self.numberOfExecutions == 1:
-            return self.runMainAnalysis(total)
-        else:
-            return outputWorkspaces
+            runTwice = self.getProperty('MultipleRuns').value
+            if runTwice and self.numberOfExecutions == 1:
+                return self.runMainAnalysis(total)
+
+        return outputWorkspaces
 
     def runPeakSearch(self, correlationWorkspace):
         peaksName = self.baseName + "_peaks_raw"
@@ -218,6 +226,7 @@ class PoldiDataAnalysis(PythonAlgorithm):
 
         if plotResults:
             from IndirectImport import import_mantidplot
+
             plot = import_mantidplot()
 
             plotWindow = plot.plotSpectrum(total, 0, type=1)
