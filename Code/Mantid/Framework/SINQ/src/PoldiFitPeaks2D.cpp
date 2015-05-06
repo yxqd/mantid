@@ -1143,6 +1143,11 @@ void PoldiFitPeaks2D::init() {
 
   declareProperty(new WorkspaceProperty<Workspace>(
       "RefinedCellParameters", "", Direction::Output, PropertyMode::Optional));
+
+  declareProperty(new WorkspaceProperty<Workspace>("RawFitParameters", "",
+                                                   Direction::Output,
+                                                   PropertyMode::Optional),
+                  "Table workspace that contains all raw fit parameters.");
 }
 
 /// Executes the algorithm
@@ -1244,6 +1249,14 @@ void PoldiFitPeaks2D::exec() {
     } else {
       g_log.warning() << "Warning: Cell parameter table is empty.";
     }
+  }
+
+  // Optionally output the raw fitting parameters.
+  Property *rawFitParameters = getPointerToProperty("RawFitParameters");
+  if (!rawFitParameters->isDefault()) {
+    ITableWorkspace_sptr parameters =
+        fitAlgorithm->getProperty("OutputParameters");
+    setProperty("RawFitParameters", parameters);
   }
 }
 

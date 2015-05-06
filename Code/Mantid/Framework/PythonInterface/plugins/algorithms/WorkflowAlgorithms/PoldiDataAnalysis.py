@@ -59,6 +59,10 @@ class PoldiDataAnalysis(PythonAlgorithm):
                              doc=('If this is activated, plot the sum of residuals and calculated spectrum together '
                                   'with the theoretical spectrum and the residuals.'))
 
+        self.declareProperty('OutputRawFitParameters', False, direction=Direction.Input,
+                             doc=('Activating this option produces an output workspace which contains the raw '
+                                  'fit parameters.'))
+
         self.declareProperty(WorkspaceProperty(name="OutputWorkspace", defaultValue="", direction=Direction.Output),
                              doc='WorkspaceGroup with result data from all processing steps.')
 
@@ -182,6 +186,12 @@ class PoldiDataAnalysis(PythonAlgorithm):
         refinedPeaksName = self.baseName + "_peaks_refined_2d"
         refinedCellName = self.baseName + "_cell_refined"
 
+        rawFitParametersWorkspaceName = ''
+        outputRawFitParameters = self.getProperty('OutputRawFitParameters').value
+        if outputRawFitParameters:
+            rawFitParametersWorkspaceName = self.baseName + "_raw_fit_parameters"
+
+
         pawleyFit = self.getProperty('PawleyFit').value
 
         PoldiFitPeaks2D(InputWorkspace=self.inputWorkspace,
@@ -192,13 +202,17 @@ class PoldiDataAnalysis(PythonAlgorithm):
                         OutputWorkspace=spectrum2DName,
                         Calculated1DSpectrum=spectrum1DName,
                         RefinedPoldiPeakWorkspace=refinedPeaksName,
-                        RefinedCellParameters=refinedCellName)
+                        RefinedCellParameters=refinedCellName,
+                        RawFitParameters=rawFitParametersWorkspaceName)
 
         workspaces = [AnalysisDataService.retrieve(spectrum2DName),
                       AnalysisDataService.retrieve(spectrum1DName),
                       AnalysisDataService.retrieve(refinedPeaksName)]
         if AnalysisDataService.doesExist(refinedCellName):
             workspaces.append(AnalysisDataService.retrieve(refinedCellName))
+
+        if AnalysisDataService.doesExist(rawFitParametersWorkspaceName):
+            workspaces.append(AnalysisDataService.retrieve(rawFitParametersWorkspaceName))
 
         return workspaces
 
