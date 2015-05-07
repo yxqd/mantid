@@ -29,7 +29,7 @@ class POLDIDataAnalysisTestSi(stresstesting.MantidStressTest):
 
 
 class POLDIDataAnalysisTestSiIndividual(POLDIDataAnalysisTestSi):
-    """This test runs PoldiDataAnalysis with Si data, using."""
+    """This test runs PoldiDataAnalysis with Si data, using individual peaks."""
 
     def runTest(self):
         data, expectedPeaks = self.prepareTest()
@@ -63,17 +63,18 @@ class POLDIDataAnalysisTestSiIndividual(POLDIDataAnalysisTestSi):
         # Maximum residual should not be too large
         self.assertLessThan(maxResidual / maxSum, 0.075)
 
+
 class POLDIDataAnalysisTestSiPawley(POLDIDataAnalysisTestSi):
-    """This test runs PoldiDataAnalysis with Si data, using."""
+    """This test runs PoldiDataAnalysis with Si data, using the PawleyFit option."""
 
     def runTest(self):
         data, expectedPeaks = self.prepareTest()
 
         PoldiDataAnalysis(InputWorkspace=data,
-                                   MaximumPeakNumber=11,
-                                   ExpectedPeaks=expectedPeaks,
-                                   PawleyFit=True,
-                                   PlotResult=False, OutputWorkspace='output')
+                          MaximumPeakNumber=11,
+                          ExpectedPeaks=expectedPeaks,
+                          PawleyFit=True,
+                          PlotResult=False, OutputWorkspace='output')
 
         # inspect the cell
         cell = AnalysisDataService.retrieve('poldi_data_6904_cell_refined')
@@ -86,3 +87,39 @@ class POLDIDataAnalysisTestSiPawley(POLDIDataAnalysisTestSi):
 
         self.assertLessThan(np.abs(a_err), 5.0e-5)
         self.assertLessThan(np.abs(a_val - 5.4311946) / a_err, 1.5)
+
+
+class POLDIDataAnalysisTestSiCalibration(POLDIDataAnalysisTestSi):
+    """This test runs PoldiDataAnalysis with Silicon data, using the calibration option."""
+
+    def _loadData(self):
+        PoldiLoadRuns(2013, 6904, OutputWorkspace='poldi', MaskBadDetectors=False)
+
+
+    def runTest(self):
+        data, expectedPeaks = self.prepareTest()
+
+        PoldiDataAnalysis(InputWorkspace=data,
+                          MaximumPeakNumber=11,
+                          ExpectedPeaks=expectedPeaks,
+                          PawleyFit=False,
+                          CalibrationRun=True,
+                          OutputRawFitParameters=True,
+                          PlotResult=False, OutputWorkspace='output')
+
+        # Check the slope
+        fitParameters = AnalysisDataService.retrieve('poldi_data_6904_raw_fit_parameters')
+
+        slopeRow = None
+        for i in range(fitParameters.rowCount()):
+            currentRow = fitParameters.row(i)
+
+            if currentRow['Name'].endswith('Slope'):
+                slopeRow = currentRow
+                break
+
+        slope = slopeRow['Value']
+        slope_error = slopeRow['Error']
+
+        self.assertDelta(slope, -0.13, 0.005)
+        self.assertLessThan(np.fabs(slope), slope_error)
