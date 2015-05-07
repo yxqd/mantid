@@ -9,12 +9,22 @@ using namespace API;
 
 DECLARE_FUNCTION(PoldiCalibrationProfile)
 
+/**
+ * Calculates function values
+ *
+ * This function calculates the function values like a Gaussian, but with some
+ * additional modifications, as detailed in the class description.
+ *
+ * @param out :: The calculated function values.
+ * @param xValues :: The x-values for which to calculate the function.
+ * @param nData :: Number of data points.
+ */
 void PoldiCalibrationProfile::functionLocal(double *out, const double *xValues,
                                             const size_t nData) const {
 
   const double height = getParameter("Height");
   const double peakCentre = getParameter("PeakCentre");
-  const double shift = getAbsoluteShift();
+  const double shift = getShiftFactor();
   const double realCentre =
       peakCentre * (1.0 + shift) + getAttribute("ChopperOffset").asDouble();
 
@@ -26,17 +36,27 @@ void PoldiCalibrationProfile::functionLocal(double *out, const double *xValues,
   }
 }
 
+/**
+ * Calculates derivatives
+ *
+ * This function calculates the Jacobian like a gaussian, but with some
+ * additional modifications, as detailed in the class description.
+ *
+ * @param out :: The calculated Jacobian.
+ * @param xValues :: The x-values for which to calculate the function.
+ * @param nData :: Number of data points.
+ */
 void PoldiCalibrationProfile::functionDerivLocal(Jacobian *out,
                                                  const double *xValues,
                                                  const size_t nData) {
   const double height = getParameter("Height");
   const double peakCentre = getParameter("PeakCentre");
-  const double shift = getAbsoluteShift();
+  const double shift = getShiftFactor();
   const double realCentre =
       peakCentre * (1.0 + shift) + getAttribute("ChopperOffset").asDouble();
 
   const double weight = pow(1 / getParameter("Sigma"), 2);
-  const double factor = getAttribute("DeltaTheta").asDouble() * 1.e-3;
+  const double factor = getConstantFactor();
 
   for (size_t i = 0; i < nData; i++) {
     double diff = xValues[i] - realCentre;
@@ -50,8 +70,16 @@ void PoldiCalibrationProfile::functionDerivLocal(Jacobian *out,
   }
 }
 
-double PoldiCalibrationProfile::getAbsoluteShift() const {
-  return getParameter("Slope") * getAttribute("DeltaTheta").asDouble() * 1.e-3;
+/// Calulates the shift factor by multiplying the slope paramater by the return
+/// value of getConstantFactor.
+double PoldiCalibrationProfile::getShiftFactor() const {
+  return getParameter("Slope") * getConstantFactor();
+}
+
+/// Returns the constant factor for the slope, depends on the DeltaTheta
+/// attribute.
+double PoldiCalibrationProfile::getConstantFactor() const {
+  return getAttribute("DeltaTheta").asDouble() * 1.e-3;
 }
 
 /// Initialize Gaussian parameters and declare additional parameter.
@@ -61,8 +89,6 @@ void PoldiCalibrationProfile::init() {
   declareParameter("Slope", 0.0);
   declareAttribute("DeltaTheta", IFunction::Attribute(0.0));
   declareAttribute("ChopperOffset", IFunction::Attribute(0.0));
-
-  // fix(3);
 }
 
 } // namespace CurveFitting

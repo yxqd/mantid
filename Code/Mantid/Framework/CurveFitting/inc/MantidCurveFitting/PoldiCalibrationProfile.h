@@ -18,6 +18,16 @@ namespace CurveFitting {
   PoldiSpectrumCalibrationFunction in the SINQ module. If used otherwise
   it will behave like Gaussian with an additional parameter that does nothing.
 
+  The attribute DeltaTheta has to be set in order to get the correct shift for
+  the corresponding 2theta-value. The ChopperOffset attribute is another shift
+  that is added to the peak centre after correcting for the 2theta-dependent
+  shift, so that the real peak centre is:
+
+    c_real = c_0 * [1.0 + shiftFactor(DeltaTheta)] + ChopperOffset
+
+  The centre/setCentre methods are unmodified, so they behave exactly like in
+  the Gaussian case, modifying only the PeakCentre parameter.
+
     @author Michael Wedel, Paul Scherrer Institut - SINQ
     @date 04/05/2015
 
@@ -53,7 +63,8 @@ public:
                           const size_t nData);
 
 protected:
-  double getAbsoluteShift() const;
+  double getShiftFactor() const;
+  double getConstantFactor() const;
 
   void init();
 };
