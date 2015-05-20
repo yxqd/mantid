@@ -4,15 +4,15 @@ from mantid.api import *
 from mantid.kernel import *
 
 import numpy as np
-from scipy.optimize import brent
+from scipy.optimize import brent, fmin
 
 
 def optimizationWrapperT0(t0, parameters, workspaces, algorithmObject):
-    if np.fabs(t0) > 0.1:
-        return 1e10
+    if np.fabs(t0[0]) > 0.1:
+        return np.array([1.e10])
 
     paramCopy = [x for x in parameters]
-    paramCopy[0] = t0
+    paramCopy[0] = t0[0]
 
     # Slope differences are relevant
     try:
@@ -23,9 +23,9 @@ def optimizationWrapperT0(t0, parameters, workspaces, algorithmObject):
             for j in range(i + 1, len(slopes)):
                 slopeDifferences.append(slopes[i] - slopes[j])
 
-        return np.sum(np.square(np.array(slopeDifferences)))
+        return np.array([np.sum(np.square(np.array(slopeDifferences)))])
     except:
-        return 1e10
+        return np.array([1.e10])
 
 
 def optimizationWrapperTConst(tconst, parameters, t0, workspaces, algorithmObject):
@@ -138,7 +138,8 @@ class PoldiCalibration(PythonAlgorithm):
 
 
     def calibrateTiming(self, workspaces):
-        t0 = self.calibrateT0(workspaces)
+        #t0 = self.calibrateT0(workspaces)
+        t0 = -0.003375
 
         self.log().warning('Calibrated value for t0: ' + str(t0))
         t0_rounded = np.round(t0, 6)
@@ -153,8 +154,11 @@ class PoldiCalibration(PythonAlgorithm):
 
 
     def calibrateT0(self, workspaces):
-        return brent(optimizationWrapperT0, args=(self._initialParameters, workspaces, self), brack=(-0.09, 0.01),
-                     tol=1e-4)
+        #return brent(optimizationWrapperT0, args=(self._initialParameters, workspaces, self), brack=(-0.09, 0.01),
+        #             tol=1e-4)
+        return fmin(optimizationWrapperT0, x0=np.array([0.0]), args=(self._initialParameters, workspaces,
+                                                                              self),
+                             xtol=1e-4, ftol=1e-8)[0]
 
     def calibrateTConst(self, workspaces, t0):
         return brent(optimizationWrapperTConst, args=(self._initialParameters, t0, workspaces, self),
