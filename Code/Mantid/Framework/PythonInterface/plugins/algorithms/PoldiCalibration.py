@@ -79,7 +79,7 @@ class PoldiCalibration(PythonAlgorithm):
         self.declareProperty('InitialParameters', '', direction=Direction.Input,
                              doc='Initial parameters for the calibration, comma separated in the order t0, '
                                  'tconst, x0, y0, two_theta. If not supplied, the loaded instrument parameters are '
-                                 'used.')
+                                 'used. For position refinement it is enough to provide the first two.')
 
         self.declareProperty('ParameterRanges', '', direction=Direction.Input,
                              doc='Parameter ranges for two_theta, x0, y0 in the form \'start,stop,number of steps\', '
@@ -108,7 +108,11 @@ class PoldiCalibration(PythonAlgorithm):
 
         # Perform calibration
         if calibrationMode == 'Timing':
-            self.calibrateTiming(workspaceList)
+            t0, tconst = self.calibrateTiming(workspaceList)
+
+            self.log().warning('''Calibrated timing parameters:
+                t0 = {}
+                tconst = {}'''.format(t0, tconst))
         else:
             self.calibratePosition(workspaceList)
 
@@ -138,20 +142,21 @@ class PoldiCalibration(PythonAlgorithm):
 
 
     def calibrateTiming(self, workspaces):
-        #t0 = self.calibrateT0(workspaces)
-        t0 = -0.003375
+        # First, calibrate t0
+        t0 = self.calibrateT0(workspaces)
 
-        self.log().warning('Calibrated value for t0: ' + str(t0))
+        # Since a rounded value will be put into the parameter file, this is done here, both values are logged
+        self.log().notice('Calibrated value for t0: ' + str(t0))
         t0_rounded = np.round(t0, 6)
-        self.log().warning('Rounded value for t0 used as parameter: ' + str(t0_rounded))
+        self.log().notice('Rounded value for t0 used as parameter: ' + str(t0_rounded))
 
+        # With the new t0 value, tconst can be refined as well.
         tconst = self.calibrateTConst(workspaces, t0_rounded)
-        self.log().warning('Calibrated value for tconst: ' + str(tconst))
+        self.log().notice('Calibrated value for tconst: ' + str(tconst))
         tconst_rounded = np.round(tconst, 3)
-        self.log().warning('Rounded value for tconst used as parameter: ' + str(tconst_rounded))
+        self.log().notice('Rounded value for tconst used as parameter: ' + str(tconst_rounded))
 
-        print t0_rounded, tconst_rounded
-
+        return t0_rounded, tconst_rounded
 
     def calibrateT0(self, workspaces):
         #return brent(optimizationWrapperT0, args=(self._initialParameters, workspaces, self), brack=(-0.09, 0.01),
@@ -222,6 +227,10 @@ class PoldiCalibration(PythonAlgorithm):
 
         self.log().information('Slope: ' + str(slope))
         self.log().information('Chi^2 of fit: ' + str(chiSq))
+
+        covarianceTable.delete()
+        paramTable.delete()
+        fitWorkspace.delete()
 
         return slope
 
