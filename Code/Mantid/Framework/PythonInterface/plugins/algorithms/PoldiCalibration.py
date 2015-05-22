@@ -1,4 +1,5 @@
 # pylint: disable=no-init,invalid-name,attribute-defined-outside-init
+from mmtbx_hbond_restraints_ext import h_bond_implicit_proxy
 from mantid.simpleapi import *
 from mantid.api import *
 from mantid.kernel import *
@@ -82,8 +83,12 @@ class PoldiCalibration(PythonAlgorithm):
                                  'used. For position refinement it is enough to provide the first two.')
 
         self.declareProperty('ParameterRanges', '', direction=Direction.Input,
-                             doc='Parameter ranges for two_theta, x0, y0 in the form \'start,stop,number of steps\', '
+                             doc='Parameter ranges for two_theta, x0, y0 in the form \'start,stop,step\', '
                                  'separated by semicolons. Ignored for t0, tconst optimization.')
+
+        self.declareProperty(WorkspaceProperty(name='OutputWorkspace',
+                                               defaultValue='', direction=Direction.Output),
+                             doc='Output table with parameters for position calibration.')
 
     def PyExec(self):
         workspaceGroup = self.getProperty('InputWorkspace').value
@@ -113,8 +118,37 @@ class PoldiCalibration(PythonAlgorithm):
             self.log().warning('''Calibrated timing parameters:
                 t0 = {}
                 tconst = {}'''.format(t0, tconst))
+
+            outputWorkspace = self.createOutputWorkspaceTiming(t0, tconst)
+            self.setProperty('OutputWorkspace', outputWorkspace)
         else:
-            self.calibratePosition(workspaceList)
+            lines = self.calibratePosition(workspaceList)
+
+            outputWorkspace = self.createOutputWorkspacePosition(lines)
+            self.setProperty('OutputWorkspace', outputWorkspace)
+
+
+    def createOutputWorkspacePosition(self, data):
+        columnNames = ['TwoTheta', 'x0', 'y0', 'a', 'delta_a', 'slope', 'delta_slope', 'fwhm', 'delta_fwhm']
+
+        tableWs = WorkspaceFactory.createTable()
+        for n in columnNames:
+            tableWs.addColumn('double', n)
+
+        for row in data:
+            tableWs.addRow(dict(zip(columnNames, row)))
+
+        return tableWs
+
+    def createOutputWorkspaceTiming(self, t0, tconst):
+        tableWs = WorkspaceFactory.createTable()
+        tableWs.addColumn('str', 'Parameter')
+        tableWs.addColumn('double', 'Value')
+
+        tableWs.addRow({'Parameter': 't0', 'Value': t0})
+        tableWs.addRow({'Parameter': 'tconst', 'Value': tconst})
+
+        return tableWs
 
     def setInitialParametersFromWorkspace(self, workspace):
         instrument = workspace.getInstrument()
@@ -132,13 +166,87 @@ class PoldiCalibration(PythonAlgorithm):
     def setInitialParametersFromString(self, parameterString):
         parts = [float(x) for x in parameterString.split(',')]
 
+        if len(parts) == 2:
+            parts += [0.0] * 3
+
         if not len(parts) == 5:
             raise RuntimeError('InitialParameters format is wrong.')
 
         self._initialParameters = parts
 
     def calibratePosition(self, workspaces):
-        pass
+        workspace = self.getWorkspaceWithHighestChopperSpeed(workspaces)
+        ranges = self.getRangesFromProperty()
+
+        print ranges
+
+        lines = []
+
+        for two_theta in ranges[0]:
+            for x0 in ranges[1]:
+                for y0 in ranges[2]:
+                    params = self.getParameters(two_theta, x0, y0)
+                    print params
+
+                    ws = self.getWorkspaceWithParameters(workspace, *params)
+
+                    slope, slope_error = self.getSlopeParameter(ws)
+                    a, a_error, fwhms = self.getLatticeParameter(ws)
+
+                    lines.append([two_theta, x0, y0, a, a_error, slope * 1000.0, slope_error * 1000.0,
+                                        fwhms[0][0], fwhms[0][1]])
+
+        return lines
+
+    def saveDataPoints(self, datalines):
+        # Expected a list of lists of floats
+        fileName = self.getProperty('Output').value
+
+        fh = open(fileName, 'w')
+        fh.write('# two_theta x0 y0 a delta_a slope delta_slope fwhm delta_fwhm')
+        for l in lines:
+            fh.write(' '.join(l))
+            fh.write('\n')
+
+        fh.close()
+
+    def getParameters(self, two_theta, x0, y0):
+        params = [x for x in self._initialParameters[:2]]
+        params += [x0, y0, two_theta]
+
+        return params
+
+    def getWorkspaceWithHighestChopperSpeed(self, workspaces):
+        resultWs = workspaces[0]
+        highestChopperSpeed = resultWs.getRun().getProperty('chopperspeed').value[0]
+
+        for ws in workspaces[1:]:
+            chopperSpeed = ws.getRun().getProperty('chopperspeed').value[0]
+            print chopperSpeed
+
+            if chopperSpeed > highestChopperSpeed:
+                highestChopperSpeed = chopperSpeed
+                resultWs = ws
+
+        return resultWs
+
+
+    def getRangesFromProperty(self):
+        rangeString = self.getProperty('ParameterRanges').value
+        rangeStrings = rangeString.split(';')
+
+        if not len(rangeStrings) == 3:
+            raise RuntimeError('Three parameter ranges must be specified.')
+
+        ranges = []
+        for rStr in rangeStrings:
+            params = [float(x) for x in rStr.split(',')]
+            if not len(params) == 3:
+                raise RuntimeError('Parameter range must be specified by start,stop,step')
+
+            ranges.append(np.arange(*params))
+
+        return ranges
 
 
     def calibrateTiming(self, workspaces):
@@ -159,11 +267,11 @@ class PoldiCalibration(PythonAlgorithm):
         return t0_rounded, tconst_rounded
 
     def calibrateT0(self, workspaces):
-        #return brent(optimizationWrapperT0, args=(self._initialParameters, workspaces, self), brack=(-0.09, 0.01),
+        # return brent(optimizationWrapperT0, args=(self._initialParameters, workspaces, self), brack=(-0.09, 0.01),
         #             tol=1e-4)
         return fmin(optimizationWrapperT0, x0=np.array([0.0]), args=(self._initialParameters, workspaces,
-                                                                              self),
-                             xtol=1e-4, ftol=1e-8)[0]
+                                                                     self),
+                    xtol=1e-4, ftol=1e-8)[0]
 
     def calibrateTConst(self, workspaces, t0):
         return brent(optimizationWrapperTConst, args=(self._initialParameters, t0, workspaces, self),
@@ -231,8 +339,49 @@ class PoldiCalibration(PythonAlgorithm):
         covarianceTable.delete()
         paramTable.delete()
         fitWorkspace.delete()
+        fitResult.delete()
 
         return slope
+
+    def getSlopeParameter(self, workspace):
+        # Do a calibration run, which computes the additional slope parameter
+        # Note: Despite the similarity in name, this has nothing to do with the slope in lattice parameters above.
+        fitResult = PoldiDataAnalysis(InputWorkspace=workspace, CalibrationRun=True, OutputRawFitParameters=True,
+                                      ExpectedPeaks=self._expectedPeaks, MaximumPeakNumber=self._maxPeakCount,
+                                      AnalyseResiduals=False)
+
+        # Get the slope parameter and return it.
+        rawParams = fitResult.getItem(fitResult.size() - 1)
+        slope = float(rawParams.cell(3, 1))
+        slope_error = float(rawParams.cell(3, 2))
+
+        fitResult.delete()
+
+        return slope, slope_error
+
+    def getLatticeParameter(self, workspace):
+        fitResult = PoldiDataAnalysis(InputWorkspace=workspace, OutputRawFitParameters=True,
+                                      ExpectedPeaks=self._expectedPeaks,
+                                      MaximumPeakNumber=self._maxPeakCount, AnalyseResiduals=False)
+        fpeaks = AnalysisDataService.retrieve(workspace.getName() + '_peaks_refined_2d')
+
+        if isinstance(fpeaks, WorkspaceGroup):
+            fpeaks = fpeaks.getItem(0)
+
+        fwhms = []
+        for i in range(fpeaks.rowCount()):
+            fpeaks.setCell(i, 1, fpeaks.cell(i, 1).split()[0])
+
+            fwhmStrs = fpeaks.cell(i, 4).split()
+            fwhms.append((float(fwhmStrs[0]), float(fwhmStrs[-1])))
+
+        Fit("name=LatticeFunction,CrystalSystem=Cubic,a=5.4", Ties="ZeroShift=0.0", CostFunction="Unweighted least squares", InputWorkspace=fpeaks, CreateOutput=True, Output='cell')
+
+        params = AnalysisDataService.retrieve('cell_Parameters')
+        values = params.column(1)
+        errors = params.column(2)
+
+        return float(values[0]), float(errors[0]), fwhms
 
     def getWorkspaceWithParameters(self, workspace, t0, tconst, x0, y0, two_theta):
         workWs = workspace.clone()
