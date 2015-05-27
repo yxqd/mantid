@@ -1,5 +1,4 @@
 # pylint: disable=no-init,invalid-name,attribute-defined-outside-init
-from mmtbx_hbond_restraints_ext import h_bond_implicit_proxy
 from mantid.simpleapi import *
 from mantid.api import *
 from mantid.kernel import *
@@ -9,11 +8,11 @@ from scipy.optimize import brent, fmin
 
 
 def optimizationWrapperT0(t0, parameters, workspaces, algorithmObject):
-    if np.fabs(t0[0]) > 0.1:
-        return np.array([1.e10])
+    if np.fabs(t0) > 0.1:
+        return 1e10
 
     paramCopy = [x for x in parameters]
-    paramCopy[0] = t0[0]
+    paramCopy[0] = t0
 
     # Slope differences are relevant
     try:
@@ -24,9 +23,9 @@ def optimizationWrapperT0(t0, parameters, workspaces, algorithmObject):
             for j in range(i + 1, len(slopes)):
                 slopeDifferences.append(slopes[i] - slopes[j])
 
-        return np.array([np.sum(np.square(np.array(slopeDifferences)))])
+        return np.sum(np.square(np.array(slopeDifferences)))
     except:
-        return np.array([1.e10])
+        return 1e10
 
 
 def optimizationWrapperTConst(tconst, parameters, t0, workspaces, algorithmObject):
@@ -190,11 +189,14 @@ class PoldiCalibration(PythonAlgorithm):
 
                     ws = self.getWorkspaceWithParameters(workspace, *params)
 
-                    slope, slope_error = self.getSlopeParameter(ws)
-                    a, a_error, fwhms = self.getLatticeParameter(ws)
+                    try:
+                        slope, slope_error = self.getSlopeParameter(ws)
+                        a, a_error, fwhms = self.getLatticeParameter(ws)
 
-                    lines.append([two_theta, x0, y0, a, a_error, slope * 1000.0, slope_error * 1000.0,
-                                        fwhms[0][0], fwhms[0][1]])
+                        lines.append([two_theta, x0, y0, a, a_error, slope * 1000.0, slope_error * 1000.0,
+                                      fwhms[0][0], fwhms[0][1]])
+                    except:
+                        pass
 
         return lines
 
@@ -267,11 +269,8 @@ class PoldiCalibration(PythonAlgorithm):
         return t0_rounded, tconst_rounded
 
     def calibrateT0(self, workspaces):
-        # return brent(optimizationWrapperT0, args=(self._initialParameters, workspaces, self), brack=(-0.09, 0.01),
-        #             tol=1e-4)
-        return fmin(optimizationWrapperT0, x0=np.array([0.0]), args=(self._initialParameters, workspaces,
-                                                                     self),
-                    xtol=1e-4, ftol=1e-8)[0]
+        return brent(optimizationWrapperT0, args=(self._initialParameters, workspaces, self), brack=(-0.09, 0.01),
+                     tol=1e-4)
 
     def calibrateTConst(self, workspaces, t0):
         return brent(optimizationWrapperTConst, args=(self._initialParameters, t0, workspaces, self),
@@ -326,7 +325,7 @@ class PoldiCalibration(PythonAlgorithm):
         self.log().notice('Number of peaks used for analysis: ' + str(len(a_values_good)))
 
         # fit a linear function to the data points
-        slopeWs = CreateWorkspace(q_values_good, a_values_good, a_errors_good)
+        slopeWs = CreateWorkspace(q_values, a_values, a_errors)
 
         fitStatus, chiSq, covarianceTable, paramTable, fitWorkspace = Fit("name=LinearBackground",
                                                                           IgnoreInvalidData=True,
@@ -338,7 +337,7 @@ class PoldiCalibration(PythonAlgorithm):
 
         covarianceTable.delete()
         paramTable.delete()
-        fitWorkspace.delete()
+        # fitWorkspace.delete()
         fitResult.delete()
 
         return slope
@@ -375,7 +374,8 @@ class PoldiCalibration(PythonAlgorithm):
             fwhmStrs = fpeaks.cell(i, 4).split()
             fwhms.append((float(fwhmStrs[0]), float(fwhmStrs[-1])))
 
-        Fit("name=LatticeFunction,CrystalSystem=Cubic,a=5.4", Ties="ZeroShift=0.0", CostFunction="Unweighted least squares", InputWorkspace=fpeaks, CreateOutput=True, Output='cell')
+        Fit("name=LatticeFunction,CrystalSystem=Cubic,a=5.4", Ties="ZeroShift=0.0",
+            CostFunction="Unweighted least squares", InputWorkspace=fpeaks, CreateOutput=True, Output='cell')
 
         params = AnalysisDataService.retrieve('cell_Parameters')
         values = params.column(1)
