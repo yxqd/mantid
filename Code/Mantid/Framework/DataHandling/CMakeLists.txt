@@ -132,6 +132,7 @@ set ( SRC_FILES
 	src/SaveNISTDAT.cpp
 	src/SaveNXSPE.cpp
 	src/SaveNXTomo.cpp
+	src/SaveNXTomoFromStackOfImages.cpp
 	src/SaveNexus.cpp
 	src/SaveNexusProcessed.cpp
 	src/SavePAR.cpp
@@ -281,6 +282,7 @@ set ( INC_FILES
 	inc/MantidDataHandling/SaveNISTDAT.h
 	inc/MantidDataHandling/SaveNXSPE.h
 	inc/MantidDataHandling/SaveNXTomo.h
+	inc/MantidDataHandling/SaveNXTomoFromStackOfImages.h
 	inc/MantidDataHandling/SaveNexus.h
 	inc/MantidDataHandling/SaveNexusProcessed.h
 	inc/MantidDataHandling/SavePAR.h
@@ -424,6 +426,7 @@ set ( TEST_FILES
 	SaveMaskTest.h
 	SaveNISTDATTest.h
 	SaveNXSPETest.h
+	SaveNXTomoFromStackOfImagesTest.h
 	SaveNXTomoTest.h
 	SaveNexusProcessedTest.h
 	SaveNexusTest.h
