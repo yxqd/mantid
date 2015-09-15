@@ -78,21 +78,7 @@ ENDIF()
 # Set paths to Third_Party for Mac builds
 ###########################################################################
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-
-  if ( NOT THIRD_PARTY )
-    set ( THIRD_PARTY "${PROJECT_SOURCE_DIR}/../Third_Party" )
-  endif ()
-
-  # Print out where we think we are looking for 3rd party stuff
-  message (STATUS "Setting THIRD_PARTY to be ${THIRD_PARTY}." )
-
-  # Check that the 3rd party directory exists.
-  if (NOT IS_DIRECTORY "${THIRD_PARTY}")
-    message ( WARNING "Specified THIRD_PARTY directory doesn't exist!" )
-  endif()
-
   include ( DarwinSetup )
-
 ENDIF()
 
 # We probably don't want this to run on every build.
@@ -295,7 +281,7 @@ if ( ENABLE_CPACK )
                            "libboost-python${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION},"
                            "libnexus0 (>= 4.3),libgsl0ldbl,libqtcore4 (>= 4.2),libqtgui4 (>= 4.2),libqt4-opengl (>= 4.2),"
                            "libqt4-xml (>= 4.2),libqt4-svg (>= 4.2),libqt4-qt3support (>= 4.2),qt4-dev-tools,"
-                           "libqwt5-qt4,libqwtplot3d-qt4-0,python-numpy,python-sip,python-qt4,libjsoncpp0" )
+                           "libqwt5-qt4,libqwtplot3d-qt4-0,python-numpy,python-sip,python-qt4,python-nxs (>= 4.3),libjsoncpp0" )
         set ( PERFTOOLS_DEB_PACKAGE "libgoogle-perftools0 (>= 1.7)" )
         if( "${UNIX_CODENAME}" MATCHES "lucid" )
           list ( APPEND DEPENDS_LIST ",libqscintilla2-5,"
