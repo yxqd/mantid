@@ -27,7 +27,7 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "qwt_compat.h"
+#include "MantidQtAPI/qwt_compat.h"
 #include <QVarLengthArray>
 
 #include "pixmaps.h"
@@ -56,11 +56,12 @@
 #include "RangeSelectorTool.h"
 #include "PlotCurve.h"
 #include "ApplicationWindow.h"
-#include "plot2D/ScaleEngine.h"
+#include "MantidQtAPI/ScaleEngine.h"
 
 #include "MantidAPI/AnalysisDataService.h"
 #include "Mantid/MantidMatrixCurve.h"
 #include "MantidQtAPI/PlotAxis.h"
+#include "MantidQtAPI/QwtRasterDataMD.h"
 #include "MantidQtAPI/QwtWorkspaceSpectrumData.h"
 #include "Mantid/ErrorBarSettings.h"
 
@@ -419,7 +420,7 @@ bool Graph::isColorBarEnabled(int axis) const
 bool Graph::isLog(const QwtPlot::Axis& axis) const
 {
   ScaleEngine *sc_engine = dynamic_cast<ScaleEngine *>(d_plot->axisScaleEngine(axis));
-  return ( sc_engine && sc_engine->type() == QwtScaleTransformation::Log10 );
+  return ( sc_engine && sc_engine->type() == ScaleTransformation::Log10 );
 }
 
 ScaleDraw::ScaleType Graph::axisType(int axis)
@@ -984,8 +985,9 @@ void Graph::updateSecondaryAxis(int axis)
 
   ScaleEngine *sc_engine = dynamic_cast<ScaleEngine *>(d_plot->axisScaleEngine(axis));
   if (sc_engine) {
-    ScaleEngine *a_engine = dynamic_cast<ScaleEngine *>(d_plot->axisScaleEngine(a));
-    sc_engine->clone(a_engine);
+    if (ScaleEngine *a_engine = dynamic_cast<ScaleEngine *>(d_plot->axisScaleEngine(a))) {
+      sc_engine->clone(a_engine);
+    }
   }
 
   /*QwtScaleEngine *qwtsc_engine = d_plot->axisScaleEngine(axis);
@@ -1135,7 +1137,7 @@ void Graph::niceLogScales(QwtPlot::Axis axis)
   setScale(axis, start, end, axisStep(axis),
       scDiv->ticks(QwtScaleDiv::MajorTick).count(),
       d_plot->axisMaxMinor(axis),
-      QwtScaleTransformation::Log10,
+      ScaleTransformation::Log10,
       scaleEng->testAttribute(QwtScaleEngine::Inverted),
       scaleEng->axisBreakLeft(),
       scaleEng->axisBreakRight(),
@@ -1150,19 +1152,22 @@ void Graph::setScale(int axis, double start, double end, double step,
     int majorTicks, int minorTicks, int type, bool inverted,
     double left_break, double right_break, int breakPos,
     double stepBeforeBreak, double stepAfterBreak, int minTicksBeforeBreak,
-    int minTicksAfterBreak, bool log10AfterBreak, int breakWidth, bool breakDecoration)
+    int minTicksAfterBreak, bool log10AfterBreak, int breakWidth,
+    bool breakDecoration, double nth_power)
 {
-  ScaleEngine* se = dynamic_cast<ScaleEngine *>(d_plot->axisScaleEngine(axis));
-  se->setBreakRegion(left_break, right_break);
-  se->setBreakPosition(breakPos);
-  se->setBreakWidth(breakWidth);
-  se->drawBreakDecoration(breakDecoration);
-  se->setStepBeforeBreak(stepBeforeBreak);
-  se->setStepAfterBreak(stepAfterBreak);
-  se->setMinTicksBeforeBreak(minTicksBeforeBreak);
-  se->setMinTicksAfterBreak(minTicksAfterBreak);
-  se->setLog10ScaleAfterBreak(log10AfterBreak);
-  se->setAttribute(QwtScaleEngine::Inverted, inverted);
+  if (ScaleEngine* se = dynamic_cast<ScaleEngine *>(d_plot->axisScaleEngine(axis))){
+    se->setBreakRegion(left_break, right_break);
+    se->setBreakPosition(breakPos);
+    se->setBreakWidth(breakWidth);
+    se->drawBreakDecoration(breakDecoration);
+    se->setStepBeforeBreak(stepBeforeBreak);
+    se->setStepAfterBreak(stepAfterBreak);
+    se->setMinTicksBeforeBreak(minTicksBeforeBreak);
+    se->setMinTicksAfterBreak(minTicksAfterBreak);
+    se->setLog10ScaleAfterBreak(log10AfterBreak);
+    se->setAttribute(QwtScaleEngine::Inverted, inverted);
+    se->setNthPower(nth_power);
+  }
 
   setAxisScale(axis, start, end, type, step, majorTicks, minorTicks);
 
@@ -1181,24 +1186,24 @@ void Graph::setScale(int axis, double start, double end, double step,
 /** Overload of setScale() to that only allows setting the axis type
  *  to linear or log. Does nothing if the scale is already the that type
  *  @param axis :: the scale to change either QwtPlot::xBottom or QwtPlot::yLeft
- *  @param scaleType :: either QwtScaleTransformation::Log10 or ::Linear
+ *  @param scaleType :: either ScaleTransformation::Log10 or ::Linear
  */
-void Graph::setScale(QwtPlot::Axis axis, QwtScaleTransformation::Type scaleType)
+void Graph::setScale(QwtPlot::Axis axis, ScaleTransformation::Type scaleType)
 {
   //check if the scale is already of the desired type, 
   ScaleEngine *sc_engine = dynamic_cast<ScaleEngine *>(d_plot->axisScaleEngine(axis));
   if (!sc_engine)
     return;
 
-  QwtScaleTransformation::Type type = sc_engine->type();
-  if ( scaleType == QwtScaleTransformation::Log10 )
+  ScaleTransformation::Type type = sc_engine->type();
+  if ( scaleType == ScaleTransformation::Log10 )
   {
-    if ( type ==  QwtScaleTransformation::Log10 )
+    if ( type ==  ScaleTransformation::Log10 )
     {
       return;
     }
   }
-  else if ( type == QwtScaleTransformation::Linear )
+  else if ( type == ScaleTransformation::Linear )
   {
     return;
   }
@@ -1234,51 +1239,51 @@ void Graph::setScale(QwtPlot::Axis axis, QString logOrLin)
 {
   if ( logOrLin == "log" )
   {
-    setScale(axis, QwtScaleTransformation::Log10);
+    setScale(axis, ScaleTransformation::Log10);
   }
   else if ( logOrLin == "linear" )
   {
-    setScale(axis, QwtScaleTransformation::Linear);
+    setScale(axis, ScaleTransformation::Linear);
   }
 }
 
 void Graph::logLogAxes()
 {
-  setScale(QwtPlot::xBottom, QwtScaleTransformation::Log10);
-  setScale(QwtPlot::yLeft, QwtScaleTransformation::Log10);
+  setScale(QwtPlot::xBottom, ScaleTransformation::Log10);
+  setScale(QwtPlot::yLeft, ScaleTransformation::Log10);
   notifyChanges();
 }
 
 void Graph::logXLinY()
 {
-  setScale(QwtPlot::xBottom, QwtScaleTransformation::Log10);
-  setScale(QwtPlot::yLeft, QwtScaleTransformation::Linear);
+  setScale(QwtPlot::xBottom, ScaleTransformation::Log10);
+  setScale(QwtPlot::yLeft, ScaleTransformation::Linear);
   notifyChanges();
 }
 
 void Graph::logYlinX()
 {
-  setScale(QwtPlot::xBottom, QwtScaleTransformation::Linear);
-  setScale(QwtPlot::yLeft, QwtScaleTransformation::Log10);
+  setScale(QwtPlot::xBottom, ScaleTransformation::Linear);
+  setScale(QwtPlot::yLeft, ScaleTransformation::Log10);
   notifyChanges();
 }
 
 void Graph::linearAxes()
 {
-  setScale(QwtPlot::xBottom, QwtScaleTransformation::Linear);
-  setScale(QwtPlot::yLeft, QwtScaleTransformation::Linear);
+  setScale(QwtPlot::xBottom, ScaleTransformation::Linear);
+  setScale(QwtPlot::yLeft, ScaleTransformation::Linear);
   notifyChanges();
 }
 
 void Graph::logColor()
 {
-  setScale(QwtPlot::yRight, QwtScaleTransformation::Log10);
+  setScale(QwtPlot::yRight, ScaleTransformation::Log10);
   notifyChanges();
 }
 
 void Graph::linColor()
 {
-  setScale(QwtPlot::yRight, QwtScaleTransformation::Linear);
+  setScale(QwtPlot::yRight, ScaleTransformation::Linear);
   notifyChanges();
 }
 
@@ -1289,7 +1294,7 @@ void Graph::setAxisScale(int axis, double start, double end, int type, double st
   if(!sc_engine)
     return;
 
-  QwtScaleTransformation::Type old_type = sc_engine->type();
+  ScaleTransformation::Type old_type = sc_engine->type();
 
   // If not specified, keep the same as now
   if( type < 0 ) type = axisType(axis);
@@ -1297,12 +1302,24 @@ void Graph::setAxisScale(int axis, double start, double end, int type, double st
   if (type != old_type)
   {
     // recalculate boundingRect of MantidCurves
-    emit axisScaleChanged(axis,type == QwtScaleTransformation::Log10);
+    emit axisScaleChanged(axis,type == ScaleTransformation::Log10);
   }
 
   if (type == GraphOptions::Log10)
   {
-    sc_engine->setType(QwtScaleTransformation::Log10);
+    sc_engine->setType(ScaleTransformation::Log10);
+  }
+  else if (type == GraphOptions::Power)
+  {
+    sc_engine->setType(ScaleTransformation::Power);
+  }
+  else
+  {
+    sc_engine->setType(ScaleTransformation::Linear);
+  }
+
+  if (type == GraphOptions::Log10)
+  {
     if (start <= 0)
     {
       double s_min = DBL_MAX;
@@ -1348,9 +1365,63 @@ void Graph::setAxisScale(int axis, double start, double end, int type, double st
     // log scales can't represent zero or negative values, 1e-10 is a low number that I hope will be lower than most of the data but is still sensible for many color plots
     //start = start < 1e-90 ? 1e-10 : start;
   }
-  else
+  else if (type == GraphOptions::Power)
   {
-    sc_engine->setType(QwtScaleTransformation::Linear);
+    double const nth_power = sc_engine->nthPower();
+    if (start <= 0 && nth_power < 0)
+    {
+      double s_min = DBL_MAX;
+      // for the y axis rely on the bounding rects
+      for(int i=0;i<curves();++i)
+      {
+        QwtPlotCurve* c = curve(i);
+        if (c)
+        {
+          double s;
+          if (axis == QwtPlot::yRight || axis == QwtPlot::yLeft)
+          {
+            s = c->boundingRect().y();
+          }
+          else
+          {
+            s = c->boundingRect().x();
+          }
+          if (s < s_min)
+          {
+            s_min = s;
+          }
+        }
+      }
+
+      if (s_min != DBL_MAX)
+      {
+        start = s_min;
+      }
+      else
+      {
+        start = 0.01 * end;
+      }
+      if (start == 0)
+      {
+        start = 0.01 * end;
+      }
+      else if (end == 0)
+      {
+        end = 0.01 * start;
+      }
+    }
+    // If n is +ve even integer then negative scale values are not valid
+    // so set start of axis to 0
+    if (start < 0 &&
+      std::floor(nth_power) == nth_power &&
+      (long)nth_power % 2 == 0)
+    {
+      start = 0;
+      if (end < 0)
+      {
+        end = 1;
+      }
+    }
   }
 
   if (axis == QwtPlot::yRight)
@@ -1366,11 +1437,12 @@ void Graph::setAxisScale(int axis, double start, double end, int type, double st
           QwtScaleWidget *rightAxis = d_plot->axisWidget(QwtPlot::yRight);
           if(rightAxis)
           {
-            if (type == QwtScaleTransformation::Log10 && (start <= 0 || start == DBL_MAX))
+            if (type == ScaleTransformation::Log10 && (start <= 0 || start == DBL_MAX))
             {
               start = sp->getMinPositiveValue();
             }
             sp->mutableColorMap().changeScaleType((GraphOptions::ScaleType)type);
+            sp->mutableColorMap().setNthPower(sc_engine->nthPower());
             rightAxis->setColorMap(QwtDoubleInterval(start, end), sp->getColorMap());
             sp->setColorMap(sp->getColorMap());
             // we could check if(sp->isIntensityChanged()) but this doesn't work when one value is changing from zero to say 10^-10, which is a big problem for log plots
@@ -3074,6 +3146,35 @@ void Graph::updateScale()
     updateSecondaryAxis(QwtPlot::yRight);
   }
 
+  auto mantidCurve = dynamic_cast<MantidCurve*>(curve(0));
+  auto dataCurve = dynamic_cast<DataCurve*>(curve(0));
+
+  if (mantidCurve)
+  {
+    setXAxisTitle(mantidCurve->mantidData()->getXAxisLabel());
+    setYAxisTitle(mantidCurve->mantidData()->getYAxisLabel());
+  }
+  else if (dataCurve && dataCurve->table())
+  {
+    setXAxisTitle(dataCurve->table()->colLabel(0));
+    setYAxisTitle(dataCurve->table()->colLabel(1).section(".",0,0));
+  }
+
+  Spectrogram* spec = spectrogram();
+  if (spec)
+  {
+    auto specData = dynamic_cast<const MantidQt::API::QwtRasterDataMD*>(&spec->data());
+    if (specData)
+    {
+      Mantid::API::IMDWorkspace_const_sptr ws = specData->getWorkspace();
+      if(ws)
+      {
+        setXAxisTitle(MantidQt::API::PlotAxis(*ws, 0).title());
+        setYAxisTitle(MantidQt::API::PlotAxis(*ws, 1).title());
+      }
+    }
+  }
+
   d_plot->replot();//TODO: avoid 2nd replot!
   d_zoomer[0]->setZoomBase(false);
 }
@@ -4151,7 +4252,7 @@ void Graph::copy(Graph* g)
             fc->copy(fcCV);
         }
       } else if (style == VerticalBars || style == HorizontalBars) {
-        QwtBarCurve *bc = dynamic_cast<QwtBarCurve *>(c);
+        QwtBarCurve *bc = dynamic_cast<QwtBarCurve *>(cv);
         if (bc) {
           c = new QwtBarCurve(bc->orientation(), cv->table(), cv->xColumnName(),
                               cv->title().text(), cv->startRow(), cv->endRow());
@@ -4184,7 +4285,7 @@ void Graph::copy(Graph* g)
         c_keys[i] = d_plot->insertCurve(c);
 
         QwtHistogram *cQH = dynamic_cast<QwtHistogram*>(c);
-        if (cQH)
+        if (cQH && h)
           cQH->copy(h);
       } else if (style == VectXYXY || style == VectXYAM) {
         VectorCurve::VectorStyle vs = VectorCurve::XYXY;
@@ -4271,6 +4372,7 @@ void Graph::copy(Graph* g)
         rightAxis->setColorBarEnabled(false);
       sp->plot()->enableAxis(QwtPlot::yRight, true);
       sp->mutableColorMap().changeScaleType(sp->getColorMap().getScaleType());
+      sp->mutableColorMap().setNthPower(sp->getColorMap().getNthPower());
 
       rightAxis->setColorMap(sp->data().range(),sp->mutableColorMap());
       sp->plot()->setAxisScale(QwtPlot::yRight,
@@ -5360,9 +5462,11 @@ void Graph::enablePanningMagnifier(bool on)
     delete d_panner;
 
   QwtPlotCanvas *cnvs =d_plot->canvas(); //canvas();
-  if (on){
+  if (on) {
     cnvs->setCursor(Qt::pointingHandCursor);
     d_magnifier = new QwtPlotMagnifier(cnvs);
+    // Disable the mouse button as it causes issues with the context menu
+    d_magnifier->setMouseButton(Qt::NoButton);
     d_magnifier->setAxisEnabled(QwtPlot::yRight,false);
     d_magnifier->setZoomInKey(Qt::Key_Plus, Qt::ShiftModifier);
 

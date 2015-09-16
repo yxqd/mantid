@@ -32,6 +32,7 @@ set ( SRC_FILES
         src/PoldiUtilities/PoldiSourceSpectrum.cpp
 	src/PoldiUtilities/PoldiSpectrumConstantBackground.cpp
 	src/PoldiUtilities/PoldiSpectrumLinearBackground.cpp
+	src/PoldiUtilities/PoldiSpectrumPawleyFunction.cpp
 	src/PoldiUtilities/PoldiTimeTransformer.cpp
 	src/PoldiUtilities/UncertainValue.cpp
 	src/ProjectMD.cpp
@@ -78,6 +79,7 @@ set ( INC_FILES
 	inc/MantidSINQ/PoldiUtilities/PoldiSpectrumConstantBackground.h
         inc/MantidSINQ/PoldiUtilities/PoldiSpectrumDomainFunction.h
 	inc/MantidSINQ/PoldiUtilities/PoldiSpectrumLinearBackground.h
+	inc/MantidSINQ/PoldiUtilities/PoldiSpectrumPawleyFunction.h
 	inc/MantidSINQ/PoldiUtilities/PoldiTimeTransformer.h
 	inc/MantidSINQ/PoldiUtilities/UncertainValue.h
 	inc/MantidSINQ/PoldiUtilities/UncertainValueIO.h
@@ -119,6 +121,7 @@ set ( TEST_FILES
         PoldiSpectrumDomainFunctionTest.h
 	PoldiSpectrumConstantBackgroundTest.h
 	PoldiSpectrumLinearBackgroundTest.h
+	PoldiSpectrumPawleyFunctionTest.h
 	PoldiTimeTransformerTest.h
 	PoldiTruncateDataTest.h
 	ProjectMDTest.h
@@ -127,6 +130,11 @@ set ( TEST_FILES
 	UncertainValueTest.h
 )
 
+if (COVERALLS)
+    foreach( loop_var ${SRC_FILES} ${INC_FILES})
+      set_property(GLOBAL APPEND PROPERTY COVERAGE_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/${loop_var}")
+    endforeach(loop_var)
+endif()
 
 # Add a precompiled header where they are supported
 enable_precompiled_headers ( inc/MantidSINQ/PrecompiledHeader.h SRC_FILES )
@@ -143,9 +151,14 @@ endif ()
 # Add to the 'Framework' group in VS
 set_property ( TARGET SINQ PROPERTY FOLDER "MantidFramework" )
 
-include_directories ( inc ../MDEvents/inc )
+include_directories ( inc )
 
-target_link_libraries ( SINQ ${MANTIDLIBS} MDEvents )
+# Have to link to winsock library on Windows
+if ( WIN32 )
+  set ( WINSOCK ws2_32 )
+endif ()
+
+target_link_libraries ( SINQ LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME} ${MANTIDLIBS} ${NEXUS_LIBRARIES} ${WINSOCK} )
 
 # Add the unit tests directory
 add_subdirectory ( test )

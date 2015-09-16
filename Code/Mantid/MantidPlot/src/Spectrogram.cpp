@@ -25,7 +25,7 @@
  *   Boston, MA  02110-1301  USA                                           *
  *                                                                         *
  ***************************************************************************/
-#include "qwt_compat.h"
+#include "MantidQtAPI/qwt_compat.h"
 #include "Spectrogram.h"
 #include <math.h>
 #include <QPen>
@@ -400,6 +400,7 @@ Spectrogram* Spectrogram::copy()
   new_s->setLevelsNumber(levels());
 
   new_s->mutableColorMap().changeScaleType(getColorMap().getScaleType());
+  new_s->mutableColorMap().setNthPower(getColorMap().getNthPower());
   return new_s;
 }
 
@@ -423,25 +424,11 @@ void Spectrogram::setGrayScale()
 
 void Spectrogram::setDefaultColorMap()
 {
-  // option 1 use last used colour map
-  QSettings settings;
-  settings.beginGroup("Mantid/2DPlotSpectrogram");
-  //Load Colormap. If the file is invalid the default stored colour map is used
-  QString lastColormapFile = settings.value("ColormapFile", "").toString();
-  settings.endGroup();
-
-  if (lastColormapFile.size() > 0)
-  {
-      mCurrentColorMap = lastColormapFile;
-      mColorMap.loadMap(lastColormapFile);
-  }
-  else
-  {
-    //option 2 use the default colormap from MantidColorMap.
-    mColorMap.setupDefaultMap();
-  }
+  MantidColorMap map = getDefaultColorMap();
   
-  setColorMap(mColorMap);
+  mCurrentColorMap = map.getFilePath();
+  mColorMap = map;
+  setColorMap(map);
       
   color_map_policy = Default;
 
@@ -453,6 +440,22 @@ void Spectrogram::setDefaultColorMap()
   if (colorAxis)
     colorAxis->setColorMap(this->data().range(), this->colorMap());
 
+}
+
+
+MantidColorMap Spectrogram::getDefaultColorMap()
+{
+  
+  QSettings settings;
+  settings.beginGroup("Mantid/2DPlotSpectrogram");
+  //Load Colormap. If the file is invalid the default stored colour map is used
+  QString lastColormapFile = settings.value("ColormapFile", "").toString();
+  settings.endGroup();
+
+  //if the file is not valid you will get the default
+  MantidColorMap retColorMap(lastColormapFile,GraphOptions::Linear);
+
+  return retColorMap;
 }
 
 void Spectrogram::loadColorMap(const QString& file)

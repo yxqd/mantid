@@ -6,6 +6,8 @@
 #include "MantidAPI/FrameworkManager.h"
 #include "MantidAPI/AlgorithmManager.h"
 
+#include "MantidKernel/Matrix.h"
+
 #include "MantidSINQ/PoldiFitPeaks2D.h"
 #include "MantidSINQ/PoldiUtilities/PoldiSpectrumDomainFunction.h"
 #include "MantidSINQ/PoldiUtilities/PoldiMockInstrumentHelpers.h"
@@ -14,6 +16,7 @@
 using namespace Mantid::Poldi;
 using namespace Mantid::API;
 using namespace Mantid::DataObjects;
+using namespace Mantid::Kernel;
 
 class PoldiFitPeaks2DTest : public CxxTest::TestSuite
 {
@@ -144,10 +147,6 @@ public:
         PoldiPeakCollection_sptr noProfilePeaks(new PoldiPeakCollection);
         TS_ASSERT_THROWS_NOTHING(spectrumCalculator.getIntegratedPeakCollection(noProfilePeaks));
 
-        // While setting an invalid function name throws.
-        spectrumCalculator.setProperty("PeakProfileFunction", "InvalidFunctionName");
-        TS_ASSERT_THROWS(spectrumCalculator.getIntegratedPeakCollection(noProfilePeaks), std::runtime_error);
-
         // When there is no valid PoldiPeakCollection, the method also throws
         PoldiPeakCollection_sptr invalidPeakCollection;
         TS_ASSERT_THROWS(spectrumCalculator.getIntegratedPeakCollection(invalidPeakCollection), std::invalid_argument);
@@ -226,6 +225,49 @@ public:
         }
     }
 
+    void testGetUserDefinedTies()
+    {
+        TestablePoldiFitPeaks2D spectrumCalculator;
+        spectrumCalculator.initialize();
+        spectrumCalculator.setProperty("PeakProfileFunction", "Gaussian");
+
+        // Create a function with some peaks
+        PoldiPeakCollection_sptr peaks = PoldiPeakCollectionHelpers::createPoldiPeakCollectionNormalized();
+        boost::shared_ptr<Poldi2DFunction> poldi2DFunction = spectrumCalculator.getFunctionFromPeakCollection(peaks);
+
+        // Make "Height" global, i.e. the same for all peaks
+        spectrumCalculator.setProperty("GlobalParameters", "Height");
+        std::string ties = spectrumCalculator.getUserSpecifiedTies(poldi2DFunction);
+        TS_ASSERT_EQUALS(ties, "f1.Height=f0.Height,f2.Height=f0.Height,f3.Height=f0.Height");
+
+        // Height and Sigma
+        spectrumCalculator.setProperty("GlobalParameters", "Height,Sigma");
+        ties = spectrumCalculator.getUserSpecifiedTies(poldi2DFunction);
+
+        TS_ASSERT_EQUALS(ties, "f1.Height=f0.Height,f2.Height=f0.Height,f3.Height=f0.Height,"
+                         "f1.Sigma=f0.Sigma,f2.Sigma=f0.Sigma,f3.Sigma=f0.Sigma");
+
+        // Empty
+        spectrumCalculator.setProperty("GlobalParameters", "");
+        ties = spectrumCalculator.getUserSpecifiedTies(poldi2DFunction);
+        TS_ASSERT(ties.empty());
+
+        // Invalid name
+        spectrumCalculator.setProperty("GlobalParameters", "Invalid");
+        ties = spectrumCalculator.getUserSpecifiedTies(poldi2DFunction);
+        TS_ASSERT(ties.empty());
+
+        // Valid and invalid
+        spectrumCalculator.setProperty("GlobalParameters", "Height,Invalid");
+        ties = spectrumCalculator.getUserSpecifiedTies(poldi2DFunction);
+        TS_ASSERT_EQUALS(ties, "f1.Height=f0.Height,f2.Height=f0.Height,f3.Height=f0.Height");
+
+        // Several empty
+        spectrumCalculator.setProperty("GlobalParameters", ",,,,");
+        ties = spectrumCalculator.getUserSpecifiedTies(poldi2DFunction);
+        TS_ASSERT(ties.empty());
+    }
+
     void testGetPeakCollectionFromFunction()
     {
         TestablePoldiFitPeaks2D spectrumCalculator;
@@ -234,6 +276,18 @@ public:
         PoldiPeakCollection_sptr peaks = PoldiPeakCollectionHelpers::createPoldiPeakCollectionNormalized();
         IFunction_sptr poldi2DFunction = spectrumCalculator.getFunctionFromPeakCollection(peaks);
 
+        size_t nParams = poldi2DFunction->nParams();
+
+        // Make a matrix with diagonal elements = 0.05 and set as covariance matrix
+        boost::shared_ptr<DblMatrix> matrix = boost::make_shared<DblMatrix>(nParams, nParams, true);
+        matrix->operator *=(0.05);
+        poldi2DFunction->setCovarianceMatrix(matrix);
+
+        // Also set errors for old behavior
+        for(size_t i = 0; i < nParams; ++i) {
+            poldi2DFunction->setError(i, sqrt(0.05));
+        }
+
         PoldiPeakCollection_sptr peaksFromFunction = spectrumCalculator.getPeakCollectionFromFunction(poldi2DFunction);
 
         TS_ASSERT_EQUALS(peaksFromFunction->peakCount(), peaks->peakCount());
@@ -241,8 +295,11 @@ public:
             PoldiPeak_sptr functionPeak = peaksFromFunction->peak(i);
             PoldiPeak_sptr referencePeak = peaks->peak(i);
 
-            TS_ASSERT_EQUALS(functionPeak->d(), referencePeak->d());
-            TS_ASSERT_EQUALS(functionPeak->fwhm(), referencePeak->fwhm());
+            TS_ASSERT_EQUALS(functionPeak->d().value(), referencePeak->d().value());
+            TS_ASSERT_EQUALS(functionPeak->fwhm().value(), referencePeak->fwhm().value());
+            TS_ASSERT_DELTA(functionPeak->d().error(), sqrt(0.05), 1e-6);
+            TS_ASSERT_DELTA(functionPeak->fwhm(PoldiPeak::AbsoluteD).error(), sqrt(0.05) * (2.0 * sqrt(2.0 * log(2.0))), 1e-6);
+
         }
     }
 
@@ -306,6 +363,39 @@ public:
         TS_ASSERT_EQUALS(funConstant->nParams(), 1);
         TS_ASSERT_EQUALS(funConstant->parameterName(0), "f0.A0");
         TS_ASSERT_EQUALS(funConstant->nFunctions(), 1);
+    }
+
+    void testGetRefinedStartingCell() {
+        // Get Silicon peaks for testing
+        PoldiPeakCollection_sptr peaks = PoldiPeakCollectionHelpers::createPoldiPeakCollectionNormalized();
+
+        TestablePoldiFitPeaks2D alg;
+
+        std::string refinedCell;
+        TS_ASSERT_THROWS_NOTHING(
+                    refinedCell = alg.getRefinedStartingCell(
+                                        "5.4 5.4 5.4 90 90 90",
+                                        "Cubic", peaks));
+
+        UnitCell cell = strToUnitCell(refinedCell);
+        TS_ASSERT_DELTA(cell.a(), 5.43111972, 1e-8);
+
+        // With less accurate starting parameters the result should not change
+        TS_ASSERT_THROWS_NOTHING(
+                    refinedCell = alg.getRefinedStartingCell(
+                                        "5 5 5 90 90 90",
+                                        "Cubic", peaks));
+
+        cell = strToUnitCell(refinedCell);
+        TS_ASSERT_DELTA(cell.a(), 5.43111972, 1e-8);
+
+        // Adding an unindexed peak should make the function return the initial
+        peaks->addPeak(PoldiPeak::create(UncertainValue(1.0)));
+        TS_ASSERT_THROWS_NOTHING(
+                    refinedCell = alg.getRefinedStartingCell(
+                                        "5 5 5 90 90 90",
+                                        "Cubic", peaks));
+        TS_ASSERT_EQUALS(refinedCell, "5 5 5 90 90 90");
     }
 
 private:

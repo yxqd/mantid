@@ -11,12 +11,13 @@
 #include <qwt_double_interval.h>
 #include "MantidTestHelpers/MDEventsTestHelper.h"
 #include "MantidAPI/FileFinder.h"
+#include "MantidAPI/ITableWorkspace.h"
 #include "boost/pointer_cast.hpp"
 
 using namespace Mantid::VATES;
 using namespace Mantid::API;
 using namespace testing;
-using Mantid::MDEvents::MDEventsTestHelper::makeFakeMDHistoWorkspace;
+using Mantid::DataObjects::MDEventsTestHelper::makeFakeMDHistoWorkspace;
 
 class MetaDataExtractorUtilsTest : public CxxTest::TestSuite
 {
@@ -40,7 +41,7 @@ class MetaDataExtractorUtilsTest : public CxxTest::TestSuite
     void testShouldExtractMinAndMaxFromWorkspaceForMDHisto()
     {
       // Arrange
-      Mantid::MDEvents::MDHistoWorkspace_sptr histoWorkspace = makeFakeMDHistoWorkspace(1.0, 4);
+      Mantid::DataObjects::MDHistoWorkspace_sptr histoWorkspace = makeFakeMDHistoWorkspace(1.0, 4);
 
       // Act
       MetaDataExtractorUtils extractor;

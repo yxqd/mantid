@@ -3,8 +3,9 @@ import stresstesting
 from mantid.simpleapi import *
 import numpy as np
 
-'''This test checks that the results of PoldiAutoCorrelation match the expected outcome.'''
 class POLDIPeakSearchTest(stresstesting.MantidStressTest):
+    '''This test checks that the results of PoldiAutoCorrelation match the expected outcome.'''
+
     def runTest(self):
         dataFiles = ["poldi2013n006903", "poldi2013n006904"]
 
@@ -31,7 +32,7 @@ class POLDIPeakSearchTest(stresstesting.MantidStressTest):
             referencePeaks = mtd["%s_reference_Peaks" % (dataFile)]
             self.assertEqual(calculatedPeaks.rowCount(), referencePeaks.rowCount())
 
-            positions = calculatedPeaks.column(2)
+            positions = calculatedPeaks.column(3)
             referencePositions = referencePeaks.column(0)
 
       # In this test we only compare positions, because the height

@@ -1,6 +1,7 @@
 #include "MantidVatesAPI/MDEWLoadingPresenter.h"
 #include "MantidVatesAPI/MDLoadingView.h"
 #include "MantidAPI/FrameworkManager.h"
+#include "MantidAPI/IMDEventWorkspace.h"
 
 #include "MantidGeometry/MDGeometry/NullImplicitFunction.h"
 #include "MantidVatesAPI/VatesKnowledgeSerializer.h"
@@ -155,7 +156,7 @@ namespace Mantid
       vtkFieldData* outputFD = vtkFieldData::New();
       
       //Serialize metadata
-      VatesKnowledgeSerializer serializer(LocationNotRequired);
+      VatesKnowledgeSerializer serializer;
       serializer.setWorkspaceName(wsName);
       serializer.setGeometryXML(xmlBuilder.create());
       serializer.setImplicitFunction( Mantid::Geometry::MDImplicitFunction_sptr(new Mantid::Geometry::NullImplicitFunction()));
@@ -178,10 +179,12 @@ namespace Mantid
      */
     void MDEWLoadingPresenter::setAxisLabels(vtkDataSet *visualDataSet)
     {
-      vtkFieldData* fieldData = visualDataSet->GetFieldData();
-      setAxisLabel("AxisTitleForX", axisLabels[0], fieldData);
-      setAxisLabel("AxisTitleForY", axisLabels[1], fieldData);
-      setAxisLabel("AxisTitleForZ", axisLabels[2], fieldData);
+      if (!vtkPVChangeOfBasisHelper::AddBasisNames(
+              visualDataSet, axisLabels[0].c_str(), axisLabels[1].c_str(),
+              axisLabels[2].c_str())) {
+        g_log.warning("The basis names could not be added to the field data of "
+                      "the data set.\n");
+      }
     }
 
     /**

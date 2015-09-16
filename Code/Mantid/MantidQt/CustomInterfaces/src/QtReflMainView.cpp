@@ -14,7 +14,7 @@ namespace MantidQt
   {
     using namespace Mantid::API;
 
-    DECLARE_SUBWINDOW(QtReflMainView);
+    DECLARE_SUBWINDOW(QtReflMainView)
 
     //----------------------------------------------------------------------------------------------
     /** Constructor
@@ -469,6 +469,15 @@ namespace MantidQt
     void QtReflMainView::setProgress(int progress)
     {
       ui.progressBar->setValue(progress);
+    }
+
+    /**
+     Get status of checkbox which determines whether an ipython notebook is produced
+     @return true if a notebook should be output on process, false otherwise
+     */
+    bool QtReflMainView::getEnableNotebook()
+    {
+      return ui.checkEnableNotebook->isChecked();
     }
 
     /**

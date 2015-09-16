@@ -155,6 +155,34 @@ class RunDescriptorTest(unittest.TestCase):
         self.assertEqual(mon_ws.getNumberHistograms(),3)
         self.assertEqual(mon_ws.getIndexFromSpectrumNumber(3),2)
 
+    def test_copy_spectra2monitors_heterogen(self):
+        propman  = self.prop_man
+        run_ws = CreateSampleWorkspace( Function='Multiple Peaks', WorkspaceType = 'Event',NumBanks=1, BankPixelWidth=5, NumEvents=100)
+        run_ws_monitors = CreateSampleWorkspace( Function='Multiple Peaks', WorkspaceType = 'Histogram',NumBanks=2, BankPixelWidth=1, NumEvents=100)
+
+        run_ws_monitors = Rebin(run_ws_monitors,Params='1,-0.01,20000')
+        x=run_ws_monitors.readX(0)
+        dx = x[1:]-x[:-1]
+        min_step0 = min(dx)
+
+        propman.monovan_run = run_ws
+        propman.spectra_to_monitors_list = 3
+
+        mon_ws = PropertyManager.monovan_run.get_monitors_ws()
+        self.assertTrue(isinstance(mon_ws, api.Workspace))
+        self.assertEqual(mon_ws.getNumberHistograms(),3)
+        self.assertEqual(mon_ws.getIndexFromSpectrumNumber(3),2)
+
+        x=mon_ws.readX(0)
+        dx = x[1:]-x[:-1]
+        min_step1 = min(dx)
+        max_step1 = max(dx)
+
+        self.assertAlmostEqual(min_step0,min_step1,5)
+        self.assertAlmostEqual(max_step1,min_step1,5)
+
+
+
     def test_ws_name(self):
         run_ws = CreateSampleWorkspace( Function='Multiple Peaks', NumBanks=1, BankPixelWidth=4, NumEvents=100)
         propman  = self.prop_man
@@ -512,6 +540,37 @@ class RunDescriptorTest(unittest.TestCase):
         propman.data_file_ext = '.raw'
         real_fext=PropertyManager.sample_run.get_fext()
         self.assertEqual('.nxs',real_fext)
+
+    def test_change_normalization(self):
+        propman  = self.prop_man
+        a_wksp=CreateSampleWorkspace(Function='Multiple Peaks',WorkspaceType='Event',
+                                NumBanks=4, BankPixelWidth=1, NumEvents=100, XUnit='TOF',
+                                XMin=2000, XMax=20000, BinWidth=1)
+        source_wksp = a_wksp/5.
+        propman.sample_run = source_wksp
+        self.assertRaises(RuntimeError,PropertyManager.sample_run.export_normalization,a_wksp)
+
+        AddSampleLog(source_wksp,LogName='NormalizationFactor',LogText='5.',LogType='Number')
+        PropertyManager.sample_run.export_normalization(a_wksp)
+
+        rez = CheckWorkspacesMatch(Workspace1=source_wksp,Workspace2=a_wksp,Tolerance=1.e-8)
+        self.assertEqual(rez,'Success!')
+
+        # divide by 20 to get final normalization factor equal 100 (ws/(5*20))
+        a_wksp/= 20
+        AddSampleLog(a_wksp,LogName='NormalizationFactor',LogText='100',LogType='Number')
+        # export normalization by 5
+        PropertyManager.sample_run.export_normalization(a_wksp)
+        rez = CheckWorkspacesMatch(Workspace1=source_wksp,Workspace2=a_wksp,Tolerance=1.e-6)
+        self.assertEqual(rez,'Success!')
+        self.assertAlmostEqual(a_wksp.getRun().getLogData('NormalizationFactor').value,5.)
+
+        propman.sample_run = None
+        DeleteWorkspace(a_wksp)
+
+
+
+
 
 
 

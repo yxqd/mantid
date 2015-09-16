@@ -156,7 +156,8 @@ namespace CustomInterfaces
   {
     // Get properties
     QString firstFile = m_uiForm.leRunNo->getFirstFilename();
-    QString filenames = m_uiForm.leRunNo->getFilenames().join(",");
+    QStringList filenameList = m_uiForm.leRunNo->getFilenames();
+    QString filenames = filenameList.join(",");
 
     auto instDetails = getInstrumentDetails();
     QString instDetectorRange = instDetails["spectra-min"] + "," + instDetails["spectra-max"];
@@ -168,18 +169,20 @@ namespace CustomInterfaces
     QString outputWorkspaceNameStem = firstFileInfo.baseName() + "_" + getInstrumentConfiguration()->getAnalyserName()
                                       + getInstrumentConfiguration()->getReflectionName();
 
-    QString calibrationWsName = outputWorkspaceNameStem + "_calib";
+    m_outputCalibrationName = outputWorkspaceNameStem;
+    if(filenameList.size() > 1)
+        m_outputCalibrationName += "_multi";
+    m_outputCalibrationName += "_calib";
 
     // Configure the calibration algorithm
-    IAlgorithm_sptr calibrationAlg = AlgorithmManager::Instance().create("CreateCalibrationWorkspace");
+    IAlgorithm_sptr calibrationAlg = AlgorithmManager::Instance().create("IndirectCalibration");
     calibrationAlg->initialize();
 
     calibrationAlg->setProperty("InputFiles", filenames.toStdString());
-    calibrationAlg->setProperty("OutputWorkspace", calibrationWsName.toStdString());
+    calibrationAlg->setProperty("OutputWorkspace", m_outputCalibrationName.toStdString());
     calibrationAlg->setProperty("DetectorRange", instDetectorRange.toStdString());
     calibrationAlg->setProperty("PeakRange", peakRange.toStdString());
     calibrationAlg->setProperty("BackgroundRange", backgroundRange.toStdString());
-    calibrationAlg->setProperty("Plot", m_uiForm.ckPlot->isChecked());
 
     if(m_uiForm.ckScale->isChecked())
     {
@@ -187,29 +190,24 @@ namespace CustomInterfaces
       calibrationAlg->setProperty("ScaleFactor", scale);
     }
 
+    bool save = m_uiForm.ckSave->isChecked();
+
     m_batchAlgoRunner->addAlgorithm(calibrationAlg);
 
     // Initially take the calibration workspace as the result
-    m_pythonExportWsName = calibrationWsName.toStdString();
-
-    // Properties for algorithms that use data from calibration as an input
-    BatchAlgorithmRunner::AlgorithmRuntimeProps inputFromCalProps;
-    inputFromCalProps["InputWorkspace"] = calibrationWsName.toStdString();
+    m_pythonExportWsName = m_outputCalibrationName.toStdString();
 
     // Add save algorithm to queue if ticked
-    if( m_uiForm.ckSave->isChecked() )
-    {
-      IAlgorithm_sptr saveAlg = AlgorithmManager::Instance().create("SaveNexusProcessed");
-      saveAlg->initialize();
-      saveAlg->setProperty("Filename", calibrationWsName.toStdString() + ".nxs");
-
-      m_batchAlgoRunner->addAlgorithm(saveAlg, inputFromCalProps);
-    }
+    if(save)
+      addSaveWorkspaceToQueue(m_outputCalibrationName);
 
     // Configure the resolution algorithm
     if(m_uiForm.ckCreateResolution->isChecked())
     {
-      QString resolutionWsName = outputWorkspaceNameStem + "_res";
+      m_outputResolutionName = outputWorkspaceNameStem;
+      if(filenameList.size() > 1)
+        m_outputResolutionName += "_multi";
+      m_outputResolutionName += "_res";
 
       QString resDetectorRange = QString::number(m_dblManager->value(m_properties["ResSpecMin"])) + ","
           + QString::number(m_dblManager->value(m_properties["ResSpecMax"]));
@@ -222,7 +220,6 @@ namespace CustomInterfaces
           + QString::number(m_dblManager->value(m_properties["ResEnd"]));
 
       bool smooth = m_uiForm.ckSmoothResolution->isChecked();
-      bool save = m_uiForm.ckSave->isChecked();
 
       IAlgorithm_sptr resAlg = AlgorithmManager::Instance().create("IndirectResolution", -1);
       resAlg->initialize();
@@ -234,20 +231,14 @@ namespace CustomInterfaces
       resAlg->setProperty("RebinParam", rebinString.toStdString());
       resAlg->setProperty("DetectorRange", resDetectorRange.toStdString());
       resAlg->setProperty("BackgroundRange", background.toStdString());
-      resAlg->setProperty("Save", save);
 
       if(m_uiForm.ckResolutionScale->isChecked())
         resAlg->setProperty("ScaleFactor", m_uiForm.spScale->value());
 
       if(smooth)
-      {
-        resAlg->setProperty("OutputWorkspace", resolutionWsName.toStdString() + "_pre_smooth");
-      }
+        resAlg->setProperty("OutputWorkspace", m_outputResolutionName.toStdString() + "_pre_smooth");
       else
-      {
-        resAlg->setProperty("OutputWorkspace", resolutionWsName.toStdString());
-        resAlg->setProperty("Plot", m_uiForm.ckPlot->isChecked());
-      }
+        resAlg->setProperty("OutputWorkspace", m_outputResolutionName.toStdString());
 
       m_batchAlgoRunner->addAlgorithm(resAlg);
 
@@ -255,43 +246,46 @@ namespace CustomInterfaces
       {
         IAlgorithm_sptr smoothAlg = AlgorithmManager::Instance().create("WienerSmooth");
         smoothAlg->initialize();
-        smoothAlg->setProperty("OutputWorkspace", resolutionWsName.toStdString());
+        smoothAlg->setProperty("OutputWorkspace", m_outputResolutionName.toStdString());
 
         BatchAlgorithmRunner::AlgorithmRuntimeProps smoothAlgInputProps;
-        smoothAlgInputProps["InputWorkspace"] = resolutionWsName.toStdString() + "_pre_smooth";
+        smoothAlgInputProps["InputWorkspace"] = m_outputResolutionName.toStdString() + "_pre_smooth";
 
         m_batchAlgoRunner->addAlgorithm(smoothAlg, smoothAlgInputProps);
-
-        if(save)
-        {
-          IAlgorithm_sptr saveAlg = AlgorithmManager::Instance().create("SaveNexusProcessed");
-          saveAlg->initialize();
-
-          BatchAlgorithmRunner::AlgorithmRuntimeProps inputFromSmoothProps;
-          inputFromSmoothProps["InputWorkspace"] = calibrationWsName.toStdString();
-          saveAlg->setProperty("Filename", resolutionWsName.toStdString() + ".nxs");
-
-          m_batchAlgoRunner->addAlgorithm(saveAlg, inputFromSmoothProps);
-        }
       }
 
+      if(save)
+        addSaveWorkspaceToQueue(m_outputResolutionName);
+
       // When creating resolution file take the resolution workspace as the result
-      m_pythonExportWsName = resolutionWsName.toStdString();
+      m_pythonExportWsName = m_outputResolutionName.toStdString();
     }
 
     m_batchAlgoRunner->executeBatchAsync();
   }
 
+  /*
+   * Handle completion of the calibration and resolution algorithms.
+   *
+   * @param error If the algorithms failed.
+   */
   void ISISCalibration::algorithmComplete(bool error)
   {
     if(error)
       return;
 
-    // Plot the smoothed workspace if required
-    if(m_uiForm.ckSmoothResolution->isChecked() && m_uiForm.ckPlot->isChecked())
+    if(m_uiForm.ckPlot->isChecked())
     {
-      std::string pyInput = "from mantidplot import plotSpectrum\nplotSpectrum(['" + m_pythonExportWsName + "', '" + m_pythonExportWsName + "_pre_smooth'], 0)\n";
-      m_pythonRunner.runPythonCode(QString::fromStdString(pyInput));
+      plotTimeBin(m_outputCalibrationName);
+
+      QStringList plotWorkspaces;
+      if(m_uiForm.ckCreateResolution->isChecked())
+      {
+        plotWorkspaces << m_outputResolutionName;
+        if(m_uiForm.ckSmoothResolution->isChecked())
+          plotWorkspaces << m_outputResolutionName + "_pre_smooth";
+      }
+      plotSpectrum(plotWorkspaces);
     }
   }
 
@@ -334,7 +328,7 @@ namespace CustomInterfaces
   void ISISCalibration::setDefaultInstDetails()
   {
     // Get spectra, peak and background details
-    std::map<QString, QString> instDetails = getInstrumentDetails();
+    QMap<QString, QString> instDetails = getInstrumentDetails();
 
     // Set the search instrument for runs
     m_uiForm.leRunNo->setInstrumentOverride(instDetails["instrument"]);
@@ -428,14 +422,14 @@ namespace CustomInterfaces
     QString detRange = QString::number(m_dblManager->value(m_properties["ResSpecMin"])) + ","
                      + QString::number(m_dblManager->value(m_properties["ResSpecMax"]));
 
-    IAlgorithm_sptr reductionAlg = AlgorithmManager::Instance().create("InelasticIndirectReduction");
+    IAlgorithm_sptr reductionAlg = AlgorithmManager::Instance().create("ISISIndirectEnergyTransfer");
     reductionAlg->initialize();
     reductionAlg->setProperty("Instrument", getInstrumentConfiguration()->getInstrumentName().toStdString());
     reductionAlg->setProperty("Analyser", getInstrumentConfiguration()->getAnalyserName().toStdString());
     reductionAlg->setProperty("Reflection", getInstrumentConfiguration()->getReflectionName().toStdString());
     reductionAlg->setProperty("InputFiles", files.toStdString());
     reductionAlg->setProperty("OutputWorkspace", "__IndirectCalibration_reduction");
-    reductionAlg->setProperty("DetectorRange", detRange.toStdString());
+    reductionAlg->setProperty("SpectraRange", detRange.toStdString());
     reductionAlg->execute();
 
     if(!reductionAlg->isExecuted())

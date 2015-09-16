@@ -3,10 +3,11 @@ import stresstesting
 from mantid.simpleapi import *
 import numpy as np
 
-'''Checking results of PoldiFitPeaks1D.'''
 class POLDIFitPeaks1DTest(stresstesting.MantidStressTest):
-  # The errors of fitted parameters in version 2 are a bit small
-  # because of the "fabricated data", so a larger margin has to be allowed.
+    '''Checking results of PoldiFitPeaks1D.'''
+
+    # The errors of fitted parameters in version 2 are a bit small
+    # because of the "fabricated data", so a larger margin has to be allowed.
     versionDeltas = {1: 2.0e-4, 2: 1.5e-3}
     errorMultiplier = {1: 1.0, 2: 4.0}
 
@@ -28,8 +29,8 @@ class POLDIFitPeaks1DTest(stresstesting.MantidStressTest):
     def runPeakSearch(self, filenames, deleteList):
         for dataFile,deleteRowList in zip(filenames, deleteList):
             PoldiPeakSearch(InputWorkspace=dataFile,
-                      MinimumPeakSeparation=8,
-                      OutputWorkspace="%s_Peaks" % (dataFile))
+                            MinimumPeakSeparation=8,
+                            OutputWorkspace="%s_Peaks" % (dataFile))
 
             for deleteRows in deleteRowList:
                 DeleteTableRows(TableWorkspace="%s_Peaks" % (dataFile), Rows=deleteRows)
@@ -41,11 +42,11 @@ class POLDIFitPeaks1DTest(stresstesting.MantidStressTest):
     def runPoldiFitPeaks1D(self, filenames, versions):
         for dataFile, version in zip(filenames, versions):
             args = {"InputWorkspace": dataFile,
-                          "FwhmMultiples": 4,
-                          "PoldiPeakTable": "%s_Peaks" % (dataFile),
-                          "OutputWorkspace": "%s_Peaks_Refined" % (dataFile),
-                          "FitPlotsWorkspace": "%s_FitPlots" % (dataFile),
-                          "Version": version}
+                    "FwhmMultiples": 4,
+                    "PoldiPeakTable": "%s_Peaks" % (dataFile),
+                    "OutputWorkspace": "%s_Peaks_Refined" % (dataFile),
+                    "FitPlotsWorkspace": "%s_FitPlots" % (dataFile),
+                    "Version": version}
 
             if version == 2:
                 args["AllowedOverlap"] = 0.1
@@ -63,19 +64,20 @@ class POLDIFitPeaks1DTest(stresstesting.MantidStressTest):
             referencePeaks = mtd["%s_reference_1DFit" % (dataFile)]
             self.assertEqual(calculatedPeaks.rowCount(), referencePeaks.rowCount())
 
-            positions = calculatedPeaks.column(2)
+            positions = calculatedPeaks.column(3)
+            positionErrors = calculatedPeaks.column(4)
             referencePositions = [float(x) for x in referencePeaks.column(0)]
 
-            fwhms = calculatedPeaks.column(4)
+            fwhms = calculatedPeaks.column(7)
+            fwhmErrors = calculatedPeaks.column(8)
             referenceFwhms = [float(x) for x in referencePeaks.column(1)]
 
             for i in range(10):
           # extract position and fwhm with uncertainties
-                positionparts = positions[i].split()
-                position = [float(positionparts[0]), float(positionparts[2])]
+                position = [positions[i], positionErrors[i]]
+                fwhm = [fwhms[i], fwhmErrors[i]]
 
-                fwhmparts = fwhms[i].split()
-                fwhm = [float(fwhmparts[0]), float(fwhmparts[2])]
+                print position, fwhm, referencePositions
 
                 self.assertTrue(self.positionAcceptable(position))
                 self.assertTrue(self.fwhmAcceptable(fwhm))

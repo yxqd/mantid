@@ -43,13 +43,11 @@
        <property name="workspaceSuffixes" stdset="0">
         <stringlist>
          <string>_res</string>
-         <string>_sqw</string>
         </stringlist>
        </property>
        <property name="fileBrowserSuffixes" stdset="0">
         <stringlist>
          <string>_res.nxs</string>
-         <string>_sqw.nxs</string>
         </stringlist>
        </property>
        <property name="showLoad" stdset="0">
@@ -81,13 +79,11 @@
        <property name="workspaceSuffixes" stdset="0">
         <stringlist>
          <string>_red</string>
-         <string>_sqw</string>
         </stringlist>
        </property>
        <property name="fileBrowserSuffixes" stdset="0">
         <stringlist>
          <string>_red.nxs</string>
-         <string>_sqw.nxs</string>
         </stringlist>
        </property>
       </widget>
@@ -208,14 +204,14 @@
          </spacer>
         </item>
         <item>
-         <widget class="QCheckBox" name="chkSave">
+         <widget class="QCheckBox" name="ckSave">
           <property name="text">
            <string>Save Result</string>
           </property>
          </widget>
         </item>
        </layout>
-       <zorder>chkSave</zorder>
+       <zorder>ckSave</zorder>
        <zorder>lblPlot</zorder>
        <zorder>cbPlot</zorder>
       </widget>

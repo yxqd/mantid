@@ -6,6 +6,7 @@ set ( SRC_FILES
     src/CheckboxHeader.cpp
     src/DataSelector.cpp
     src/DiagResults.cpp
+    src/ErrorCurve.cpp
     src/FilenameDialogEditor.cpp
     src/FindDialog.cpp
     src/FindReplaceDialog.cpp
@@ -16,6 +17,7 @@ set ( SRC_FILES
     src/HintingLineEdit.cpp
     src/InstrumentSelector.cpp
     src/IndirectInstrumentConfig.cpp
+    src/InputController.cpp
     src/MantidHelpWindow.cpp
     src/MWDiag.cpp
     src/MWRunFiles.cpp
@@ -24,6 +26,7 @@ set ( SRC_FILES
     src/MuonFitPropertyBrowser.cpp
     src/MuonSequentialFitDialog.cpp
     src/PeakPicker.cpp
+    src/PeriodicTableWidget.cpp
     src/PreviewPlot.cpp
     src/ProcessingAlgoWidget.cpp
     src/PropertyHandler.cpp
@@ -65,6 +68,7 @@ set ( MOC_FILES
     inc/MantidQtMantidWidgets/CatalogSelector.h
     inc/MantidQtMantidWidgets/InstrumentSelector.h
     inc/MantidQtMantidWidgets/IndirectInstrumentConfig.h
+    inc/MantidQtMantidWidgets/InputController.h
     inc/MantidQtMantidWidgets/MantidHelpWindow.h
     inc/MantidQtMantidWidgets/MessageDisplay.h
     inc/MantidQtMantidWidgets/MultifitSetupDialog.h
@@ -73,6 +77,7 @@ set ( MOC_FILES
     inc/MantidQtMantidWidgets/MWDiag.h
     inc/MantidQtMantidWidgets/MWRunFiles.h
     inc/MantidQtMantidWidgets/PeakPicker.h
+    inc/MantidQtMantidWidgets/PeriodicTableWidget.h
     inc/MantidQtMantidWidgets/pqHelpWindow.h
     inc/MantidQtMantidWidgets/PreviewPlot.h
     inc/MantidQtMantidWidgets/PropertyHandler.h
@@ -101,6 +106,7 @@ set ( INC_FILES
     ${MOC_FILES}
     inc/MantidQtMantidWidgets/AlgorithmHintStrategy.h
     inc/MantidQtMantidWidgets/CatalogHelper.h
+    inc/MantidQtMantidWidgets/ErrorCurve.h
     inc/MantidQtMantidWidgets/WidgetDllOption.h
     inc/MantidQtMantidWidgets/HintStrategy.h
 )
@@ -122,6 +128,7 @@ set ( UI_FILES
     inc/MantidQtMantidWidgets/SlicingAlgorithmDialog.ui
     inc/MantidQtMantidWidgets/SlitCalculator.ui
     inc/MantidQtMantidWidgets/UserFunctionDialog.ui
+    inc/MantidQtMantidWidgets/PeriodicTableWidget.ui
     inc/MantidQtMantidWidgets/PreviewPlot.ui
     inc/MantidQtMantidWidgets/pqHelpWindow.ui
 )
@@ -145,7 +152,6 @@ set ( ALL_SRC ${SRC_FILES} ${MOCCED_FILES} )
 
 qt4_wrap_ui ( UI_HDRS ${UI_FILES} ) 
 
-find_package ( QScintilla REQUIRED )
 include_directories ( ${QSCINTILLA_INCLUDE_DIR} )
 add_definitions ( -DQSCINTILLA_DLL )     # Will only have an effect on Windows (as is desired)
 
@@ -160,10 +166,15 @@ if (OSX_VERSION VERSION_GREATER 10.8)
   set_target_properties ( MantidWidgets PROPERTIES INSTALL_RPATH "@loader_path/../MacOS")
 endif ()
 
-target_link_libraries ( MantidWidgets MantidQtAPI QtPropertyBrowser 
-    ${QT_LIBRARIES} ${QWT_LIBRARIES} 
-    ${QSCINTILLA_LIBRARIES}
-    )
+target_link_libraries ( MantidWidgets LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME} 
+            MantidQtAPI
+            QtPropertyBrowser
+            ${CORE_MANTIDLIBS}
+            ${QT_LIBRARIES} ${QWT_LIBRARIES}
+            ${QSCINTILLA_LIBRARIES}
+            ${POCO_LIBRARIES}
+            ${Boost_LIBRARIES}
+            )
 
 ###########################################################################
 # Testing

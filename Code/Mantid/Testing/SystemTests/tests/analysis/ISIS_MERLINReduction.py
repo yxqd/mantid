@@ -1,6 +1,6 @@
 #pylint: disable=invalid-name
 """ Sample MERLIN reduction scrip """
-import os
+#import os
 #os.environ["PATH"] = r"c:/Mantid/Code/builds/br_master/bin/Release;"+os.environ["PATH"]
 
 from Direct.ReductionWrapper import *
@@ -25,7 +25,8 @@ class ReduceMERLIN(ReductionWrapper):
 
       # Absolute units reduction properties.
        #prop['monovan_run'] = 17589
-       #prop['sample_mass'] = 10/(94.4/13) # -- this number allows to get approximately the same system test intensities for MAPS as the old test
+       #prop['sample_mass'] = 10/(94.4/13)
+       # -- this number allows to get approximately the same system test intensities for MAPS as the old test
        #prop['sample_rmm'] = 435.96 #
         return prop
 
@@ -53,7 +54,7 @@ class ReduceMERLIN(ReductionWrapper):
      #SaveNexus(ws,Filename = 'MARNewReduction.nxs')
         return outWS
 
-    def __init__(self):
+    def __init__(self,web_var=None):
         """ sets properties defaults for the instrument with Name"""
         ReductionWrapper.__init__(self,'MER',web_var)
 #----------------------------------------------------------------------------------------------------------------------
@@ -61,12 +62,12 @@ class ReduceMERLIN(ReductionWrapper):
 
 
 if __name__=="__main__":
-    maps_dir = 'd:/Data/MantidSystemTests/Data'
-    data_dir ='d:/Data/Mantid_Testing/14_11_27'
-    ref_data_dir = 'd:/Data/MantidSystemTests/SystemTests/AnalysisTests/ReferenceResults'
-    config.setDataSearchDirs('{0};{1};{2}'.format(data_dir,maps_dir,ref_data_dir))
-     #config.appendDataSearchDir('d:/Data/Mantid_GIT/Test/AutoTestData')
-    config['defaultsave.directory'] = data_dir # folder to save resulting spe/nxspe files. Defaults are in
+    #maps_dir = 'd:/Data/MantidSystemTests/Data'
+    #data_dir ='d:/Data/Mantid_Testing/14_11_27'
+    #ref_data_dir = 'd:/Data/MantidSystemTests/SystemTests/AnalysisTests/ReferenceResults'
+    #config.setDataSearchDirs('{0};{1};{2}'.format(data_dir,maps_dir,ref_data_dir))
+    #config.appendDataSearchDir('d:/Data/Mantid_GIT/Test/AutoTestData')
+    #config['defaultsave.directory'] = data_dir # folder to save resulting spe/nxspe files. Defaults are in
 
      # execute stuff from Mantid
     rd = ReduceMERLIN()

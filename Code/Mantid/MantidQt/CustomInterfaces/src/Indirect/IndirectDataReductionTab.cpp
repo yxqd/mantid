@@ -21,7 +21,7 @@ namespace CustomInterfaces
   /** Constructor
    */
   IndirectDataReductionTab::IndirectDataReductionTab(IndirectDataReduction *idrUI, QObject *parent) :
-    IndirectTab(parent), m_idrUI(idrUI)
+    IndirectTab(parent), m_idrUI(idrUI), m_tabRunning(false)
   {
     connect(m_batchAlgoRunner, SIGNAL(batchComplete(bool)), this, SLOT(tabExecutionComplete(bool)));
   }
@@ -84,7 +84,7 @@ namespace CustomInterfaces
    *
    * @return Map of information ID to value
    */
-  std::map<QString, QString> IndirectDataReductionTab::getInstrumentDetails()
+  QMap<QString, QString> IndirectDataReductionTab::getInstrumentDetails()
   {
     return m_idrUI->getInstrumentDetails();
   }
@@ -188,7 +188,7 @@ namespace CustomInterfaces
     loadParamAlg->execute();
     energyWs = loadParamAlg->getProperty("Workspace");
 
-    double efixed = energyWs->getInstrument()->getNumberParameter("efixed-val")[0];
+    double efixed = getEFixed(energyWs);
 
     auto spectrum = energyWs->getSpectrum(0);
     spectrum->setSpectrumNo(3);

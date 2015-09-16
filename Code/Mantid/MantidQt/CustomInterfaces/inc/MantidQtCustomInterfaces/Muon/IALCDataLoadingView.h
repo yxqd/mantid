@@ -1,7 +1,7 @@
 #ifndef MANTIDQT_CUSTOMINTERFACES_IALCDATALOADINGVIEW_H_
 #define MANTIDQT_CUSTOMINTERFACES_IALCDATALOADINGVIEW_H_
 
-#include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/MatrixWorkspace_fwd.h"
 
 #include "MantidQtCustomInterfaces/DllConfig.h"
 #include "MantidKernel/System.h"
@@ -53,6 +53,10 @@ namespace CustomInterfaces
     /// @return Log name
     virtual std::string log() const = 0;
 
+    /// Returns the function to apply
+    /// @return Log function
+    virtual std::string function() const = 0;
+
     /// @return dead time correction type to use
     virtual std::string deadTimeType() const = 0;
 
@@ -89,7 +93,9 @@ namespace CustomInterfaces
 
     /// Updates the data curve
     /// @param data :: New curve data to set
-    virtual void setDataCurve(const QwtData& data) = 0;
+    /// @param errors :: New curve errors to set
+    virtual void setDataCurve(const QwtData &data,
+                              const std::vector<double> &errors) = 0;
 
     /// Displays an error
     /// @param error :: Error message to display
@@ -103,11 +109,24 @@ namespace CustomInterfaces
     /// @param periods :: New list of periods
     virtual void setAvailablePeriods(const std::vector<std::string>& periods) = 0;
 
+    /// Update the time limits
+    /// @param tMin :: Minimum X value available
+    /// @param tMax :: Maximum X value available
+    virtual void setTimeLimits(double tMin, double tMax) = 0;
+
+    /// Update the time limits
+    /// @param tMin :: Minimum X value available
+    /// @param tMax :: Maximum X value available
+    virtual void setTimeRange(double tMin, double tMax) = 0;
+
     /// Set waiting cursor for long operation
     virtual void setWaitingCursor() = 0;
 
     /// Restore the original cursor
     virtual void restoreCursor() = 0;
+
+    /// Opens the Mantid Wiki web page
+    virtual void help() = 0;
 
   signals:
     /// Request to load data
@@ -115,6 +134,7 @@ namespace CustomInterfaces
 
     /// User has selected the first run
     void firstRunSelected();
+
   };
 
 } // namespace CustomInterfaces

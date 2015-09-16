@@ -10,13 +10,12 @@
 #include "MantidKernel/ConfigService.h"
 #include "MantidDataObjects/Workspace2D.h"
 
-#include <Poco/Path.h>
-#include <Poco/DOM/DOMParser.h>
+#include <Poco/AutoPtr.h>
 #include <Poco/DOM/Document.h>
+#include <Poco/DOM/DOMParser.h>
 #include <Poco/DOM/NodeList.h>
-#include <Poco/DOM/Text.h>
 #include <Poco/SAX/InputSource.h>
-#include <Poco/DOM/AutoPtr.h>
+
 
 #include <boost/lexical_cast.hpp>
 //-----------------------------------------------------------------------
@@ -26,7 +25,6 @@ using Poco::XML::Document;
 using Poco::XML::Element;
 using Poco::XML::NodeList;
 using Poco::XML::Node;
-using Poco::XML::Text;
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
@@ -35,7 +33,7 @@ using namespace Mantid::DataObjects;
 namespace Mantid {
 namespace DataHandling {
 
-DECLARE_FILELOADER_ALGORITHM(LoadCanSAS1D);
+DECLARE_FILELOADER_ALGORITHM(LoadCanSAS1D)
 
 /// constructor
 LoadCanSAS1D::LoadCanSAS1D() : m_groupNumber(0) {}
@@ -186,6 +184,8 @@ LoadCanSAS1D::loadEntry(Poco::XML::Node *const workspaceData,
   MantidVec &E = dataWS->dataE(0);
   MantidVec &Dx = dataWS->dataDx(0);
   int vecindex = 0;
+  std::string yUnit = "";
+  bool isCommon = true;
   // iterate through each Idata element  and get the values of "Q",
   //"I" and "Idev" text nodes and fill X,Y,E vectors
   for (unsigned long index = 0; index < nBins; ++index) {
@@ -214,6 +214,9 @@ LoadCanSAS1D::loadEntry(Poco::XML::Node *const workspaceData,
       // setting Y vector
       Element *iElem = elem->getChildElement("I");
       check(qElem, "I");
+      const std::string unit = iElem->getAttribute("unit");
+      if (index == 0) yUnit = unit;
+      else if (unit != yUnit) isCommon = false;
       nodeVal = iElem->innerText();
       std::stringstream y(nodeVal);
       y >> d;
@@ -240,6 +243,7 @@ LoadCanSAS1D::loadEntry(Poco::XML::Node *const workspaceData,
   runLoadInstrument(instname, dataWS);
 
   dataWS->getAxis(0)->setUnit("MomentumTransfer");
+  if (isCommon == true) dataWS->setYUnitLabel(yUnit);
   return dataWS;
 }
 /* This method throws not found error if a element is not found in the xml file

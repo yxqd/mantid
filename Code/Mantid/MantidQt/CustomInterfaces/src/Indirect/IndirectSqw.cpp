@@ -63,6 +63,7 @@ namespace CustomInterfaces
     QString sampleWsName = m_uiForm.dsSampleInput->getCurrentDataName();
     QString sqwWsName = sampleWsName.left(sampleWsName.length() - 4) + "_sqw";
     QString eRebinWsName = sampleWsName.left(sampleWsName.length() - 4) + "_r";
+    QString method = m_uiForm.cbMethod->currentText();
 
     QString rebinString = m_uiForm.spQLow->text() + "," + m_uiForm.spQWidth->text() +
       "," + m_uiForm.spQHigh->text();
@@ -84,18 +85,9 @@ namespace CustomInterfaces
       m_batchAlgoRunner->addAlgorithm(energyRebinAlg);
     }
 
-    // Get correct S(Q, w) algorithm
-    QString eFixed = getInstrumentDetails()["efixed-val"];
+    QString eFixed = getInstrumentDetails()["Efixed"];
 
-    IAlgorithm_sptr sqwAlg;
-    QString rebinType = m_uiForm.cbRebinType->currentText();
-
-    if(rebinType == "Parallelepiped (SofQW2)")
-      sqwAlg = AlgorithmManager::Instance().create("SofQW2");
-    else if(rebinType == "Parallelepiped/Fractional Area (SofQW3)")
-      sqwAlg = AlgorithmManager::Instance().create("SofQW3");
-
-    // S(Q, w) algorithm
+    IAlgorithm_sptr sqwAlg = AlgorithmManager::Instance().create("SofQW");
     sqwAlg->initialize();
 
     BatchAlgorithmRunner::AlgorithmRuntimeProps sqwInputProps;
@@ -108,6 +100,7 @@ namespace CustomInterfaces
     sqwAlg->setProperty("QAxisBinning", rebinString.toStdString());
     sqwAlg->setProperty("EMode", "Indirect");
     sqwAlg->setProperty("EFixed", eFixed.toStdString());
+    sqwAlg->setProperty("Method", method.toStdString());
 
     m_batchAlgoRunner->addAlgorithm(sqwAlg, sqwInputProps);
 
@@ -117,7 +110,7 @@ namespace CustomInterfaces
 
     sampleLogAlg->setProperty("LogName", "rebin_type");
     sampleLogAlg->setProperty("LogType", "String");
-    sampleLogAlg->setProperty("LogText", rebinType.toStdString());
+    sampleLogAlg->setProperty("LogText", method.toStdString());
 
     BatchAlgorithmRunner::AlgorithmRuntimeProps inputToAddSampleLogProps;
     inputToAddSampleLogProps["Workspace"] = sqwWsName.toStdString();
@@ -160,22 +153,17 @@ namespace CustomInterfaces
     QString sampleWsName = m_uiForm.dsSampleInput->getCurrentDataName();
     QString sqwWsName = sampleWsName.left(sampleWsName.length() - 4) + "_sqw";
 
-    QString pyInput = "sqw_ws = '" + sqwWsName + "'\n";
     QString plotType = m_uiForm.cbPlotType->currentText();
 
     if(plotType == "Contour")
-    {
-      pyInput += "plot2D(sqw_ws)\n";
-    }
+      plot2D(sqwWsName);
 
     else if(plotType == "Spectra")
     {
-      pyInput +=
-        "n_spec = mtd[sqw_ws].getNumberHistograms()\n"
-        "plotSpectrum(sqw_ws, range(0, n_spec))\n";
+      auto ws = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(sqwWsName.toStdString());
+      int numHist = static_cast<int>(ws->getNumberHistograms());
+      plotSpectrum(sqwWsName, 0, numHist);
     }
-
-    m_pythonRunner.runPythonCode(pyInput);
   }
 
   /**

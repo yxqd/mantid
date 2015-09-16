@@ -6,11 +6,10 @@
 #include "DllOption.h"
 #include "MantidAPI/IMDIterator.h"
 #include "MantidAPI/IMDWorkspace.h"
-#include "MantidAPI/PeakTransformSelector.h"
+#include "MantidGeometry/Crystal/PeakTransformSelector.h"
 #include "MantidGeometry/MDGeometry/MDHistoDimension.h"
 #include "MantidKernel/Logger.h"
 #include "MantidKernel/VMD.h"
-#include "MantidQtAPI/MantidColorMap.h"
 #include "MantidQtAPI/MdSettings.h"
 #include "MantidQtMantidWidgets/SafeQwtPlot.h"
 #include "MantidQtAPI/SyncedCheckboxes.h"
@@ -19,21 +18,16 @@
 #include "MantidQtSliceViewer/ZoomablePeaksView.h"
 #include "MantidQtAPI/QwtRasterDataMD.h"
 #include "ui_SliceViewer.h"
-#include <QtCore/QtCore>
-#include <QtGui/qdialog.h>
-#include <QtGui/QWidget>
 #include <qwt_color_map.h>
 #include <qwt_plot_spectrogram.h>
 #include <qwt_plot.h>
-#include <qwt_raster_data.h>
-#include <qwt_scale_widget.h>
 #include <vector>
-#include "MantidAPI/Algorithm.h"
 #include "MantidQtAPI/AlgorithmRunner.h"
 #include <boost/shared_ptr.hpp>
 
 class QDragEnterEvent;
 class QDropEvent;
+class QwtPlotRescaler;
 
 namespace Mantid
 {
@@ -50,6 +44,21 @@ namespace SliceViewer
 // Forward dec
 class CompositePeaksPresenter;
 class ProxyCompositePeaksPresenter;
+
+// Static Const values
+static const std::string g_iconPathPrefix = ":/SliceViewer/icons/";
+static const std::string g_iconZoomPlus = g_iconPathPrefix + "colour zoom plus scale 32x32.png";
+static const std::string g_iconZoomMinus = g_iconPathPrefix + "colour zoom minus scale 32x32.png";
+static const std::string g_iconViewFull = g_iconPathPrefix + "view-fullscreen.png";
+static const std::string g_iconCutOn = g_iconPathPrefix + "cut on 32x32.png";
+static const std::string g_iconCut = g_iconPathPrefix + "cut 32x32.png";
+static const std::string g_iconGridOn = g_iconPathPrefix + "grid on 32x32.png";
+static const std::string g_iconGrid = g_iconPathPrefix + "grid 32x32.png";
+static const std::string g_iconRebinOn = g_iconPathPrefix + "rebin on 32x32.png";
+static const std::string g_iconRebin = g_iconPathPrefix + "rebin 32x32.png";
+static const std::string g_iconPeakListOn = g_iconPathPrefix + "Peak List on 32x32.png";
+static const std::string g_iconPeakList = g_iconPathPrefix + "Peak List 32x32.png";
+
 
 /** GUI for viewing a 2D slice out of a multi-dimensional workspace.
  * You can select which dimension to plot as X,Y, and the cut point
@@ -88,7 +97,9 @@ public:
   void setColorScaleMin(double min);
   void setColorScaleMax(double max);
   void setColorScaleLog(bool log);
+  int getColorScaleType();
   void setColorScale(double min, double max, bool log);
+  void setColorScale(double min, double max, int type);
   void setColorMapBackground(int r, int g, int b);
   double getColorScaleMin() const;
   double getColorScaleMax() const;
@@ -163,6 +174,7 @@ public slots:
   void changeNormalizationNone();
   void changeNormalizationVolume();
   void changeNormalizationNumEvents();
+  void onNormalizationChanged(const QString& normalizationKey);
 
   // Buttons or actions
   void clearLine();
@@ -170,6 +182,7 @@ public slots:
   void saveImage(const QString & filename = QString());
   void copyImageToClipboard();
   void onPeaksViewerOverlayOptions();
+
 
   // Synced checkboxes
   void LineMode_toggled(bool);
@@ -183,6 +196,10 @@ public slots:
   void dynamicRebinComplete(bool error);
   // Peaks overlay
   void peakOverlay_clicked();
+  // Aspect ratios
+  void changeAspectRatioGuess();
+  void changeAspectRatioAll();
+  void changeAspectRatioUnlock();
 
 protected:
 
@@ -190,8 +207,13 @@ protected:
   void dropEvent(QDropEvent *e);
 
 private:
+  enum AspectRatioType{Guess=0, All=1, Unlock=2};
   void loadSettings();
   void saveSettings();
+  void setIconFromString(QAction* action, const std::string& iconName,
+    QIcon::Mode mode, QIcon::State state);
+  void setIconFromString(QAbstractButton* btn, const std::string& iconName,
+    QIcon::Mode mode, QIcon::State state);
   void initMenus();
   void initZoomer();
 
@@ -215,7 +237,14 @@ private:
   // helper for saveImage
   QString ensurePngExtension(const QString& fname) const;
 
+  // Rescaler methods
+  void updateAspectRatios();
+
+  // Set aspect ratio type.
+  void setAspectRatio(AspectRatioType type);
+
 private:
+  
 
   // -------------------------- Widgets ----------------------------
 
@@ -297,6 +326,10 @@ private:
   QAction *m_actionNormalizeVolume;
   QAction *m_actionNormalizeNumEvents;
   QAction *m_actionRefreshRebin;
+  QAction *m_lockAspectRatiosActionGuess;
+  QAction *m_lockAspectRatiosActionAll;
+  QAction *m_lockAspectRatiosActionUnlock;
+
 
   /// Synced menu/buttons
   MantidQt::API::SyncedCheckboxes *m_syncLineMode, *m_syncSnapToGrid,
@@ -335,11 +368,20 @@ private:
   DimensionSliceWidget* m_peaksSliderWidget;
 
   /// Object for choosing a PeakTransformFactory based on the workspace type.
-  Mantid::API::PeakTransformSelector m_peakTransformSelector;
+  Mantid::Geometry::PeakTransformSelector m_peakTransformSelector;
+
+  /// Plot rescaler. For fixed aspect ratios.
+  QwtPlotRescaler* m_rescaler;
+
+  static const QString NoNormalizationKey;
+  static const QString VolumeNormalizationKey;
+  static const QString NumEventsNormalizationKey;
+
+  AspectRatioType m_aspectRatioType;
 
 };
 
 } // namespace SliceViewer
-} // namespace Mantid
+} // namespace MantidQt
 
 #endif // SLICEVIEWER_H

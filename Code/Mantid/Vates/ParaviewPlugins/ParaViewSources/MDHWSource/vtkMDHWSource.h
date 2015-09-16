@@ -1,7 +1,9 @@
 #ifndef _vtkMDHWSource_h 
 #define _vtkMDHWSource_h
 
-#include "vtkUnstructuredGridAlgorithm.h"
+#include "MantidVatesAPI/Normalization.h"
+#include "vtkStructuredGridAlgorithm.h"
+
 #include <string>
 
 namespace Mantid
@@ -40,11 +42,11 @@ namespace Mantid
 */
 
 // cppcheck-suppress class_X_Y
-class VTK_EXPORT vtkMDHWSource : public vtkUnstructuredGridAlgorithm
+class VTK_EXPORT vtkMDHWSource : public vtkStructuredGridAlgorithm
 {
 public:
   static vtkMDHWSource *New();
-  vtkTypeMacro(vtkMDHWSource, vtkUnstructuredGridAlgorithm);
+  vtkTypeMacro(vtkMDHWSource, vtkStructuredGridAlgorithm)
   void PrintSelf(ostream& os, vtkIndent indent);
   
   void SetWsName(std::string wsName);
@@ -71,6 +73,8 @@ public:
   double GetMaxValue();
   /// Getter for the maximum value of the workspace data
   const char* GetInstrument();
+  /// Setter for the normalization
+  void SetNormalization(int option);
 
 protected:
   vtkMDHWSource();
@@ -91,6 +95,10 @@ private:
 
   /// Cached typename.
   std::string typeName;
+
+  /// Normalization Option
+  Mantid::VATES::VisualNormalization m_normalizationOption;
+
 
   vtkMDHWSource(const vtkMDHWSource&);
   void operator = (const vtkMDHWSource&);

@@ -1,34 +1,34 @@
+#include <time.h>
+#include <sstream> // for ostringstream
+#include <string>
+#include <exception>
+
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/LiveListenerFactory.h"
 #include "MantidAPI/WorkspaceFactory.h"
-#include "MantidLiveData/SNSLiveEventDataListener.h"
-#include "MantidLiveData/Exception.h"
 #include "MantidDataObjects/Events.h"
 #include "MantidKernel/DateAndTime.h"
 #include "MantidKernel/Strings.h"
 #include "MantidKernel/TimeSeriesProperty.h"
 #include "MantidKernel/UnitFactory.h"
 #include "MantidKernel/WriteLock.h"
+#include "MantidLiveData/SNSLiveEventDataListener.h"
+#include "MantidLiveData/Exception.h"
+
+// Includes for parsing the XML device descriptions
+#include <Poco/DOM/AutoPtr.h>
+#include <Poco/DOM/Document.h>
+#include <Poco/DOM/DOMParser.h>
+#include <Poco/DOM/NamedNodeMap.h>
+#include <Poco/DOM/NodeList.h>
 
 #include <Poco/Net/NetException.h>
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/Net/SocketStream.h>
 #include <Poco/Timestamp.h>
 
-// Includes for parsing the XML device descriptions
-#include "Poco/DOM/DOMParser.h"
-#include "Poco/DOM/Document.h"
-#include "Poco/DOM/AutoPtr.h"
-#include "Poco/DOM/NodeList.h"
-#include "Poco/DOM/NamedNodeMap.h"
-
 #include <Poco/Thread.h>
 #include <Poco/Runnable.h>
-
-#include <time.h>
-#include <sstream> // for ostringstream
-#include <string>
-#include <exception>
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
@@ -54,7 +54,7 @@ Mantid::Kernel::DateAndTime timeFromPacket(const ADARA::PacketHeader &hdr) {
 
 namespace Mantid {
 namespace LiveData {
-DECLARE_LISTENER(SNSLiveEventDataListener);
+DECLARE_LISTENER(SNSLiveEventDataListener)
 // The DECLARE_LISTENER macro seems to confuse some editors' syntax checking.
 // The semi-colon limits the complaints to one line.  It has no actual effect
 // on the code.
@@ -265,7 +265,12 @@ void SNSLiveEventDataListener::run() {
           bufferBytesAppended(bytesRead);
         }
       }
-      int packetsParsed = bufferParse();
+
+      std::string bufferParseLog;
+      // bufferParse() wants a string where it can save log messages.
+      // We don't actually use the messages for anything, though.
+      int packetsParsed = bufferParse( bufferParseLog);
+      bufferParseLog.clear();  // keep the string from growing without bound
       if (packetsParsed == 0) {
         // No packets were parsed.  Sleep a little to let some data accumulate
         // before calling read again.  (Keeps us from spinlocking the cpu...)
@@ -1157,7 +1162,7 @@ bool SNSLiveEventDataListener::rxPacket(const ADARA::AnnotationPkt &pkt) {
   {
     Poco::ScopedLock<Poco::FastMutex> scopedLock(m_mutex);
     // We have to lock the mutex prior to calling mutableRun()
-    switch (pkt.type()) {
+    switch (pkt.marker_type()) {
     case ADARA::MarkerType::GENERIC:
       // Do nothing.  We log the comment field below for all types
       break;

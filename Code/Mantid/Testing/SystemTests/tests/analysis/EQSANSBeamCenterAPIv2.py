@@ -1,6 +1,5 @@
-#pylint: disable=no-init
+#pylint: disable=no-init,attribute-defined-outside-init
 import stresstesting
-import mantid
 from mantid.simpleapi import *
 from reduction_workflow.instruments.sans.sns_command_interface import *
 from mantid.api import *
@@ -20,8 +19,8 @@ class EQSANSBeamCenter(stresstesting.MantidStressTest):
         return True
 
     def runTest(self):
-        config = ConfigService.Instance()
-        config["facilityName"]='SNS'
+        configI = ConfigService.Instance()
+        configI["facilityName"]='SNS'
         EQSANS(False)
         AppendDataFile("EQSANS_4061_event.nxs")
         NoSolidAngle()
@@ -56,8 +55,8 @@ class EQSANSBeamCenterEvent(EQSANSBeamCenter):
         return True
 
     def runTest(self):
-        config = ConfigService.Instance()
-        config["facilityName"]='SNS'
+        configI = ConfigService.Instance()
+        configI["facilityName"]='SNS'
         EQSANS(True)
         AppendDataFile("EQSANS_4061_event.nxs")
         NoSolidAngle()

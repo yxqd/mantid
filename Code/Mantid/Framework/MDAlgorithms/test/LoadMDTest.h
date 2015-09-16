@@ -1,26 +1,24 @@
 #ifndef MANTID_MDALGORITHMS_LOADMDEWTEST_H_
 #define MANTID_MDALGORITHMS_LOADMDEWTEST_H_
 
-#include "MantidAPI/IMDEventWorkspace.h"
-#include "MantidKernel/CPUTimer.h"
-#include "MantidKernel/System.h"
-#include "MantidKernel/Timer.h"
-#include "MantidMDEvents/MDBox.h"
-#include "MantidMDEvents/MDGridBox.h"
-#include "MantidMDEvents/MDEventFactory.h"
-#include "MantidMDEvents/MDEventWorkspace.h"
-#include "MantidMDEvents/BoxControllerNeXusIO.h"
 #include "SaveMDTest.h"
-#include <cxxtest/TestSuite.h>
-#include <iomanip>
-#include <iostream>
+#include "SaveMD2Test.h"
+
+#include "MantidAPI/IMDEventWorkspace.h"
 #include "MantidAPI/ExperimentInfo.h"
+#include "MantidDataObjects/MDBox.h"
+#include "MantidDataObjects/MDGridBox.h"
+#include "MantidDataObjects/MDEventFactory.h"
+#include "MantidDataObjects/MDEventWorkspace.h"
+#include "MantidDataObjects/BoxControllerNeXusIO.h"
 #include "MantidMDAlgorithms/LoadMD.h"
+
+#include <cxxtest/TestSuite.h>
 
 #include <hdf5.h>
 
 using namespace Mantid;
-using namespace Mantid::MDEvents;
+using namespace Mantid::DataObjects;
 using namespace Mantid::MDAlgorithms;
 using namespace Mantid::API;
 using namespace Mantid::Kernel;
@@ -199,7 +197,7 @@ public:
     ws1->addExperimentInfo(ei);
 
     // -------- Save it ---------------
-    SaveMD saver;
+    SaveMD2 saver;
     TS_ASSERT_THROWS_NOTHING( saver.initialize() )
     TS_ASSERT( saver.isInitialized() )
     TS_ASSERT_THROWS_NOTHING( saver.setProperty("InputWorkspace", "LoadMDTest_ws" ) );
@@ -217,8 +215,6 @@ public:
     // Name of the output workspace.
     std::string outWSName("LoadMDTest_OutputWS");
 
-    CPUTimer tim;
-
     LoadMD alg;
     TS_ASSERT_THROWS_NOTHING( alg.initialize() )
     TS_ASSERT( alg.isInitialized() )
@@ -231,17 +227,14 @@ public:
     TS_ASSERT_THROWS_NOTHING( alg.execute(); );
     TS_ASSERT( alg.isExecuted() );
 
-    std::cout << tim << " to do the entire MDEW loading." << std::endl;
-
     // Retrieve the workspace from data service.
     IMDEventWorkspace_sptr iws;
     TS_ASSERT_THROWS_NOTHING( iws = AnalysisDataService::Instance().retrieveWS<IMDEventWorkspace>(outWSName) );
     TS_ASSERT(iws);
     if (!iws) return;
-
-    boost::shared_ptr<MDEventWorkspace<MDE,nd> > ws = boost::dynamic_pointer_cast<MDEventWorkspace<MDLeanEvent<nd>,nd> >(iws);
-
+ 
     // Perform the full comparison
+    auto ws = boost::dynamic_pointer_cast<MDEventWorkspace<MDLeanEvent<nd>,nd> >(iws);
     do_compare_MDEW(ws, ws1, BoxStructureOnly);
 
     // Look for the not-disk-cached-cause-they-are-too-small
@@ -327,7 +320,7 @@ public:
 
     // There are some new boxes that are not cached to disk at this point.
     // Save it again.
-    SaveMD saver;
+    SaveMD2 saver;
     TS_ASSERT_THROWS_NOTHING( saver.initialize() )
     TS_ASSERT( saver.isInitialized() )
     TS_ASSERT_THROWS_NOTHING( saver.setPropertyValue("InputWorkspace", outWSName ) );
@@ -437,7 +430,7 @@ public:
     AnalysisDataService::Instance().addOrReplace("LoadMDTest_ws", boost::dynamic_pointer_cast<IMDEventWorkspace>(ws1));
 
     // Save it
-    SaveMD saver;
+    SaveMD2 saver;
     TS_ASSERT_THROWS_NOTHING( saver.initialize() )
     TS_ASSERT( saver.isInitialized() )
     TS_ASSERT_THROWS_NOTHING( saver.setProperty("InputWorkspace", "LoadMDTest_ws" ) );
@@ -478,10 +471,8 @@ public:
 
   }
 
-
-
-  /** Run SaveMD with the MDHistoWorkspace */
-  void doTestHisto(MDHistoWorkspace_sptr ws)
+  /** Run SaveMD v1 with the MDHistoWorkspace */
+  void doTestHistoV1(MDHistoWorkspace_sptr ws)
   {
     std::string filename = "SaveMDTestHisto.nxs";
 
@@ -520,15 +511,57 @@ public:
       Poco::File(filename).remove();
   }
 
+  /** Run SaveMD2 with the MDHistoWorkspace */
+  void doTestHisto(MDHistoWorkspace_sptr ws)
+  {
+    std::string filename = "SaveMD2TestHisto.nxs";
+
+    SaveMD2 alg1;
+    TS_ASSERT_THROWS_NOTHING( alg1.initialize() )
+    TS_ASSERT( alg1.isInitialized() )
+    TS_ASSERT_THROWS_NOTHING( alg1.setProperty("InputWorkspace", ws) );
+    TS_ASSERT_THROWS_NOTHING( alg1.setPropertyValue("Filename", filename) );
+    alg1.execute();
+    TS_ASSERT( alg1.isExecuted() );
+    filename = alg1.getPropertyValue("Filename");
+
+    LoadMD alg;
+    TS_ASSERT_THROWS_NOTHING( alg.initialize() )
+    TS_ASSERT( alg.isInitialized() )
+    TS_ASSERT_THROWS_NOTHING( alg.setPropertyValue("Filename", filename) );
+    TS_ASSERT_THROWS_NOTHING( alg.setPropertyValue("OutputWorkspace", "loaded") );
+    TS_ASSERT_THROWS_NOTHING( alg.execute(); );
+    TS_ASSERT( alg.isExecuted() );
+
+    MDHistoWorkspace_sptr newWS;
+    TS_ASSERT_THROWS_NOTHING( newWS = AnalysisDataService::Instance().retrieveWS<MDHistoWorkspace>("loaded") );
+    TS_ASSERT(newWS); if (!newWS) return;
+
+    TS_ASSERT_EQUALS( ws->getNPoints(), newWS->getNPoints());
+    TS_ASSERT_EQUALS( ws->getNumDims(), newWS->getNumDims());
+    for (size_t i=0; i<ws->getNPoints(); i++)
+    {
+      TS_ASSERT_DELTA(ws->getSignalAt(i), newWS->getSignalAt(i), 1e-6);
+      TS_ASSERT_DELTA(ws->getErrorAt(i), newWS->getErrorAt(i), 1e-6);
+      TS_ASSERT_DELTA(ws->getNumEventsAt(i), newWS->getNumEventsAt(i), 1e-6);
+      TS_ASSERT_EQUALS(ws->getIsMaskedAt(i), newWS->getIsMaskedAt(i));
+    }
+
+    if (Poco::File(filename).exists())
+      Poco::File(filename).remove();
+  }
+
   void test_histo2() 
   {
     MDHistoWorkspace_sptr ws = MDEventsTestHelper::makeFakeMDHistoWorkspace(2.5, 2, 10, 10.0, 3.5, "histo2", 4.5);
+    doTestHistoV1(ws);
     doTestHisto(ws);
   }
 
   void test_histo3()
   {
     MDHistoWorkspace_sptr ws = MDEventsTestHelper::makeFakeMDHistoWorkspace(2.5, 3, 4, 10.0, 3.5, "histo3", 4.5);
+    doTestHistoV1(ws);
     doTestHisto(ws);
   }
 
@@ -608,7 +641,7 @@ public:
                            const char *rootGroup,
                            const bool rmCoordField = false) {
     const std::string fileName = "SaveMDSpecialCoordinatesTest.nxs";
-    SaveMD saveAlg;
+    SaveMD2 saveAlg;
     saveAlg.setChild(true);
     saveAlg.initialize();
     saveAlg.setProperty("InputWorkspace", inputWS);
@@ -621,7 +654,7 @@ public:
       // Remove the coordinate_system entry so it falls back on the log. NeXus
       // can't do this
       // so use the HDF5 API directly
-      auto fid = H5Fopen(fileName.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+      auto fid = H5Fopen(this_fileName.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
       auto gid = H5Gopen(fid, rootGroup, H5P_DEFAULT);
       if (gid > 0) {
         H5Ldelete(gid, "coordinate_system", H5P_DEFAULT);
@@ -669,7 +702,7 @@ public:
     balg.setProperty("AlignedDim3", "Axis3,0,10,2");
     balg.execute();
 
-    SaveMD alg;
+    SaveMD2 alg;
     alg.initialize();
     alg.setPropertyValue("InputWorkspace", "SaveMDAffineTestHisto_ws");
     alg.setPropertyValue("Filename", filename);

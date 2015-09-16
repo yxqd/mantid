@@ -1,4 +1,5 @@
 set ( SRC_FILES
+	${SRC_FILES} ${OPENCASCADE_SRC}
 	src/ComponentParser.cpp
 	src/Crystal/BraggScatterer.cpp
 	src/Crystal/BraggScattererFactory.cpp
@@ -9,10 +10,16 @@ set ( SRC_FILES
 	src/Crystal/CrystalStructure.cpp
 	src/Crystal/CyclicGroup.cpp
 	src/Crystal/Group.cpp
+	src/Crystal/IPeak.cpp
 	src/Crystal/IndexingUtils.cpp
 	src/Crystal/IsotropicAtomBraggScatterer.cpp
 	src/Crystal/NiggliCell.cpp
 	src/Crystal/OrientedLattice.cpp
+	src/Crystal/PeakTransform.cpp
+	src/Crystal/PeakTransformHKL.cpp
+	src/Crystal/PeakTransformQLab.cpp
+	src/Crystal/PeakTransformQSample.cpp
+	src/Crystal/PeakTransformSelector.cpp
 	src/Crystal/PointGroup.cpp
 	src/Crystal/PointGroupFactory.cpp
 	src/Crystal/ProductOfCyclicGroups.cpp
@@ -51,9 +58,12 @@ set ( SRC_FILES
 	src/Instrument/ReferenceFrame.cpp
 	src/Instrument/XMLInstrumentParameter.cpp
 	src/MDGeometry/CompositeImplicitFunction.cpp
+	src/MDGeometry/GeneralFrame.cpp
+	src/MDGeometry/HKL.cpp
 	src/MDGeometry/IMDDimension.cpp
 	src/MDGeometry/IMDDimensionFactory.cpp
 	src/MDGeometry/MDBoxImplicitFunction.cpp
+	src/MDGeometry/MDFrameFactory.cpp
 	src/MDGeometry/MDGeometryXMLBuilder.cpp
 	src/MDGeometry/MDGeometryXMLParser.cpp
 	src/MDGeometry/MDHistoDimension.cpp
@@ -62,18 +72,19 @@ set ( SRC_FILES
 	src/MDGeometry/MDPlane.cpp
 	src/MDGeometry/MDPlaneImplicitFunction.cpp
 	src/MDGeometry/NullImplicitFunction.cpp
+	src/MDGeometry/QLab.cpp
+	src/MDGeometry/QSample.cpp
 	src/Math/Acomp.cpp
 	src/Math/Algebra.cpp
 	src/Math/BnId.cpp
 	src/Math/ConvexPolygon.cpp
-	src/Math/LaszloIntersection.cpp
+	src/Math/ConvexPolygonIterator.cpp
 	src/Math/PolyBase.cpp
 	src/Math/PolygonEdge.cpp
+	src/Math/PolygonIntersection.cpp
 	src/Math/Quadrilateral.cpp
 	src/Math/RotCounter.cpp
 	src/Math/Triple.cpp
-	src/Math/Vertex2D.cpp
-	src/Math/Vertex2DList.cpp
 	src/Math/mathSupport.cpp
 	src/Objects/BoundingBox.cpp
 	src/Objects/InstrumentRayTracer.cpp
@@ -111,11 +122,11 @@ set ( OPENCASCADE_SRC
 )
 
 set ( SRC_UNITY_IGNORE_FILES src/Instrument/CompAssembly.cpp
-  src/Instrument/ObjCompAssembly.cpp 
+  src/Instrument/ObjCompAssembly.cpp
   src/Rendering/OCGeometryHandler.cpp
   src/Rendering/OCGeometryRenderer.cpp
 )
-        
+
 set ( INC_FILES
 	inc/MantidGeometry/ComponentParser.h
 	inc/MantidGeometry/Crystal/BraggScatterer.h
@@ -123,15 +134,23 @@ set ( INC_FILES
 	inc/MantidGeometry/Crystal/BraggScattererInCrystalStructure.h
 	inc/MantidGeometry/Crystal/CenteringGroup.h
 	inc/MantidGeometry/Crystal/CompositeBraggScatterer.h
+	inc/MantidGeometry/Crystal/ConcretePeakTransformFactory.h
 	inc/MantidGeometry/Crystal/ConventionalCell.h
 	inc/MantidGeometry/Crystal/CrystalStructure.h
 	inc/MantidGeometry/Crystal/CyclicGroup.h
 	inc/MantidGeometry/Crystal/Group.h
+	inc/MantidGeometry/Crystal/IPeak.h
 	inc/MantidGeometry/Crystal/IndexingUtils.h
 	inc/MantidGeometry/Crystal/IsotropicAtomBraggScatterer.h
 	inc/MantidGeometry/Crystal/NiggliCell.h
 	inc/MantidGeometry/Crystal/OrientedLattice.h
 	inc/MantidGeometry/Crystal/PeakShape.h
+	inc/MantidGeometry/Crystal/PeakTransform.h
+	inc/MantidGeometry/Crystal/PeakTransformFactory.h
+	inc/MantidGeometry/Crystal/PeakTransformHKL.h
+	inc/MantidGeometry/Crystal/PeakTransformQLab.h
+	inc/MantidGeometry/Crystal/PeakTransformQSample.h
+	inc/MantidGeometry/Crystal/PeakTransformSelector.h
 	inc/MantidGeometry/Crystal/PointGroup.h
 	inc/MantidGeometry/Crystal/PointGroupFactory.h
 	inc/MantidGeometry/Crystal/ProductOfCyclicGroups.h
@@ -177,10 +196,14 @@ set ( INC_FILES
 	inc/MantidGeometry/Instrument/ReferenceFrame.h
 	inc/MantidGeometry/Instrument/XMLInstrumentParameter.h
 	inc/MantidGeometry/MDGeometry/CompositeImplicitFunction.h
+	inc/MantidGeometry/MDGeometry/GeneralFrame.h
+	inc/MantidGeometry/MDGeometry/HKL.h
 	inc/MantidGeometry/MDGeometry/IMDDimension.h
 	inc/MantidGeometry/MDGeometry/IMDDimensionFactory.h
 	inc/MantidGeometry/MDGeometry/MDBoxImplicitFunction.h
 	inc/MantidGeometry/MDGeometry/MDDimensionExtents.h
+	inc/MantidGeometry/MDGeometry/MDFrame.h
+	inc/MantidGeometry/MDGeometry/MDFrameFactory.h
 	inc/MantidGeometry/MDGeometry/MDGeometryXMLBuilder.h
 	inc/MantidGeometry/MDGeometry/MDGeometryXMLDefinitions.h
 	inc/MantidGeometry/MDGeometry/MDGeometryXMLParser.h
@@ -192,19 +215,19 @@ set ( INC_FILES
 	inc/MantidGeometry/MDGeometry/MDTypes.h
 	inc/MantidGeometry/MDGeometry/MDWorkspaceConstants.h
 	inc/MantidGeometry/MDGeometry/NullImplicitFunction.h
+	inc/MantidGeometry/MDGeometry/QLab.h
+	inc/MantidGeometry/MDGeometry/QSample.h
 	inc/MantidGeometry/Math/Acomp.h
 	inc/MantidGeometry/Math/Algebra.h
 	inc/MantidGeometry/Math/BnId.h
 	inc/MantidGeometry/Math/ConvexPolygon.h
-	inc/MantidGeometry/Math/LaszloIntersection.h
 	inc/MantidGeometry/Math/MapSupport.h
 	inc/MantidGeometry/Math/PolyBase.h
 	inc/MantidGeometry/Math/PolygonEdge.h
+	inc/MantidGeometry/Math/PolygonIntersection.h
 	inc/MantidGeometry/Math/Quadrilateral.h
 	inc/MantidGeometry/Math/RotCounter.h
 	inc/MantidGeometry/Math/Triple.h
-	inc/MantidGeometry/Math/Vertex2D.h
-	inc/MantidGeometry/Math/Vertex2DList.h
 	inc/MantidGeometry/Math/mathSupport.h
 	inc/MantidGeometry/Objects/BoundingBox.h
 	inc/MantidGeometry/Objects/InstrumentRayTracer.h
@@ -245,6 +268,7 @@ set ( TEST_FILES
 	CompositeImplicitFunctionTest.h
 	ConeTest.h
 	ConventionalCellTest.h
+	ConvexPolygonIteratorTest.h
 	ConvexPolygonTest.h
 	CrystalStructureTest.h
 	CyclicGroupTest.h
@@ -252,9 +276,11 @@ set ( TEST_FILES
 	DetectorGroupTest.h
 	DetectorTest.h
 	FitParameterTest.h
+	GeneralFrameTest.h
 	GeneralTest.h
 	GoniometerTest.h
 	GroupTest.h
+	HKLTest.h
 	IDFObjectTest.h
 	IMDDimensionFactoryTest.h
 	IMDDimensionTest.h
@@ -263,10 +289,10 @@ set ( TEST_FILES
 	InstrumentRayTracerTest.h
 	InstrumentTest.h
 	IsotropicAtomBraggScattererTest.h
-	LaszloIntersectionTest.h
 	LineIntersectVisitTest.h
 	LineTest.h
 	MDBoxImplicitFunctionTest.h
+	MDFrameFactoryTest.h
 	MDGeometryXMLParserTest.h
 	MDHistoDimensionBuilderTest.h
 	MDHistoDimensionTest.h
@@ -291,11 +317,18 @@ set ( TEST_FILES
 	ParObjComponentTest.h
 	ParameterMapTest.h
 	ParametrizedComponentTest.h
+	PeakTransformHKLTest.h
+	PeakTransformQLabTest.h
+	PeakTransformQSampleTest.h
+	PeakTransformSelectorTest.h
 	PlaneTest.h
 	PointGroupFactoryTest.h
 	PointGroupTest.h
 	PolygonEdgeTest.h
+	PolygonIntersectionTest.h
 	ProductOfCyclicGroupsTest.h
+	QLabTest.h
+	QSampleTest.h
 	QuadrilateralTest.h
 	RectangularDetectorPixelTest.h
 	RectangularDetectorTest.h
@@ -327,8 +360,6 @@ set ( TEST_FILES
 	TripleTest.h
 	UnitCellTest.h
 	V3RTest.h
-	Vertex2DListTest.h
-	Vertex2DTest.h
 	XMLInstrumentParameterTest.h
 )
 
@@ -336,18 +367,16 @@ set ( GMOCK_TEST_FILES
   MDGeometryXMLBuilderTest.h
 )
 
+if (COVERALLS)
+    foreach( loop_var ${SRC_FILES} ${INC_FILES})
+      set_property(GLOBAL APPEND PROPERTY COVERAGE_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/${loop_var}")
+    endforeach(loop_var)
+endif()
 
 if(UNITY_BUILD)
   include(UnityBuild)
   enable_unity_build(Geometry SRC_FILES SRC_UNITY_IGNORE_FILES 10)
 endif(UNITY_BUILD)
-
-# Find 'local' dependencies
-find_package ( OpenGL REQUIRED )
-# FindOpenGL does not (as of CMake 2.6.4) take notice of the REQUIRED
-if ( NOT OPENGL_FOUND )
-  message ( FATAL_ERROR "OpenGL was not found." )
-endif ()
 
 # ===================== Open Cascade ===================
 if (ENABLE_OPENCASCADE)
@@ -371,20 +400,20 @@ enable_precompiled_headers( inc/MantidGeometry/PrecompiledHeader.h SRC_FILES )
 # Add the target for this directory
 add_library ( Geometry ${SRC_FILES} ${INC_FILES} )
 # Set the name of the generated library
-set_target_properties ( Geometry PROPERTIES OUTPUT_NAME MantidGeometry 
+set_target_properties ( Geometry PROPERTIES OUTPUT_NAME MantidGeometry
                                             COMPILE_DEFINITIONS IN_MANTID_GEOMETRY )
 
 if (OSX_VERSION VERSION_GREATER 10.8)
   set_target_properties ( Geometry PROPERTIES INSTALL_RPATH "@loader_path/../MacOS")
-endif () 
+endif ()
 
 # Add to the 'Framework' group in VS
 set_property ( TARGET Geometry PROPERTY FOLDER "MantidFramework" )
 
-target_link_libraries ( Geometry ${MANTIDLIBS}  ${OPENGL_LIBRARIES} )
+target_link_libraries ( Geometry LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME} ${MANTIDLIBS}  ${OPENGL_LIBRARIES} ${GSL_LIBRARIES} ${NEXUS_LIBRARIES} )
 
-if (NOT NO_OPENCASCADE)
-  target_link_libraries ( Geometry ${OPENCASCADE_LIBRARIES} )
+if (ENABLE_OPENCASCADE)
+  target_link_libraries ( Geometry LINK_PRIVATE ${OPENCASCADE_LIBRARIES} )
 endif ()
 
 # Add the unit tests directory

@@ -3,9 +3,9 @@
 #include "MantidDataObjects/PeaksWorkspace.h"
 #include "MantidDataObjects/PeakShapeSpherical.h"
 #include "MantidKernel/System.h"
-#include "MantidMDEvents/MDEventFactory.h"
+#include "MantidDataObjects/MDEventFactory.h"
 #include "MantidMDAlgorithms/IntegratePeaksMD.h"
-#include "MantidMDEvents/CoordTransformDistance.h"
+#include "MantidDataObjects/CoordTransformDistance.h"
 #include "MantidKernel/ListValidator.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/Workspace2D.h"
@@ -31,7 +31,7 @@ DECLARE_ALGORITHM(IntegratePeaksMD)
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
-using namespace Mantid::MDEvents;
+using namespace Mantid::DataObjects;
 using namespace Mantid::DataObjects;
 using namespace Mantid::Geometry;
 
@@ -164,7 +164,7 @@ void IntegratePeaksMD::integrate(typename MDEventWorkspace<MDE, nd>::sptr ws) {
   Mantid::DataObjects::PeaksWorkspace_sptr peakWS =
       getProperty("OutputWorkspace");
   if (peakWS != inPeakWS)
-    peakWS = inPeakWS->clone();
+    peakWS.reset(inPeakWS->clone().release());
 
   /// Value of the CoordinatesToUse property.
   std::string CoordinatesToUseStr = getPropertyValue("CoordinatesToUse");
@@ -495,7 +495,7 @@ void IntegratePeaksMD::integrate(typename MDEventWorkspace<MDE, nd>::sptr ws) {
         findpeaks->setProperty<bool>("HighBackground", true);
         findpeaks->setProperty<bool>("RawPeakParameters", true);
         std::vector<double> peakPosToFit;
-        peakPosToFit.push_back(static_cast<double>(numSteps / 2));
+        peakPosToFit.push_back(static_cast<double>(numSteps) / 2.0);
         findpeaks->setProperty("PeakPositions", peakPosToFit);
         findpeaks->setProperty<int>("MinGuessedPeakWidth", 4);
         findpeaks->setProperty<int>("MaxGuessedPeakWidth", 4);
@@ -689,4 +689,4 @@ double f_eval(double x, void *params) {
 }
 
 } // namespace Mantid
-} // namespace MDEvents
+} // namespace DataObjects

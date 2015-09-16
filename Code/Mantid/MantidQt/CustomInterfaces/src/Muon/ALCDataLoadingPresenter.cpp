@@ -6,6 +6,8 @@
 #include "MantidQtCustomInterfaces/Muon/MuonAnalysisHelper.h"
 #include "MantidQtAPI/AlgorithmInputHistory.h"
 
+#include <Poco/ActiveResult.h>
+
 #include <QApplication>
 #include <QFileInfo>
 #include <QDir>
@@ -43,6 +45,7 @@ namespace CustomInterfaces
       alg->setProperty("FirstRun", m_view->firstRun());
       alg->setProperty("LastRun", m_view->lastRun());
       alg->setProperty("LogValue", m_view->log());
+      alg->setProperty("Function", m_view->function());
       alg->setProperty("Type", m_view->calculationType());
       alg->setProperty("DeadTimeCorrType",m_view->deadTimeType());
       alg->setProperty("Red",m_view->redPeriod());
@@ -50,8 +53,13 @@ namespace CustomInterfaces
       // If time limiting requested, set min/max times
       if (auto timeRange = m_view->timeRange())
       {
-        alg->setProperty("TimeMin", timeRange->first);
-        alg->setProperty("TimeMax", timeRange->second);
+        double timeMin = (*timeRange).first;
+        double timeMax = (*timeRange).second;
+        if (timeMin>=timeMax) {
+          throw std::invalid_argument("Invalid time limits");
+        }
+        alg->setProperty("TimeMin", timeMin);
+        alg->setProperty("TimeMax", timeMax);
       }
 
       // If corrections from custom file requested, set file property
@@ -71,7 +79,17 @@ namespace CustomInterfaces
       }
 
       alg->setPropertyValue("OutputWorkspace", "__NotUsed");
-      alg->execute();
+
+      // Execute async so we can show progress bar
+      Poco::ActiveResult<bool> result(alg->executeAsync());
+      while( !result.available() )
+      {
+        QCoreApplication::processEvents();
+      }
+      if (!result.error().empty())
+      {
+        throw std::runtime_error(result.error());
+      }
 
       m_loadedData = alg->getProperty("OutputWorkspace");
 
@@ -87,7 +105,8 @@ namespace CustomInterfaces
 
       // Plot spectrum 0. It is either red period (if subtract is unchecked) or 
       // red - green (if subtract is checked)
-      m_view->setDataCurve(*(ALCHelper::curveDataFromWs(m_loadedData, 0)));
+      m_view->setDataCurve(*(ALCHelper::curveDataFromWs(m_loadedData, 0)),
+                           ALCHelper::curveErrorsFromWs(m_loadedData, 0));
 
     }
     catch(std::exception& e)
@@ -121,6 +140,7 @@ namespace CustomInterfaces
     {
       m_view->setAvailableLogs(std::vector<std::string>()); // Empty logs list
       m_view->setAvailablePeriods(std::vector<std::string>()); // Empty period list
+      m_view->setTimeLimits(0,0); // "Empty" time limits
       return;
     }
 
@@ -145,7 +165,37 @@ namespace CustomInterfaces
       periods.push_back(buffer.str());
     }
     m_view->setAvailablePeriods(periods);
+
+    // Set time limits
+    m_view->setTimeLimits(ws->readX(0).front(),ws->readX(0).back());
+    // Set allowed time range
+    m_view->setTimeRange (ws->readX(0).front(),ws->readX(0).back());
   }
 
+   MatrixWorkspace_sptr ALCDataLoadingPresenter::exportWorkspace()
+  {
+    if ( m_loadedData ) {
+
+      return boost::const_pointer_cast<MatrixWorkspace>(m_loadedData);
+
+    } else {
+
+      return MatrixWorkspace_sptr();
+    }
+   }
+
+   void ALCDataLoadingPresenter::setData(MatrixWorkspace_const_sptr data) {
+
+     if (data) {
+       // Set the data
+       m_loadedData = data;
+       // Plot the data
+       m_view->setDataCurve(*(ALCHelper::curveDataFromWs(m_loadedData, 0)),
+         ALCHelper::curveErrorsFromWs(m_loadedData, 0));
+
+     } else {
+       std::invalid_argument("Cannot load an empty workspace");
+     }
+   }
 } // namespace CustomInterfaces
 } // namespace MantidQt

@@ -1,6 +1,5 @@
-#pylint: disable=no-init
+#pylint: disable=no-init,attribute-defined-outside-init
 import stresstesting
-import mantid
 from mantid.simpleapi import *
 from reduction_workflow.instruments.sans.sns_command_interface import *
 from mantid.api import FileFinder
@@ -19,8 +18,8 @@ class EQSANSEff(stresstesting.MantidStressTest):
         """
             System test for sensitivity correction
         """
-        config = ConfigService.Instance()
-        config["facilityName"]='SNS'
+        configI = ConfigService.Instance()
+        configI["facilityName"]='SNS'
         EQSANS(False)
         AppendDataFile("EQSANS_1466_event.nxs")
         SolidAngle()

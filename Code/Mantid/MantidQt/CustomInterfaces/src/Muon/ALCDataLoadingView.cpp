@@ -1,5 +1,8 @@
 #include "MantidQtCustomInterfaces/Muon/ALCDataLoadingView.h"
 
+#include "MantidQtAPI/HelpWindow.h"
+#include "MantidQtMantidWidgets/ErrorCurve.h"
+
 #include <QMessageBox>
 
 #include <qwt_symbol.h>
@@ -9,14 +12,25 @@ namespace MantidQt
 namespace CustomInterfaces
 {
   ALCDataLoadingView::ALCDataLoadingView(QWidget* widget)
-    : m_widget(widget), m_dataCurve(new QwtPlotCurve())
+    : m_widget(widget), m_dataCurve(new QwtPlotCurve()), m_dataErrorCurve(NULL)
   {}
+
+  ALCDataLoadingView::~ALCDataLoadingView() {
+    m_dataCurve->detach();
+    delete m_dataCurve;
+    if (m_dataErrorCurve) {
+      m_dataErrorCurve->detach();
+      delete m_dataErrorCurve;
+    }
+  }
 
   void ALCDataLoadingView::initialize()
   {
     m_ui.setupUi(m_widget);
     connect(m_ui.load, SIGNAL(clicked()), SIGNAL(loadRequested()));
     connect(m_ui.firstRun, SIGNAL(fileFindingFinished()), SIGNAL(firstRunSelected()));
+
+    connect(m_ui.help, SIGNAL(clicked()), this, SLOT(help()));
 
     m_ui.dataPlot->setCanvasBackground(Qt::white);
     m_ui.dataPlot->setAxisFont(QwtPlot::xBottom, m_widget->font());
@@ -55,6 +69,11 @@ namespace CustomInterfaces
   std::string ALCDataLoadingView::log() const
   {
     return m_ui.log->currentText().toStdString();
+  }
+
+  std::string ALCDataLoadingView::function() const
+  {
+    return m_ui.function->currentText().toStdString();
   }
 
   std::string ALCDataLoadingView::calculationType() const
@@ -118,20 +137,25 @@ namespace CustomInterfaces
 
   boost::optional< std::pair<double,double> > ALCDataLoadingView::timeRange() const
   {
-    if (m_ui.timeLimit->isChecked())
-    {
-      auto range = std::make_pair(m_ui.minTime->value(), m_ui.maxTime->value());
-      return boost::make_optional(range);
-    }
-    else
-    {
-      return boost::none;
-    }
+    auto range = std::make_pair(m_ui.minTime->value(), m_ui.maxTime->value());
+    return boost::make_optional(range);
   }
 
-  void ALCDataLoadingView::setDataCurve(const QwtData& data)
-  {
+  void ALCDataLoadingView::setDataCurve(const QwtData &data,
+                                        const std::vector<double> &errors) {
+
+    // Set data
     m_dataCurve->setData(data);
+
+    // Set errors
+    if (m_dataErrorCurve) {
+      m_dataErrorCurve->detach();
+      delete m_dataErrorCurve;
+    }
+    m_dataErrorCurve =
+        new MantidQt::MantidWidgets::ErrorCurve(m_dataCurve, errors);
+    m_dataErrorCurve->attach(m_ui.dataPlot);
+
     m_ui.dataPlot->replot();
   }
 
@@ -142,8 +166,17 @@ namespace CustomInterfaces
 
   void ALCDataLoadingView::setAvailableLogs(const std::vector<std::string>& logs)
   {
+    // Keep the current log value
+    QString previousLog = m_ui.log->currentText();
+
     // Clear previous log list
     m_ui.log->clear();
+
+    // If previousLog is in 'logs' list, add it at the beginning
+    if ( std::find(logs.begin(), logs.end(), previousLog.toStdString()) != logs.end())
+    {
+      m_ui.log->addItem(previousLog);
+    }
 
     // Add new items
     for (auto it = logs.begin(); it != logs.end(); ++it)
@@ -164,6 +197,28 @@ namespace CustomInterfaces
       m_ui.redPeriod->addItem(QString::fromStdString(*it));
       m_ui.greenPeriod->addItem(QString::fromStdString(*it));
     }
+  }
+
+  void ALCDataLoadingView::setTimeLimits(double tMin, double tMax)
+  {
+    // Set initial values
+    m_ui.minTime->setValue(tMin);
+    m_ui.maxTime->setValue(tMax);
+  }
+
+  void ALCDataLoadingView::setTimeRange(double tMin, double tMax)
+  {
+    // Set range for minTime
+    m_ui.minTime->setMinimum(tMin);
+    m_ui.minTime->setMaximum(tMax);
+    // Set range for maxTime
+    m_ui.maxTime->setMinimum(tMin);
+    m_ui.maxTime->setMaximum(tMax);
+  }
+
+  void ALCDataLoadingView::help()
+  {
+    MantidQt::API::HelpWindow::showCustomInterface(NULL, QString("Muon_ALC"));
   }
 
   void ALCDataLoadingView::setWaitingCursor()

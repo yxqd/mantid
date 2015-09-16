@@ -1,12 +1,14 @@
+#pylint: disable=no-init
 from mantid import config
 import os
-import re
 import stresstesting
 import glob
 
 EXPECTED_EXT = '.expected'
 
 class ValidateGroupingFiles(stresstesting.MantidStressTest):
+
+    xsdFile =''
 
     def skipTests(self):
         try:
@@ -45,9 +47,9 @@ class ValidateGroupingFiles(stresstesting.MantidStressTest):
                 print "----------------------------------------"
                 print "Validating '%s'" % filename
                 pyxsval.parseAndValidateXmlInput(filename, xsdFile=self.xsdFile, validateSchema=0)
-            except Exception, e:
+            except Exception, err:
                 print "VALIDATION OF '%s' FAILED WITH ERROR:" % filename
-                print e
+                print err
                 failed.append(filename)
 
         # final say on whether or not it 'worked'

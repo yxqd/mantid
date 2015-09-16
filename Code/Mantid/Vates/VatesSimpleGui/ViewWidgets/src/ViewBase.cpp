@@ -1,6 +1,14 @@
+#include <stdexcept>
+
 #include "MantidVatesSimpleGuiViewWidgets/ViewBase.h"
 #include "MantidVatesSimpleGuiViewWidgets/BackgroundRgbProvider.h"
-
+#include "MantidVatesSimpleGuiViewWidgets/ColorSelectionWidget.h"
+#include "MantidVatesSimpleGuiViewWidgets/RebinnedSourcesManager.h"
+#include "MantidVatesAPI/ADSWorkspaceProvider.h"
+#include "MantidVatesAPI/ColorScaleGuard.h"
+#include "MantidAPI/IMDEventWorkspace.h"
+#include "MantidVatesAPI/BoxInfo.h"
+#include "MantidKernel/WarningSuppressions.h"
 #if defined(__INTEL_COMPILER)
   #pragma warning disable 1170
 #endif
@@ -10,31 +18,41 @@
 #include <pqAnimationScene.h>
 #include <pqApplicationCore.h>
 #include <pqDataRepresentation.h>
+#include <pqDeleteReaction.h>
 #include <pqObjectBuilder.h>
-#include <pqPipelineSource.h>
 #include <pqPipelineFilter.h>
 #include <pqPipelineRepresentation.h>
+#include <pqPipelineSource.h>
 #include <pqPVApplicationCore.h>
 #include <pqRenderView.h>
 #include <pqScalarsToColors.h>
 #include <pqServer.h>
 #include <pqServerManagerModel.h>
 #include <pqView.h>
+#include <QVTKWidget.h>
+#include <vtkEventQtSlotConnect.h>
+#include <vtkRendererCollection.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
 #include <vtkSMDoubleVectorProperty.h>
 #include <vtkSMPropertyHelper.h>
 #include <vtkSMPropertyIterator.h>
 #include <vtkSMProxy.h>
+#include <vtkSMRenderViewProxy.h>
 #include <vtkSMSourceProxy.h>
+
+#include <pqMultiSliceAxisWidget.h>
 
 #if defined(__INTEL_COMPILER)
   #pragma warning enable 1170
 #endif
 
-#include <QDebug>
 #include <QHBoxLayout>
 #include <QPointer>
+#include <QThread>
+#include <QSet>
 
-#include <stdexcept>
+#include <typeinfo>
 
 namespace Mantid
 {
@@ -46,8 +64,13 @@ namespace SimpleGui
 /**
  * Default constructor.
  * @param parent the parent widget for the view
+ * @param rebinnedSourcesManager Pointer to a RebinnedSourcesManager
  */
-ViewBase::ViewBase(QWidget *parent) : QWidget(parent), m_currentColorMapModel(NULL), m_temporaryWorkspaceIdentifier("tempvsi")
+ViewBase::ViewBase(QWidget *parent, RebinnedSourcesManager* rebinnedSourcesManager) :
+  QWidget(parent), m_rebinnedSourcesManager(rebinnedSourcesManager),
+  m_currentColorMapModel(NULL), m_internallyRebinnedWorkspaceIdentifier("rebinned_vsi"),
+  m_vtkConnections(vtkSmartPointer<vtkEventQtSlotConnect>::New()),
+  m_pythonGIL(), m_colorScaleLock(NULL)
 {
 }
 
@@ -75,35 +98,34 @@ pqRenderView* ViewBase::createRenderView(QWidget* widget, QString viewName)
   pqActiveObjects::instance().setActiveView(view);
 
   // Place the widget for the render view in the frame provided.
-  hbox->addWidget(view->getWidget());
+  hbox->addWidget(view->widget());
 
-  /// Make a connection to the view's endRender signal for later checking.
-  QObject::connect(view, SIGNAL(endRender()),
-                   this, SIGNAL(renderingDone()));
+  this->setupVTKEventConnections(view);
 
   return view;
 }
 
 /**
  * This function removes all filters of a given name: i.e. Slice.
- * @param builder the ParaView object builder
  * @param name the class name of the filters to remove
  */
-void ViewBase::destroyFilter(pqObjectBuilder *builder, const QString &name)
+void ViewBase::destroyFilter(const QString &name)
 {
   pqServer *server = pqActiveObjects::instance().activeServer();
   pqServerManagerModel *smModel = pqApplicationCore::instance()->getServerManagerModel();
   QList<pqPipelineSource *> sources;
   QList<pqPipelineSource *>::Iterator source;
   sources = smModel->findItems<pqPipelineSource *>(server);
+  QSet<pqPipelineSource*> toDelete;
   for (source = sources.begin(); source != sources.end(); ++source)
   {
     const QString sourceName = (*source)->getSMName();
     if (sourceName.startsWith(name))
     {
-      builder->destroy(*source);
+    toDelete.insert(*source);
     }
   }
+  pqDeleteReaction::deleteSources(toDelete);
 }
 
 /**
@@ -145,6 +167,95 @@ void ViewBase::setAutoColorScale()
   emit this->setLogScale(colorScale.useLogScale);
 }
 
+/**
+ * Connect the relevant VTK signals to the appropriate slots
+ * @param view A pointer to the view to connect
+ */
+void ViewBase::setupVTKEventConnections(pqRenderView* view) {
+  // @todo This needs factoring out to put the widget specfic stuff in the
+  // right class.
+  // Python locks
+  QObject::connect(view, SIGNAL(beginRender()), this, SLOT(lockPyGIL()),
+                   Qt::DirectConnection);
+  QObject::connect(view, SIGNAL(endRender()), this, SLOT(releasePyGIL()),
+                   Qt::DirectConnection);
+  vtkRenderWindow *renderWindow = view->getViewProxy()->GetRenderWindow();
+  m_vtkConnections->Connect(renderWindow,
+                            vtkCommand::StartEvent,
+                            this,
+                            SLOT(lockPyGIL()),
+                            NULL, 1.0f, Qt::DirectConnection);
+  m_vtkConnections->Connect(renderWindow,
+                            vtkCommand::EndEvent,
+                            this,
+                            SLOT(releasePyGIL()),
+                            NULL, 1.0f, Qt::DirectConnection);
+    QGridLayout *layout = dynamic_cast<QGridLayout*>(view->widget()->layout());
+    if(layout) {
+      for(int i = 0; i < layout->count(); ++i) {
+        if(auto *axisWidget = qobject_cast<pqMultiSliceAxisWidget*>(layout->itemAt(i)->widget())) {
+          renderWindow = axisWidget->getVTKWidget()->GetRenderWindow();
+          m_vtkConnections->Connect(renderWindow,
+                                    vtkCommand::StartEvent,
+                                    this,
+                                    SLOT(lockPyGIL()),
+                                    NULL, 1.0f, Qt::DirectConnection);
+          m_vtkConnections->Connect(renderWindow,
+                                    vtkCommand::EndEvent,
+                                    this,
+                                    SLOT(releasePyGIL()),
+                                    NULL, 1.0f, Qt::DirectConnection);
+        }
+      }
+    }
+
+   m_vtkConnections->Connect(view->getRenderViewProxy()->GetInteractor(),
+                             vtkCommand::StartEvent,
+                             this,
+                             SLOT(lockPyGIL()),
+                             NULL, 1.0f, Qt::DirectConnection);
+   m_vtkConnections->Connect(view->getRenderViewProxy()->GetInteractor(),
+                             vtkCommand::EndEvent,
+                             this,
+                             SLOT(releasePyGIL()),
+                             NULL, 1.0f, Qt::DirectConnection);
+  m_vtkConnections->Connect(view->getRenderViewProxy()->GetInteractor(),
+                            vtkCommand::LeftButtonPressEvent,
+                            this,
+                            SLOT(lockPyGIL()),
+                            NULL, 1.0f, Qt::DirectConnection);
+  m_vtkConnections->Connect(view->getRenderViewProxy()->GetInteractor(),
+                            vtkCommand::LeftButtonReleaseEvent,
+                            this,
+                            SLOT(releasePyGIL()),
+                            NULL, 1.0f, Qt::DirectConnection);
+  // get right mouse pressed with high priority
+  m_vtkConnections->Connect(view->getRenderViewProxy()->GetInteractor(),
+                            vtkCommand::RightButtonPressEvent,
+                            this,
+                            SLOT(lockPyGIL()),
+                            NULL, 1.0f, Qt::DirectConnection);
+  m_vtkConnections->Connect(view->getRenderViewProxy()->GetInteractor(),
+                            vtkCommand::RightButtonReleaseEvent,
+                            this,
+                            SLOT(releasePyGIL()),
+                            NULL, 1.0f, Qt::DirectConnection);
+
+  // Make a connection to the view's endRender signal for later checking.
+  QObject::connect(view, SIGNAL(endRender()),
+                   this, SIGNAL(renderingDone()));
+  
+}
+
+/// Called when the rendering begins
+void ViewBase::lockPyGIL() {
+  m_pythonGIL.acquire();
+}
+
+/// Called when the rendering finishes
+void ViewBase::releasePyGIL() {
+  m_pythonGIL.release();
+}
 
 /**
  * This function sets the requested color map on the data.
@@ -213,7 +324,11 @@ void ViewBase::setColorScaleState(ColorSelectionWidget *cs)
 
 /**
  * This function checks the current state from the color updater and
- * processes the necessary color changes.
+ * processes the necessary color changes. Similarly to
+ * setColorForBackground(), this method sets a Vtk callback for
+ * changes to the color map made by the user in the Paraview color
+ * editor.
+ *
  * @param colorScale A pointer to the colorscale widget.
  */
 void ViewBase::setColorsForView(ColorSelectionWidget *colorScale)
@@ -234,6 +349,11 @@ void ViewBase::setColorsForView(ColorSelectionWidget *colorScale)
   {
     this->onLogScale(true);
   }
+
+  // This installs the callback as soon as we have colors for this
+  // view. It needs to keep an eye on whether the user edits the color
+  // map for this (new?) representation in the pqColorToolbar.
+  colorUpdater.observeColorScaleEdited(this->getRep(), colorScale);
 }
 
 /**
@@ -269,28 +389,46 @@ pqPipelineRepresentation *ViewBase::getPvActiveRep()
   return qobject_cast<pqPipelineRepresentation *>(drep);
 }
 
+GCC_DIAG_OFF(strict-aliasing)
 /**
  * This function creates a ParaView source from a given plugin name and
  * workspace name. This is used in the plugin mode of the simple interface.
  * @param pluginName name of the ParaView plugin
  * @param wsName name of the Mantid workspace to pass to the plugin
+ * @param axesGridOn: if the axes grid should be on
+ * @returns a pointer to the newly created pipeline source
  */
-pqPipelineSource* ViewBase::setPluginSource(QString pluginName, QString wsName)
+pqPipelineSource* ViewBase::setPluginSource(QString pluginName, QString wsName, bool axesGridOn)
 {
   // Create the source from the plugin
   pqObjectBuilder* builder = pqApplicationCore::instance()->getObjectBuilder();
   pqServer *server = pqActiveObjects::instance().activeServer();
   pqPipelineSource *src = builder->createSource("sources", pluginName,
                                                 server);
+  src->getProxy()->SetAnnotation("MdViewerWidget0", "1");
   vtkSMPropertyHelper(src->getProxy(),
                       "Mantid Workspace Name").Set(wsName.toStdString().c_str());
 
+  // WORKAROUND BEGIN
+  // We are setting the recursion depth to 1 when we are dealing with MDEvent workspaces
+  // with top level splitting, but this is not updated in the plugin line edit field.
+  // We do this here.
+  if (auto split = Mantid::VATES::findRecursionDepthForTopLevelSplitting(wsName.toStdString())) {
+    vtkSMPropertyHelper(src->getProxy(),
+              "Recursion Depth").Set(split.get());
+  }
+  // WORKAROUND END
+
+  // Set the Axes Grid to On if required
+  setAxesGrid(axesGridOn);
+
   // Update the source so that it retrieves the data from the Mantid workspace
-  vtkSMSourceProxy *srcProxy = vtkSMSourceProxy::SafeDownCast(src->getProxy());
-  srcProxy->UpdateVTKObjects();
-  srcProxy->Modified();
-  srcProxy->UpdatePipelineInformation();
-  src->updatePipeline();
+  src->getProxy()->UpdateVTKObjects(); // Updates all the proxies
+  src->updatePipeline(); // Updates the pipeline
+  src->setModifiedState(pqProxy::UNMODIFIED); // Just to that the UI state looks consistent with the apply
+
+  // Update the properties, from PV3.98.1 to PV4.3.1, it wasn't updating any longer, so need to force it
+  src->getProxy()->UpdatePropertyInformation();
 
   return src;
 }
@@ -619,10 +757,10 @@ bool ViewBase::isMDHistoWorkspace(pqPipelineSource *src)
 }
 
 /**
- * This function checks if a pqPipelineSource is a temporary workspace.
- * @return true if the source is a temporary workspace;
+ * This function checks if a pqPipelineSource is an internally rebinned workspace.
+ * @return true if the source is an internally rebinned workspace;
  */
-bool ViewBase::isTemporaryWorkspace(pqPipelineSource *src)
+bool ViewBase::isInternallyRebinnedWorkspace(pqPipelineSource *src)
 {
   if (NULL == src)
   {
@@ -636,12 +774,12 @@ bool ViewBase::isTemporaryWorkspace(pqPipelineSource *src)
   {
     wsType = src->getSMName();
   }
-  
+
 
   QString wsName(vtkSMPropertyHelper(src->getProxy(),
                                     "WorkspaceName", true).GetAsString());
 
-  if (wsName.contains(m_temporaryWorkspaceIdentifier))
+  if (wsName.contains(m_internallyRebinnedWorkspaceIdentifier) && m_rebinnedSourcesManager->isRebinnedSourceBeingTracked(src))
   {
     return true;
   }
@@ -759,23 +897,33 @@ bool ViewBase::hasWorkspaceType(const QString &wsTypeName)
 
 /**
  * This function sets the default colors for the background and connects a tracker for changes of the background color by the user.
- * @param viewSwitched If the view was switched or created.
+ * @param useCurrentColorSettings If the view was switched or created.
  */
-void ViewBase::setColorForBackground(bool viewSwitched)
+void ViewBase::setColorForBackground(bool useCurrentColorSettings)
 {
-  backgroundRgbProvider.setBackgroundColor(this->getView(), viewSwitched);
+  backgroundRgbProvider.setBackgroundColor(this->getView(), useCurrentColorSettings);
   backgroundRgbProvider.observe(this->getView());
+}
+
+
+/**
+ * Set color scale lock
+ * @param colorScaleLock: the color scale lock
+ */
+void ViewBase::setColorScaleLock(Mantid::VATES::ColorScaleLock* colorScaleLock) {
+  m_colorScaleLock = colorScaleLock;
 }
 
 /**
  * React to a change of the visibility of a representation of a source.
  * This can be a change of the status if the "eye" symbol in the PipelineBrowserWidget
- * as well as the addition or removal of a representation. 
+ * as well as the addition or removal of a representation.
  * @param source The pipeleine source assoicated with the call.
- * @param representation The representation associatied with the call 
+ * @param representation The representation associatied with the call
  */
 void ViewBase::onVisibilityChanged(pqPipelineSource*, pqDataRepresentation*)
 {
+  Mantid::VATES::ColorScaleLockGuard colorScaleLockGuard(m_colorScaleLock);
   // Reset the colorscale if it is set to autoscale
   if (colorUpdater.isAutoScale())
   {
@@ -788,7 +936,7 @@ void ViewBase::onVisibilityChanged(pqPipelineSource*, pqDataRepresentation*)
 }
 
 /**
- * Initializes the settings of the color scale 
+ * Initializes the settings of the color scale
  */
 void ViewBase::initializeColorScale()
 {
@@ -890,6 +1038,18 @@ void ViewBase::removeVisibilityListener() {
   }
 }
 
+/**
+ * Sets the axes grid if the user has this enabled
+ */
+void ViewBase::setAxesGrid(bool on) {
+  if (on) {
+    if (auto renderView = getView()) {
+      vtkSMProxy *gridAxes3DActor = vtkSMPropertyHelper(renderView->getProxy(), "AxesGrid", true).GetAsProxy();
+      vtkSMPropertyHelper(gridAxes3DActor, "Visibility").Set(1);
+      gridAxes3DActor->UpdateProperty("Visibility");
+    }
+  }
+}
 
 
 } // namespace SimpleGui

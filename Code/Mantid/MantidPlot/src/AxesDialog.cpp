@@ -26,7 +26,7 @@ Description          : General plot options dialog
 *   Boston, MA  02110-1301  USA                                           *
 *                                                                         *
 ***************************************************************************/
-#include "qwt_compat.h"
+#include "MantidQtAPI/qwt_compat.h"
 #include "AxesDialog.h"
 #include "ApplicationWindow.h"
 #include "TextDialog.h"
@@ -66,7 +66,7 @@ Description          : General plot options dialog
 
 #include <qwt_plot.h>
 #include <qwt_scale_widget.h>
-#include "plot2D/ScaleEngine.h"
+#include "MantidQtAPI/ScaleEngine.h"
 
 /* XPM */
 static const char* bottom_scl_xpm[] = { "36 38 75 1", " 	c None", ".	c #FFFFFF",
@@ -1165,9 +1165,9 @@ void AxesDialog::updateGrid()
       QList<MdiSubWindow *> windows = m_app->windowsList();
       foreach(MdiSubWindow *w, windows)
       {
-        if (w->isA("MultiLayer"))
+        if (auto multi = dynamic_cast<MultiLayer*>(w))
         {
-          QList<Graph *> layers = (dynamic_cast<MultiLayer*>(w))->layersList();
+          QList<Graph *> layers = multi->layersList();
           foreach(Graph *g, layers)
           {
             if (g->isPiePlot())

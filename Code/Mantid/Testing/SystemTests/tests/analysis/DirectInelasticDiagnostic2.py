@@ -14,6 +14,8 @@ def getNamedParameter(ws, name):
 
 class DirectInelasticDiagnostic2(MantidStressTest):
 
+    saved_diag_file=''
+
     def requiredMemoryMB(self):
         """Requires 4Gb"""
         return 4000
@@ -72,7 +74,7 @@ class DirectInelasticDiagnostic2(MantidStressTest):
             if sample.getDetector(index).isMasked():
                 spec_no = sample.getSpectrum(index).getSpectrumNo()
                 handle.write(str(spec_no) + '\n')
-        handle.close
+        handle.close()
 
     def cleanup(self):
         if os.path.exists(self.saved_diag_file):

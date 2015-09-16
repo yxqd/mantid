@@ -13,10 +13,11 @@
 #include "MantidVatesAPI/FilteringUpdateProgressAction.h"
 #include "MantidVatesAPI/vtkPeakMarkerFactory.h"
 #include "MantidAPI/Workspace.h"
+#include "MantidAPI/IPeaksWorkspace.h"
 #include "MantidAPI/AnalysisDataService.h"
 
 
-vtkStandardNewMacro(vtkPeaksSource);
+vtkStandardNewMacro(vtkPeaksSource)
 
 using namespace Mantid::VATES;
 using Mantid::Geometry::IMDDimension_sptr;

@@ -1,7 +1,5 @@
 #pylint: disable=invalid-name,no-init
 import stresstesting
-import numpy
-import os
 from mantid.simpleapi import *
 
 ######################################################################
@@ -83,7 +81,6 @@ def validateMD(result,reference,tol=1.e-5,class_name='dummy',mismatchName=None):
       #elf.disableChecking.append('Instrument')
 
     valNames = [result,reference]
-    from mantid.simpleapi import Load,CompareMDWorkspaces,FrameworkManager,SaveNexus
 
     if not reference in mtd:
         Load(Filename=reference,OutputWorkspace=valNames[1])
@@ -114,6 +111,9 @@ def validateMD(result,reference,tol=1.e-5,class_name='dummy',mismatchName=None):
 
 class SNSConvertToMDNoHistNoProjTest(stresstesting.MantidStressTest):
     truth_file = "SEQ_11499_md_enp.nxs"
+    output_ws=None
+    tolerance=0.0
+    gold_ws_name =''
 
     def requiredMemoryMB(self):
         """ Require about 2.5GB free """
@@ -136,6 +136,9 @@ class SNSConvertToMDNoHistNoProjTest(stresstesting.MantidStressTest):
 
 class SNSConvertToMDHistNoProjTest(stresstesting.MantidStressTest):
     truth_file = "SEQ_11499_md_hnp.nxs"
+    output_ws=None
+    tolerance=0.0
+    gold_ws_name =''
 
     def requiredMemoryMB(self):
         """ Require about 2.5GB free """
@@ -158,6 +161,9 @@ class SNSConvertToMDHistNoProjTest(stresstesting.MantidStressTest):
 
 class SNSConvertToMDNoHistProjTest(stresstesting.MantidStressTest):
     truth_file = "SEQ_11499_md_ewp.nxs"
+    output_ws=None
+    tolerance=0.0
+    gold_ws_name =''
 
     def requiredMemoryMB(self):
         """ Require about 2.5GB free """
@@ -181,6 +187,9 @@ class SNSConvertToMDNoHistProjTest(stresstesting.MantidStressTest):
 
 class SNSConvertToMDHistProjTest(stresstesting.MantidStressTest):
     truth_file = "SEQ_11499_md_hwp.nxs"
+    output_ws=None
+    tolerance=0.0
+    gold_ws_name =''
 
     def requiredMemoryMB(self):
         """ Require about 2.5GB free """

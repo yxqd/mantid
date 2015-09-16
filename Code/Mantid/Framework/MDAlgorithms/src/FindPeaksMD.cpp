@@ -1,8 +1,8 @@
 #include "MantidDataObjects/PeaksWorkspace.h"
 #include "MantidKernel/System.h"
 #include "MantidMDAlgorithms/FindPeaksMD.h"
-#include "MantidMDEvents/MDEventFactory.h"
-#include "MantidMDEvents/MDHistoWorkspace.h"
+#include "MantidDataObjects/MDEventFactory.h"
+#include "MantidDataObjects/MDHistoWorkspace.h"
 #include "MantidKernel/VMD.h"
 
 #include <boost/math/special_functions/fpclassify.hpp>
@@ -14,7 +14,7 @@
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::DataObjects;
-using namespace Mantid::MDEvents;
+using namespace Mantid::DataObjects;
 
 namespace Mantid {
 namespace MDAlgorithms {
@@ -30,7 +30,7 @@ template <typename MDE, size_t nd> struct IsFullEvent : boost::false_type {};
 template <size_t nd> struct IsFullEvent<MDEvent<nd>, nd> : boost::true_type {};
 
 /**
- * Specialization if isFullEvent for MDEvents
+ * Specialization if isFullEvent for DataObjects
  * to return true
  */
 template <typename MDE, size_t nd>
@@ -39,7 +39,7 @@ bool isFullMDEvent(const boost::true_type &) {
 }
 
 /**
- * Specialization if isFullEvent for MDEvents
+ * Specialization if isFullEvent for DataObjects
  * to return false
  */
 template <typename MDE, size_t nd>
@@ -106,7 +106,9 @@ DECLARE_ALGORITHM(FindPeaksMD)
 /** Constructor
  */
 FindPeaksMD::FindPeaksMD()
-    : m_addDetectors(true), m_densityScaleFactor(1e-6), prog(NULL) {}
+: peakWS(), peakRadiusSquared(), DensityThresholdFactor(0.0), m_maxPeaks(0),
+  m_addDetectors(true), m_densityScaleFactor(1e-6), prog(NULL), inst(),
+  m_runNumber(-1), dimType(), m_goniometer() {}
 
 //----------------------------------------------------------------------------------------------
 /** Destructor
@@ -160,7 +162,7 @@ void FindPeaksMD::readExperimentInfo(const ExperimentInfo_sptr &ei,
   // Instrument associated with workspace
   inst = ei->getInstrument();
   // Find the run number
-  runNumber = ei->getRunNumber();
+  m_runNumber = ei->getRunNumber();
 
   // Check that the workspace dimensions are in Q-sample-frame or Q-lab-frame.
   std::string dim0 = ws->getDimension(0)->getName();
@@ -177,10 +179,10 @@ void FindPeaksMD::readExperimentInfo(const ExperimentInfo_sptr &ei,
         "Unexpected dimensions: need either Q_lab_x or Q_sample_x.");
 
   // Find the goniometer rotation matrix
-  goniometer =
+  m_goniometer =
       Mantid::Kernel::Matrix<double>(3, 3, true); // Default IDENTITY matrix
   try {
-    goniometer = ei->mutableRun().getGoniometerMatrix();
+    m_goniometer = ei->mutableRun().getGoniometerMatrix();
   } catch (std::exception &e) {
     g_log.warning() << "Error finding goniometer matrix. It will not be set in "
                        "the peaks found." << std::endl;
@@ -214,10 +216,10 @@ FindPeaksMD::createPeak(const Mantid::Kernel::V3D &Q, const double binCount) {
     // Build using the Q-lab-frame constructor
     p = boost::shared_ptr<DataObjects::Peak>(new Peak(inst, Q));
     // Save gonio matrix for later
-    p->setGoniometerMatrix(goniometer);
+    p->setGoniometerMatrix(m_goniometer);
   } else if (dimType == QSAMPLE) {
     // Build using the Q-sample-frame constructor
-    p = boost::shared_ptr<DataObjects::Peak>(new Peak(inst, Q, goniometer));
+    p = boost::shared_ptr<DataObjects::Peak>(new Peak(inst, Q, m_goniometer));
   }
 
   try { // Look for a detector
@@ -227,7 +229,7 @@ FindPeaksMD::createPeak(const Mantid::Kernel::V3D &Q, const double binCount) {
 
   p->setBinCount(binCount);
   // Save the run number found before.
-  p->setRunNumber(runNumber);
+  p->setRunNumber(m_runNumber);
   return p;
 }
 
@@ -313,7 +315,7 @@ void FindPeaksMD::findPeaks(typename MDEventWorkspace<MDE, nd>::sptr ws) {
     // List of chosen possible peak boxes.
     std::vector<API::IMDNode *> peakBoxes;
 
-    prog = new Progress(this, 0.30, 0.95, MaxPeaks);
+    prog = new Progress(this, 0.30, 0.95, m_maxPeaks);
 
     // used for selecting method for calculating BinCount
     bool isMDEvent(ws->id().find("MDEventWorkspace") != std::string::npos);
@@ -362,9 +364,9 @@ void FindPeaksMD::findPeaks(typename MDEventWorkspace<MDE, nd>::sptr ws) {
 
       // The box was not rejected for another reason.
       if (!badBox) {
-        if (numBoxesFound++ >= MaxPeaks) {
+        if (numBoxesFound++ >= m_maxPeaks) {
           g_log.notice() << "Number of peaks found exceeded the limit of "
-                         << MaxPeaks << ". Stopping peak finding." << std::endl;
+                         << m_maxPeaks << ". Stopping peak finding." << std::endl;
           break;
         }
 
@@ -403,8 +405,13 @@ void FindPeaksMD::findPeaks(typename MDEventWorkspace<MDE, nd>::sptr ws) {
 
       try {
         auto p = this->createPeak(Q, binCount);
-        if (m_addDetectors)
-          addDetectors(*p, *dynamic_cast<MDBoxBase<MDE, nd> *>(box));
+        if (m_addDetectors) {
+          auto mdBox = dynamic_cast<MDBoxBase<MDE, nd> *>(box);
+          if (!mdBox) {
+            throw std::runtime_error("Failed to cast box to MDBoxBase");
+          }
+          addDetectors(*p, *mdBox);
+        }
         if (p->getDetectorID() != -1) peakWS->addPeak(*p);
       } catch (std::exception &e) {
         g_log.notice() << "Error creating peak at " << Q << " because of '"
@@ -426,7 +433,7 @@ void FindPeaksMD::findPeaks(typename MDEventWorkspace<MDE, nd>::sptr ws) {
  *
  * @param ws :: MDHistoWorkspace
  */
-void FindPeaksMD::findPeaksHisto(Mantid::MDEvents::MDHistoWorkspace_sptr ws) {
+void FindPeaksMD::findPeaksHisto(Mantid::DataObjects::MDHistoWorkspace_sptr ws) {
   size_t nd = ws->getNumDims();
   if (nd < 3)
     throw std::invalid_argument("Workspace must have at least 3 dimensions.");
@@ -487,7 +494,7 @@ void FindPeaksMD::findPeaksHisto(Mantid::MDEvents::MDHistoWorkspace_sptr ws) {
     // List of chosen possible peak boxes.
     std::vector<size_t> peakBoxes;
 
-    prog = new Progress(this, 0.30, 0.95, MaxPeaks);
+    prog = new Progress(this, 0.30, 0.95, m_maxPeaks);
 
     int64_t numBoxesFound = 0;
     // Now we go (backwards) through the map
@@ -522,9 +529,9 @@ void FindPeaksMD::findPeaksHisto(Mantid::MDEvents::MDHistoWorkspace_sptr ws) {
 
       // The box was not rejected for another reason.
       if (!badBox) {
-        if (numBoxesFound++ >= MaxPeaks) {
+        if (numBoxesFound++ >= m_maxPeaks) {
           g_log.notice() << "Number of peaks found exceeded the limit of "
-                         << MaxPeaks << ". Stopping peak finding." << std::endl;
+                         << m_maxPeaks << ". Stopping peak finding." << std::endl;
           break;
         }
 
@@ -584,7 +591,7 @@ void FindPeaksMD::exec() {
       static_cast<coord_t>(PeakDistanceThreshold * PeakDistanceThreshold);
 
   DensityThresholdFactor = getProperty("DensityThresholdFactor");
-  MaxPeaks = getProperty("MaxPeaks");
+  m_maxPeaks = getProperty("MaxPeaks");
 
   // Execute the proper algo based on the type of workspace
   if (inMDHW) {
@@ -611,4 +618,4 @@ void FindPeaksMD::exec() {
 }
 
 } // namespace Mantid
-} // namespace MDEvents
+} // namespace DataObjects

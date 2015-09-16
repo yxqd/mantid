@@ -1,6 +1,5 @@
-#pylint: disable=no-init
+#pylint: disable=no-init,attribute-defined-outside-init
 import stresstesting
-import mantid
 from mantid.api import FileFinder
 from mantid.simpleapi import *
 from reduction_workflow.instruments.sans.hfir_command_interface import *
@@ -9,11 +8,11 @@ import os
 
 def do_cleanup():
     Files = ["BioSANS_test_data_reduction.log",
-    "BioSANS_test_data_Iq.xml",
-    "BioSANS_test_data_Iq.txt",
-    "BioSANS_test_data_Iqxy.dat"]
-    for file in Files:
-        absfile = FileFinder.getFullPath(file)
+             "BioSANS_test_data_Iq.xml",
+             "BioSANS_test_data_Iq.txt",
+             "BioSANS_test_data_Iqxy.dat"]
+    for filename in Files:
+        absfile = FileFinder.getFullPath(filename)
         if os.path.exists(absfile):
             os.remove(absfile)
     return True
@@ -25,8 +24,8 @@ class HFIRBackground(stresstesting.MantidStressTest):
         return True
 
     def runTest(self):
-        config = ConfigService.Instance()
-        config["facilityName"]='HFIR'
+        configI = ConfigService.Instance()
+        configI["facilityName"]='HFIR'
         GPSANS()
         SetBeamCenter(16, 95)
         AppendDataFile("BioSANS_test_data.xml")
@@ -49,8 +48,8 @@ class HFIRBackgroundTransmission(stresstesting.MantidStressTest):
         return True
 
     def runTest(self):
-        config = ConfigService.Instance()
-        config["facilityName"]='HFIR'
+        configI = ConfigService.Instance()
+        configI["facilityName"]='HFIR'
         GPSANS()
         AppendDataFile("BioSANS_test_data.xml")
         Background("BioSANS_test_data.xml")
@@ -73,8 +72,8 @@ class HFIRBackgroundDirectBeamTrans(stresstesting.MantidStressTest):
         return True
 
     def runTest(self):
-        config = ConfigService.Instance()
-        config["facilityName"]='HFIR'
+        configI = ConfigService.Instance()
+        configI["facilityName"]='HFIR'
         GPSANS()
         AppendDataFile("BioSANS_test_data.xml")
         Background("BioSANS_test_data.xml")
@@ -99,17 +98,17 @@ class HFIRBackgroundBeamSpreaderTrans(stresstesting.MantidStressTest):
         return True
 
     def runTest(self):
-        config = ConfigService.Instance()
-        config["facilityName"]='HFIR'
+        configI = ConfigService.Instance()
+        configI["facilityName"]='HFIR'
         GPSANS()
         AppendDataFile("BioSANS_test_data.xml")
         Background("BioSANS_test_data.xml")
         BckBeamSpreaderTransmission(sample_spreader="BioSANS_test_data.xml",
-                                 direct_spreader="BioSANS_empty_cell.xml",
-                                 sample_scattering="BioSANS_test_data.xml",
-                                 direct_scattering="BioSANS_empty_cell.xml",
-                                 spreader_transmission=0.5,
-                                 spreader_transmission_err=0.1)
+                                    direct_spreader="BioSANS_empty_cell.xml",
+                                    sample_scattering="BioSANS_test_data.xml",
+                                    direct_scattering="BioSANS_empty_cell.xml",
+                                    spreader_transmission=0.5,
+                                    spreader_transmission_err=0.1)
         AzimuthalAverage(binning="0.01,0.001,0.11")
         Reduce1D()
 
@@ -128,8 +127,8 @@ class HFIRBackgroundTransDarkCurrent(stresstesting.MantidStressTest):
         return True
 
     def runTest(self):
-        config = ConfigService.Instance()
-        config["facilityName"]='HFIR'
+        configI = ConfigService.Instance()
+        configI["facilityName"]='HFIR'
         GPSANS()
         AppendDataFile("BioSANS_test_data.xml")
         Background("BioSANS_test_data.xml")
@@ -155,8 +154,8 @@ class HFIRBackgroundDirectBeamTransDC(stresstesting.MantidStressTest):
         return True
 
     def runTest(self):
-        config = ConfigService.Instance()
-        config["facilityName"]='HFIR'
+        configI = ConfigService.Instance()
+        configI["facilityName"]='HFIR'
         GPSANS()
         AppendDataFile("BioSANS_test_data.xml")
         Background("BioSANS_test_data.xml")

@@ -38,13 +38,23 @@ set( TEST_SUITES
 
 add_executable( ${PROJECT_NAME} ${INCLUDE_FILES} ${SOURCE_FILES} ${MOC_SRCS} )
 
-target_link_libraries( ${PROJECT_NAME}
+include_directories( SYSTEM ${PARAVIEW_INCLUDE_DIRS} )
+
+target_link_libraries( ${PROJECT_NAME} LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME} 
 pqCore pqComponents pqApplicationComponents
 ${QT_LIBRARIES}
 ${MANTID_SUBPROJECT_LIBS}
 VatesSimpleGuiQtWidgets
 VatesSimpleGuiViewWidgets
+MantidQtAPI
+vtkRenderingFreeType
+${POCO_LIBRARIES}
+${Boost_LIBRARIES}
 )
+
+if (OSX_VERSION VERSION_GREATER 10.8)
+  set_target_properties ( ${PROJECT_NAME} PROPERTIES INSTALL_RPATH "@loader_path/../Libraries;@loader_path/../MacOS")
+endif ()
 
 if( SQUISH_FOUND )
   # Need to set the AUT first

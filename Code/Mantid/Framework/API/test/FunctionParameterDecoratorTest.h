@@ -4,9 +4,12 @@
 #include <cxxtest/TestSuite.h>
 
 #include "MantidAPI/FunctionParameterDecorator.h"
+#include "MantidAPI/CompositeFunction.h"
 #include "MantidAPI/ParamFunction.h"
 #include "MantidAPI/FunctionFactory.h"
+#include "MantidAPI/WorkspaceGroup.h"
 #include "MantidKernel/Exception.h"
+
 #include <boost/make_shared.hpp>
 
 #include <gtest/gtest.h>
@@ -44,11 +47,11 @@ public:
   }
 };
 
-DECLARE_FUNCTION(TestableFunctionParameterDecorator);
+DECLARE_FUNCTION(TestableFunctionParameterDecorator)
 
 class FunctionWithParameters : public ParamFunction {
 public:
-  FunctionWithParameters() : ParamFunction() {}
+  FunctionWithParameters() : ParamFunction(), m_workspace() {}
 
   std::string name() const { return "FunctionWithParameters"; }
 
@@ -63,8 +66,15 @@ public:
     UNUSED_ARG(values);
     // Does nothing, not required for this test.
   }
+
+  void setWorkspace(boost::shared_ptr<const Workspace> ws) { m_workspace = ws; }
+
+  Workspace_const_sptr getWorkspace() const { return m_workspace; }
+
+private:
+  Workspace_const_sptr m_workspace;
 };
-DECLARE_FUNCTION(FunctionWithParameters);
+DECLARE_FUNCTION(FunctionWithParameters)
 
 class FunctionWithAttributes : public ParamFunction {
 public:
@@ -88,7 +98,7 @@ public:
   }
 };
 
-DECLARE_FUNCTION(FunctionWithAttributes);
+DECLARE_FUNCTION(FunctionWithAttributes)
 
 class FunctionParameterDecoratorTest : public CxxTest::TestSuite {
 public:
@@ -277,6 +287,40 @@ public:
     TS_ASSERT(!tie);
   }
 
+  void testTiesInComposite() {
+    FunctionParameterDecorator_sptr fn =
+        getFunctionParameterDecoratorGaussian();
+
+    CompositeFunction_sptr composite = boost::make_shared<CompositeFunction>();
+    composite->addFunction(fn);
+
+    TS_ASSERT_THROWS_NOTHING(composite->addTies("f0.Height=2.0*f0.Sigma"));
+
+    composite->setParameter("f0.Sigma", 3.0);
+    composite->applyTies();
+    TS_ASSERT_EQUALS(composite->getParameter("f0.Height"), 6.0);
+  }
+
+  void testTiesInWrappedComposite() {
+    FunctionParameterDecorator_sptr outer =
+        boost::make_shared<TestableFunctionParameterDecorator>();
+    outer->setDecoratedFunction("CompositeFunction");
+
+    FunctionParameterDecorator_sptr fn =
+        getFunctionParameterDecoratorGaussian();
+
+    CompositeFunction_sptr composite =
+        boost::dynamic_pointer_cast<CompositeFunction>(
+            outer->getDecoratedFunction());
+    composite->addFunction(fn);
+
+    TS_ASSERT_THROWS_NOTHING(outer->addTies("f0.Height=2.0*f0.Sigma"));
+
+    outer->setParameter("f0.Sigma", 3.0);
+    outer->applyTies();
+    TS_ASSERT_EQUALS(outer->getParameter("f0.Height"), 6.0);
+  }
+
   void testParameterNames() {
     FunctionParameterDecorator_sptr fn =
         getFunctionParameterDecoratorGaussian();
@@ -347,6 +391,25 @@ public:
     TS_ASSERT_EQUALS(cloned->getParameter("Height"), 3.0);
     TS_ASSERT_EQUALS(cloned->getParameter("PeakCentre"), 0.5);
     TS_ASSERT_EQUALS(cloned->getParameter("Sigma"), 0.3);
+  }
+
+  void testSetWorkspace() {
+    // using WorkspaceGroup because it is in API
+    Workspace_const_sptr ws = boost::make_shared<const WorkspaceGroup>();
+
+    TestableFunctionParameterDecorator invalidFn;
+    TS_ASSERT_THROWS(invalidFn.setWorkspace(ws), std::runtime_error);
+
+    FunctionParameterDecorator_sptr fn =
+        getFunctionParameterDecoratorGaussian();
+
+    TS_ASSERT_THROWS_NOTHING(fn->setWorkspace(ws));
+
+    boost::shared_ptr<FunctionWithParameters> decorated =
+        boost::dynamic_pointer_cast<FunctionWithParameters>(
+            fn->getDecoratedFunction());
+
+    TS_ASSERT_EQUALS(decorated->getWorkspace(), ws);
   }
 
 private:

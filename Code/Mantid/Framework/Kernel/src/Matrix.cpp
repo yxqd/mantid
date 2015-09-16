@@ -3,8 +3,6 @@
 #include "MantidKernel/Exception.h"
 #include "MantidKernel/TimeSeriesProperty.h"
 #include "MantidKernel/MersenneTwister.h"
-#include <iomanip>
-#include <iostream>
 
 using Mantid::Kernel::TimeSeriesProperty;
 
@@ -351,11 +349,15 @@ V3D Matrix<T>::operator*(const V3D &Vx) const
   @return Matrix(This * A)
 */
 {
-  if (ny != 3 || nx != 3)
+  if (ny != 3 || nx > 3)
     throw Kernel::Exception::MisMatch<size_t>(ny, 3, "Matrix::operator*(V3D)");
-  return V3D(V[0][0] * Vx.X() + V[0][1] * Vx.Y() + V[0][2] * Vx.Z(),
-             V[1][0] * Vx.X() + V[1][1] * Vx.Y() + V[1][2] * Vx.Z(),
-             V[2][0] * Vx.X() + V[2][1] * Vx.Y() + V[2][2] * Vx.Z());
+
+  V3D v;
+  for(size_t i = 0; i < nx; ++i) {
+      v[i] = V[i][0] * Vx.X() + V[i][1] * Vx.Y() + V[i][2] * Vx.Z();
+  }
+
+  return v;
 }
 
 template <typename T>
@@ -963,6 +965,13 @@ T Matrix<T>::Invert()
   if (nx != ny && nx < 1)
     return 0;
 
+  if(nx==1)
+  {
+      T det=V[0][0];
+      if(V[0][0]!=static_cast<T>(0.))
+          V[0][0]=static_cast<T>(1.)/V[0][0];
+      return det;
+  }
   int *indx = new int[nx]; // Set in lubcmp
 
   double *col = new double[nx];
@@ -1094,7 +1103,7 @@ void Matrix<T>::lubcmp(int *rowperm, int &interchange)
   Find biggest pivot and move to top row. Then
   divide by pivot.
   @param interchange :: odd/even nterchange (+/-1)
-  @param rowperm :: row permuations [nx values]
+  @param rowperm :: row permutations [nx values]
 */
 {
   double sum, dum, big, temp;
@@ -1113,6 +1122,9 @@ void Matrix<T>::lubcmp(int *rowperm, int &interchange)
 
     if (big == 0.0) {
       delete[] vv;
+      for (int j=0;j<static_cast<int>(nx); j++){
+        rowperm[j] = j;
+      }
       return;
     }
     vv[i] = 1.0 / big;

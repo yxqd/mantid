@@ -1,13 +1,12 @@
 #pylint: disable=invalid-name
 """ Sample LET reduction script """
-import os
 #os.environ["PATH"] = r"c:/Mantid/Code/builds/br_master/bin/Release;"+os.environ["PATH"]
 
 
 from Direct.ReductionWrapper import *
 try:
     import reduce_vars as web_var
-except:
+except ImportError:
     web_var = None
 
 #
@@ -32,7 +31,7 @@ def find_binning_range(energy,ebin):
         mult=2.8868
         dt_DAE = 1
     else:
-       raise RuntimeError("Find_binning_range: unsupported/unknown instrument found")
+        raise RuntimeError("Find_binning_range: unsupported/unknown instrument found")
 
     energy=float(energy)
 
@@ -66,7 +65,8 @@ class ReduceLET_OneRep(ReductionWrapper):
 
         # Absolute units reduction properties.
         #prop['monovan_run'] = 17589
-        #prop['sample_mass'] = 10/(94.4/13) # -- this number allows to get approximately the same system test intensities for MAPS as the old test
+        #prop['sample_mass'] = 10/(94.4/13)
+        # -- this number allows to get approximately the same system test intensities for MAPS as the old test
         #prop['sample_rmm'] = 435.96 #
         return prop
 
@@ -101,8 +101,8 @@ class ReduceLET_OneRep(ReductionWrapper):
         sample_ws = 'w1'
         monitors_ws = sample_ws + '_monitors'
         LoadEventNexus(Filename='LET00006278.nxs',OutputWorkspace=sample_ws,
-                     SingleBankPixelsOnly='0',LoadMonitors='1',
-                     MonitorsAsEvents='1')
+                       SingleBankPixelsOnly='0',LoadMonitors='1',
+                       MonitorsAsEvents='1')
         ConjoinWorkspaces(InputWorkspace1=sample_ws, InputWorkspace2=monitors_ws)
         #prop.sample_run = sample_ws
 
@@ -169,7 +169,7 @@ class ReduceLET_MultiRep2015(ReductionWrapper):
         prop['bleed'] = False
         prop['norm_method']='current'
         prop['detector_van_range']=[2,7]
-        prop['background_range'] = [92000,98000] # TOF range for the calculating flat background
+        prop['background_range'] = [90000,95000] # TOF range for the calculating flat background
         prop['hardmaskOnly']='LET_hard.msk' # diag does not work well on LET. At present only use a hard mask RIB has created
 
         prop['check_background']=True
@@ -190,6 +190,8 @@ class ReduceLET_MultiRep2015(ReductionWrapper):
         # Should be possibility to define spectra_to_monitors_list to just monitors list, if
         # spectra_to_monitors_list remains undefined
         prop['spectra_to_monitors_list']=5506
+        # similar to the one above. old IDF do not contain this property
+        prop['multirep_tof_specta_list']="12416,21761"
         return prop
       #
     @iliad
@@ -226,7 +228,7 @@ class ReduceLET_MultiRep2015(ReductionWrapper):
             """
             # Note -- properties have the same names  as the list of advanced and
             # main properties
-            ei = prop_man.incident_energy
+            ei = PropertyManager.incident_energy.get_current()
             # sample run is more then just list of runs, so we use
             # the formalization below to access its methods
             run_num = PropertyManager.sample_run.run_number()
@@ -236,19 +238,19 @@ class ReduceLET_MultiRep2015(ReductionWrapper):
         # Uncomment this to use custom filename function
         # Note: the properties are stored in prop_man class accessed as
         # below.
-        #return custom_name(self.reducer.prop_man)
+        #return lambda : custom_name(self.reducer.prop_man)
         # use this method to use standard file name generating function
         return None
 
 #----------------------------------------------------------------------------------------------------------------------
 
 if __name__=="__main__":
-    maps_dir = r'd:\Data\MantidDevArea\Datastore\DataCopies\Testing\Data\SystemTest'
-    data_dir = r'd:\Data\Mantid_Testing\15_03_01'
-    ref_data_dir = r'd:\Data\MantidDevArea\Datastore\DataCopies\Testing\SystemTests\tests\analysis\reference'
-    config.setDataSearchDirs('{0};{1};{2}'.format(data_dir,maps_dir,ref_data_dir))
+    #maps_dir = r'd:\Data\MantidDevArea\Datastore\DataCopies\Testing\Data\SystemTest'
+    #data_dir = r'd:\Data\Mantid_Testing\15_03_01'
+    #ref_data_dir = r'd:\Data\MantidDevArea\Datastore\DataCopies\Testing\SystemTests\tests\analysis\reference'
+    #config.setDataSearchDirs('{0};{1};{2}'.format(data_dir,maps_dir,ref_data_dir))
     #config.appendDataSearchDir('d:/Data/Mantid_GIT/Test/AutoTestData')
-    config['defaultsave.directory'] = data_dir # folder to save resulting spe/nxspe files. Defaults are in
+    #config['defaultsave.directory'] = data_dir # folder to save resulting spe/nxspe files. Defaults are in
 
     # execute stuff from Mantid
     rd =ReduceLET_MultiRep2015()

@@ -307,37 +307,48 @@ class DirectEnergyConversionTest(unittest.TestCase):
     def test_tof_range(self):
 
         run=CreateSampleWorkspace(Function='Multiple Peaks', NumBanks=6, BankPixelWidth=1, NumEvents=10,\
-                                  XUnit='DeltaE', XMin=-20, XMax=65, BinWidth=0.2)
+                                  XUnit='Energy', XMin=5, XMax=75, BinWidth=0.2)
         LoadInstrument(run,InstrumentName='MARI')
 
         red = DirectEnergyConversion(run.getInstrument())
 
-        red.prop_man.incident_energy = 67
-        red.prop_man.energy_bins =  [-20,0.2,65]
-        red.prop_man.multirep_tof_specta_list = [5,5]
+        red.prop_man.incident_energy = 26.2
+        red.prop_man.energy_bins =  [-20,0.1,20]
+        red.prop_man.multirep_tof_specta_list = [4,5,6]
+        MoveInstrumentComponent(Workspace='run', ComponentName='Detector', DetectorID=1102, Z=3)
+        MoveInstrumentComponent(Workspace='run', ComponentName='Detector', DetectorID=1103,Z=6)
 
-        tof_range = red.find_tof_range_for_multirep(run)
+        run_tof = ConvertUnits(run,Target='TOF',EMode='Elastic')
+
+        tof_range = red.find_tof_range_for_multirep(run_tof)
 
         self.assertEqual(len(tof_range),3)
 
-        run_tof = ConvertUnits(run,Target='TOF',EMode='Direct',EFixed=67.)
-        x = run_tof.readX(4)
+        x = run_tof.readX(3)
         dx=abs(x[1:]-x[:-1])
         xMin = min(x)
-        xMax = max(x)
         dt   = min(dx)
+        x = run_tof.readX(5)
+        xMax = max(x)
 
-        self.assertAlmostEqual(tof_range[0],xMin)
-        self.assertAlmostEqual(tof_range[1],dt)
-        self.assertAlmostEqual(tof_range[2],xMax)
+
+        self.assertTrue(tof_range[0]>xMin)
+        #self.assertAlmostEqual(tof_range[1],dt)
+        self.assertTrue(tof_range[2]<xMax)
 
         # check another working mode
-        red.prop_man.multirep_tof_specta_list = 5
-        tof_range1 = red.find_tof_range_for_multirep(run)
+        red.prop_man.multirep_tof_specta_list = 4
+        red.prop_man.incident_energy = 47.505
+        red.prop_man.energy_bins =  [-20,0.1,45]
+  
+        tof_range1 = red.find_tof_range_for_multirep(run_tof)
 
-        self.assertAlmostEqual(tof_range[0],tof_range1[0])
-        self.assertAlmostEqual(tof_range[1],tof_range1[1])
-        self.assertAlmostEqual(tof_range[2],tof_range1[2])
+        self.assertTrue(tof_range1[0]>xMin)
+        self.assertTrue(tof_range1[2]<xMax)
+
+        self.assertTrue(tof_range1[2]<tof_range[2])
+        self.assertTrue(tof_range1[0]<tof_range[0])
+        self.assertTrue(tof_range1[1]<tof_range[1])
 
     def test_multirep_mode(self):
         # create test workspace
@@ -352,6 +363,9 @@ class DirectEnergyConversionTest(unittest.TestCase):
         run = CreateSampleWorkspace( Function='Multiple Peaks',WorkspaceType='Event',NumBanks=8, BankPixelWidth=1,\
                                      NumEvents=100000, XUnit='TOF',xMin=tMin,xMax=tMax)
         LoadInstrument(run,InstrumentName='MARI')
+        MoveInstrumentComponent(Workspace='run', ComponentName='Detector', DetectorID=1102,Z=1)
+       # MoveInstrumentComponent(Workspace='run', ComponentName='Detector', DetectorID=1103,Z=4)
+       # MoveInstrumentComponent(Workspace='run', ComponentName='Detector', DetectorID=1104,Z=5)
 
         # do second
         run2 = CloneWorkspace(run)
@@ -365,6 +379,7 @@ class DirectEnergyConversionTest(unittest.TestCase):
         tReducer.hard_mask_file=None
         tReducer.map_file=None
         tReducer.save_format=None
+        tReducer.multirep_tof_specta_list = [4,5]
 
         result = tReducer.convert_to_energy(wb_ws,run,[67.,122.],[-2,0.02,0.8])
 
@@ -431,6 +446,7 @@ class DirectEnergyConversionTest(unittest.TestCase):
         tReducer.prop_man.normalise_method='monitor-1'
         tReducer.norm_mon_integration_range=[tMin,tMax]
 
+
         result = tReducer.convert_to_energy(wb_ws,run,[67.,122.],[-2,0.02,0.8],None,mono)
 
         self.assertEqual(len(result),2)
@@ -459,6 +475,150 @@ class DirectEnergyConversionTest(unittest.TestCase):
         rez = CheckWorkspacesMatch(result[1],result2[1])
         self.assertEqual(rez,'Success!')
 
+    def test_abs_multirep_with_bkg_and_bleed(self):
+        # create test workspace
+        run_monitors=CreateSampleWorkspace(Function='Multiple Peaks', NumBanks=4, BankPixelWidth=1,\
+                                            NumEvents=100000, XUnit='Energy', XMin=3, XMax=200, BinWidth=0.1)
+        LoadInstrument(run_monitors,InstrumentName='MARI')
+        ConvertUnits(InputWorkspace='run_monitors', OutputWorkspace='run_monitors', Target='TOF')
+        run_monitors = mtd['run_monitors']
+        tof = run_monitors.dataX(3)
+        tMin = tof[0]
+        tMax = tof[-1]
+        run = CreateSampleWorkspace( Function='Multiple Peaks',WorkspaceType='Event',NumBanks=8, BankPixelWidth=1,\
+                                     NumEvents=100000, XUnit='TOF',xMin=tMin,xMax=tMax)
+        LoadInstrument(run,InstrumentName='MARI')
+        AddSampleLog(run,LogName='gd_prtn_chrg',LogText='1.',LogType='Number')
+
+        # build "monovanadium"
+        mono = CloneWorkspace(run)
+        mono_monitors = CloneWorkspace(run_monitors)
+
+        # build "White-beam"
+        wb_ws   = Rebin(run,Params=[tMin,1,tMax],PreserveEvents=False)
+
+        # build "second run" to ensure repeated execution
+        run2 = CloneWorkspace(run)
+        run2_monitors = CloneWorkspace(run_monitors)
+
+        # Run multirep
+        tReducer = DirectEnergyConversion(run.getInstrument())
+        tReducer.prop_man.run_diagnostics=True 
+        tReducer.hard_mask_file=None
+        tReducer.map_file=None
+        tReducer.prop_man.check_background = True
+        tReducer.prop_man.background_range=[0.99*tMax,tMax]
+        tReducer.prop_man.monovan_mapfile=None
+        tReducer.save_format=None
+        tReducer.prop_man.normalise_method='monitor-2'
+
+        tReducer.prop_man.bleed = True
+        tReducer.norm_mon_integration_range=[tMin,tMax]
+
+        AddSampleLog(run,LogName='good_frames',LogText='1.',LogType='Number Series')
+        result = tReducer.convert_to_energy(wb_ws,run,[67.,122.],[-2,0.02,0.8],None,mono)
+
+        self.assertEqual(len(result),2)
+
+        ws1=result[0]
+        self.assertEqual(ws1.getAxis(0).getUnit().unitID(),'DeltaE')
+        x = ws1.readX(0)
+        self.assertAlmostEqual(x[0],-2*67.)
+        self.assertAlmostEqual(x[-1],0.8*67.)
+
+        ws2=result[1]
+        self.assertEqual(ws2.getAxis(0).getUnit().unitID(),'DeltaE')
+        x = ws2.readX(0)
+        self.assertAlmostEqual(x[0],-2*122.)
+        self.assertAlmostEqual(x[-1],0.8*122.)
+
+        # test another ws
+        # rename samples from previous workspace to avoid deleting them on current run
+        for ind,item in enumerate(result):
+            result[ind]=RenameWorkspace(item,OutputWorkspace='SampleRez#'+str(ind))
+        #
+        AddSampleLog(run2,LogName='goodfrm',LogText='1',LogType='Number')
+        result2 = tReducer.convert_to_energy(None,run2)
+
+        rez = CheckWorkspacesMatch(result[0],result2[0])
+        self.assertEqual(rez,'Success!')
+        rez = CheckWorkspacesMatch(result[1],result2[1])
+        self.assertEqual(rez,'Success!')
+
+    def test_sum_monitors(self):
+        # create test workspace
+        monitor_ws=CreateSampleWorkspace(Function='Multiple Peaks', NumBanks=6, BankPixelWidth=1,\
+                                            NumEvents=100000, XUnit='Energy', XMin=3, XMax=200, BinWidth=0.1)
+
+        # Place all detectors into appropriate positions as the distance for all detectors
+        # to sum have to be equal
+        mon1_det = monitor_ws.getDetector(0)
+        mon1_pos = mon1_det.getPos()
+        MoveInstrumentComponent(Workspace=monitor_ws,ComponentName= 'Detector', DetectorID=2,
+                                X=mon1_pos.getX(),Y=mon1_pos.getY(), Z=mon1_pos.getZ(),
+                                 RelativePosition=False)
+        MoveInstrumentComponent(Workspace=monitor_ws,ComponentName= 'Detector', DetectorID=3,
+                                X=mon1_pos.getX(),Y=mon1_pos.getY(), Z=mon1_pos.getZ(),
+                                 RelativePosition=False)
+        mon2_det = monitor_ws.getDetector(3)
+        mon2_pos = mon2_det.getPos()
+        MoveInstrumentComponent(Workspace=monitor_ws,ComponentName= 'Detector', DetectorID=4,
+                                X=mon2_pos.getX(),Y=mon2_pos.getY(), Z=mon2_pos.getZ(),
+                                 RelativePosition=False)
+        MoveInstrumentComponent(Workspace=monitor_ws,ComponentName= 'Detector', DetectorID=5,
+                                X=mon2_pos.getX(),Y=mon2_pos.getY(), Z=mon2_pos.getZ(),
+                                 RelativePosition=False)
+        ConvertUnits(InputWorkspace=monitor_ws, OutputWorkspace='monitor_ws', Target='TOF')
+        # Rebin to "formally" make common bin boundaries as it is not considered as such
+        #any more after converting units (Is this a bug?)
+        xx = monitor_ws.readX(0)
+        x_min = min(xx[0],xx[-1])
+        x_max= max(xx[0],xx[-1])
+        x_step = (x_max-x_min)/(len(xx)-1)
+        monitor_ws = Rebin(monitor_ws,Params=[x_min,x_step,x_max])
+        monitor_ws = mtd['monitor_ws']
+        #
+        # keep this workspace for second test below -- clone and give
+        # special name for RunDescriptor to recognize as monitor workspace for
+        # fake data workspace we will provide.
+        _TMPmonitor_ws_monitors = CloneWorkspace(monitor_ws)
+
+        # Estimate energy from two monitors
+        ei,mon1_peak,mon1_index,tzero = \
+            GetEi(InputWorkspace=monitor_ws, Monitor1Spec=1,Monitor2Spec=4,
+                  EnergyEstimate=62.2,FixEi=False)
+        self.assertAlmostEqual(ei,62.1449,3)
+
+        # Provide instrument parameter, necessary to define
+        # DirectEnergyConversion class properly
+        SetInstrumentParameter(monitor_ws,ParameterName='fix_ei',ParameterType='Number',Value='0')
+        SetInstrumentParameter(monitor_ws,DetectorList=[1,2,3,6],ParameterName='DelayTime',\
+                               ParameterType='Number',Value='0.5') 
+        # initiate test reducer
+        tReducer = DirectEnergyConversion(monitor_ws.getInstrument())
+        tReducer.prop_man.ei_mon_spectra= ([1,2,3],6)
+        tReducer.prop_man.normalise_method = 'current'
+        ei_mon_spectra  = tReducer.prop_man.ei_mon_spectra
+        ei_mon_spectra,monitor_ws  = tReducer.sum_monitors_spectra(monitor_ws,ei_mon_spectra)
+        #
+        # Check GetEi with summed monitors. Try to run separately.
+        ei1,mon1_peak,mon1_index,tzero = \
+            GetEi(InputWorkspace=monitor_ws, Monitor1Spec=1,Monitor2Spec=6,
+                  EnergyEstimate=62.2,FixEi=False)
+        self.assertAlmostEqual(ei1,ei,2)
+
+        # Second test Check get_ei as part of the reduction
+        tReducer.prop_man.ei_mon_spectra= ([1,2,3],[4,5,6])
+        tReducer.prop_man.fix_ei = False
+        # DataWorkspace == monitor_ws data workspace is not used anyway. The only thing we
+        # use it for is to retrieve monitor workspace from Mantid using its name
+        ei2,mon1_peak2=tReducer.get_ei(monitor_ws,62.2)
+        self.assertAlmostEqual(ei2,64.95,2)
+
+
+
 
 if __name__=="__main__":
+   #test = DirectEnergyConversionTest('test_sum_monitors')
+   #test.test_sum_monitors()
    unittest.main()

@@ -15,8 +15,8 @@
 #include "MantidDataObjects/PeaksWorkspace.h"
 #include "MantidDataObjects/PeakNoShapeFactory.h"
 #include "MantidDataObjects/PeakShapeSphericalFactory.h"
+#include "MantidDataObjects/PeakShapeEllipsoidFactory.h"
 #include "MantidKernel/ArrayProperty.h"
-#include "MantidKernel/ConfigService.h"
 #include "MantidKernel/DateAndTime.h"
 #include "MantidKernel/UnitFactory.h"
 #include "MantidKernel/BoundedValidator.h"
@@ -28,14 +28,8 @@
 #include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/shared_array.hpp>
-#include <cmath>
-#include <Poco/Path.h>
+
 #include <Poco/StringTokenizer.h>
-#include "MantidDataObjects/PeaksWorkspace.h"
-#include "MantidKernel/MultiThreaded.h"
-#include "MantidDataObjects/PeakNoShapeFactory.h"
-#include "MantidDataObjects/PeakShapeSphericalFactory.h"
-#include "MantidDataObjects/PeakShapeEllipsoidFactory.h"
 
 #include <nexus/NeXusException.hpp>
 
@@ -43,7 +37,7 @@ namespace Mantid {
 namespace DataHandling {
 
 // Register the algorithm into the algorithm factory
-DECLARE_NEXUS_FILELOADER_ALGORITHM(LoadNexusProcessed);
+DECLARE_NEXUS_FILELOADER_ALGORITHM(LoadNexusProcessed)
 
 using namespace Mantid::NeXus;
 using namespace DataObjects;
@@ -249,9 +243,8 @@ void LoadNexusProcessed::init() {
   declareProperty(new ArrayProperty<int64_t>("SpectrumList"),
                   "List of spectrum numbers to read.");
   declareProperty("EntryNumber", (int64_t)0, mustBePositive,
-                  "The particular entry number to read. Default load all "
-                  "workspaces and creates a workspacegroup (default: read all "
-                  "entries).");
+                  "0 indicates that every entry is loaded, into a separate workspace within a group. "
+                  "A positive number identifies one entry to be loaded, into one worskspace");
   declareProperty("LoadHistory", true,
                   "If true, the workspace history will be loaded");
   declareProperty(
@@ -284,9 +277,16 @@ Workspace_sptr LoadNexusProcessed::doAccelleratedMultiPeriodLoading(
     periodWorkspace->setX(i, tempMatrixWorkspace->refX(i));
   }
 
-  NXEntry mtdEntry = root.openEntry(entryName);
-  const std::string groupName = "workspace";
-  if (!mtdEntry.containsGroup(groupName)) {
+  // We avoid using `openEntry` or similar here because they're just wrappers
+  // around `open`. `open` is slow for large multiperiod datasets, because it
+  // does a search upon the entire HDF5 tree. `openLocal` is *much* quicker, as
+  // it only searches the current group. It does, however, require that the parent
+  // group is currently open.
+  NXEntry mtdEntry(root, entryName);
+  mtdEntry.openLocal();
+
+  NXData wsEntry(mtdEntry, "workspace");
+  if (!wsEntry.openLocal()) {
     std::stringstream buffer;
     buffer
         << "Group entry " << p - 1
@@ -295,7 +295,6 @@ Workspace_sptr LoadNexusProcessed::doAccelleratedMultiPeriodLoading(
     throw std::runtime_error(buffer.str());
   }
 
-  NXData wsEntry = mtdEntry.openNXData(groupName);
   if (wsEntry.isValid("frac_area")) {
     std::stringstream buffer;
     buffer << "Group entry " << p - 1 << " has fractional area present. Try "
@@ -304,8 +303,10 @@ Workspace_sptr LoadNexusProcessed::doAccelleratedMultiPeriodLoading(
     throw std::runtime_error(buffer.str());
   }
 
-  NXDataSetTyped<double> data = wsEntry.openDoubleData();
-  NXDataSetTyped<double> errors = wsEntry.openNXDouble("errors");
+  NXDataSetTyped<double> data(wsEntry, "values");
+  data.openLocal();
+  NXDataSetTyped<double> errors(wsEntry, "errors");
+  errors.openLocal();
 
   const int nChannels = data.dim1();
 
@@ -351,7 +352,15 @@ Workspace_sptr LoadNexusProcessed::doAccelleratedMultiPeriodLoading(
     }
   }
 
-  m_cppFile->openPath(mtdEntry.path());
+  // We always start one layer too deep
+  // go from /workspace_{n}/{something} -> /workspace_{n}
+  m_cppFile->closeGroup();
+
+  // Now move to the correct period group
+  // /workspace_{n} -> /workspace_{n+1}
+  m_cppFile->closeGroup();
+  m_cppFile->openGroup(entryName, "NXentry");
+
   try {
     // This loads logs, sample, and instrument.
     periodWorkspace->loadSampleAndLogInfoNexus(m_cppFile);
@@ -359,6 +368,11 @@ Workspace_sptr LoadNexusProcessed::doAccelleratedMultiPeriodLoading(
     g_log.information("Error loading Instrument section of nxs file");
     g_log.information(e.what());
   }
+
+  // We make sure to close the current entries. Failing to do this can cause
+  // strange off-by-one errors when loading the spectra.
+  wsEntry.close();
+  mtdEntry.close();
 
   const double fractionComplete = double(p - 1) / double(nWorkspaceEntries);
   progress(fractionComplete, "Loading multiperiod entry");
@@ -1009,10 +1023,19 @@ API::Workspace_sptr LoadNexusProcessed::loadPeaksEntry(NXEntry &entry) {
   // Get information from all but data group
   std::string parameterStr;
   // Hop to the right point /mantid_workspace_1
-  m_cppFile->openPath(entry.path()); // This is
+  try {
+    m_cppFile->openPath(entry.path()); // This is
+  } catch (std::runtime_error &re) {
+    throw std::runtime_error("Error while opening a path in a Peaks entry in a "
+                             "Nexus processed file. "
+                             "This path is wrong: " +
+                             entry.path() +
+                             ". Lower level error description: " + re.what());
+  }
   try {
     // This loads logs, sample, and instrument.
-    peakWS->loadExperimentInfoNexus(m_cppFile, parameterStr);
+    peakWS->loadExperimentInfoNexus(getPropertyValue("Filename"), m_cppFile,
+                                    parameterStr);
   } catch (std::exception &e) {
     g_log.information("Error loading Instrument section of nxs file");
     g_log.information(e.what());
@@ -1021,7 +1044,15 @@ API::Workspace_sptr LoadNexusProcessed::loadPeaksEntry(NXEntry &entry) {
   // Coordinates - Older versions did not have the separate field but used a log
   // value
   uint32_t loadCoord(0);
-  m_cppFile->openGroup("peaks_workspace", "NXentry");
+  const std::string peaksWSName = "peaks_workspace";
+  try {
+    m_cppFile->openGroup(peaksWSName, "NXentry");
+  } catch (std::runtime_error &re) {
+    throw std::runtime_error(
+        "Error while opening a peaks workspace in a Nexus processed file. "
+        "Cannot open gropu " +
+        peaksWSName + ". Lower level error description: " + re.what());
+  }
   try {
     m_cppFile->readData("coordinate_system", loadCoord);
     peakWS->setCoordinateSystem(
@@ -1045,7 +1076,7 @@ API::Workspace_sptr LoadNexusProcessed::loadPeaksEntry(NXEntry &entry) {
   for (int r = 0; r < numberPeaks; r++) {
     Kernel::V3D v3d;
     v3d[2] = 1.0;
-    API::IPeak *p;
+    Geometry::IPeak *p;
     p = peakWS->createPeak(v3d);
     peakWS->addPeak(*p);
   }
@@ -1536,7 +1567,7 @@ API::Workspace_sptr LoadNexusProcessed::loadEntry(NXRoot &root,
   m_cppFile->openPath(mtd_entry.path());
   try {
     // This loads logs, sample, and instrument.
-    local_workspace->loadExperimentInfoNexus(
+    local_workspace->loadExperimentInfoNexus(getPropertyValue("Filename"), 
         m_cppFile, parameterStr); // REQUIRED PER PERIOD
   } catch (std::exception &e) {
     g_log.information("Error loading Instrument section of nxs file");
@@ -1925,7 +1956,7 @@ void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
     rb_workspace = boost::dynamic_pointer_cast<RebinnedOutput>(local_workspace);
   }
   xbins.load(static_cast<int>(blocksize), static_cast<int>(hist));
-  const int64_t nxbins(nchannels + 1);
+  const int64_t nxbins(xbins.dim1());
   double *xbin_start = xbins();
   double *xbin_end = xbin_start + nxbins;
   int64_t final(hist + blocksize);

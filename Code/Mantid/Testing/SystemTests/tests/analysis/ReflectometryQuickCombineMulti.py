@@ -22,7 +22,7 @@ class ReflectometryQuickCombineMulti(stresstesting.MantidStressTest):
             for transmissionNumber in transmissionNumbers:
                 LoadISISNexus(Filename=str(transmissionNumber), OutputWorkspace=str(transmissionNumber))
 
-            transmissionRuns = ",".join(map(str, transmissionNumbers))
+            transmissionRuns = ",".join([str(tn) for tn in transmissionNumbers])
             # Run quick
             quick.quick(str(runNumber), trans=transmissionRuns, theta=incidentAngle)
         finally:
@@ -48,7 +48,8 @@ class ReflectometryQuickCombineMulti(stresstesting.MantidStressTest):
         IvsQ2Binned = Rebin(InputWorkspace=IvsQ2, Params=self.createBinningParam(run2QLow, -step, run2QHigh))
 
         # Peform the stitching
-        combineMulti.combineDataMulti([IvsQ1Binned.name(), IvsQ2Binned.name()], self.__stitchedWorkspaceName, [run1QLow, run2QLow], [run1QHigh, run2QHigh], run1QLow, run2QHigh, -step, 1)
+        combineMulti.combineDataMulti([IvsQ1Binned.name(), IvsQ2Binned.name()], self.__stitchedWorkspaceName, \
+                                      [run1QLow, run2QLow], [run1QHigh, run2QHigh], run1QLow, run2QHigh, -step, 1)
 
 
     def validate(self):

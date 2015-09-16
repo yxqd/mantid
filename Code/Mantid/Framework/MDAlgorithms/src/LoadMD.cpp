@@ -5,17 +5,21 @@
 #include "MantidGeometry/MDGeometry/IMDDimension.h"
 #include "MantidGeometry/MDGeometry/IMDDimensionFactory.h"
 #include "MantidGeometry/MDGeometry/MDDimensionExtents.h"
+#include "MantidGeometry/MDGeometry/MDFrameFactory.h"
+#include "MantidGeometry/MDGeometry/MDFrame.h"
 #include "MantidKernel/CPUTimer.h"
 #include "MantidKernel/EnabledWhenProperty.h"
 #include "MantidKernel/Memory.h"
+#include "MantidKernel/MDUnitFactory.h"
+#include "MantidKernel/MDUnit.h"
 #include "MantidKernel/PropertyWithValue.h"
 #include "MantidKernel/System.h"
 #include "MantidMDAlgorithms/LoadMD.h"
-#include "MantidMDEvents/MDEventFactory.h"
-#include "MantidMDEvents/MDBoxFlatTree.h"
-#include "MantidMDEvents/MDHistoWorkspace.h"
-#include "MantidMDEvents/BoxControllerNeXusIO.h"
-#include "MantidMDEvents/CoordTransformAffine.h"
+#include "MantidDataObjects/MDEventFactory.h"
+#include "MantidDataObjects/MDBoxFlatTree.h"
+#include "MantidDataObjects/MDHistoWorkspace.h"
+#include "MantidDataObjects/BoxControllerNeXusIO.h"
+#include "MantidDataObjects/CoordTransformAffine.h"
 #include <nexus/NeXusException.hpp>
 #include <boost/algorithm/string.hpp>
 #include <vector>
@@ -29,12 +33,12 @@ typedef std::auto_ptr<Mantid::API::IBoxControllerIO> file_holder_type;
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::Geometry;
-using namespace Mantid::MDEvents;
+using namespace Mantid::DataObjects;
 
 namespace Mantid {
 namespace MDAlgorithms {
 
-DECLARE_NEXUS_FILELOADER_ALGORITHM(LoadMD);
+DECLARE_NEXUS_FILELOADER_ALGORITHM(LoadMD)
 
 //----------------------------------------------------------------------------------------------
 /** Constructor
@@ -42,7 +46,8 @@ DECLARE_NEXUS_FILELOADER_ALGORITHM(LoadMD);
 LoadMD::LoadMD()
     : m_numDims(0), // uninitialized incorrect value
       m_coordSystem(None),
-      m_BoxStructureAndMethadata(true) // this is faster but rarely needed.
+      m_BoxStructureAndMethadata(true), // this is faster but rarely needed.
+      m_saveMDVersion(false)
 {}
 
 //----------------------------------------------------------------------------------------------
@@ -158,17 +163,27 @@ void LoadMD::exec() {
   // Open the entry
   m_file->openGroup(entryName, "NXentry");
 
-  // How many dimensions?
-  std::vector<int32_t> vecDims;
-  m_file->readData("dimensions", vecDims);
-  if (vecDims.empty())
-    throw std::runtime_error("LoadMD:: Error loading number of dimensions.");
-  m_numDims = vecDims[0];
-  if (m_numDims <= 0)
-    throw std::runtime_error("LoadMD:: number of dimensions <= 0.");
+  // Check is SaveMD version 2 was used
+  m_saveMDVersion = 0;
+  if (m_file->hasAttr("SaveMDVersion"))
+    m_file->getAttr("SaveMDVersion", m_saveMDVersion);
 
-  // Now load all the dimension xml
-  this->loadDimensions();
+  if (m_saveMDVersion == 2)
+    this->loadDimensions2();
+  else {
+    // How many dimensions?
+    std::vector<int32_t> vecDims;
+    m_file->readData("dimensions", vecDims);
+    if (vecDims.empty())
+      throw std::runtime_error("LoadMD:: Error loading number of dimensions.");
+    m_numDims = vecDims[0];
+    if (m_numDims <= 0)
+      throw std::runtime_error("LoadMD:: number of dimensions <= 0.");
+
+    // Now load all the dimension xml
+    this->loadDimensions();
+  }
+
   // Coordinate system
   this->loadCoordinateSystem();
 
@@ -211,12 +226,19 @@ void LoadMD::loadSlab(std::string name, void *data, MDHistoWorkspace_sptr ws,
   if (m_file->getInfo().type != dataType)
     throw std::runtime_error("Unexpected data type for '" + name +
                              "' data set.'");
-  if (m_file->getInfo().dims[0] != static_cast<int>(ws->getNPoints()))
+
+  int nPoints = 1;
+  size_t numDims = m_file->getInfo().dims.size();
+  std::vector<int> size(numDims);
+  for (size_t d = 0; d < numDims; d++) {
+    nPoints *= static_cast<int>(m_file->getInfo().dims[d]);
+    size[d] = static_cast<int>(m_file->getInfo().dims[d]);
+  }
+  if (nPoints != static_cast<int>(ws->getNPoints()))
     throw std::runtime_error(
         "Inconsistency between the number of points in '" + name +
         "' and the number of bins defined by the dimensions.");
-  std::vector<int> start(1, 0);
-  std::vector<int> size(1, static_cast<int>(ws->getNPoints()));
+  std::vector<int> start(numDims, 0);
   try {
     m_file->getSlab(data, start, size);
   } catch (...) {
@@ -244,6 +266,8 @@ void LoadMD::loadHisto() {
 
   this->loadAffineMatricies(boost::dynamic_pointer_cast<IMDWorkspace>(ws));
 
+  if (m_saveMDVersion == 2 )
+    m_file->openGroup("data","NXdata");
   // Load each data slab
   this->loadSlab("signal", ws->getSignalArray(), ws, ::NeXus::FLOAT64);
   this->loadSlab("errors_squared", ws->getErrorSquaredArray(), ws,
@@ -271,6 +295,48 @@ void LoadMD::loadDimensions() {
     // Use the dimension factory to read the XML
     m_dims.push_back(createDimension(dimXML));
   }
+}
+
+//----------------------------------------------------------------------------------------------
+/** Load all the dimensions into this->m_dims
+* The dimensions are stored as an nxData array */
+void LoadMD::loadDimensions2() {
+  using namespace Geometry;
+  m_dims.clear();
+
+  std::string axes;
+
+  m_file->openGroup("data","NXdata");
+  m_file->openData("signal");
+  m_file->getAttr("axes", axes);
+  m_file->closeData();
+
+  std::vector<std::string> splitAxes;
+  boost::split(splitAxes, axes, boost::is_any_of(":"));
+  // Create each dimension from axes data
+  // We loop axes backwards because Mantid
+  for (size_t d = splitAxes.size(); d > 0; d--) {
+    std::string long_name;
+    std::string units;
+    std::string frame;
+    std::vector<double> axis;
+    m_file->openData(splitAxes[d - 1]);
+    m_file->getAttr("long_name", long_name);
+    m_file->getAttr("units", units);
+    try {
+        m_file->getAttr("frame", frame);
+    } catch (std::exception&)
+    {
+        frame = "Unknown frame";
+    }
+    Geometry::MDFrame_const_uptr mdFrame = Geometry::makeMDFrameFactoryChain()->create(MDFrameArgument(frame, units));
+    m_file->getData(axis);
+    m_file->closeData();
+    m_dims.push_back(boost::make_shared<MDHistoDimension>(
+        long_name, splitAxes[d - 1], *mdFrame, static_cast<coord_t>(axis.front()),
+        static_cast<coord_t>(axis.back()), axis.size() - 1));
+  }
+  m_file->closeGroup();
 }
 
 /** Load the coordinate system **/
@@ -310,16 +376,23 @@ void LoadMD::doLoad(typename MDEventWorkspace<MDE, nd>::sptr ws) {
   bool fileBackEnd = getProperty("FileBackEnd");
 
   if (fileBackEnd && m_BoxStructureAndMethadata)
-    throw std::invalid_argument("Both BoxStructureOnly and fileBackEnd were "
-                                "set to TRUE: this is not possible.");
+    throw std::invalid_argument("Combination of BoxStructureOnly or "
+                                "MetaDataOnly were set to TRUE with "
+                                "fileBackEnd "
+                                ": this is not possible.");
 
   CPUTimer tim;
   Progress *prog = new Progress(this, 0.0, 1.0, 100);
 
   prog->report("Opening file.");
   std::string title;
-  m_file->getAttr("title", title);
-  ws->setTitle("title");
+  try{
+    m_file->getAttr("title", title);
+  } catch (std::exception&)
+  {
+    //Leave the title blank if error on loading
+  }
+  ws->setTitle(title);
 
   // Load the WorkspaceHistory "process"
   ws->history().loadNexus(m_file.get());
@@ -355,7 +428,7 @@ void LoadMD::doLoad(typename MDEventWorkspace<MDE, nd>::sptr ws) {
   // ------------------------------------
   if (fileBackEnd) { // TODO:: call to the file format factory
     auto loader = boost::shared_ptr<API::IBoxControllerIO>(
-        new MDEvents::BoxControllerNeXusIO(bc.get()));
+        new DataObjects::BoxControllerNeXusIO(bc.get()));
     loader->setDataType(sizeof(coord_t), MDE::getTypeName());
     bc->setFileBacked(loader, m_filename);
     // boxes have been already made file-backed when restoring the boxTree;
@@ -387,7 +460,7 @@ void LoadMD::doLoad(typename MDEventWorkspace<MDE, nd>::sptr ws) {
     // ------------------------------------
     // TODO:: call to the file format factory
     auto loader =
-        file_holder_type(new MDEvents::BoxControllerNeXusIO(bc.get()));
+        file_holder_type(new DataObjects::BoxControllerNeXusIO(bc.get()));
     loader->setDataType(sizeof(coord_t), MDE::getTypeName());
 
     loader->openFile(m_filename, "r");
@@ -487,4 +560,4 @@ CoordTransform *LoadMD::loadAffineMatrix(std::string entry_name) {
 }
 
 } // namespace Mantid
-} // namespace MDEvents
+} // namespace DataObjects

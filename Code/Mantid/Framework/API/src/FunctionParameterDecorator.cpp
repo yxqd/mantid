@@ -1,5 +1,7 @@
 #include "MantidAPI/FunctionParameterDecorator.h"
 #include "MantidAPI/FunctionFactory.h"
+#include "MantidAPI/CompositeFunction.h"
+#include "MantidAPI/ParameterReference.h"
 
 namespace Mantid {
 namespace API {
@@ -35,6 +37,21 @@ IFunction_sptr FunctionParameterDecorator::clone() const {
   }
 
   return cloned;
+}
+
+void FunctionParameterDecorator::setWorkspace(
+    boost::shared_ptr<const Workspace> ws) {
+  throwIfNoFunctionSet();
+
+  m_wrappedFunction->setWorkspace(ws);
+}
+
+void FunctionParameterDecorator::setMatrixWorkspace(
+    boost::shared_ptr<const MatrixWorkspace> workspace, size_t wi,
+    double startX, double endX) {
+  throwIfNoFunctionSet();
+
+  m_wrappedFunction->setMatrixWorkspace(workspace, wi, startX, endX);
 }
 
 void FunctionParameterDecorator::setParameter(size_t i, const double &value,
@@ -91,8 +108,8 @@ double FunctionParameterDecorator::getParameter(const std::string &name) const {
 }
 
 size_t FunctionParameterDecorator::nParams() const {
-  if(!m_wrappedFunction) {
-      return 0;
+  if (!m_wrappedFunction) {
+    return 0;
   }
 
   return m_wrappedFunction->nParams();
@@ -157,12 +174,20 @@ size_t FunctionParameterDecorator::getParameterIndex(
     const ParameterReference &ref) const {
   throwIfNoFunctionSet();
 
-  return m_wrappedFunction->getParameterIndex(ref);
+  if(boost::dynamic_pointer_cast<CompositeFunction>(m_wrappedFunction)) {
+      return m_wrappedFunction->getParameterIndex(ref);
+  }
+
+  if(ref.getFunction() == this && ref.getIndex() < nParams()) {
+      return ref.getIndex();
+  }
+
+  return nParams();
 }
 
 size_t FunctionParameterDecorator::nAttributes() const {
-  if(!m_wrappedFunction) {
-      return 0;
+  if (!m_wrappedFunction) {
+    return 0;
   }
 
   return m_wrappedFunction->nAttributes();
@@ -273,8 +298,12 @@ void FunctionParameterDecorator::declareParameter(
   UNUSED_ARG(description);
 }
 
-/// Does nothing.
-void FunctionParameterDecorator::addTie(ParameterTie *tie) { UNUSED_ARG(tie); }
+/// Forwads addTie-call to the decorated function.
+void FunctionParameterDecorator::addTie(ParameterTie *tie) {
+    throwIfNoFunctionSet();
+
+    m_wrappedFunction->addTie(tie);
+}
 
 /**
  * @brief Function that is called before the decorated function is set

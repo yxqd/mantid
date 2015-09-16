@@ -10,8 +10,11 @@
 #include <vtkObjectFactory.h>
 #include <vtkUnstructuredGridAlgorithm.h>
 #include <vtkUnstructuredGrid.h>
+#include <vtkSmartPointer.h>
 
-vtkStandardNewMacro(vtkScaleWorkspace);
+
+
+vtkStandardNewMacro(vtkScaleWorkspace)
 
 using namespace Mantid::VATES;
 
@@ -19,6 +22,8 @@ vtkScaleWorkspace::vtkScaleWorkspace() :
   m_xScaling(1),
   m_yScaling(1),
   m_zScaling(1),
+  m_minValue(0.1),
+  m_maxValue(0.1),
   m_specialCoordinates(-1),
   m_metadataJsonManager(new MetadataJsonManager()),
   m_vatesConfigurations(new VatesConfigurations())
@@ -35,14 +40,17 @@ vtkScaleWorkspace::~vtkScaleWorkspace()
 int vtkScaleWorkspace::RequestData(vtkInformation*, vtkInformationVector **inputVector, vtkInformationVector *outputVector)
 {
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
-  vtkUnstructuredGrid *inputDataSet = vtkUnstructuredGrid::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+  
+  // Try to cast to vktUnstructuredGrid, if this fails then cast it to vtkPolyData
+ vtkSmartPointer<vtkPointSet> inputDataSet = vtkSmartPointer<vtkPointSet>(vtkPointSet::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT())));
 
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
-  vtkUnstructuredGrid *outputDataSet = vtkUnstructuredGrid::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
+  vtkDataSetToScaledDataSet scaler;
+  scaler.execute(m_xScaling, m_yScaling, m_zScaling, inputDataSet, outInfo);
 
-  vtkDataSetToScaledDataSet scaler(inputDataSet, outputDataSet);
-  scaler.initialize(m_xScaling, m_yScaling, m_zScaling);
-  scaler.execute();
+  // Need to call an update on the meta data, as it is not guaranteed that RequestInformation will be called
+  // before we access the metadata.
+  updateMetaData(inputDataSet);
   return 1;
 }
 
@@ -50,21 +58,9 @@ int vtkScaleWorkspace::RequestInformation(vtkInformation*, vtkInformationVector*
 {
   // Set the meta data 
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
-  vtkUnstructuredGrid *inputDataSet = vtkUnstructuredGrid::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+  vtkSmartPointer<vtkPointSet> inputDataSet = vtkSmartPointer<vtkPointSet>(vtkPointSet::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT())));
 
-  vtkFieldData* fieldData = inputDataSet->GetFieldData();
-  
-  // Extract information for meta data in Json format.
-  FieldDataToMetadata fieldDataToMetadata;
-
-  std::string jsonString = fieldDataToMetadata(fieldData, m_vatesConfigurations->getMetadataIdJson());
-  m_metadataJsonManager->readInSerializedJson(jsonString);
-
-  m_minValue = m_metadataJsonManager->getMinValue();
-  m_maxValue = m_metadataJsonManager->getMaxValue();
-  m_instrument = m_metadataJsonManager->getInstrument();
-  m_specialCoordinates = m_metadataJsonManager->getSpecialCoordinates();
-
+  updateMetaData(inputDataSet);
   return 1;
 }
 
@@ -145,3 +141,33 @@ int vtkScaleWorkspace::GetSpecialCoordinates()
 {
   return m_specialCoordinates;
 }
+
+/**
+ * Update the metadata fields of the plugin based on the information of the inputDataSet
+ * @param inputDataSet :: the input data set.
+ */
+void vtkScaleWorkspace::updateMetaData(vtkPointSet *inputDataSet) {
+  vtkFieldData* fieldData = inputDataSet->GetFieldData();
+  
+  // Extract information for meta data in Json format.
+  FieldDataToMetadata fieldDataToMetadata;
+
+  std::string jsonString = fieldDataToMetadata(fieldData, m_vatesConfigurations->getMetadataIdJson());
+  m_metadataJsonManager->readInSerializedJson(jsonString);
+
+  m_minValue = m_metadataJsonManager->getMinValue();
+  m_maxValue = m_metadataJsonManager->getMaxValue();
+  m_instrument = m_metadataJsonManager->getInstrument();
+  m_specialCoordinates = m_metadataJsonManager->getSpecialCoordinates();
+}
+
+/**
+ * Set the input types that we expect for this algorithm. These are naturally
+ * vtkUnstructredGrid data sets. In order to accomodate for the cut filter's
+ * output we need to allow also for vtkPolyData data sets.
+ * @retuns either success flag (1) or a failure flag (0)
+ */
+int vtkScaleWorkspace::FillInputPortInformation (int, vtkInformation *) {
+  return 0;
+}
+

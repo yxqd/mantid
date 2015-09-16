@@ -1,9 +1,7 @@
+#pylint: disable=attribute-defined-outside-init
 import stresstesting
 from mantid.simpleapi import *
-import isis_reducer
 import ISISCommandInterface as i
-import isis_instrument
-import isis_reduction_steps
 
 MASKFILE = FileFinder.getFullPath('MaskLOQData.txt')
 BATCHFILE = FileFinder.getFullPath('loq_batch_mode_reduction.csv')
@@ -24,4 +22,5 @@ class LOQMinimalBatchReduction(stresstesting.MantidStressTest):
     	# this is partly a temperary measure, but also justified by
     	# when overlaying the two options they overlap very well
         self.tolerance = 1.0e+1
+        self.disableChecking.append('Instrument')
         return 'first_time_merged', 'LOQReductionMergedData.nxs'

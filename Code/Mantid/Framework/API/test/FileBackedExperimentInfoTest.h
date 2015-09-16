@@ -36,7 +36,7 @@ public:
     ::NeXus::File nxFile(m_filename, NXACC_READ);
     nxFile.openGroup("mantid_workspace_1", "NXentry");
     std::string paramString;
-    m_inMemoryExptInfo->loadExperimentInfoNexus(&nxFile, paramString);
+    m_inMemoryExptInfo->loadExperimentInfoNexus(m_filename, &nxFile, paramString);
     m_inMemoryExptInfo->readParameterMap(paramString);
   }
 
@@ -45,19 +45,17 @@ public:
     TS_ASSERT_EQUALS(fileBacked->toString(), m_inMemoryExptInfo->toString());
   }
 
-  void test_cloneExperimentInfo_populates_object() {
+  void test_cloneExperimentInfo_returns_new_file_backed_object_and_does_not_touch_file() {
     auto fileBacked = createTestObject();
     auto *clonedFileBacked = fileBacked->cloneExperimentInfo();
 
-    TS_ASSERT_EQUALS(clonedFileBacked->toString(),
-                     m_inMemoryExptInfo->toString());
+    TS_ASSERT(dynamic_cast<FileBackedExperimentInfo*>(clonedFileBacked));
+
     delete clonedFileBacked;
   }
 
   void test_getInstrument_populates_object() {
     auto fileBacked = createTestObject();
-    auto fileBackedInstrument = fileBacked->getInstrument();
-    auto inMemoryInstrument = m_inMemoryExptInfo->getInstrument();
 
     TS_ASSERT_EQUALS(fileBacked->constInstrumentParameters(),
                      m_inMemoryExptInfo->constInstrumentParameters());

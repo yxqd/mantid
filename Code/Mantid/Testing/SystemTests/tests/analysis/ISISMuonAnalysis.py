@@ -1,4 +1,4 @@
-#pylint: disable=no-init,invalid-name
+#pylint: disable=no-init,invalid-name,attribute-defined-outside-init,too-many-instance-attributes,too-few-public-methods
 import math
 import stresstesting
 from mantid.simpleapi import *
@@ -30,11 +30,11 @@ class ISISMuonAnalysis(stresstesting.MantidStressTest):
     def get_reference_file(self):
         """Returns the name of the reference file to compare against"""
         raise NotImplementedError("Implmenent get_reference_file to return "
-                                "the name of the file to compare against.")
+                                  "the name of the file to compare against.")
 
     def get_result_workspace(self):
         """Returns the result workspace to be checked"""
-        return self.instr_name + str(self.sample_run) 
+        return self.instr_name + str(self.sample_run)
 
     def runTest(self):
         """Defines the workflow for the test"""
@@ -187,4 +187,4 @@ class MuSRAnalysisFromFile(ISISMuonAnalysis):
     def get_reference_file(self):
         return "MuSRAnalysis.nxs"
 
- 
+

@@ -1,7 +1,7 @@
 #ifndef _VTKPEAKSFILTER_h
 #define _VTKPEAKSFILTER_h
 #include "vtkUnstructuredGridAlgorithm.h"
-#include "MantidAPI/IPeaksWorkspace.h"
+#include "MantidAPI/IPeaksWorkspace_fwd.h"
 #include "MantidVatesAPI/MetadataJsonManager.h"
 #include "MantidVatesAPI/VatesConfigurations.h"
 #include <boost/scoped_ptr.hpp>
@@ -11,7 +11,7 @@ class VTK_EXPORT vtkPeaksFilter : public vtkUnstructuredGridAlgorithm
 {
 public:
   static vtkPeaksFilter *New();
-  vtkTypeMacro(vtkPeaksFilter, vtkUnstructuredGridAlgorithm);
+  vtkTypeMacro(vtkPeaksFilter, vtkUnstructuredGridAlgorithm)
   void PrintSelf(ostream& os, vtkIndent indent);
   void SetPeaksWorkspace(std::string peaksWorkspaceName);
   void SetRadiusNoShape(double radius);

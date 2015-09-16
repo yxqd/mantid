@@ -1,6 +1,5 @@
-#pylint: disable=no-init
+#pylint: disable=no-init,attribute-defined-outside-init
 import stresstesting
-import mantid
 from mantid.simpleapi import *
 from reduction_workflow.instruments.sans.sns_command_interface import *
 from mantid.api import *
@@ -8,22 +7,22 @@ from mantid.api import *
 import os
 
 class EQSANSDarkCurrent(stresstesting.MantidStressTest):
-
+    """
+        Analysis Tests for EQSANS
+        Testing that the I(Q) output of is correct
+    """
     def cleanup(self):
         absfile = FileFinder.getFullPath("EQSANS_1466_event_reduction.log")
         if os.path.exists(absfile):
             os.remove(absfile)
         return True
 
-    """
-        Analysis Tests for EQSANS
-        Testing that the I(Q) output of is correct 
-    """
 
     def runTest(self):
-        config = ConfigService.Instance()
-        config["facilityName"]='SNS'
-        EQSANS(True)
+        configI = ConfigService.Instance()
+        configI["facilityName"]='SNS'
+        # The new version of dark current subtraction only works on histograms
+        EQSANS(False)
         SolidAngle()
         SetBeamCenter(96.29, 126.15)
         PerformFlightPathCorrection(False)
@@ -48,4 +47,4 @@ class EQSANSDarkCurrent(stresstesting.MantidStressTest):
         self.disableChecking.append('Axes')
 
         return "EQSANS_1466_event_Iq", 'EQSANSDarkCurrent.nxs'
-    
+

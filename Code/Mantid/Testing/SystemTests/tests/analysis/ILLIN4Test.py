@@ -2,7 +2,7 @@
 import stresstesting
 
 from mantid.api import MatrixWorkspace, mtd
-from mantid.simpleapi import LoadILL
+import mantid.simpleapi as ms
 from mantid.kernel import V3D
 
 import unittest
@@ -48,16 +48,18 @@ class ILLIN4Tests(unittest.TestCase):
         """
         ILL Loader
         """
-        LoadILL(Filename=dataFile,OutputWorkspace=self.ws_name)
+        ms.LoadILL(Filename=dataFile,OutputWorkspace=self.ws_name)
         self._do_ads_check(self.ws_name)
 
     def _do_ads_check(self, name):
         self.assertTrue(name in mtd)
-        self.assertTrue(type(mtd[name]) == MatrixWorkspace)
+        self.assertTrue(isinstance(mtd[name], MatrixWorkspace))
 
 #====================================================================================
 
 class LoadILLIN4Test(stresstesting.MantidStressTest):
+
+    _success = False
 
     def runTest(self):
         self._success = False

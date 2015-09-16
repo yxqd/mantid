@@ -1,11 +1,14 @@
-#pylint: disable=invalid-name
-#Force for ILL backscattering raw
-#
+#pylint: disable=invalid-name,too-many-arguments
+
+"""
+Force for ILL backscattering raw
+"""
+
 from IndirectImport import *
 from mantid.simpleapi import *
 from mantid import config, logger, mtd, FileFinder
 import sys, math, os.path, numpy as np
-from IndirectCommon import StartTime, EndTime, ExtractFloat, ExtractInt
+from IndirectCommon import StartTime, EndTime, ExtractFloat, ExtractInt, getEfixed
 MTD_PLOT = import_mantidplot()
 
 #  Routines for Ascii file of raw data
@@ -70,8 +73,6 @@ def ReadIbackGroup(a,first):                           #read Ascii block of spec
     line1 = a[next]
     next += 1
     val = ExtractInt(a[next])
-    n1 = val[0]
-    ngrp = val[2]
     if line1.startswith('S'):
         error = ''
     else:
@@ -122,7 +123,7 @@ def loadFile(path):
         handle.close()
 
         return asc
-    except:
+    except RuntimeError:
         error = 'ERROR *** Could not load ' + path
         sys.exit(error)
 
@@ -447,7 +448,7 @@ def RunParas(ascWS,instr,run,title):
     AddSampleLog(Workspace=ascWS, LogName="facility", LogType="String", LogText="ILL")
     ws.getRun()['run_number'] = run
     ws.getRun()['run_title'] = title
-    efixed = inst.getNumberParameter('efixed-val')[0]
+    efixed = getEfixed(ascWS)
 
     facility = ws.getRun().getLogData('facility').value
     logger.information('Facility is ' +facility)

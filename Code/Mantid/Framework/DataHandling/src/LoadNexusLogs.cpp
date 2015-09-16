@@ -4,7 +4,7 @@
 #include "MantidDataHandling/LoadNexusLogs.h"
 #include <nexus/NeXusException.hpp>
 #include "MantidKernel/TimeSeriesProperty.h"
-#include "MantidKernel/LogParser.h"
+//#include "MantidKernel/LogParser.h"
 #include "MantidAPI/FileProperty.h"
 #include <cctype>
 
@@ -118,6 +118,9 @@ void LoadNexusLogs::exec() {
     if (group_name == "DASlogs" || group_class == "IXrunlog" ||
         group_class == "IXselog" || group_name == "framelog") {
       loadLogs(file, group_name, group_class, workspace);
+    }
+    if(group_class == "IXperiods") {
+        loadNPeriods(file, workspace);
     }
   }
 
@@ -267,6 +270,28 @@ void LoadNexusLogs::loadVetoPulses(
   file.closeGroup();
 }
 
+void LoadNexusLogs::loadNPeriods(
+    ::NeXus::File &file,
+    boost::shared_ptr<API::MatrixWorkspace> workspace) const {
+  int value = 1; // Default to 1-period unless
+  try {
+    file.openGroup("periods", "IXperiods");
+    file.openData("number");
+    file.getData(&value);
+    file.closeData();
+    file.closeGroup();
+  } catch (::NeXus::Exception &) {
+    // Likely missing IXperiods.
+      return;
+  }
+
+  API::Run& run = workspace->mutableRun();
+  const std::string nPeriodsLabel = "nperiods";
+  if(!run.hasProperty(nPeriodsLabel)){
+      run.addProperty(new PropertyWithValue<int>(nPeriodsLabel, value));
+  }
+}
+
 /**
  * Load log entries from the given group
  * @param file :: A reference to the NeXus file handle opened such that the
@@ -290,11 +315,16 @@ void LoadNexusLogs::loadLogs(
     } else if (log_class == "IXseblock") {
       loadSELog(file, itr->first, workspace);
     }
+    else if(log_class == "NXcollection"){
+        int jj = 0;
+        ++jj;
+    }
   }
   loadVetoPulses(file, workspace);
 
   file.closeGroup();
 }
+
 
 /**
  * Load an NX log entry a group type that has value and time entries.

@@ -1,6 +1,5 @@
-#pylint: disable=no-init
+#pylint: disable=no-init,attribute-defined-outside-init
 import stresstesting
-import mantid
 from mantid.simpleapi import *
 from reduction_workflow.instruments.sans.sns_command_interface import *
 from mantid.api import *
@@ -9,9 +8,9 @@ import os
 
 def do_cleanup():
     Files = ["EQSANS_4061_event_reduction.log",
-    "EQSANS_1466_event_reduction.log"]
-    for file in Files:
-        absfile = FileFinder.getFullPath(file)
+             "EQSANS_1466_event_reduction.log"]
+    for filename in Files:
+        absfile = FileFinder.getFullPath(filename)
         if os.path.exists(absfile):
             os.remove(absfile)
     return True
@@ -23,8 +22,8 @@ class EQSANSTransmission(stresstesting.MantidStressTest):
         return True
 
     def runTest(self):
-        config = ConfigService.Instance()
-        config["facilityName"]='SNS'
+        configI = ConfigService.Instance()
+        configI["facilityName"]='SNS'
         EQSANS(False)
         AppendDataFile("EQSANS_1466_event.nxs")
         SolidAngle()
@@ -58,8 +57,8 @@ class EQSANSTransmissionEvent(EQSANSTransmission):
         return True
 
     def runTest(self):
-        config = ConfigService.Instance()
-        config["facilityName"]='SNS'
+        configI = ConfigService.Instance()
+        configI["facilityName"]='SNS'
         EQSANS(True)
         AppendDataFile("EQSANS_1466_event.nxs")
         SolidAngle()
@@ -96,8 +95,8 @@ class EQSANSTransmissionDC(stresstesting.MantidStressTest):
         """
             Check that EQSANSTofStructure returns the correct workspace
         """
-        config = ConfigService.Instance()
-        config["facilityName"]='SNS'
+        configI = ConfigService.Instance()
+        configI["facilityName"]='SNS'
         EQSANS(False)
         AppendDataFile("EQSANS_1466_event.nxs")
         SolidAngle()
@@ -125,20 +124,19 @@ class EQSANSTransmissionDC(stresstesting.MantidStressTest):
         return "EQSANS_1466_event_Iq", 'EQSANSTransmissionDC.nxs'
 
 class EQSANSTransmissionCompatibility(EQSANSTransmission):
+    """
+        Analysis Tests for EQSANS
+        Check that the transmission correction can be applied if the
+        sample run and transmission runs don't have the same binning
+    """
 
     def cleanup(self):
         do_cleanup()
         return True
 
-    """
-        Analysis Tests for EQSANS
-        Check that the transmission correction can be applied if the 
-        sample run and transmission runs don't have the same binning
-    """
-
     def runTest(self):
-        config = ConfigService.Instance()
-        config["facilityName"]='SNS'
+        configI = ConfigService.Instance()
+        configI["facilityName"]='SNS'
         EQSANS(True)
         AppendDataFile("EQSANS_1466_event.nxs")
         SolidAngle()
@@ -174,8 +172,8 @@ class EQSANSTransmissionFS(stresstesting.MantidStressTest):
         """
             Check that EQSANSTofStructure returns the correct workspace
         """
-        config = ConfigService.Instance()
-        config["facilityName"]='SNS'
+        configI = ConfigService.Instance()
+        configI["facilityName"]='SNS'
         EQSANS(False)
         SetBeamCenter(96.29, 126.15)
         AppendDataFile("EQSANS_4061_event.nxs")
@@ -206,8 +204,8 @@ class EQSANSDirectTransFS(stresstesting.MantidStressTest):
         """
             Check that EQSANSTofStructure returns the correct workspace
         """
-        config = ConfigService.Instance()
-        config["facilityName"]='SNS'
+        configI = ConfigService.Instance()
+        configI["facilityName"]='SNS'
         EQSANS(False)
         SetBeamCenter(96.29, 126.15)
         AppendDataFile("EQSANS_4061_event.nxs")

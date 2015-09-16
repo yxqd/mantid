@@ -19,7 +19,6 @@
 #include "MantidTestHelpers/NexusTestHelper.h"
 #include "MantidTestHelpers/ComponentCreationHelper.h"
 #include "MantidAPI/AlgorithmManager.h"
-#include "MantidAPI/FrameworkManager.h"
 #include "MantidAPI/LogManager.h"
 
 #include <Poco/File.h>
@@ -37,12 +36,6 @@ public:
   // This means the constructor isn't called when running other tests
   static PeaksWorkspaceTest *createSuite() { return new PeaksWorkspaceTest(); }
   static void destroySuite( PeaksWorkspaceTest *suite ) { delete suite; }
-
-  PeaksWorkspaceTest()
-  {
-     FrameworkManager::Instance();
-     AlgorithmManager::Instance();
-  }
 
   /** Build a test PeaksWorkspace with one peak (others peaks can be added)
    *
@@ -80,10 +73,16 @@ public:
     checkPW(*pw);
   }
 
+  class TestablePeaksWorkspace : public PeaksWorkspace {
+  public:
+    TestablePeaksWorkspace(const PeaksWorkspace &other)
+        : PeaksWorkspace(other) {}
+  };
+
   void test_copyConstructor()
   {
     auto pw = buildPW();
-    auto pw2 = PeaksWorkspace_sptr(new PeaksWorkspace(*pw));
+    auto pw2 = PeaksWorkspace_sptr(new TestablePeaksWorkspace(*pw));
     checkPW(*pw2);
   }
 
@@ -156,6 +155,9 @@ public:
 
     // Check detector IDs
     TS_ASSERT_THROWS_NOTHING(nexusHelper.file->openData("column_1") );
+    std::string columnName;
+    TS_ASSERT_THROWS_NOTHING(nexusHelper.file->getAttr("name", columnName) );
+    TS_ASSERT_EQUALS( columnName, "Detector ID");
     std::vector<int> detIDs;
     TS_ASSERT_THROWS_NOTHING(nexusHelper.file->getData(detIDs));
     nexusHelper.file->closeData();
@@ -279,7 +281,7 @@ public:
    {
      auto pw = buildPW(); // 1 peaks each with single detector
      // Add a detector to the peak
-     Mantid::API::IPeak & ipeak = pw->getPeak(0);
+     Mantid::Geometry::IPeak & ipeak = pw->getPeak(0);
      auto & peak = static_cast<Peak&>(ipeak);
      peak.addContributingDetID(2);
      peak.addContributingDetID(3);
@@ -306,10 +308,10 @@ public:
      auto pw = createSaveTestPeaksWorkspace(); // 5 peaks each with single detector
 
      // Add some detectors
-     Mantid::API::IPeak & ipeak3 = pw->getPeak(2);
+     Mantid::Geometry::IPeak & ipeak3 = pw->getPeak(2);
      auto & peak3 = static_cast<Peak&>(ipeak3);
      peak3.addContributingDetID(11);
-     Mantid::API::IPeak & ipeak5 = pw->getPeak(4);
+     Mantid::Geometry::IPeak & ipeak5 = pw->getPeak(4);
      auto & peak5 = static_cast<Peak&>(ipeak5);
      peak5.addContributingDetID(51);
      peak5.addContributingDetID(52);

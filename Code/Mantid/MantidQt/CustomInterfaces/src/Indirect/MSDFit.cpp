@@ -1,5 +1,5 @@
 #include "MantidAPI/AnalysisDataService.h"
-#include "MantidAPI/WorkspaceGroup.h"
+#include "MantidAPI/WorkspaceGroup_fwd.h"
 #include "MantidQtCustomInterfaces/Indirect/MSDFit.h"
 #include "MantidQtCustomInterfaces/UserInputValidator.h"
 #include "MantidQtMantidWidgets/RangeSelector.h"
@@ -22,7 +22,7 @@ namespace CustomInterfaces
 {
 namespace IDA
 {
-  MSDFit::MSDFit(QWidget * parent) : IDATab(parent),
+  MSDFit::MSDFit(QWidget * parent) : IndirectDataAnalysisTab(parent),
     m_currentWsName(""), m_msdTree(NULL)
   {
     m_uiForm.setupUi(parent);
@@ -185,11 +185,12 @@ namespace IDA
       auto groupWsNames = groupWs->getNames();
 
       // Find the correct fit workspace and plot it
-      std::string searchString = "_" + std::to_string(static_cast<long long int>(specNo)) + "_Workspace";
+      std::stringstream searchString;
+      searchString << "_" << specNo << "_Workspace";
       for(auto it = groupWsNames.begin(); it != groupWsNames.end(); ++it)
       {
         std::string wsName = *it;
-        if(wsName.find(searchString) != std::string::npos)
+        if(wsName.find(searchString.str()) != std::string::npos)
         {
           // Get the fit workspace
           auto ws = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(wsName);

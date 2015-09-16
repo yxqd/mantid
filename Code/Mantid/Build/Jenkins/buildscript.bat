@@ -7,6 +7,11 @@ setlocal enableextensions enabledelayedexpansion
 :: WORKSPACE & JOB_NAME are environment variables that are set by Jenkins.
 :: BUILD_THREADS & PARAVIEW_DIR should be set in the configuration of each slave.
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: All nodes currently have PARAVIEW_DIR=4.3.b40280 and PARAVIEW_NEXT_DIR=4.3.1
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 set CMAKE_BIN_DIR=C:\Program Files (x86)\CMake 2.8\bin
 "%CMAKE_BIN_DIR%\cmake.exe" --version
 echo %sha1%
@@ -39,14 +44,29 @@ if not "%JOB_NAME%" == "%JOB_NAME:clean=%" (
   set BUILDPKG=yes
 )
 
-if EXIST %WORKSPACE%\build\CMakeCache.txt (
-  FINDSTR "Code/Mantid/TestingTools/cxxtest" %WORKSPACE%\build\CMakeCache.txt && (
-    rmdir /S /Q %WORKSPACE%\build
-  )
-)
-
 if not "%JOB_NAME%" == "%JOB_NAME:pull_requests=%" (
   set BUILDPKG=yes
+)
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Setup the build directory
+:: For a clean build the entire thing is removed to guarantee it is clean. All
+:: other build types are assumed to be incremental and the following items
+:: are removed to ensure stale build objects don't interfere with each other:
+::   - build/bin: if libraries are removed from cmake they are not deleted
+::                   from bin and can cause random failures
+::   - build/ExternalData/**: data files will change over time and removing
+::                            the links helps keep it fresh
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+set BUILD_DIR=%WORKSPACE%\build
+if "%CLEANBUILD%" == "yes" (
+  rmdir /S /Q %BUILD_DIR%
+)
+
+if EXIST %BUILD_DIR% (
+  rmdir /S /Q %BUILD_DIR%\bin %BUILD_DIR%\ExternalData
+) else (
+  md %BUILD_DIR%
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -57,14 +77,7 @@ if "%BUILDPKG%" == "yes" (
   set PACKAGE_DOCS=-DPACKAGE_DOCS=ON
 )
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: Setup the build directory
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-if "%CLEANBUILD%" == "yes" (
-  rmdir /S /Q %WORKSPACE%\build
-)
-md %WORKSPACE%\build
-cd %WORKSPACE%\build
+cd %BUILD_DIR%
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Clean up any artifacts from last build so that if it fails
@@ -87,7 +100,7 @@ if not "%JOB_NAME%"=="%JOB_NAME:relwithdbg=%" (
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Update the PATH so that we can find everything
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-set PATH=%WORKSPACE%\Code\Third_Party\lib\win64;%WORKSPACE%\Code\Third_Party\lib\win64\Python27;%PARAVIEW_DIR%\bin\%BUILD_CONFIG%;%PATH%
+set PATH=%WORKSPACE%\Code\Third_Party\lib\win64;%WORKSPACE%\Code\Third_Party\lib\win64\Python27;%WORKSPACE%\Code\Third_Party\lib\win64\mingw;%PARAVIEW_DIR%\bin\%BUILD_CONFIG%;%PATH%
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: CMake configuration
@@ -124,33 +137,3 @@ if "%BUILDPKG%" == "yes" (
   ::if ERRORLEVEL 1 exit /B %ERRORLEVEL%
   "%CMAKE_BIN_DIR%\cpack.exe" -C %BUILD_CONFIG% --config CPackConfig.cmake
 )
-
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: Run the doc tests when doing a pull request build. Run from a package
-:: from a package to have at least one Linux checks it install okay
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-if not "%JOB_NAME%"=="%JOB_NAME:pull_requests=%" (
-  :: Install package
-  set SYSTEMTESTS_DIR=%WORKSPACE%\Code\Mantid\Testing\SystemTests
-  python !SYSTEMTESTS_DIR!\scripts\mantidinstaller.py install %WORKSPACE%\build
-
-  ::Remove user properties, disable instrument updating & usage reports and add data paths
-  del /Q C:\MantidInstall\bin\Mantid.user.properties
-  echo UpdateInstrumentDefinitions.OnStartup = 0 > C:\MantidInstall\bin\Mantid.user.properties
-  echo usagereports.enabled = 0 >> C:\MantidInstall\bin\Mantid.user.properties
-  :: User properties file cannot contain backslash characters
-  set WORKSPACE_UNIX_STYLE=%WORKSPACE:\=/%
-  set DATA_ROOT=!WORKSPACE_UNIX_STYLE!/build/ExternalData/Testing/Data
-  echo datasearch.directories = !DATA_ROOT!/UnitTest;!DATA_ROOT!/DocTest;!WORKSPACE_UNIX_STYLE!/Code/Mantid/instrument >> C:\MantidInstall\bin\Mantid.user.properties
-
-  :: Run tests
-  cd %WORKSPACE%\build\docs
-  C:\MantidInstall\bin\MantidPlot.exe -xq runsphinx_doctest.py
-  set RETCODE=!ERRORLEVEL!
-
-  :: Remove Mantid
-  cd %WORKSPACE%\build
-  python !SYSTEMTESTS_DIR!\scripts\mantidinstaller.py uninstall %WORKSPACE%\build
-  if !RETCODE! NEQ 0 exit /B 1
-)
-

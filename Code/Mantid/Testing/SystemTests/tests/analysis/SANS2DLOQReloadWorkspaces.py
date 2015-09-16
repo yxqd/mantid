@@ -1,12 +1,9 @@
 #pylint: disable=invalid-name,no-init
 import stresstesting
 from mantid.simpleapi import *
-from mantid.api import Workspace
 from ISISCommandInterface import *
-import numpy
 import unittest
 
-## export PYTHONPATH=/apps/workspace/mantid_debug/bin/:/apps/mantid/systemtests/StressTestFramework/:/apps/mantid/mantid/Code/Mantid/scripts/SANS/:/apps/mantid/mantid/Code/Mantid/scripts/reduction
 
 
 """
@@ -201,6 +198,7 @@ class LOQReductionOnLoadedWorkspaceMustProduceTheSameResult_1(stresstesting.Mant
         WavRangeReduction(3, 9, DefaultTrans)
 
     def validate(self):
+        self.disableChecking.append('Instrument')
         return '54431main_1D_3.0_9.0','LOQCentreNoGravSearchCentreFixed.nxs'
 
 class LOQReductionOnLoadedWorkspaceMustProduceTheSameResult_2(stresstesting.MantidStressTest):

@@ -1,9 +1,10 @@
 #include "MantidCrystal/AddPeakHKL.h"
+
+#include "MantidGeometry/Crystal/IPeak.h"
+
 #include "MantidAPI/IPeaksWorkspace.h"
-#include "MantidAPI/IPeak.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/ArrayLengthValidator.h"
-#include "MantidKernel/V3D.h"
 
 namespace Mantid
 {
@@ -39,13 +40,13 @@ namespace Crystal
   const std::string AddPeakHKL::name() const { return "AddPeakHKL"; }
 
   /// Algorithm's version for identification. @see Algorithm::version
-  int AddPeakHKL::version() const { return 1;};
+  int AddPeakHKL::version() const { return 1;}
 
   /// Algorithm's category for identification. @see Algorithm::category
   const std::string AddPeakHKL::category() const { return "Crystal";}
 
   /// Algorithm's summary for use in the GUI and help. @see Algorithm::summary
-  const std::string AddPeakHKL::summary() const { return "Add a peak in the hkl frame";};
+  const std::string AddPeakHKL::summary() const { return "Add a peak in the hkl frame";}
 
   //----------------------------------------------------------------------------------------------
   /** Initialize the algorithm's properties.
@@ -63,7 +64,7 @@ namespace Crystal
   {
     IPeaksWorkspace_sptr peakWS = this->getProperty("Workspace");
     const std::vector<double> hklValue = this->getProperty("HKL");
-    IPeak * peak = peakWS->createPeakHKL(V3D(hklValue[0], hklValue[1], hklValue[2]));
+    Mantid::Geometry::IPeak * peak = peakWS->createPeakHKL(V3D(hklValue[0], hklValue[1], hklValue[2]));
     peakWS->addPeak(*peak);
     delete peak;
   }

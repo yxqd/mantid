@@ -37,6 +37,38 @@ Manage Directories
   Opens the Manage Directories dialog allowing you to change your search directories
   and default save directory and enable/disable data archive search.
 
+Bayesian
+--------
+
+There is the option to perform Bayesian data analysis on the I(Q, t) Fit ConvFit
+tabs on this interface by using the :ref:`FABADA` fitting minimizer, however in
+order to to use this you will need to use better starting parameters than the
+defaults provided by the interface.
+
+You may also experience issues where the starting parameters may give a reliable
+fit on one spectra but not others, in this case the best option is to reduce
+the number of spectra that are fitted in one operation.
+
+In both I(Q, t) Fit and ConvFit the following options are available when fitting
+using FABADA:
+
+Output Chain
+  Select to enable output of the FABADA chain when using FABADA as the fitting
+  minimizer.
+
+Chain Length
+  Number of further steps carried out by fitting algorithm once parameters have
+  converged (see *ChainLength* is :ref:`FABADA` documentation)
+
+Convergence Criteria
+  The minimum variation in the cost function before the parameters are
+  considered to have converged (see *ConvergenceCriteria* in :ref:`FABADA`
+  documentation)
+
+Acceptance Rate
+  The desired percentage acceptance of new parameters (see *JumpAcceptanceRate*
+  in :ref:`FABADA` documentation)
+
 Elwin
 -----
 
@@ -59,13 +91,13 @@ Input File
   Specify a range of input files that are either reduced (*_red.nxs*) or
   :math:`S(Q, \omega)`.
 
-Range One
+Integration Range
   The energy range over which to integrate the values.
 
-Use Two Ranges
+Background Subtraction
   If checked a background will be calculated and subtracted from the raw data.
 
-Range Two
+Background Range
   The energy range over which a background is calculated which is subtracted from
   the raw data.
 
@@ -77,6 +109,11 @@ Normalise to Lowest Temp
 SE log name
   The name of the sample environment log entry in the input files sample logs
   (defaults to sample).
+
+SE log value
+  The value to be taken from the "SE log name" data series (defaults to the
+  specified value in the intrument parameters file, and in the absence of such
+  specification, defaults to "last value")
 
 Plot Result
   If enabled will plot the result as a spectra plot.
@@ -127,9 +164,6 @@ Plot Spectrum
 Spectra Range
   The spectra range over which to perform sequential fitting.
 
-Verbose
-  Enables outputting additional information to the Results Log.
-
 Plot Result
   If enabled will plot the result as a spectra plot.
 
@@ -137,14 +171,14 @@ Save Result
   If enabled the result will be saved as a NeXus file in the default save
   directory.
 
-Fury
-----
+I(Q, t)
+-------
 
 .. interface:: Data Analysis
-  :widget: tabFury
+  :widget: tabIqt
 
 Given sample and resolution inputs, carries out a fit as per the theory detailed
-below.
+in the :ref:`TransformToIqt <algm-TransformToIqt>` algorithm.
 
 Options
 ~~~~~~~
@@ -163,9 +197,6 @@ ELow, EHigh
 SampleBinning
   The ratio at which to decrease the number of bins by through merging of
   intensities from neighbouring bins.
-
-Verbose
-  Enables outputting additional information to the Results Log.
 
 Plot Result
   If enabled will plot the result as a spectra plot.
@@ -194,83 +225,13 @@ ResolutionBins
   Number of bins in the resolution after rebinning, typically this should be at
   least 5 and a warning will be shown if it is less.
 
-Theory
-~~~~~~
-
-The measured spectrum :math:`I(Q, \omega)` is proportional to the four
-dimensional convolution of the scattering law :math:`S(Q, \omega)` with the
-resolution function :math:`R(Q, \omega)` of the spectrometer via :math:`I(Q,
-\omega) = S(Q, \omega) ⊗ R(Q, \omega)`, so :math:`S(Q, \omega)` can be obtained,
-in principle, by a deconvolution in :math:`Q` and :math:`\omega`. The method
-employed here is based on the Fourier Transform (FT) technique [6,7]. On Fourier
-transforming the equation becomes :math:`I(Q, t) = S(Q, t) x R(Q, t)` where the
-convolution in :math:`\omega`-space is replaced by a simple multiplication in
-:math:`t`-space. The intermediate scattering law :math:`I(Q, t)` is then
-obtained by simple division and the scattering law :math:`S(Q, \omega)` itself
-can be obtained by back transformation. The latter however is full of pitfalls
-for the unwary. The advantage of this technique over that of a fitting procedure
-such as SWIFT is that a functional form for :math:`I(Q, t)` does not have to be
-assumed. On IRIS the resolution function is close to a Lorentzian and the
-scattering law is often in the form of one or more Lorentzians. The FT of a
-Lorentzian is a decaying exponential, :math:`exp(-\alpha t)` , so that plots of
-:math:`ln(I(Q, t))` against t would be straight lines thus making interpretation
-easier.
-
-In general, the origin in energy for the sample run and the resolution run need
-not necessarily be the same or indeed be exactly zero in the conversion of the
-RAW data from time-of-flight to energy transfer. This will depend, for example,
-on the sample and vanadium shapes and positions and whether the analyser
-temperature has changed between the runs. The procedure takes this into account
-automatically, without using an arbitrary fitting procedure, in the following
-way. From the general properties of the FT, the transform of an offset
-Lorentzian has the form :math:`(cos(\omega_{0}t) + isin(\omega_{0}t))exp(-\Gamma
-t)` , thus taking the modulus produces the exponential :math:`exp(-\Gamma t)`
-which is the required function. If this is carried out for both sample and
-resolution, the difference in the energy origin is automatically removed. The
-results of this procedure should however be treated with some caution when
-applied to more complicated spectra in which it is possible for :math:`I(Q, t)`
-to become negative, for example, when inelastic side peaks are comparable in
-height to the elastic peak.
-
-The interpretation of the data must also take into account the propagation of
-statistical errors (counting statistics) in the measured data as discussed by
-Wild et al [1]. If the count in channel :math:`k` is :math:`X_{k}` , then
-:math:`X_{k}=<X_{k}>+\Delta X_{k}` where :math:`<X_{k}>` is the mean value and
-:math:`\Delta X_{k}` the error. The standard deviation for channel :math:`k` is
-:math:`\sigma k` :math:`2=<\Delta X_{k}>2` which is assumed to be given by
-:math:`\sigma k=<X_{k}>`. The FT of :math:`X_{k}` is defined by
-:math:`X_{j}=<X_{j}>+\Delta X_{j}` and the real and imaginary parts denoted by
-:math:`X_{j} I` and :math:`X_{j} I` respectively. The standard deviations on
-:math:`X_{j}` are then given by :math:`\sigma 2(X_{j} R)=1/2 X0 R + 1/2 X2j R`
-and :math:`\sigma 2(X_{j} I)=1/2 X0 I - 1/2 X2j I`.
-
-Note that :math:`\sigma 2(X_{0} R) = X_{0} R` and from the properties of FT
-:math:`X_{0} R = X_{k}`.  Thus the standard deviation of the first coefficient
-of the FT is the square root of the integrated intensity of the spectrum. In
-practice, apart from the first few coefficients, the error is nearly constant
-and close to :math:`X_{0} R`.  A further point to note is that the errors make
-the imaginary part of :math:`I(Q, t)` non-zero and that, although these will be
-distributed about zero, on taking the modulus of :math:`I(Q, t)`, they become
-positive at all times and are distributed about a non-zero positive value. When
-:math:`I(Q, t)` is plotted on a log-scale the size of the error bars increases
-with time (coefficient) and for the resolution will reach a point where the
-error on a coefficient is comparable to its value. This region must therefore be
-treated with caution. For a true deconvolution by back transforming, the data
-would be truncated to remove this poor region before back transforming. If the
-truncation is severe the back transform may contain added ripples, so an
-automatic back transform is not provided.
-
-References:
-
-1. U P Wild, R Holzwarth & H P Good, Rev Sci Instr 48 1621 (1977)
-
-Fury Fit
---------
+I(Q, t) Fit
+-----------
 
 .. interface:: Data Analysis
-  :widget: tabFuryFit
+  :widget: tabIqtFit
 
-FuryFit provides a simplified interface for controlling various fitting
+I(Q, t) Fit provides a simplified interface for controlling various fitting
 functions (see the :ref:`Fit <algm-Fit>` algorithm for more info). The functions
 are also available via the fit wizard.
 
@@ -306,9 +267,16 @@ Plot Guess
   When checked a curve will be created on the plot window based on the bitting
   parameters.
 
+Max Iterations
+  The maximum number of iterations that can be carried out by the fitting
+  algorithm (automatically increased when FABADA is enabled).
+
 StartX & EndX
   The range of :math:`x` over which the fitting will be applied (blue lines on
   preview plot).
+
+Use FABADA
+  Select to enable use of the :ref:`FABADA` minimizer when performing the fit.
 
 Linear Background A0
   The constant amplitude of the background (horizontal green line on the preview
@@ -325,9 +293,6 @@ Plot Spectrum
 
 Spectra Range
   The spectra range over which to perform sequential fitting.
-
-Verbose
-  Enables outputting additional information to the Results Log.
 
 Plot Output
   Allows plotting spectra plots of fitting parameters, the options available
@@ -357,6 +322,71 @@ A sequential fit is run by clicking the Run button at the bottom of the tab, a
 single fit can be done using the Fit Single Spectrum button underneath the
 preview plot.
 
+Fitting Model
+~~~~~~~~~~~~~
+
+The model used to perform fitting is described in the following tree, note that
+everything under the Model section is optional and determined by the *Fit Type*
+and *Use Delta Function* options in the interface.
+
+- :ref:`CompositeFunction <func-CompositeFunction>`
+
+  - :ref:`LinearBackground <func-LinearBackground>`
+
+  - :ref:`Convolution <func-Convolution>`
+
+    - Resolution
+
+    - Model (:ref:`CompositeFunction <func-CompositeFunction>`)
+
+      - DeltaFunction
+
+      - :ref:`ProductFunction <func-ProductFunction>` (One Lorentzian)
+
+        - :ref:`Lorentzian <func-Lorentzian>`
+
+        - Temperature Correction
+
+      - :ref:`ProductFunction <func-ProductFunction>` (Two Lorentzians)
+
+        - :ref:`Lorentzian <func-Lorentzian>`
+
+        - Temperature Correction
+
+      - :ref:`ProductFunction <func-ProductFunction>` (InelasticDiffSphere)
+
+        - :ref:`Inelastic Diff Sphere <func-DiffSphere>`
+
+        - Temperature Correction
+
+      - :ref:`ProductFunction <func-ProductFunction>` (InelasticDiffRotDiscreteCircle)
+
+        - :ref:`Inelastic Diff Rot Discrete Circle <func-DiffRotDiscreteCircle>` 
+
+        - Temperature Correction
+		
+      - :ref:`ProductFunction <func-ProductFunction>` (ElasticDiffSphere)
+
+        - :ref:`Elastic Diff Sphere <func-DiffSphere>`
+
+        - Temperature Correction
+		
+      - :ref:`ProductFunction <func-ProductFunction>` (ElasticDiffRotDiscreteCircle)
+
+        - :ref:`Elastic Diff Rot Discrete Circle <func-DiffRotDiscreteCircle>`
+
+        - Temperature Correction
+		
+      - :ref:`ProductFunction <func-ProductFunction>` (StretchedExpFT)
+
+        - :ref:`StretchedExpFT <func-StretchedExpFT>`
+
+        - Temperature Correction
+
+The Temperature Correction is a :ref:`UserFunction <func-UserFunction>` with the
+formula :math:`((x * 11.606) / T) / (1 - exp(-((x * 11.606) / T)))` where
+:math:`T` is the temperature in Kelvin.
+
 Options
 ~~~~~~~
 
@@ -378,9 +408,16 @@ Plot Guess
   When checked a curve will be created on the plot window based on the bitting
   parameters.
 
+Max Iterations
+  The maximum number of iterations that can be carried out by the fitting
+  algorithm (automatically increased when FABADA is enabled).
+
 StartX & EndX
   The range of :math:`x` over which the fitting will be applied (blue lines on
   preview plot).
+
+Use FABADA
+  Select to enable use of the :ref:`FABADA` minimizer when performing the fit.
 
 A0 & A1 (background)
   The A0 and A1 parameters as they appear in the LinearBackground fir function,
@@ -400,9 +437,6 @@ Plot Spectrum
 
 Spectra Range
   The spectra range over which to perform sequential fitting.
-
-Verbose
-  Enables outputting additional information to the Results Log.
 
 Plot Output
   Allows plotting spectra plots of fitting parameters, the options available
@@ -500,170 +534,43 @@ Polymer
 
 References:
 
-1. J S Higgins, R E Ghosh, W S Howells & G Allen, JCS Faraday II 73 40 (1977)
-2. J S Higgins, G Allen, R E Ghosh, W S Howells & B Farnoux, Chem Phys Lett 49 197 (1977)
+1. J S Higgins, R E Ghosh, W S Howells & G Allen, `JCS Faraday II 73 40 (1977) <http://dx.doi.org/10.1039/F29777300040>`_
+2. J S Higgins, G Allen, R E Ghosh, W S Howells & B Farnoux, `Chem Phys Lett 49 197 (1977) <http://dx.doi.org/10.1016/0009-2614(77)80569-1>`_
 
-Calculate Corrections
----------------------
-
-.. warning:: This interface is only available on Windows
+JumpFit
+-------
 
 .. interface:: Data Analysis
-  :widget: tabCalcCorr
+  :widget: tabJumpFit
 
-Calculates absorption corrections that could be applied to the data when given
-information about the sample (and optionally can) geometry.
+One of the models used to interpret diffusion is that of jump diffusion in which
+it is assumed that an atom remains at a given site for a time :math:`\tau`; and
+then moves rapidly, that is, in a time negligible compared to :math:`\tau`;
+hence ‘jump’.
 
 Options
 ~~~~~~~
 
-Input
-  Either a reduced file (*_red.nxs*) or workspace (*_red*) or an :math:`S(Q,
-  \omega)` file (*_sqw.nxs*) or workspace (*_sqw*).
+Sample
+  A sample workspace created with either ConvFit or Quasi.
 
-Use Can
-  If checked allows you to select a workspace for the container in the format of
-  either a reduced file (*_red.nxs*) or workspace (*_red*) or an :math:`S(Q,
-  \omega)` file (*_sqw.nxs*) or workspace (*_sqw*).
+Fit Funcion
+  Selects the model to be used for fitting.
 
-Sample Shape
-  Sets the shape of the sample, this affects the options for the sample details,
-  see below.
+Width
+  Spectrum in the sample workspace to fit.
 
-Beam Width
-  Width of the incident beam.
+QMin & QMax
+  The Q range to perform fitting within.
 
-Verbose
-  Enables outputting additional information to the Results Log.
+Fitting Parameters
+  Provides the option to change the defautl fitting parameters passed to the
+  chosen function.
 
 Plot Result
-  Plots the :math:`A_{s,s}`, :math:`A_{s,sc}`, :math:`A_{c,sc}` and
-  :math:`A_{c,c}` workspaces as spectra plots.
+  Plots the result workspaces.
 
 Save Result
-  If enabled the result will be saved as a NeXus file in the default save
-  directory.
-
-Sample Details
-~~~~~~~~~~~~~~
-
-Depending on the shape of the sample different parameters for the sample
-dimension are required and are detailed below.
-
-Flat
-####
-
-.. interface:: Data Analysis
-  :widget: pageFlat
-
-Thickness
-  Thickness of sample (cm).
-
-Can Front Thickness
-  Thickness of front container (cm).
-
-Can Back Thickness
-  Thickness of back container (cm).
-
-Sample Angle
-  Sample angle (degrees).
-
-Cylinder
-########
-
-.. interface:: Data Analysis
-  :widget: pageCylinder
-
-Radius 1
-  Sample radius 1 (cm).
-
-Radius 2
-  Sample radius 2 (cm).
-
-Can Radius
-  Radius of inside of the container (cm).
-
-Step Size
-  Step size used in calculation.
-
-Theory
-~~~~~~
-
-The main correction to be applied to neutron scattering data is that for
-absorption both in the sample and its container, when present. For flat plate
-geometry, the corrections can be analytical and have been discussed for example
-by Carlile [1]. The situation for cylindrical geometry is more complex and
-requires numerical integration. These techniques are well known and used in
-liquid and amorphous diffraction, and are described in the ATLAS manual [2]. The
-routines used here have been developed from the corrections programs in the
-ATLAS suite and take into account the wavelength variation of both the
-absorption and the scattering cross-sections for the inelastic flight paths.
-
-The absorption corrections use the formulism of Paalman and Pings [3] and
-involve the attenuation factors :math:`A_{i,j}` where :math:`i` refers to
-scattering and :math:`j` attenuation. For example, :math:`A_{s,sc}` is the
-attenuation factor for scattering in the sample and attenuation in the sample
-plus container. If the scattering cross sections for sample and container are
-:math:`\Sigma_{s}` and :math:`\Sigma_{c}` respectively, then the measured
-scattering from the empty container is :math:`I_{c} = \Sigma_{c}A_{c,c}` and
-that from the sample plus container is :math:`I_{sc} = \Sigma_{s}A_{s,sc} +
-\Sigma_{c}A_{c,sc}`, thus :math:`\Sigma_{s} = (I_{sc} - I_{c}A_{c,sc}/A_{c,c}) /
-A_{s,sc}`.  In the package, the program Acorn calculates the attenuation
-coefficients :math:`A_{i,j}` and the routine Analyse uses them to calculate Σs
-which we identify with :math:`S(Q, \omega)`.
-
-References:
-
-1. C J Carlile, Rutherford Laboratory report, RL-74-103 (1974)
-2. A K Soper, W S Howells & A C Hannon, RAL Report RAL-89-046 (1989)
-3. H H Paalman & C J Pings, J Appl Phys 33 2635 (1962)
-
-
-Apply Corrections
------------------
-
-.. interface:: Data Analysis
-  :widget: tabApplyCorr
-
-The Apply Corrections tab applies the corrections calculated in the Calculate
-Corrections tab of the Indirect Data Analysis interface.
-
-This tab will expect to find the ass file generated in the previous tab. If Use
-Can is selected, it will also expect the assc, acsc and acc files. It will take
-the run number from the sample file, and geometry from the option you select.
-
-Once run the corrected output and can correction is shown in the preview plot,
-the Spectrum spin box can be used to scroll through each spectrum.
-
-Options
-~~~~~~~
-
-Input
-  Either a reduced file (*_red.nxs*) or workspace (*_red*) or an :math:`S(Q,
-  \omega)` file (*_sqw.nxs*) or workspace (*_sqw*).
-
-Geometry
-  Sets the sample geometry (this must match the sample shape used when running
-  Calculate Corrections).
-
-Use Can
-  If checked allows you to select a workspace for the container in the format of
-  either a reduced file (*_red.nxs*) or workspace (*_red*) or an :math:`S(Q,
-  \omega)` file (*_sqw.nxs*) or workspace (*_sqw*).
-
-Corrections File
-  The output file (_Abs.nxs) or workspace group (_Abs) generated by Calculate
-  Corrections.
-
-Verbose
-  Enables outputting additional information to the Results Log.
-
-Plot Output
-  Gives the option to create either a spectra or contour plot (or both) of the
-  corrected workspace.
-
-Save Result
-  If enabled the result will be saved as a NeXus file in the default save
-  directory.
+  Saves the result in the default save directory.
 
 .. categories:: Interfaces Indirect

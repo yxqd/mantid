@@ -1,10 +1,9 @@
 from LoadAndCheckBase import *
 
-'''
-Test File loading and basic data integrity checks of CRISP data in Mantid.
-'''
 class CRISPLoadingTest(LoadAndCheckBase):
-
+    '''
+    Test File loading and basic data integrity checks of CRISP data in Mantid.
+    '''
     def __init__(self):
         super(self.__class__,self).__init__()
         self.disableChecking.append("Instrument")
@@ -22,4 +21,4 @@ class CRISPLoadingTest(LoadAndCheckBase):
         return "CSP85423_1Integrated.nxs"
 
     def get_expected_instrument_name(self):
-        return "CRISP" 
+        return "CRISP"

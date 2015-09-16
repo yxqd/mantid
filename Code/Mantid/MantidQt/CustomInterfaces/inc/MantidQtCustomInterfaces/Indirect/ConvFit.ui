@@ -85,7 +85,7 @@
          </sizepolicy>
         </property>
         <property name="autoLoad" stdset="0">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
         <property name="workspaceSuffixes" stdset="0">
          <stringlist>
@@ -141,6 +141,31 @@
                <string>Two Lorentzians</string>
               </property>
              </item>
+             <item>
+              <property name="text">
+               <string>InelasticDiffSphere</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>InelasticDiffRotDiscreteCircle</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+                <string>ElasticDiffSphere</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+                <string>ElasticDiffRotDiscreteCircle</string>
+              </property>
+             </item>
+              <item>
+                <property name="text">
+                  <string>StretchedExpFT</string>
+                </property>
+              </item>
             </widget>
            </item>
           </layout>
@@ -354,6 +379,18 @@
       </item>
       <item>
        <widget class="QComboBox" name="cbPlotType">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>0</height>
+         </size>
+        </property>
         <item>
          <property name="text">
           <string>None</string>
