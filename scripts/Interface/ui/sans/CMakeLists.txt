@@ -1,3 +1,4 @@
+add_subdirectory(ansto)
 # UI files to convert
 set( UI_FILES
  eqsans_info.ui

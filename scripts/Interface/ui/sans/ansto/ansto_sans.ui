@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>WindowSansAnsto</class>
+ <widget class="QMainWindow" name="WindowSansAnsto">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>616</width>
+    <height>434</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>ANSTO Sans</string>
+  </property>
+  <widget class="QWidget" name="widgetMainRow">
+   <layout class="QVBoxLayout" name="layoutBase">
+    <item>
+     <widget class="QTabWidget" name="tabs">
+      <property name="currentIndex">
+       <number>2</number>
+      </property>
+      <widget class="QWidget" name="processing">
+       <attribute name="title">
+        <string>Loading And Processing</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="settings">
+       <attribute name="title">
+        <string>Reduction Settings</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="masking">
+       <attribute name="title">
+        <string>Masking</string>
+       </attribute>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
