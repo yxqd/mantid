@@ -1,8 +1,8 @@
 #ifndef MANTID_DATAHANDLING_SAVENXTOMOFROMSTACKOFIMAGES_H_
 #define MANTID_DATAHANDLING_SAVENXTOMOFROMSTACKOFIMAGES_H_
 
-#include "MantidKernel/System.h"
 #include "MantidAPI/Algorithm.h"
+
 namespace Mantid {
 namespace DataHandling {
 
@@ -32,16 +32,26 @@ namespace DataHandling {
 */
 class DLLExport SaveNXTomoFromStackOfImages : public API::Algorithm {
 public:
+  /// Default constructor
   SaveNXTomoFromStackOfImages();
+  /// Destructor
   virtual ~SaveNXTomoFromStackOfImages();
 
+  /// Algorithm's name for identification overriding a virtual method
   virtual const std::string name() const;
+  /// Algorithm's version for identification overriding a virtual method
   virtual int version() const;
+  /// Algorithm's category for identification overriding a virtual method
   virtual const std::string category() const;
+
+  /// Summary of algorithms purpose
   virtual const std::string summary() const;
 
 private:
+  /// Initialise the algorithm
   void init();
+
+  /// Execute the algorithm
   void exec();
 };
 

@@ -1,4 +1,6 @@
+#include "MantidAPI/FileProperty.h"
 #include "MantidDataHandling/SaveNXTomoFromStackOfImages.h"
+#include "MantidKernel/BoundedValidator.h"
 
 namespace Mantid {
 namespace DataHandling {
@@ -38,19 +40,27 @@ const std::string SaveNXTomoFromStackOfImages::summary() const {
  * Initialize the algorithm's properties.
  */
 void SaveNXTomoFromStackOfImages::init() {
+  std::vector<std::string> exts;
+  exts.push_back(".fits");
+  exts.push_back(".fit");
+  exts.push_back(".*");
 
-  declareProperty(new API::FileProperty("SampleFilename", "",
-                                        API::FileProperty::Load, exts),
+
+  declareProperty(new Mantid::API::FileProperty("SampleFilename", "",
+                                                Mantid::API::FileProperty::Load,
+                                                exts),
                   "First sample file in the stack of images/files. There must "
                   "be at least one.");
 
-  auto mustBePositive = boost::make_shared<BoundedValidator<int64_t>>();
+  auto mustBePositive =
+      boost::make_shared<Mantid::Kernel::BoundedValidator<int64_t>>();
   declareProperty("SampleMaxIndex", EMPTY_INT(), mustBePositive,
                   "Maximum sample image index to load.");
 
   declareProperty(
-      new API::FileProperty("FlatFieldFilename", "",
-                            API::FileProperty::OptionalLoad, exts),
+      new Mantid::API::FileProperty("FlatFieldFilename", "",
+                                    Mantid::API::FileProperty::OptionalLoad,
+                                    exts),
       "First flat or open beam image file. There can be none, one or many.");
 
   declareProperty(
@@ -58,22 +68,23 @@ void SaveNXTomoFromStackOfImages::init() {
       "Maximum index to load when loading multiple flat field images.");
 
   declareProperty(
-      new API::FileProperty("DarkFieldFilename", "",
-                            API::FileProperty::OptionalLoad, exts),
+      new Mantid::API::FileProperty("DarkFieldFilename", "",
+                                    Mantid::API::FileProperty::OptionalLoad,
+                                    exts),
       "First dark or open beam image file. There can be none, one or many.");
 
   declareProperty(
       "DarkFieldMaxIndex", EMPTY_INT(), mustBePositive,
       "Maximum index to load when loading multiple dark field images.");
 
-  declareProperty(new PropertyWithValue<bool>("OverwriteFile", false,
-                                              Kernel::Direction::Input),
+  declareProperty(new Mantid::Kernel::PropertyWithValue<bool>(
+                      "OverwriteFile", false, Kernel::Direction::Input),
                   "Replace any existing file of the same name instead of "
                   "appending data. If the file exists and this option is left "
                   "or given as false the algorithm will not do anything");
 
-  declareProperty(new API::FileProperty("OutputFilename", "",
-                                        API::FileProperty::Load, exts),
+  declareProperty(new Mantid::API::FileProperty("OutputFilename", "",
+                                                Mantid::API::FileProperty::Load, exts),
                   "Name of the output NXtomo. The extension .nxs will be "
                   "appended if missing.");
 }
