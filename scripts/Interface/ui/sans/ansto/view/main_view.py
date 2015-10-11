@@ -5,9 +5,8 @@ class MainView(object):
     #__metaclass__ = abc.ABCMeta
 
     #@abc.abstractmethod
-    def get_processing_view(self):
+    def get_run_table(self):
         pass
 
-    #@abc.abstractmethod
-    def select_processing_view(self):
+    def set_processing(self):
         pass

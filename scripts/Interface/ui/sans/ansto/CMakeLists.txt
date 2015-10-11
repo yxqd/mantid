@@ -7,7 +7,6 @@ UiToPy( UI_FILES CompileUISANSANSTO)
 
 set ( TEST_PY_FILES
       MainViewPresenterTest.py
-      ProcessingViewPresenterTest.py
       )
 
 
