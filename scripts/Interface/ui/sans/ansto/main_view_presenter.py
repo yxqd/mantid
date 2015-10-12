@@ -21,5 +21,6 @@ class MainViewPresenter(object):
             table_of_runs = self._main_view.get_run_table()
             self._main_view.set_processing()
         else:
+            # TODO more command driven processing options
             pass
 
