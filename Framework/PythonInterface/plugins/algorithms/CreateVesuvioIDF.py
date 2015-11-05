@@ -1,10 +1,28 @@
-    def ConstructIDF(print_flag, write_flag):
-        """
-        Constructs the full IDF from a vesuvio IP file
-        print_flag - Print output to console
-        write_flag - Write output to file
-        """
-        ip_lines = ReadIP('C:\Users\HVQ65228\Documents\Vesuvio\Vesuvio\IP0005.par')
+
+from mantid.kernel import *
+from mantid.api import *
+
+IP_PROP = "IP File"
+IDF_PROP = "IDF File"
+
+class CreateVesuvioIDF(PythonAlgorithm):
+
+    def summary(self):
+        return "Uses an IP file to create an IDF for the Vesuvio instrument at ISIS."
+
+    def PyInit(self):
+        self.declareProperty(FileProperty(IP_PROP, "", extensions["par"]),
+                              doc="The file path to the Vesuvio IP file.")
+
+        self.declareProperty(FileProperty(IDF_PROP, "", Direction.Output),
+                              doc="The file path to the desired IDF file.")
+
+
+    def PyExec(self):
+        ip_filename = self.getPropertyValue(IP_PROP)
+        idf_filename = self.getPropertyValue(IDF_PROP)
+        ip_lines = _read_ip(ip_filename)
+
         # Read headings
         ip_heading = ip_lines[0].split()
 
@@ -13,33 +31,30 @@
         ip_monitor_two = ip_lines[2].split()
 
         # Construct full IDF
-        idf_string = ConstructIDFHeader()
-        idf_string += ConstructIDFSourceSample(ip_lines[3].split()[4])
-        idf_string += ConstructIDFMonitors(ip_monitor_one, ip_monitor_two)
-        idf_string += ConstructIDFFoils()
-        idf_string += ConstructIDFForward(ip_lines)
-        idf_string += ConstructIDFBack(ip_lines)
-        idf_string += ConstructIDFPixel()
-        idf_string += ConstructIDFDetList()
-
-        if print_flag:
-            print idf_string
+        idf_string = _construct_idf_header()
+        idf_string += _construct_idf_source_sample(ip_lines[3].split()[4])
+        idf_string += _construct_idf_monitors(ip_monitor_one, ip_monitor_two)
+        idf_string += _construct_idf_foils()
+        idf_string += _construct_idf_forward(ip_lines)
+        idf_string += _construct_idf_back(ip_lines)
+        idf_string += _construct_idf_pixel()
+        idf_string += _construct_idf_det_list()
 
         if write_flag:
             # Write to file
-            WriteIDF('C:/Users/HVQ65228/Documents/test.xml', idf_string)
+            _write_idf(filename, idf_string)
 
 
-    #===========================================================================================================================================#
-    def ReadIP(ip_file_name):
+#===========================================================================================================================================#
+    def _read_ip(self, ip_file_name):
         # Read IP file
         ip_file = open(ip_file_name, 'r')
         ip_lines = ip_file.readlines()
         return ip_lines
 
 
-    #===========================================================================================================================================#
-    def ConstructIDFHeader():
+#===========================================================================================================================================#
+    def _construct_idf_header(self):
         # Define the header of the IDF - input=()
         idf_header = ("""<?xml version="1.0" encoding="UTF-8"?>
         <!-- For help on the notation used to specify an Instrument Definition File
@@ -69,8 +84,8 @@
         return idf_header
 
 
-    #===========================================================================================================================================#
-    def ConstructIDFSourceSample(non_monitor_L0):
+#===========================================================================================================================================#
+    def _construct_idf_source_sample(self, non_monitor_L0):
         # Define the source and sample positions - input=(non-monitor['L0'])
         idf_src_sam = ("""
           <!--  SOURCE AND SAMPLE POSITION -->
@@ -93,8 +108,8 @@
         return idf_src_sam
 
 
-    #===========================================================================================================================================#
-    def ConstructIDFMonitors(monitor_one, monitor_two):
+#===========================================================================================================================================#
+    def _construct_idf_monitors(self, monitor_one, monitor_two):
         # Define the Monitors - input=(monitor1['L1'], monitor2['L1'])
         idf_monitors = ("""
           <!-- MONITORS -->
@@ -118,8 +133,8 @@
         return idf_monitors
 
 
-    #===========================================================================================================================================#
-    def ConstructIDFFoils():
+#===========================================================================================================================================#
+    def _construct_idf_foils(self):
         # Define the Foils and Foil changers - input=()
         idf_foils = ("""
           <!-- FOILS  -->
@@ -176,8 +191,8 @@
         return idf_foils
 
 
-    #===========================================================================================================================================#
-    def ConstructIDFForward(ip_lines):
+#===========================================================================================================================================#
+    def _construct_idf_forward(self, ip_lines):
         # Define the forward scattering detectors
         idf_forward_det_head = ("""
           <!-- DETECTORS -->
@@ -212,8 +227,8 @@
         return idf_forward_dets
 
 
-    #===========================================================================================================================================#
-    def ConstructIDFBack(ip_lines):
+#===========================================================================================================================================#
+    def _construct_idf_back(self, ip_lines):
         # Define the back scattering detectors
         idf_back_head =("""  <type name="back">
             <component type="pixel back" >
@@ -235,8 +250,8 @@
         return idf_back_dets
 
 
-    #===========================================================================================================================================#
-    def ConstructIDFPixel():
+#===========================================================================================================================================#
+    def _construct_idf_pixel(self):
         # Define pixel forward/back
         idf_pix = ("""
           <type name="pixel forward" is="detector">
@@ -263,8 +278,8 @@
         return idf_pix
 
 
-    #===========================================================================================================================================#
-    def ConstructIDFDetList():
+#===========================================================================================================================================#
+    def _construct_idf_det_list(self):
         # Detector ID Lists + tail
         idf_det_id_list = ("""
           <!-- DETECTOR ID LISTS -->
@@ -289,8 +304,8 @@
         return idf_det_id_list
 
 
-    #===========================================================================================================================================#
-    def WriteIDF(idf_filename, idf_string):
+#===========================================================================================================================================#
+    def _write_idf(idf_filename, idf_string):
         # Write IDF out to .xml file
         idf = open(idf_filename, 'w')
         idf.write(idf_string)
