@@ -18,14 +18,15 @@ class CreateVesuvioIDF(PythonAlgorithm):
                                           extensions=["par"]),
                               doc="The file path to the Vesuvio IP file.")
 
-        self.declareProperty(FileProperty(IDF_PROP, "", Direction.Output),
+        self.declareProperty(FileProperty(IDF_PROP, "", Direction.Output,
+                                          extensions=["xml"]),
                               doc="The file path to the desired IDF file.")
 
 
     def PyExec(self):
         ip_filename = self.getPropertyValue(IP_PROP)
         idf_filename = self.getPropertyValue(IDF_PROP)
-        ip_lines = _read_ip(ip_filename)
+        ip_lines = self._read_ip(ip_filename)
 
         # Read headings
         ip_heading = ip_lines[0].split()
@@ -35,18 +36,16 @@ class CreateVesuvioIDF(PythonAlgorithm):
         ip_monitor_two = ip_lines[2].split()
 
         # Construct full IDF
-        idf_string = _construct_idf_header()
-        idf_string += _construct_idf_source_sample(ip_lines[3].split()[4])
-        idf_string += _construct_idf_monitors(ip_monitor_one, ip_monitor_two)
-        idf_string += _construct_idf_foils()
-        idf_string += _construct_idf_forward(ip_lines)
-        idf_string += _construct_idf_back(ip_lines)
-        idf_string += _construct_idf_pixel()
-        idf_string += _construct_idf_det_list()
+        idf_string = self._construct_idf_header()
+        idf_string += self._construct_idf_source_sample(ip_lines[3].split()[4])
+        idf_string += self._construct_idf_monitors(ip_monitor_one, ip_monitor_two)
+        idf_string += self._construct_idf_foils()
+        idf_string += self._construct_idf_forward(ip_lines)
+        idf_string += self._construct_idf_back(ip_lines)
+        idf_string += self._construct_idf_pixel()
+        idf_string += self._construct_idf_det_list()
 
-        if write_flag:
-            # Write to file
-            _write_idf(filename, idf_string)
+        self._write_idf(idf_filename, idf_string)
 
 
 #===========================================================================================================================================#
@@ -59,7 +58,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
 
 #===========================================================================================================================================#
     def _construct_idf_header(self):
-        # Define the header of the IDF - input=()
+        # Define the header of the IDF
         idf_header = ("""<?xml version="1.0" encoding="UTF-8"?>
         <!-- For help on the notation used to specify an Instrument Definition File
              see http://www.mantidproject.org/IDF -->
@@ -90,7 +89,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
 
 #===========================================================================================================================================#
     def _construct_idf_source_sample(self, non_monitor_L0):
-        # Define the source and sample positions - input=(non-monitor['L0'])
+        # Define the source and sample positions
         idf_src_sam = ("""
           <!--  SOURCE AND SAMPLE POSITION -->
 
@@ -114,7 +113,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
 
 #===========================================================================================================================================#
     def _construct_idf_monitors(self, monitor_one, monitor_two):
-        # Define the Monitors - input=(monitor1['L1'], monitor2['L1'])
+        # Define the Monitors
         idf_monitors = ("""
           <!-- MONITORS -->
 
@@ -139,7 +138,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
 
 #===========================================================================================================================================#
     def _construct_idf_foils(self):
-        # Define the Foils and Foil changers - input=()
+        # Define the Foils and Foil changers
         idf_foils = ("""
           <!-- FOILS  -->
 
@@ -214,7 +213,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
             <component type="pixel forward" >
         """)
 
-        # Define all locations of forward scattering detectors - inputs (ip_det['theta'], ip_det['L1'], ???)
+        # Define all locations of forward scattering detectors
         idf_forward_locations = ''
         for idx in range(136,  199):
             # Get corresponding detector from IP file
@@ -238,7 +237,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
             <component type="pixel back" >
         """)
 
-        # Define all locations of forward scattering detectors - inputs (ip_det['theta'], ip_det['L1'], ???, ip_det['det'] )
+        # Define all locations of forward scattering detectors
         idf_back_locations = ''
         for idx in range (4,135):
             # Get corresponding detector from IP file
@@ -309,7 +308,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
 
 
 #===========================================================================================================================================#
-    def _write_idf(idf_filename, idf_string):
+    def _write_idf(self, idf_filename, idf_string):
         # Write IDF out to .xml file
         idf = open(idf_filename, 'w')
         idf.write(idf_string)
