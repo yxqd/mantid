@@ -3,6 +3,8 @@ import mantid.simpleapi as api
 from mantid.kernel import *
 from mantid.api import *
 
+import os
+
 IP_PROP = "IP File"
 IDF_PROP = "IDF File"
 
@@ -12,7 +14,8 @@ class CreateVesuvioIDF(PythonAlgorithm):
         return "Uses an IP file to create an IDF for the Vesuvio instrument at ISIS."
 
     def PyInit(self):
-        self.declareProperty(FileProperty(IP_PROP, "", extensions["par"]),
+        self.declareProperty(FileProperty(IP_PROP, "", action=FileAction.OptionalLoad,
+                                          extensions=["par"]),
                               doc="The file path to the Vesuvio IP file.")
 
         self.declareProperty(FileProperty(IDF_PROP, "", Direction.Output),
