@@ -13,6 +13,12 @@ class CreateVesuvioIDF(PythonAlgorithm):
     def summary(self):
         return "Uses an IP file to create an IDF for the Vesuvio instrument at ISIS."
 
+    def version(self):
+        return 1
+
+    def category(self):
+        return "Inelastic;PythonAlgorithms"
+
     def PyInit(self):
         self.declareProperty(FileProperty(IP_PROP, "", action=FileAction.OptionalLoad,
                                           extensions=["par"]),
@@ -22,6 +28,14 @@ class CreateVesuvioIDF(PythonAlgorithm):
                                           extensions=["xml"]),
                               doc="The file path to the desired IDF file.")
 
+    def validateInputs(self):
+        # Requires check to ensure files are valid
+        # .xml on idf
+        issues = dict()
+        ip_filename = self.getPropertyValue(IP_PROP)
+        idf_filename = self.getPropertyValue(IDF_PROP)
+
+        return issues
 
     def PyExec(self):
         ip_filename = self.getPropertyValue(IP_PROP)
