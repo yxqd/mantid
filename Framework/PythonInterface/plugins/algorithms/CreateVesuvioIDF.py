@@ -1,4 +1,5 @@
 
+import mantid.simpleapi as api
 from mantid.kernel import *
 from mantid.api import *
 
@@ -310,3 +311,6 @@ class CreateVesuvioIDF(PythonAlgorithm):
         idf = open(idf_filename, 'w')
         idf.write(idf_string)
         idf.close()
+
+# Register algorithm with Mantid
+AlgorithmFactory.subscribe(CreateVesuvioIDF)
