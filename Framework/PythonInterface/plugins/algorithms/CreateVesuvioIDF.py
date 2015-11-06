@@ -253,7 +253,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
 
         # Define all locations of forward scattering detectors
         idf_back_locations = ''
-        for idx in range (4,135):
+        for idx in range (3,135):
             # Get corresponding detector from IP file
             ip_det = ip_lines[idx].split()
             idf_back_locations += ('      <location t="-%s" r="%s" p="%i" name="S%s"/>\n' % (ip_det[2], ip_det[5], 0, ip_det[1]))
