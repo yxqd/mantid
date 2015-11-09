@@ -28,6 +28,8 @@ class CreateVesuvioIDFTest(unittest.TestCase):
         Test will compare z values
         Due to current lack of Phi value, x and y can not be checked as they depend on Phi)
         """
+        # Check instrument
+        self.assertEquals(self._new_definition.getFullName(), 'VESUVIO')
         # Check number of detectors are equal
         new_length = self._new_definition.getNumberHistograms()
         old_length = self._old_definition.getNumberHistograms()
