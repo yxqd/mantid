@@ -5,8 +5,8 @@ from mantid.api import *
 
 import os
 
-IP_PROP = "IP File"
-IDF_PROP = "IDF File"
+IP_PROP = "IPFilename"
+IDF_PROP = "OutputFilename"
 
 class CreateVesuvioIDF(PythonAlgorithm):
 
@@ -225,10 +225,10 @@ class CreateVesuvioIDF(PythonAlgorithm):
 
         # Define all locations of forward scattering detectors
         idf_forward_locations = ''
-        for idx in range(136,  199):
+        for idx in range(135,  199):
             # Get corresponding detector from IP file
             ip_det = ip_lines[idx].split()
-            idf_forward_locations += ('      <location t="-%s" r="%s" p="%i"/>\n' % (ip_det[2], ip_det[5], 0))
+            idf_forward_locations += ('      <location t="-%s" r="%s" p="%i" name="S%s"/>\n' % (ip_det[2], ip_det[5], 0, ip_det[1]))
 
         idf_forward_det_end = (
         '    </component>\n' +
