@@ -10,7 +10,7 @@ IDF_PROP = "OutputFilename"
 
 class CreateVesuvioIDF(PythonAlgorithm):
 
-    self._phi_data = ['-34.73019', '-28.51712', '-22.01023', '-15.42126', '-8.96977', '-2.84422', '-31.24211', '-24.71659',
+    _phi_data = ['-34.73019', '-28.51712', '-22.01023', '-15.42126', '-8.96977', '-2.84422', '-31.24211', '-24.71659',
                       '-17.98582', '-11.28699', '-4.84608', '-33.93161', '-27.46684', '-20.65919', '-13.75649', '-7.01763',
                       '-30.21015', '-23.40558', '-16.36037', '-9.35697', '-26.17764', '-19.06803', '-11.85159', '-4.82908',
                       '-28.91532', '-21.83579', '-14.48041', '-7.17771', '-24.60827', '-17.20561', '-9.68561', '-19.97559',
@@ -255,7 +255,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
         for idx in range(135,  199):
             # Get corresponding detector from IP file
             ip_det = ip_lines[idx].split()
-            idf_forward_locations += ('      <location t="-%s" r="%s" p="%i" name="S%s"/>\n' % (ip_det[2], ip_det[5], self._phi_data[idx-3], ip_det[1]))
+            idf_forward_locations += ('      <location t="-%s" r="%s" p="%s" name="S%s"/>\n' % (ip_det[2], ip_det[5], self._phi_data[idx-3], ip_det[1]))
 
         idf_forward_det_end = (
         '    </component>\n' +
@@ -279,7 +279,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
         for idx in range (3,135):
             # Get corresponding detector from IP file
             ip_det = ip_lines[idx].split()
-            idf_back_locations += ('      <location t="-%s" r="%s" p="%i" name="S%s"/>\n' % (ip_det[2], ip_det[5], self._phi_data[idx - 3], ip_det[1]))
+            idf_back_locations += ('      <location t="-%s" r="%s" p="%s" name="S%s"/>\n' % (ip_det[2], ip_det[5], self._phi_data[idx - 3], ip_det[1]))
 
         idf_back_end = (
         '    </component>\n' +
