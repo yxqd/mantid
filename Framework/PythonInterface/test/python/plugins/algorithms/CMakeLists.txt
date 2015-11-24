@@ -20,9 +20,9 @@ set ( TEST_PY_FILES
   CylinderPaalmanPingsCorrectionTest.py
   CylinderPaalmanPingsCorrection2Test.py
   DakotaChiSquaredTest.py
+  DNSComputeDetEffCorrCoefsTest.py
   DNSMergeRunsTest.py
   DNSFlippingRatioCorrTest.py
-  DNSDetEffCorrVanaTest.py
   DSFinterpTest.py
   EnggCalibrateFullTest.py
   EnggCalibrateTest.py
@@ -73,6 +73,7 @@ set ( TEST_PY_FILES
   SortXAxisTest.py
   StatisticsOfTableWorkspaceTest.py
   Stitch1DManyTest.py
+  StringToPngTest.py
   SuggestTibCNCSTest.py
   SuggestTibHYSPECTest.py
   SymmetriseTest.py
