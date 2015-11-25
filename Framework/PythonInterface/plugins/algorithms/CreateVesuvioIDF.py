@@ -231,7 +231,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
         for idx in range(135,  199):
             # Get corresponding detector from IP file
             ip_det = ip_lines[idx].split()
-            idf_forward_locations += ('      <location t="%s" r="%s" p="%d" name="S%s"/>\n' % (ip_det[2], ip_det[5], self._phi_data[idx - 3], ip_det[1]))
+            idf_forward_locations += ('      <location t="-%s" r="%s" p="%d" name="S%s"/>\n' % (ip_det[2], ip_det[5], self._phi_data[idx - 3], ip_det[1]))
 
         idf_forward_det_end = (
         '    </component>\n' +
