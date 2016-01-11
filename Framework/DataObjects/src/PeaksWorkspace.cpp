@@ -72,7 +72,7 @@ public:
    * @param criteria : a vector with a list of pairs: column name, bool;
    *        where bool = true for ascending, false for descending sort.
    */
-  PeakComparator(std::vector<std::pair<std::string, bool>> &criteria)
+  explicit PeakComparator(std::vector<std::pair<std::string, bool>> &criteria)
       : criteria(criteria) {}
 
   /** Compare two peaks using the stored criteria */
@@ -783,7 +783,7 @@ void PeaksWorkspace::saveNexus(::NeXus::File *file) const {
   file->makeData(name, NeXus::CHAR, dims, false);
   file->openData(name);
 
-  char *toNexus = new char[maxShapeJSONLength * np];
+  auto toNexus = new char[maxShapeJSONLength * np];
   for (size_t ii = 0; ii < np; ii++) {
     std::string rowStr = shapes[ii];
     for (size_t ic = 0; ic < rowStr.size(); ic++)

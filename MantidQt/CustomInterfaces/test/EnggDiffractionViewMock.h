@@ -50,8 +50,17 @@ public:
   // virtual std::string currentCalibFile() const;
   MOCK_CONST_METHOD0(currentCalibFile, std::string());
 
-  // std::string currentPlotType
+  // int currentCropCalibBankName
+  MOCK_CONST_METHOD0(currentCropCalibBankName, int());
+
+  // std::string currentCalibSpecNos
+  MOCK_CONST_METHOD0(currentCalibSpecNos, std::string());
+
+  // int currentPlotType
   MOCK_CONST_METHOD0(currentPlotType, int());
+
+  // int currentMultiRunMode
+  MOCK_CONST_METHOD0(currentMultiRunMode, int());
 
   // virtual std::vector<std::string> newVanadiumNo() const;
   MOCK_CONST_METHOD0(newVanadiumNo, std::vector<std::string>());

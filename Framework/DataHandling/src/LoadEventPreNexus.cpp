@@ -479,8 +479,7 @@ void LoadEventPreNexus::procEvents(
   loadOnlySomeSpectra = (this->spectra_list.size() > 0);
 
   // Turn the spectra list into a map, for speed of access
-  for (std::vector<int64_t>::iterator it = spectra_list.begin();
-       it != spectra_list.end(); it++)
+  for (auto it = spectra_list.begin(); it != spectra_list.end(); it++)
     spectraLoadMap[*it] = true;
 
   CPUTimer tim;
@@ -832,8 +831,9 @@ void LoadEventPreNexus::setProtonCharge(
 
   /// TODO set the units for the log
   run.addLogData(log);
-  double integ = run.integrateProtonCharge();
-  // run.setProtonCharge(this->proton_charge_tot); //This is now redundant
+  // Force re-integration
+  run.integrateProtonCharge();
+  double integ = run.getProtonCharge();
   this->g_log.information() << "Total proton charge of " << integ
                             << " microAmp*hours found by integrating.\n";
 }

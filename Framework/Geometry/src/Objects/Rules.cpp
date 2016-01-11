@@ -238,7 +238,7 @@ int Rule::makeCNFcopy(std::unique_ptr<Rule> &TopRule)
           // gamma->clone()
           std::unique_ptr<Rule> tmp1 =
               Mantid::Kernel::make_unique<Intersection>(std::move(alpha),
-                                                        std::move(gamma));
+                                                        gamma->clone());
           std::unique_ptr<Rule> tmp2 =
               Mantid::Kernel::make_unique<Intersection>(std::move(beta),
                                                         std::move(gamma));
@@ -358,7 +358,7 @@ int Rule::makeCNF(std::unique_ptr<Rule> &TopRule)
           // gamma->clone()
           std::unique_ptr<Rule> tmp1 =
               Mantid::Kernel::make_unique<Intersection>(std::move(alpha),
-                                                        std::move(gamma));
+                                                        gamma->clone());
           std::unique_ptr<Rule> tmp2 =
               Mantid::Kernel::make_unique<Intersection>(std::move(beta),
                                                         std::move(gamma));
@@ -632,7 +632,7 @@ int Rule::getKeyList(std::vector<int> &IList) const
     }
   }
   std::sort(IList.begin(), IList.end());
-  std::vector<int>::iterator px = std::unique(IList.begin(), IList.end());
+  auto px = std::unique(IList.begin(), IList.end());
   IList.erase(px, IList.end());
   return static_cast<int>(IList.size());
 }
