@@ -211,13 +211,9 @@ void SANSRunWindow::initLayout() {
   connectButtonSignals();
 
   m_uiForm.tabWidget->setCurrentWidget(m_uiForm.runNumbers);
+
   // Disable most things so that load is the only thing that can be done
-  m_uiForm.oneDBtn->setEnabled(false);
-  m_uiForm.twoDBtn->setEnabled(false);
-  m_uiForm.saveDefault_btn->setEnabled(false);
-  for (int i = 1; i < 4; ++i) {
-    m_uiForm.tabWidget->setTabEnabled(i, false);
-  }
+  userFileLoadingBegin();
 
   // Mode switches
   connect(m_uiForm.single_mode_btn, SIGNAL(clicked()), this,
@@ -783,6 +779,11 @@ bool SANSRunWindow::loadUserFile() {
     m_uiForm.mask_table->removeRow(i);
   }
 
+
+  // Disable some settings on the GUI such that the user cannot press
+  // a Reduce button while the user file is loading
+  userFileLoadingBegin();
+
   QString pyCode = "i.Clean()";
   pyCode += "\ni." + getInstrumentClass();
   pyCode += "\ni.ReductionSingleton().user_settings =";
@@ -811,6 +812,7 @@ bool SANSRunWindow::loadUserFile() {
     m_cfg_loaded = false;
     return false;
   }
+
 
   const auto settings = getReductionSettings();
 
@@ -1059,9 +1061,9 @@ bool SANSRunWindow::loadUserFile() {
 
   m_cfg_loaded = true;
   emit userfileLoaded();
-  m_uiForm.tabWidget->setTabEnabled(1, true);
-  m_uiForm.tabWidget->setTabEnabled(2, true);
-  m_uiForm.tabWidget->setTabEnabled(3, true);
+
+  // Enable buttons and tabs
+  userFileLoadingEnd();
 
   return true;
 }
@@ -4918,6 +4920,32 @@ bool SANSRunWindow::isValidUserFile() {
   user_file.close();
 
   return true;
+}
+
+/**
+ * Disable controls when the user file beings to load
+ */
+void SANSRunWindow::userFileLoadingBegin() {
+  // Disable the reduction and save buttons on the first tab
+  m_uiForm.oneDBtn->setEnabled(false);
+  m_uiForm.twoDBtn->setEnabled(false);
+  m_uiForm.saveDefault_btn->setEnabled(false);
+  for (int i = 1; i < 4; ++i) {
+    m_uiForm.tabWidget->setTabEnabled(i, false);
+  }
+}
+
+/**
+ * Enable controls when the user file has loaded
+ */
+void SANSRunWindow::userFileLoadingEnd() {
+  // Enable the reduction and save buttons on the first tab
+  m_uiForm.oneDBtn->setEnabled(true);
+  m_uiForm.twoDBtn->setEnabled(true);
+  m_uiForm.saveDefault_btn->setEnabled(true);
+  for (int i = 1; i < 4; ++i) {
+    m_uiForm.tabWidget->setTabEnabled(i, true);
+  }
 }
 
 

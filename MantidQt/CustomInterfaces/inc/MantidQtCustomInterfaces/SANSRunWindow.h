@@ -316,6 +316,7 @@ private slots:
   /// Handle a change of the aperture geometry for QResolution
   void handleQResolutionApertureChange(int aperture);
 
+
 private:
   /// used to specify the range of validation to do
   enum ValCheck {
@@ -497,6 +498,10 @@ private:
   bool hasUserFileValidFileExtension();
   /// Check if the user file is valid
   bool isValidUserFile();
+  /// Disable controls when user file is being loaded
+  void userFileLoadingBegin();
+  /// Enable controls when user file has finished loading
+  void userFileLoadingEnd();
 
   UserSubWindow *slicingWindow;
 };
