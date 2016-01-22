@@ -98,20 +98,28 @@ void RadiusSum::exec() {
   cacheInputPropertyValues();
   inputValidationSanityCheck();
 
+  // Create Progress reporting
+  auto nPoints = inputWS->getNumberHistograms();
+  API::Progress progress(this, 0, 1, size_t(double(nPoints) * 1.1));
+
   // this is the main method, that executes the algorithm of radius sum
   std::vector<double> output;
   if (inputWorkspaceHasInstrumentAssociated(inputWS))
-    output = processInstrumentRadiusSum();
+    output = processInstrumentRadiusSum(progress);
   else
-    output = processNumericImageRadiusSum();
+    output = processNumericImageRadiusSum(progress);
 
   if (getProperty("NormalizeByRadius"))
     normalizeOutputByRadius(output, getProperty("NormalizationOrder"));
 
+  // Report the last 10% progress
+  progress.reportIncrement(
+      size_t(double(nPoints) * 0.1));
+
   setUpOutputWorkspace(output);
 }
 
-std::vector<double> RadiusSum::processInstrumentRadiusSum() {
+std::vector<double> RadiusSum::processInstrumentRadiusSum(Mantid::API::Progress& progress) {
   g_log.debug() << "Process Instrument related image" << std::endl;
 
   std::vector<double> accumulator(num_bins, 0);
@@ -120,6 +128,8 @@ std::vector<double> RadiusSum::processInstrumentRadiusSum() {
                 << " and sum up all the counts inside the related spectrum"
                 << std::endl;
   for (size_t i = 0; i < inputWS->getNumberHistograms(); i++) {
+    progress.report();
+
     try {
       auto det = inputWS->getDetector(i);
 
@@ -145,7 +155,7 @@ std::vector<double> RadiusSum::processInstrumentRadiusSum() {
   return accumulator;
 }
 
-std::vector<double> RadiusSum::processNumericImageRadiusSum() {
+std::vector<double> RadiusSum::processNumericImageRadiusSum(Mantid::API::Progress& progress) {
   g_log.debug() << "Process Numeric Image" << std::endl;
 
   std::vector<double> accumulator(num_bins, 0);
@@ -178,6 +188,7 @@ std::vector<double> RadiusSum::processNumericImageRadiusSum() {
                 << std::endl;
   // for each row in the image
   for (size_t i = 0; i < inputWS->getNumberHistograms(); i++) {
+    progress.report();
 
     // pixel values
     auto refY = inputWS->getSpectrum(i)->readY();

@@ -66,8 +66,8 @@ private:
   void init();
   void exec();
 
-  std::vector<double> processInstrumentRadiusSum();
-  std::vector<double> processNumericImageRadiusSum();
+  std::vector<double> processInstrumentRadiusSum(Mantid::API::Progress& progress);
+  std::vector<double> processNumericImageRadiusSum(Mantid::API::Progress& progress);
 
   void cacheInputPropertyValues();
   void inputValidationSanityCheck();
