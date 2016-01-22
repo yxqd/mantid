@@ -28,6 +28,8 @@ from SANSUtility import (GetInstrumentDetails, MaskByBinRange,
                          is_valid_user_file_extension)
 
 from reducer_singleton import ReductionStep
+import numpy as np
+
 
 DEBUG = False
 
@@ -1252,12 +1254,20 @@ class NormalizeToMonitor(ReductionStep):
             CalculateFlatBackground(InputWorkspace=self.output_wksp, OutputWorkspace=self.output_wksp, StartX=TOF_start,
                                     EndX=TOF_end, Mode='Mean')
 
-        # perform the same conversion on the monitor spectrum as was applied to the workspace but with a possibly different rebin
+        # perform the same conversion on the monitor spectrum as was applied to the workspace but with
+        # a possibly different rebin
         if reducer.instrument.is_interpolating_norm():
             r_alg = 'InterpolatingRebin'
         else:
             r_alg = 'Rebin'
         reducer.to_wavelen.execute(reducer, self.output_wksp, bin_alg=r_alg)
+
+        # Provide a warning if the the number counts is below 64.
+        # Report the warning on all outputs
+        if np.max(self.output_wksp.dataY(0)) < 64:
+            warning_message_monitor_level = ("NormalizeToMonitor: The monitor counts has dropped below 64."
+                                             "Make sure that your workspace does not ")
+            sanslog.warning(warning_message_monitor_level)
 
 
 class TransmissionCalc(ReductionStep):
