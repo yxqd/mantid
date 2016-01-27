@@ -367,18 +367,19 @@ void AccumulateMD::exec() {
   // Use CreateMD with the new data to make a temp workspace
   // Merge the temp workspace with the input workspace using MergeMD
   // Do this with one "new data workspace" at a time to avoid a large
-  // memory overhead for the algorithm
+  // memory overhead for the algorithm. If InPlace is true, this is redundant
+  // but has a negligible impact on speed of the algorithm anyway.
   IMDEventWorkspace_sptr tmp_ws;
   API::IMDEventWorkspace_sptr out_ws;
   size_t new_data_count = 0;
-  double progress_factor = 1.0 / input_data.size();
+  double progress_factor = 1.0 / static_cast<double>(input_data.size());
   for (auto const &new_data_source : input_data) {
 
     tmp_ws = createMDWorkspace(new_data_source, psi[new_data_count],
                                gl[new_data_count], gs[new_data_count],
                                efix[new_data_count]);
     this->interruption_point();
-    this->progress(new_data_count * progress_factor);
+    this->progress(static_cast<double>(new_data_count) * progress_factor);
 
     const std::string temp_ws_name = "TEMP_WORKSPACE_ACCUMULATEMD";
     // Currently have to use ADS here as list of workspaces can only be passed
