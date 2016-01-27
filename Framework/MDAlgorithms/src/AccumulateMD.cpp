@@ -213,7 +213,7 @@ const std::string AccumulateMD::category() const { return "MDAlgorithms"; }
 
 /// Algorithm's summary for use in the GUI and help. @see Algorithm::summary
 const std::string AccumulateMD::summary() const {
-  return "Add new data to an existing MDHistoWorkspace";
+  return "Add new data to an existing MDEventWorkspace";
 }
 
 /*

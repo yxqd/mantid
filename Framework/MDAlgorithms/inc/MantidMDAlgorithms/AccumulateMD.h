@@ -61,7 +61,7 @@ extern void MANTID_MDALGORITHMS_DLL
 padParameterVector(std::vector<double> &param_vector,
                    const size_t grow_to_size);
 
-/** AccumulateMD : Algorithm for appending new data to a MDHistoWorkspace
+/** AccumulateMD : Algorithm for appending new data to a MDEventWorkspace
 
   Copyright &copy; 2015 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge
   National Laboratory & European Spallation Source
