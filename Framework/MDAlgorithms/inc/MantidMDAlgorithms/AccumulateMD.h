@@ -104,6 +104,7 @@ private:
       const std::vector<double> &psi, const std::vector<double> &gl,
       const std::vector<double> &gs, const std::vector<double> &efix);
 
+  /// Overload createMDWorkspace for use for a single data source
   Mantid::API::IMDEventWorkspace_sptr
   createMDWorkspace(const std::string &data_source, const double &psi,
                     const double &gl, const double &gs, const double &efix);

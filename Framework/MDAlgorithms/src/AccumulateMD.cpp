@@ -283,7 +283,7 @@ void AccumulateMD::init() {
                   "gs rotation in degrees. Optional or one entry per run.");
 
   declareProperty(
-      new PropertyWithValue<bool>("InPlace", false, Direction::Input),
+      new PropertyWithValue<bool>("InPlace", true, Direction::Input),
       "Execute conversions to MD and Merge in one-step. Less "
       "memory overhead.");
 
