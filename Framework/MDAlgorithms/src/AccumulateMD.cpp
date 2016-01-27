@@ -5,7 +5,6 @@
 #include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/MandatoryValidator.h"
-#include "MantidKernel/PropertyWithValue.h"
 #include "MantidAPI/FileFinder.h"
 #include "MantidAPI/HistoryView.h"
 #include "MantidDataObjects/MDHistoWorkspaceIterator.h"
@@ -310,8 +309,7 @@ void AccumulateMD::exec() {
   std::vector<double> efix = this->getProperty("EFix");
   padParameterVector(efix, input_data.size());
 
-  // Create progress reporting object
-  // Progress prog = Progress(this, 0.0, 1.0, 2);
+  // Start reporting progress
   this->progress(0);
 
   const std::string nonexistent =
@@ -329,14 +327,14 @@ void AccumulateMD::exec() {
   this->interruption_point();
 
   // If Clean=True then just call CreateMD to create a fresh workspace and
-  // delete the old one, note this means we don't retain workspace history...
+  // delete the old one
   bool do_clean = this->getProperty("Clean");
   if (do_clean) {
     this->progress(0.5);
     IMDEventWorkspace_sptr out_ws =
         createMDWorkspace(input_data, psi, gl, gs, efix);
     this->setProperty("OutputWorkspace", out_ws);
-    g_log.notice() << this->name() << " succesfully created a clean workspace"
+    g_log.notice() << this->name() << " successfully created a clean workspace"
                    << std::endl;
     this->progress(1.0);
     return; // POSSIBLE EXIT POINT
@@ -368,33 +366,49 @@ void AccumulateMD::exec() {
   // If we reach here then new data exists to append to the input workspace
   // Use CreateMD with the new data to make a temp workspace
   // Merge the temp workspace with the input workspace using MergeMD
-  IMDEventWorkspace_sptr tmp_ws =
-      createMDWorkspace(input_data, psi, gl, gs, efix);
-  this->interruption_point();
-  this->progress(0.5); // Report as CreateMD is complete
+  // Do this with one "new data workspace" at a time to avoid a large
+  // memory overhead for the algorithm
+  IMDEventWorkspace_sptr tmp_ws;
+  API::IMDEventWorkspace_sptr out_ws;
+  size_t new_data_count = 0;
+  double progress_factor = 1.0 / input_data.size();
+  for (auto const &new_data_source : input_data) {
 
-  const std::string temp_ws_name = "TEMP_WORKSPACE_ACCUMULATEMD";
-  // Currently have to use ADS here as list of workspaces can only be passed as
-  // a list of workspace names as a string
-  AnalysisDataService::Instance().add(temp_ws_name, tmp_ws);
-  std::string ws_names_to_merge = input_ws->getName();
-  ws_names_to_merge.append(",");
-  ws_names_to_merge.append(temp_ws_name);
+    tmp_ws = createMDWorkspace(new_data_source, psi[new_data_count],
+                               gl[new_data_count], gs[new_data_count],
+                               efix[new_data_count]);
+    this->interruption_point();
+    this->progress(new_data_count * progress_factor);
 
-  Algorithm_sptr merge_alg = createChildAlgorithm("MergeMD");
-  merge_alg->setProperty("InputWorkspaces", ws_names_to_merge);
-  merge_alg->executeAsChildAlg();
+    const std::string temp_ws_name = "TEMP_WORKSPACE_ACCUMULATEMD";
+    // Currently have to use ADS here as list of workspaces can only be passed
+    // as a list of workspace names as a string
+    AnalysisDataService::Instance().add(temp_ws_name, tmp_ws);
+    std::string ws_names_to_merge;
+    if (new_data_count == 0) {
+      ws_names_to_merge = input_ws->getName();
+    } else {
+      ws_names_to_merge = out_ws->getName();
+    }
+    ws_names_to_merge.append(",");
+    ws_names_to_merge.append(temp_ws_name);
 
-  API::IMDEventWorkspace_sptr out_ws =
-      merge_alg->getProperty("OutputWorkspace");
+    Algorithm_sptr merge_alg = createChildAlgorithm("MergeMD");
+    merge_alg->setProperty("InputWorkspaces", ws_names_to_merge);
+    merge_alg->executeAsChildAlg();
 
+    out_ws = merge_alg->getProperty("OutputWorkspace");
+
+    // Clean up temporary workspace
+    AnalysisDataService::Instance().remove(temp_ws_name);
+
+    ++new_data_count;
+  }
   this->setProperty("OutputWorkspace", out_ws);
   g_log.notice() << this->name() << " successfully appended data" << std::endl;
 
-  this->progress(1.0); // Report as MergeMD is complete
-
-  // Clean up temporary workspace
-  AnalysisDataService::Instance().remove(temp_ws_name);
+  // Report that algorithm is complete
+  this->progress(1.0);
 }
 
 /*
@@ -430,6 +444,30 @@ IMDEventWorkspace_sptr AccumulateMD::createMDWorkspace(
   create_alg->executeAsChildAlg();
 
   return create_alg->getProperty("OutputWorkspace");
+}
+
+/*
+ * Use the CreateMD algorithm to create an MD workspace for a single data source
+ * @param data_source :: Input data source
+ * @param psi :: Goniometer angle psi
+ * @param gl :: Goniometer angle gl
+ * @param gs :: Goniometer angle gs
+ * @param efix :: Energy value in meV
+ * @returns the newly created workspace
+*/
+IMDEventWorkspace_sptr
+AccumulateMD::createMDWorkspace(const std::string &data_source,
+                                const double &psi, const double &gl,
+                                const double &gs, const double &efix) {
+
+  const std::vector<std::string> data_source_vector{data_source};
+  const std::vector<double> psi_vector{psi};
+  const std::vector<double> gl_vector{gl};
+  const std::vector<double> gs_vector{gs};
+  const std::vector<double> efix_vector{efix};
+
+  return this->createMDWorkspace(data_source_vector, psi_vector, gl_vector,
+                                 gs_vector, efix_vector);
 }
 
 /*
