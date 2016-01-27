@@ -13,6 +13,8 @@ This workflow algorithm appends new data to an existing multidimensional workspa
 
 Input properties which are not described here are identical to those in the :ref:`algm-CreateMD` algorithm.
 
+By default if input data sources are workspaces they will be altered by the algorithm. To avoid this, at the expense of higher memory use, use InPlace=False.
+
 InputWorkspace
 ##############
 The MDEventWorkspace to append data to.

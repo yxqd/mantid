@@ -9,7 +9,8 @@
 Description
 -----------
 
-This workflow algorithm creates MDWorkspaces in the Q3D, HKL frame using :ref:`algm-ConvertToMD`. 
+This workflow algorithm creates MDWorkspaces in the Q3D, HKL frame using :ref:`algm-ConvertToMD`.
+By default if input data sources are workspaces they will be altered by the algorithm. To avoid this, at the expense of higher memory use, use InPlace=False.
 
 Setting the UB matrix
 ######################################
