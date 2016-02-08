@@ -877,7 +877,7 @@ void ConvFit::populateFunction(IFunction_sptr func, IFunction_sptr comp,
     } else {
       std::string propName = props[i]->propertyName().toStdString();
       double propValue = props[i]->valueText().toDouble();
-      if (propValue) {
+      if (propValue != 0.0) {
         if (func->hasAttribute(propName))
           func->setAttributeValue(propName, propValue);
         else
@@ -1133,6 +1133,10 @@ void ConvFit::plotGuess() {
  * Runs the single fit algorithm
  */
 void ConvFit::singleFit() {
+  // Validate tab before running a single fit
+  if (!validate()) {
+	  return;
+  }
   // disconnect signal for single fit
   disconnect(m_batchAlgoRunner, SIGNAL(batchComplete(bool)), this,
              SLOT(singleFit(bool)));
@@ -1590,7 +1594,10 @@ void ConvFit::fitFunctionSelected(const QString &functionName) {
         m_properties[fullPropName] = m_dblManager->addProperty(*it);
 
         if (paramName.compare("FWHM") == 0) {
-          double resolution = getInstrumentResolution(m_cfInputWS->getName());
+          double resolution = 0.0;
+          if (m_uiForm.dsResInput->getCurrentDataName().compare("") != 0) {
+            resolution = getInstrumentResolution(m_cfInputWS->getName());
+          }
           if (previouslyOneL && count < 3) {
             m_dblManager->setValue(m_properties[fullPropName], oneLValues[2]);
           } else {
@@ -1634,9 +1641,11 @@ void ConvFit::fitFunctionSelected(const QString &functionName) {
         const QString paramName = QString(*it);
         const QString fullPropName = propName + "." + *it;
         m_properties[fullPropName] = m_dblManager->addProperty(*it);
-
         if (paramName.compare("FWHM") == 0) {
-          double resolution = getInstrumentResolution(m_cfInputWS->getName());
+          double resolution = 0.0;
+          if (m_uiForm.dsResInput->getCurrentDataName().compare("") != 0) {
+            resolution = getInstrumentResolution(m_cfInputWS->getName());
+          }
           m_dblManager->setValue(m_properties[fullPropName], resolution);
         } else if (QString(*it).compare("Amplitude") == 0 ||
                    QString(*it).compare("Intensity") == 0) {

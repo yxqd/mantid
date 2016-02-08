@@ -147,7 +147,7 @@ getHistoricalDataSources(const WorkspaceHistory &ws_history,
   auto view = ws_history.createView();
   view->unrollAll();
   const std::vector<HistoryItem> history_items = view->getAlgorithmsList();
-  for (auto const &history_item : history_items) {
+  for (const auto &history_item : history_items) {
     auto alg_history = history_item.getAlgorithmHistory();
     if (alg_history->name() == create_alg_name ||
         alg_history->name() == accumulate_alg_name) {
@@ -184,9 +184,7 @@ void insertDataSources(const std::string &data_sources,
       boost::bind(boost::algorithm::trim<std::string>, _1, std::locale()));
 
   // Insert each data source into our complete set of historical data sources
-  for (auto it = data_split.begin(); it != data_split.end(); ++it) {
-    historical_data_sources.insert(*it);
-  }
+  historical_data_sources.insert(data_split.begin(), data_split.end());
 }
 
 // Register the algorithm into the AlgorithmFactory
