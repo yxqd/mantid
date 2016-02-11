@@ -231,6 +231,8 @@ private:
   // plots workspace according to the user selection
   void plotFocusedWorkspace(std::string outWSName);
 
+  void plotCalibWorkspace();
+
   // algorithms to save the generated workspace
   void saveGSS(std::string inputWorkspace, std::string bank, std::string runNo);
   void saveFocusedXYE(std::string inputWorkspace, std::string bank,

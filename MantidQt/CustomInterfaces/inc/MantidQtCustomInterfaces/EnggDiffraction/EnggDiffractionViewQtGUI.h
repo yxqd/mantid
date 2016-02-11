@@ -124,6 +124,8 @@ public:
 
   virtual bool focusedOutWorkspace() const;
 
+  virtual bool plotCalibWorkspace() const;
+
   virtual void resetFocus();
 
   virtual std::vector<std::string> currentPreprocRunNo() const;
@@ -145,7 +147,7 @@ public:
   virtual void plotDifcZeroCalibOutput(const std::string &wsName,
 	  double &difc, double &tzero);
 
-  virtual bool saveOutputFiles() const;
+  virtual bool saveFocusedOutputFiles() const;
 
   int currentPlotType() const { return m_currentType; }
 

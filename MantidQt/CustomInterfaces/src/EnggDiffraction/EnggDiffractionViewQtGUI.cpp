@@ -260,6 +260,9 @@ void EnggDiffractionViewQtGUI::readSettings() {
 
   m_uiTabCalib.comboBox_calib_cropped_bank_name->setCurrentIndex(0);
 
+  m_uiTabCalib.checkBox_PlotData_Calib->setChecked(
+	  qs.value("user-param-calib-plot-data", true).toBool());
+  
   // user params - focusing
   m_uiTabFocus.lineEdit_run_num->setUserInput(
       qs.value("user-params-focus-runno", "").toString());
@@ -624,7 +627,7 @@ void EnggDiffractionViewQtGUI::plotVanCurvesCalibOutput(){
 	m_logMsgs.push_back("Plotted output calibration vanadium curves, with status string " +
 		status);
 	m_presenter->notify(IEnggDiffractionPresenter::LogMsg);
-};
+}
 
 void EnggDiffractionViewQtGUI::plotDifcZeroCalibOutput(
     const std::string &wsName, double &difc, double &tzero){
@@ -663,7 +666,7 @@ void EnggDiffractionViewQtGUI::plotDifcZeroCalibOutput(
 		status);
 	m_presenter->notify(IEnggDiffractionPresenter::LogMsg);
 
-};
+}
 
 
 void EnggDiffractionViewQtGUI::resetFocus() {
@@ -947,7 +950,12 @@ bool EnggDiffractionViewQtGUI::focusedOutWorkspace() const {
   return m_uiTabFocus.checkBox_FocusedWS->checkState();
 }
 
-bool EnggDiffractionViewQtGUI::saveOutputFiles() const {
+// shahroz
+bool EnggDiffractionViewQtGUI::plotCalibWorkspace() const {
+	return m_uiTabCalib.checkBox_PlotData_Calib->checkState();
+}
+
+bool EnggDiffractionViewQtGUI::saveFocusedOutputFiles() const {
   return m_uiTabFocus.checkBox_SaveOutputFiles->checkState();
 }
 

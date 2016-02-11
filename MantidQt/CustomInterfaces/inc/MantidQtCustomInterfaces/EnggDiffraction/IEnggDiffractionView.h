@@ -293,6 +293,14 @@ public:
   virtual bool focusedOutWorkspace() const = 0;
 
   /**
+  * Check box to consider when calibrating
+  * whether to plot focused workspace
+  *
+  * @return bool
+  */
+  virtual bool plotCalibWorkspace() const = 0;
+
+  /**
    * Reset all focus inputs/options
    */
   virtual void resetFocus() = 0;
@@ -343,7 +351,14 @@ public:
  *
  * @return bool
  */
-  virtual bool saveOutputFiles() const = 0;
+  virtual bool saveFocusedOutputFiles() const = 0;
+
+  /**
+  * Produces vanadium curves graph with three spectrum for calib
+  * output. Runsm plotSpectrum function via python.
+  *
+  */
+  virtual void plotVanCurvesCalibOutput() = 0;
 
   /**
   * Produces a single spectrum graph for focused output. Runs

@@ -978,6 +978,8 @@ void EnggDiffractionPresenter::doCalib(const EnggDiffCalibSettings &cs,
                    << "difc: " << difc[i] << ", zero: " << tzero[i]
                    << std::endl;
   }
+  // plots the calibrated workspaces
+  plotCalibWorkspace();
 
   // Creates appropriate directory
   Poco::Path saveDir = outFilesDir("Calibration");
@@ -1582,7 +1584,7 @@ void EnggDiffractionPresenter::doFocusing(const EnggDiffCalibSettings &cs,
   g_log.notice() << "Saved focused workspace as file: " << fullFilename
                  << std::endl;
 
-  bool saveOutputFiles = m_view->saveOutputFiles();
+  bool saveOutputFiles = m_view->saveFocusedOutputFiles();
 
   if (saveOutputFiles) {
     try {
@@ -2097,6 +2099,13 @@ void EnggDiffractionPresenter::plotFocusedWorkspace(std::string outWSName) {
       m_view->plotFocusedSpectrum(outWSName);
     }
   }
+}
+
+void EnggDiffractionPresenter::plotCalibWorkspace() {
+	const bool plotCalibWS = m_view->plotCalibWorkspace();
+	if (plotCalibWS) {
+		//m_view->plotVanCurvesCalibOutput();
+	}
 }
 
 /**
