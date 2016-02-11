@@ -612,6 +612,60 @@ void EnggDiffractionViewQtGUI::plotReplacingWindow(const std::string &wsName) {
   m_presenter->notify(IEnggDiffractionPresenter::LogMsg);
 }
 
+// shahroz
+void EnggDiffractionViewQtGUI::plotVanCurvesCalibOutput(){
+	std::string pyCode =
+		"van_curves_ws = workspace(\"engggui_vanadium_curves_ws\")"
+		"plot(van_curves_ws, [0, 1, 2])";
+
+	std::string status =
+		runPythonCode(QString::fromStdString(pyCode), false).toStdString();
+
+	m_logMsgs.push_back("Plotted output calibration vanadium curves, with status string " +
+		status);
+	m_presenter->notify(IEnggDiffractionPresenter::LogMsg);
+};
+
+void EnggDiffractionViewQtGUI::plotDifcZeroCalibOutput(
+    const std::string &wsName, double &difc, double &tzero){
+	
+	std::string pyCode =
+		"bank_ws = workspace(" + wsName + ")"
+		"xVal = []"
+		"yVal = []"
+		"y2Val = []"
+
+		"for i in range(0, bank_ws.rowCount()):"
+		" xVal.append(bank_ws.cell()i, 0))"
+		" yVal.append(bank_ws.cell()i, 5))"
+		" difc=" + boost::lexical_cast<std::string>(difc) +
+		" tzero=" + boost::lexical_cast<std::string>(tzero) +
+		" y2Val.append(xVal[i] * difc + tzero)"
+
+		"ws1 = CreateWorkspace(DataX=xVal, DataY=yVal, UnitX=\"Expected Peaks Centre(dSpacing, A)\", YUnitLabel = \"Fitted Peaks Centre(TOF, us)\")"
+		"ws2 = CreateWorkspace(DataX=xVal, DataY=y2Val)"
+		"AppendSpectra(ws1, ws2, OutputWorkspace=\"engggui_difc_zero_peaks\")"
+
+		"DeleteWorkspace(ws1)"
+		"DeleteWorkspace(ws1)"
+
+		"engggui_difc_zero_peaks = workspace(\"engggui_difc_zero_peaks\")"
+		"calWin = plotSpectrum(engggui_difc_zero_peaks, [0, 1]).activeLayer()"
+
+		"calWin.setTitle(\"Engg Gui Difc Zero Peaks\")"
+		"calWin.setAxisTitle(Layer.Bottom, \"Expected Peaks Centre(dSpacing, A)\")"
+		"calWin.setCurveLineStyle(0, QtCore.Qt.DotLine)";
+
+	std::string status =
+		runPythonCode(QString::fromStdString(pyCode), false).toStdString();
+
+	m_logMsgs.push_back("Plotted output calibration ceria peaks, with status string " +
+		status);
+	m_presenter->notify(IEnggDiffractionPresenter::LogMsg);
+
+};
+
+
 void EnggDiffractionViewQtGUI::resetFocus() {
   m_uiTabFocus.lineEdit_run_num->setText("");
   m_uiTabFocus.checkBox_focus_bank1->setChecked(true);

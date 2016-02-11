@@ -140,6 +140,11 @@ public:
 
   virtual void plotReplacingWindow(const std::string &wsName);
 
+  virtual void plotVanCurvesCalibOutput();
+
+  virtual void plotDifcZeroCalibOutput(const std::string &wsName,
+	  double &difc, double &tzero);
+
   virtual bool saveOutputFiles() const;
 
   int currentPlotType() const { return m_currentType; }
