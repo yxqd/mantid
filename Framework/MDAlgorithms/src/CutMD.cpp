@@ -291,7 +291,7 @@ void CutMD::exec() {
       getProperty("P1Bin"), getProperty("P2Bin"), getProperty("P3Bin"),
       getProperty("P4Bin"), getProperty("P5Bin")};
 
-  Workspace_sptr sliceWS; // output worskpace
+  Workspace_sptr sliceWS; // output workspace
 
   // Histogram workspaces can be sliced axis-aligned only.
   if (auto histInWS = boost::dynamic_pointer_cast<IMDHistoWorkspace>(inWS)) {
@@ -389,16 +389,15 @@ void CutMD::exec() {
       }
 
       // and double targetUnits' length by appending itself to itself
-      size_t preSize = targetUnits.size();
-      targetUnits.resize(preSize * 2);
-      for (size_t i = 0; i < preSize; ++i)
-        targetUnits[preSize + i] = targetUnits[i];
+      auto preSize = targetUnits.size();
+      targetUnits.resize(2 * preSize);
+      std::copy_n(targetUnits.begin(), preSize, targetUnits.begin() + preSize);
     }
 
     // Make labels
     std::vector<std::string> labels = labelProjection(scaledProjectionMatrix);
 
-    // Either run RebinMD or SliceMD
+    // Either run BinMD or SliceMD
     const std::string cutAlgName = noPix ? "BinMD" : "SliceMD";
     IAlgorithm_sptr cutAlg = createChildAlgorithm(cutAlgName, 0.0, 1.0);
     cutAlg->initialize();

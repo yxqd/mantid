@@ -77,7 +77,7 @@ void SlicingAlgorithm::initSlicingProps() {
             "Format: 'name, units, x,y,z,..'.\n"
             "  name : string for the name of the output dimension.\n"
             "  units : string for the units of the output dimension.\n"
-            "  x,y,z,...: vector definining the basis in the input dimensions "
+            "  x,y,z,...: vector defining the basis in the input dimensions "
             "space.\n"
             "Leave blank for NONE.");
     setPropertySettings(propName, ps->clone());
