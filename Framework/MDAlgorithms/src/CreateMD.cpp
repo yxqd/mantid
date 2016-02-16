@@ -119,10 +119,7 @@ void CreateMD::init() {
   declareProperty(new ArrayProperty<double>("EFix", Direction::Input),
                   "datasource energy values in meV");
 
-  std::vector<std::string> e_mode_options;
-  e_mode_options.push_back("Elastic");
-  e_mode_options.push_back("Direct");
-  e_mode_options.push_back("Indirect");
+  std::vector<std::string> e_mode_options{"Elastic", "Direct", "Indirect"};
 
   declareProperty("Emode", "Direct",
                   boost::make_shared<StringListValidator>(e_mode_options),
@@ -448,16 +445,7 @@ Mantid::API::IMDEventWorkspace_sptr CreateMD::single_run(
     const std::vector<double> &u, const std::vector<double> &v,
     Mantid::API::IMDEventWorkspace_sptr out_mdws) {
 
-  std::vector<std::vector<double>> ub_params;
-  ub_params.push_back(alatt);
-  ub_params.push_back(angdeg);
-  ub_params.push_back(u);
-  ub_params.push_back(v);
-
-  std::vector<double> goniometer_params;
-  goniometer_params.push_back(psi);
-  goniometer_params.push_back(gl);
-  goniometer_params.push_back(gs);
+  std::vector<std::vector<double>> ub_params{alatt, angdeg, u, v};
 
   if (any_given(ub_params) && !all_given(ub_params)) {
     throw std::invalid_argument(
