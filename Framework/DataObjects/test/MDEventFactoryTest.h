@@ -4,8 +4,6 @@
 #include <cxxtest/TestSuite.h>
 #include <MantidKernel/Timer.h>
 #include <MantidKernel/System.h>
-#include <iostream>
-#include <iomanip>
 
 #include <MantidDataObjects/MDEventFactory.h>
 
@@ -42,8 +40,7 @@ public:
   }
 
   void test_box_factory() {
-    BoxController_sptr bc =
-        boost::shared_ptr<BoxController>(new BoxController(4));
+    BoxController_sptr bc = boost::make_shared<BoxController>(4);
 
     IMDNode *Box = MDEventFactory::createBox(
         4, MDEventFactory::BoxType::MDBoxWithLean, bc);

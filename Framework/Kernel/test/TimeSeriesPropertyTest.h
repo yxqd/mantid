@@ -122,7 +122,36 @@ public:
     TS_ASSERT_EQUALS(twoVals[1], threeVals[2]);
     TS_ASSERT_EQUALS(newVal, threeVals[1]);
   }
+  void test_GetDerivative() {
+    dProp->addValue("2007-11-30T16:17:10", 10);
+    dProp->addValue("2007-11-30T16:17:12", 12);
+    dProp->addValue("2007-11-30T16:17:01", 01);
+    dProp->addValue("2007-11-30T16:17:05", 05);
 
+    auto derProp = dProp->getDerivative();
+    TS_ASSERT(dynamic_cast<TimeSeriesProperty<double> *>(derProp.get()))
+
+    TS_ASSERT_EQUALS(derProp->size(), 3);
+    auto derValues = derProp->valuesAsVector();
+
+    TS_ASSERT_EQUALS(derValues[0], 1);
+    TS_ASSERT_EQUALS(derValues[1], 1);
+    TS_ASSERT_EQUALS(derValues[2], 1);
+
+    TSM_ASSERT_THROWS("derivative undefined for string property",
+                      sProp->getDerivative(), std::runtime_error);
+
+    iProp->addValue("2007-11-30T16:17:10", 10);
+    TSM_ASSERT_THROWS(
+        "derivative undefined for property with less then 2 values",
+        iProp->getDerivative(), std::runtime_error);
+    iProp->addValue("2007-11-30T16:17:12", 12);
+
+    derProp = iProp->getDerivative();
+    TS_ASSERT_EQUALS(derProp->size(), 1);
+    derValues = derProp->valuesAsVector();
+    TS_ASSERT_EQUALS(derValues[0], 1);
+  }
   void test_timesAsVector() {
     TimeSeriesProperty<double> *p =
         new TimeSeriesProperty<double>("doubleProp");
@@ -144,6 +173,34 @@ public:
     TS_ASSERT_EQUALS(time[3], DateAndTime("2007-11-30T16:17:30"));
 
     delete p;
+  }
+
+  void test_replaceValues() {
+    // Arrange
+    size_t num = 1000;
+    DateAndTime first("2007-11-30T16:17:10");
+    std::vector<DateAndTime> times;
+
+    std::vector<double> values;
+    std::vector<double> replacementValues;
+    double offset = 100.0;
+    for (size_t i = 0; i < num; i++) {
+      times.push_back(first + double(i));
+      values.push_back(double(i));
+      replacementValues.push_back(double(i) + offset);
+    }
+    TimeSeriesProperty<double> tsp("test");
+    tsp.addValues(times, values);
+    TS_ASSERT_EQUALS(tsp.size(), 1000);
+    TS_ASSERT_EQUALS(tsp.nthValue(3), 3.0);
+
+    // Act
+    tsp.replaceValues(times, replacementValues);
+
+    // Assert
+    TSM_ASSERT_EQUALS("Should have 1000 entries", tsp.size(), 1000);
+    TSM_ASSERT_EQUALS("Should be 3 plus the offset of 100", tsp.nthValue(3),
+                      103.0);
   }
 
   void test_addValues() {
@@ -1109,11 +1166,9 @@ public:
     TS_ASSERT_THROWS_NOTHING(p->addValue("2007-11-30T16:17:30", 4.00));
 
     // 2. What is correct
-    std::vector<std::string> correctS;
-    correctS.push_back("2007-Nov-30 16:17:00 1");
-    correctS.push_back("2007-Nov-30 16:17:10 2");
-    correctS.push_back("2007-Nov-30 16:17:20 3");
-    correctS.push_back("2007-Nov-30 16:17:30 4");
+    std::vector<std::string> correctS{
+        "2007-Nov-30 16:17:00 1", "2007-Nov-30 16:17:10 2",
+        "2007-Nov-30 16:17:20 3", "2007-Nov-30 16:17:30 4"};
 
     // 3. Check
     std::vector<std::string> tvalues = p->time_tValue();

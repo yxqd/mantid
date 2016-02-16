@@ -1,5 +1,10 @@
 #include "MantidAlgorithms/IdentifyNoisyDetectors.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/HistogramValidator.h"
+#include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/SpectraAxisValidator.h"
+#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
+#include "MantidKernel/CompositeValidator.h"
 
 namespace Mantid {
 namespace Algorithms {
@@ -38,12 +43,16 @@ void IdentifyNoisyDetectors::exec() {
         "It does not seem to make sense and the calculations done here will "
         "will cause a division by zero.");
 
+  Progress progress(this, 0, 1, (nHist * 7) + 6);
+
   // Create the output workspace a single value for each spectra.
   MatrixWorkspace_sptr outputWs;
   outputWs = WorkspaceFactory::Instance().create(inputWS, nHist, 1, 1);
 
   MatrixWorkspace_sptr stdDevWs;
   stdDevWs = WorkspaceFactory::Instance().create(outputWs);
+
+  progress.report("Integrating...");
 
   IAlgorithm_sptr integ = createChildAlgorithm("Integration");
   integ->initialize();
@@ -54,6 +63,8 @@ void IdentifyNoisyDetectors::exec() {
 
   MatrixWorkspace_sptr int1 = integ->getProperty("OutputWorkspace");
 
+  progress.report("Power...");
+
   IAlgorithm_sptr power = createChildAlgorithm("Power");
   power->initialize();
   power->setProperty<MatrixWorkspace_sptr>("InputWorkspace", inputWs);
@@ -61,6 +72,8 @@ void IdentifyNoisyDetectors::exec() {
   power->execute();
 
   MatrixWorkspace_sptr power_tmp = power->getProperty("OutputWorkspace");
+
+  progress.report("Integrating...");
 
   // integrate again
   integ = createChildAlgorithm("Integration");
@@ -72,12 +85,16 @@ void IdentifyNoisyDetectors::exec() {
 
   MatrixWorkspace_sptr int2 = integ->getProperty("OutputWorkspace");
 
+  progress.report("Creating single valued workspace...");
+
   IAlgorithm_sptr csvw = createChildAlgorithm("CreateSingleValuedWorkspace");
   csvw->initialize();
   csvw->setProperty<double>("DataValue", steps);
   csvw->execute();
 
   MatrixWorkspace_sptr stepsWs = csvw->getProperty("OutputWorkspace");
+
+  progress.report("Dividing...");
 
   IAlgorithm_sptr divide = createChildAlgorithm("Divide");
   divide->initialize();
@@ -86,6 +103,8 @@ void IdentifyNoisyDetectors::exec() {
   divide->execute();
 
   int1 = divide->getProperty("OutputWorkspace");
+
+  progress.report("Dividing...");
 
   divide = createChildAlgorithm("Divide");
   divide->initialize();
@@ -101,11 +120,13 @@ void IdentifyNoisyDetectors::exec() {
         sqrt(int2->readY(i)[0] - std::pow(int1->readY(i)[0], 2));
     outputWs->dataX(i)[0] = 0.0;
     outputWs->dataY(i)[0] = 1.0;
+
+    progress.report();
   }
 
-  getStdDev(outputWs, stdDevWs);
-  getStdDev(outputWs, stdDevWs);
-  getStdDev(outputWs, stdDevWs);
+  getStdDev(progress, outputWs, stdDevWs);
+  getStdDev(progress, outputWs, stdDevWs);
+  getStdDev(progress, outputWs, stdDevWs);
 
   setProperty("OutputWorkspace", outputWs);
 }
@@ -115,10 +136,12 @@ void IdentifyNoisyDetectors::exec() {
 * ignoring
 * the detectors marked as "bad", then determines if any of the detectors are
 * "bad".
+* @param progress :: progress indicator
 * @param valid :: eventual output workspace, holding 0 for bad and 1 for good
 * @param values :: stddeviations of each spectra (I think)
 */
-void IdentifyNoisyDetectors::getStdDev(MatrixWorkspace_sptr valid,
+void IdentifyNoisyDetectors::getStdDev(API::Progress &progress,
+                                       MatrixWorkspace_sptr valid,
                                        MatrixWorkspace_sptr values) {
   const int nhist = static_cast<int>(valid->getNumberHistograms());
   int count = 0;
@@ -131,6 +154,13 @@ void IdentifyNoisyDetectors::getStdDev(MatrixWorkspace_sptr valid,
       mean2 += std::pow(values->readY(i)[0], 2);
       count++;
     }
+
+    progress.report();
+  }
+
+  if (0 == count) {
+    // all values are zero, no need to loop
+    return;
   }
 
   mean = mean / count;
@@ -149,6 +179,8 @@ void IdentifyNoisyDetectors::getStdDev(MatrixWorkspace_sptr valid,
     } else if (value < min) {
       valid->dataY(i)[0] = 0.0;
     }
+
+    progress.report("Calculating StdDev...");
   }
 }
 

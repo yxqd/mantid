@@ -16,7 +16,7 @@ namespace {
 CompositeValidator *
 createCompositeValidator(const boost::python::list &validators) {
   namespace bpl = boost::python;
-  CompositeValidator *composite = new CompositeValidator;
+  auto composite = new CompositeValidator;
   const bpl::ssize_t nitems = bpl::len(validators);
   for (bpl::ssize_t i = 0; i < nitems; ++i) {
     try {
@@ -40,5 +40,5 @@ void export_CompositeValidator() {
 
       .def("add", (void (CompositeValidator::*)(IValidator_sptr)) &
                       CompositeValidator::add,
-           "Add another validator to the list");
+           (arg("self"), arg("other")), "Add another validator to the list");
 }

@@ -5,7 +5,7 @@
 
 #include "MantidAPI/IPeakFunction.h"
 #include "MantidAPI/CompositeFunction.h"
-#include "MantidCurveFitting/Fit.h"
+#include "MantidCurveFitting/Algorithms/Fit.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidDataObjects/TableWorkspace.h"
 #include "MantidAPI/TableRow.h"
@@ -13,12 +13,12 @@
 #include "MantidKernel/ConfigService.h"
 #include "MantidAPI/FrameworkManager.h"
 
-#include "MantidCurveFitting/SimplexMinimizer.h"
-#include "MantidCurveFitting/BFGS_Minimizer.h"
-#include "MantidCurveFitting/LevenbergMarquardtMDMinimizer.h"
-#include "MantidCurveFitting/UserFunction.h"
-#include "MantidCurveFitting/ExpDecay.h"
-#include "MantidCurveFitting/CostFuncLeastSquares.h"
+#include "MantidCurveFitting/FuncMinimizers/SimplexMinimizer.h"
+#include "MantidCurveFitting/FuncMinimizers/BFGS_Minimizer.h"
+#include "MantidCurveFitting/FuncMinimizers/LevenbergMarquardtMDMinimizer.h"
+#include "MantidCurveFitting/Functions/UserFunction.h"
+#include "MantidCurveFitting/Functions/ExpDecay.h"
+#include "MantidCurveFitting/CostFunctions/CostFuncLeastSquares.h"
 #include "MantidCurveFitting/GSLJacobian.h"
 #include "MantidAPI/FunctionDomain1D.h"
 #include "MantidAPI/FunctionValues.h"
@@ -28,6 +28,10 @@
 using namespace Mantid::API;
 using namespace Mantid::DataObjects;
 using namespace Mantid::CurveFitting;
+using namespace Mantid::CurveFitting::Algorithms;
+using namespace Mantid::CurveFitting::Functions;
+using namespace Mantid::CurveFitting::FuncMinimisers;
+using namespace Mantid::CurveFitting::CostFunctions;
 
 typedef Mantid::DataObjects::Workspace2D_sptr WS_type;
 typedef Mantid::DataObjects::TableWorkspace_sptr TWS_type;
@@ -144,10 +148,14 @@ public:
   }
 
   void testFit() {
-    boost::shared_ptr<CompositeFunction> mfun(new CompositeFunction());
-    boost::shared_ptr<CurveFittingGauss> g1(new CurveFittingGauss());
-    boost::shared_ptr<CurveFittingGauss> g2(new CurveFittingGauss());
-    boost::shared_ptr<CurveFittingLinear> bk(new CurveFittingLinear());
+    boost::shared_ptr<CompositeFunction> mfun =
+        boost::make_shared<CompositeFunction>();
+    boost::shared_ptr<CurveFittingGauss> g1 =
+        boost::make_shared<CurveFittingGauss>();
+    boost::shared_ptr<CurveFittingGauss> g2 =
+        boost::make_shared<CurveFittingGauss>();
+    boost::shared_ptr<CurveFittingLinear> bk =
+        boost::make_shared<CurveFittingLinear>();
 
     mfun->addFunction(bk);
     mfun->addFunction(g1);
@@ -286,20 +294,22 @@ public:
     values->setFitData(y);
     values->setFitWeights(1.0);
 
-    boost::shared_ptr<CompositeFunction> mfun(new CompositeFunction);
+    boost::shared_ptr<CompositeFunction> mfun =
+        boost::make_shared<CompositeFunction>();
 
-    boost::shared_ptr<UserFunction> fun1(new UserFunction);
+    boost::shared_ptr<UserFunction> fun1 = boost::make_shared<UserFunction>();
     fun1->setAttributeValue("Formula", "a*x");
     fun1->setParameter("a", 1.1);
 
-    boost::shared_ptr<UserFunction> fun2(new UserFunction);
+    boost::shared_ptr<UserFunction> fun2 = boost::make_shared<UserFunction>();
     fun2->setAttributeValue("Formula", "0*x + b");
     fun2->setParameter("b", 2.2);
 
     mfun->addFunction(fun1);
     mfun->addFunction(fun2);
 
-    boost::shared_ptr<CostFuncLeastSquares> costFun(new CostFuncLeastSquares);
+    boost::shared_ptr<CostFuncLeastSquares> costFun =
+        boost::make_shared<CostFuncLeastSquares>();
     costFun->setFittingFunction(mfun, domain, values);
 
     SimplexMinimizer s;
@@ -323,13 +333,14 @@ public:
     values->setFitData(y);
     values->setFitWeights(1.0);
 
-    boost::shared_ptr<CompositeFunction> mfun(new CompositeFunction);
+    boost::shared_ptr<CompositeFunction> mfun =
+        boost::make_shared<CompositeFunction>();
 
-    boost::shared_ptr<UserFunction> fun1(new UserFunction);
+    boost::shared_ptr<UserFunction> fun1 = boost::make_shared<UserFunction>();
     fun1->setAttributeValue("Formula", "a*x");
     fun1->setParameter("a", 1.1);
 
-    boost::shared_ptr<UserFunction> fun2(new UserFunction);
+    boost::shared_ptr<UserFunction> fun2 = boost::make_shared<UserFunction>();
     fun2->setAttributeValue("Formula", "c*x^2 + b");
     fun2->setParameter("c", 0.00);
     fun2->setParameter("b", 2.2);
@@ -337,7 +348,8 @@ public:
     mfun->addFunction(fun1);
     mfun->addFunction(fun2);
 
-    boost::shared_ptr<CostFuncLeastSquares> costFun(new CostFuncLeastSquares);
+    boost::shared_ptr<CostFuncLeastSquares> costFun =
+        boost::make_shared<CostFuncLeastSquares>();
     costFun->setFittingFunction(mfun, domain, values);
 
     BFGS_Minimizer s;
@@ -364,13 +376,14 @@ public:
     values->setFitDataFromCalculated(mockData);
     values->setFitWeights(1.0);
 
-    boost::shared_ptr<CompositeFunction> mfun(new CompositeFunction);
+    boost::shared_ptr<CompositeFunction> mfun =
+        boost::make_shared<CompositeFunction>();
 
-    boost::shared_ptr<UserFunction> fun1(new UserFunction);
+    boost::shared_ptr<UserFunction> fun1 = boost::make_shared<UserFunction>();
     fun1->setAttributeValue("Formula", "a*x");
     fun1->setParameter("a", 1.1);
 
-    boost::shared_ptr<UserFunction> fun2(new UserFunction);
+    boost::shared_ptr<UserFunction> fun2 = boost::make_shared<UserFunction>();
     fun2->setAttributeValue("Formula", "c*x^2 + b");
     fun2->setParameter("c", 0.00);
     fun2->setParameter("b", 2.2);
@@ -378,7 +391,8 @@ public:
     mfun->addFunction(fun1);
     mfun->addFunction(fun2);
 
-    boost::shared_ptr<CostFuncLeastSquares> costFun(new CostFuncLeastSquares);
+    boost::shared_ptr<CostFuncLeastSquares> costFun =
+        boost::make_shared<CostFuncLeastSquares>();
     costFun->setFittingFunction(mfun, domain, values);
 
     LevenbergMarquardtMDMinimizer s;

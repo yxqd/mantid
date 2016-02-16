@@ -9,7 +9,7 @@
 #include "MantidAPI/WorkspaceFactory.h"
 
 #include "MantidDataObjects/Peak.h"
-#include "MantidCurveFitting/PawleyFit.h"
+#include "MantidCurveFitting/Algorithms/PawleyFit.h"
 
 namespace Mantid {
 namespace CurveFitting {
@@ -17,6 +17,7 @@ namespace CurveFitting {
 using namespace API;
 using namespace Kernel;
 using namespace DataObjects;
+using namespace CurveFitting::Algorithms;
 
 /// Constructor
 LatticeDomainCreator::LatticeDomainCreator(
@@ -193,11 +194,11 @@ void LatticeDomainCreator::createDomainFromPeaksWorkspace(
     }
   }
 
-  LatticeDomain *latticeDomain = new LatticeDomain(hkls);
+  auto latticeDomain = new LatticeDomain(hkls);
   domain.reset(latticeDomain);
 
   if (!values) {
-    FunctionValues *functionValues = new FunctionValues(*domain);
+    auto functionValues = new FunctionValues(*domain);
     values.reset(functionValues);
   } else {
     values->expand(i0 + latticeDomain->size());
@@ -261,11 +262,11 @@ void LatticeDomainCreator::createDomainFromPeakTable(
       }
     }
 
-    LatticeDomain *latticeDomain = new LatticeDomain(hkls);
+    auto latticeDomain = new LatticeDomain(hkls);
     domain.reset(latticeDomain);
 
     if (!values) {
-      FunctionValues *functionValues = new FunctionValues(*domain);
+      auto functionValues = new FunctionValues(*domain);
       values.reset(functionValues);
     } else {
       values->expand(i0 + latticeDomain->size());

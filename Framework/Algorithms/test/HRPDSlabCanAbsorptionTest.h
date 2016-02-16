@@ -4,7 +4,9 @@
 #include <cxxtest/TestSuite.h>
 
 #include "MantidAlgorithms/HRPDSlabCanAbsorption.h"
+#include "MantidAPI/Axis.h"
 #include "MantidKernel/UnitFactory.h"
+#include "MantidGeometry/Instrument.h"
 #include "MantidTestHelpers/WorkspaceCreationHelper.h"
 
 using namespace Mantid::Geometry;
@@ -16,8 +18,6 @@ public:
   void testName() { TS_ASSERT_EQUALS(atten.name(), "HRPDSlabCanAbsorption"); }
 
   void testVersion() { TS_ASSERT_EQUALS(atten.version(), 1); }
-
-  void testCategory() { TS_ASSERT_EQUALS(atten.category(), "Diffraction"); }
 
   void testInit() {
     TS_ASSERT_THROWS_NOTHING(atten.initialize());
@@ -34,7 +34,8 @@ public:
     testWS->getAxis(0)->unit() =
         Mantid::Kernel::UnitFactory::Instance().create("Wavelength");
 
-    boost::shared_ptr<Instrument> testInst(new Instrument("testInst"));
+    boost::shared_ptr<Instrument> testInst =
+        boost::make_shared<Instrument>("testInst");
     testWS->setInstrument(testInst);
 
     // Define a source and sample position

@@ -5,26 +5,30 @@
 set ( TEST_PY_FILES
   AddSampleLogMultipleTest.py
   ApplyPaalmanPingsCorrectionTest.py
+  BayesQuasiTest.py
   CalculateSampleTransmissionTest.py
   CheckForSampleLogsTest.py
   ConjoinSpectraTest.py
+  CompareSampleLogsTest.py
+  ComputeCalibrationCoefVanTest.py
   CorrectLogTimesTest.py
   CreateLeBailFitInputTest.py
-  CreateMDTest.py
+  DetectorFloodWeightingTest.py
   IndirectCalibrationTest.py
   CreateWorkspaceTest.py
   CylinderPaalmanPingsCorrectionTest.py
   CylinderPaalmanPingsCorrection2Test.py
   DakotaChiSquaredTest.py
+  DNSComputeDetEffCorrCoefsTest.py
   DNSMergeRunsTest.py
   DNSFlippingRatioCorrTest.py
-  DNSDetEffCorrVanaTest.py
   DSFinterpTest.py
   EnggCalibrateFullTest.py
   EnggCalibrateTest.py
   EnggFitPeaksTest.py
   EnggFocusTest.py
   EnggVanadiumCorrectionsTest.py
+  EVSDiffractionReductionTest.py
   FilterLogByTimeTest.py
   FindReflectometryLinesTest.py
   FlatPlatePaalmanPingsCorrectionTest.py
@@ -58,6 +62,7 @@ set ( TEST_PY_FILES
   OSIRISDiffractionReductionTest.py
   ResNorm2Test.py
   RetrieveRunInfoTest.py
+  SANSFitShiftScaleTest.py
   SANSWideAngleCorrectionTest.py
   SavePlot1DTest.py
   SaveVulcanGSSTest.py
@@ -68,12 +73,18 @@ set ( TEST_PY_FILES
   SortXAxisTest.py
   StatisticsOfTableWorkspaceTest.py
   Stitch1DManyTest.py
+  StringToPngTest.py
   SuggestTibCNCSTest.py
   SuggestTibHYSPECTest.py
+  SwapWidthsTest.py
   SymmetriseTest.py
   UpdatePeakParameterTableValueTest.py
+  SANSDarkRunBackgroundCorrectionTest.py
   SANSSubtractTest.py
   TimeSliceTest.py
+  TOFTOFConvertTofToDeltaETest.py
+  TOFTOFCropWorkspaceTest.py
+  TOFTOFMergeRunsTest.py
   TOSCABankCorrectionTest.py
   TransformToIqtTest.py
   ExportSampleLogsToCSVFileTest.py
@@ -81,6 +92,7 @@ set ( TEST_PY_FILES
   PoldiMergeTest.py
   VesuvioResolutionTest.py
   PoldiCreatePeaksFromFileTest.py
+  LoadCIFTest.py
 )
 
 check_tests_valid ( ${CMAKE_CURRENT_SOURCE_DIR} ${TEST_PY_FILES} )

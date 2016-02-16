@@ -15,14 +15,20 @@ public:
   ~SANSConstants();
 
   // Python related
-  QString getPythonSuccessKeyword();
-  QString getPythonEmptyKeyword();
-  QString getPythonTrueKeyword();
+  static QString getPythonSuccessKeyword();
+  static QString getPythonEmptyKeyword();
+  static QString getPythonTrueKeyword();
+  static QString getPythonFalseKeyword();
 
+  static QString getQResolutionH1ToolTipText();
+  static QString getQResolutionH2ToolTipText();
+  static QString getQResolutionA1ToolTipText();
+  static QString getQResolutionA2ToolTipText();
+  
   // Input related
-  double getMaxDoubleValue();
-  int getMaxIntValue();
-  int getDecimals();
+  static double getMaxDoubleValue();
+  static int getMaxIntValue();
+  static int getDecimals();
 };
 
 }

@@ -39,26 +39,26 @@ namespace Poldi {
     File change history is stored at: <https://github.com/mantidproject/mantid>
     Code Documentation is available at: <http://doxygen.mantidproject.org>
   */
-class MANTID_SINQ_DLL Poldi2DFunction : virtual public API::IFunction1DSpectrum,
-                                        virtual public API::CompositeFunction,
+class MANTID_SINQ_DLL Poldi2DFunction : public API::IFunction1DSpectrum,
+                                        public API::CompositeFunction,
                                         public IPoldiFunction1D {
 public:
   Poldi2DFunction();
-  virtual ~Poldi2DFunction() {}
+  ~Poldi2DFunction() override {}
 
-  virtual void function(const API::FunctionDomain &domain,
-                        API::FunctionValues &values) const;
-  virtual void functionDeriv(const API::FunctionDomain &domain,
-                             API::Jacobian &jacobian);
+  void function(const API::FunctionDomain &domain,
+                API::FunctionValues &values) const override;
+  void functionDeriv(const API::FunctionDomain &domain,
+                     API::Jacobian &jacobian) override;
 
-  virtual void function1DSpectrum(const API::FunctionDomain1DSpectrum &domain,
-                                  API::FunctionValues &values) const;
+  void function1DSpectrum(const API::FunctionDomain1DSpectrum &domain,
+                          API::FunctionValues &values) const override;
 
-  virtual void poldiFunction1D(const std::vector<int> &indices,
-                               const API::FunctionDomain1D &domain,
-                               API::FunctionValues &values) const;
+  void poldiFunction1D(const std::vector<int> &indices,
+                       const API::FunctionDomain1D &domain,
+                       API::FunctionValues &values) const override;
 
-  void iterationFinished();
+  void iterationFinished() override;
 
 private:
   size_t m_iteration;

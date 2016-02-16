@@ -33,7 +33,7 @@ const std::string SetUB::name() const { return "SetUB"; }
 int SetUB::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
-const std::string SetUB::category() const { return "Crystal"; }
+const std::string SetUB::category() const { return "Crystal\\UBMatrix"; }
 
 //----------------------------------------------------------------------------------------------
 
@@ -124,7 +124,7 @@ void SetUB::exec() {
   // Sample copy;
   IMDEventWorkspace_sptr mdws =
       boost::dynamic_pointer_cast<IMDEventWorkspace>(ws);
-  if (mdws != NULL) {
+  if (mdws != nullptr) {
     int sampleNumber = getProperty("MDSampleNumber");
     if ((sampleNumber == EMPTY_INT()) ||
         (sampleNumber < 0)) // copy to all samples

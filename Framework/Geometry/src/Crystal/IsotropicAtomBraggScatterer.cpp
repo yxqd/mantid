@@ -7,6 +7,12 @@
 
 #include "MantidGeometry/Crystal/BraggScattererFactory.h"
 
+#include <boost/tokenizer.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/assign.hpp>
+
+#include <json/json.h>
+
 namespace Mantid {
 namespace Geometry {
 
@@ -22,7 +28,7 @@ BraggScatterer_sptr IsotropicAtomBraggScatterer::clone() const {
   IsotropicAtomBraggScatterer_sptr clone =
       boost::make_shared<IsotropicAtomBraggScatterer>();
   clone->initialize();
-  clone->setProperties(this->asString(false, ';'));
+  clone->setProperties(this->asString(false));
 
   return clone;
 }
@@ -56,9 +62,7 @@ double IsotropicAtomBraggScatterer::getU() const { return getProperty("U"); }
 /**
  * Calculates the structure factor
  *
- * This method calculates the structure factor, taking into account
- * contributions from all atoms on the stored position
- * _and all symmetrically equivalent_.
+ * This method calculates the structure factor.
  * For details, please refer to the class documentation in the header file.
  *
  * @param hkl :: HKL for which the structure factor should be calculated
@@ -69,16 +73,9 @@ IsotropicAtomBraggScatterer::calculateStructureFactor(const V3D &hkl) const {
   double amplitude =
       getOccupancy() * getDebyeWallerFactor(hkl) * getScatteringLength();
 
-  StructureFactor sum(0.0, 0.0);
+  double phase = 2.0 * M_PI * m_position.scalar_prod(hkl);
 
-  std::vector<V3D> equivalentPositions = getEquivalentPositions();
-  for (auto pos = equivalentPositions.begin(); pos != equivalentPositions.end();
-       ++pos) {
-    double phase = 2.0 * M_PI * (*pos).scalar_prod(hkl);
-    sum += amplitude * StructureFactor(cos(phase), sin(phase));
-  }
-
-  return sum;
+  return amplitude * StructureFactor(cos(phase), sin(phase));
 }
 
 /**
@@ -135,6 +132,109 @@ double IsotropicAtomBraggScatterer::getScatteringLength() const {
 }
 
 DECLARE_BRAGGSCATTERER(IsotropicAtomBraggScatterer)
+
+/**
+ * Constructor for vector with IsotropicAtomBraggScatterers from a string
+ *
+ * The functor expects to be constructed from a string in the following format:
+ *
+ *  Element x y z occupancy u_iso; Element x y z occupancy u_iso; ...
+ *
+ * It generates an IsotropicAtomBraggScatterer for each specified atom.
+ *
+ * @param scattererString :: String in the format specified above
+ */
+IsotropicAtomBraggScattererParser::IsotropicAtomBraggScattererParser(
+    const std::string &scattererString)
+    : m_scattererString(scattererString) {}
+
+/// Operator that returns vector of IsotropicAtomBraggScatterers.
+std::vector<BraggScatterer_sptr> IsotropicAtomBraggScattererParser::
+operator()() const {
+  boost::char_separator<char> atomSep(";");
+  boost::tokenizer<boost::char_separator<char>> tokens(m_scattererString,
+                                                       atomSep);
+  std::vector<BraggScatterer_sptr> scatterers;
+
+  for (auto it = tokens.begin(); it != tokens.end(); ++it) {
+    scatterers.push_back(getScatterer(boost::trim_copy(*it)));
+  }
+
+  return scatterers;
+}
+
+/// Returns IsotropicAtomBraggScatterer for string with format "Element x y z
+/// occupancy u_iso".
+BraggScatterer_sptr IsotropicAtomBraggScattererParser::getScatterer(
+    const std::string &singleScatterer) const {
+  std::vector<std::string> tokens;
+  boost::split(tokens, singleScatterer, boost::is_any_of(" "));
+
+  if (tokens.size() < 4 || tokens.size() > 6) {
+    throw std::invalid_argument("Could not parse scatterer string: " +
+                                singleScatterer);
+  }
+
+  std::vector<std::string> cleanScattererTokens =
+      getCleanScattererTokens(tokens);
+  std::vector<std::string> properties =
+      boost::assign::list_of("Element")("Position")("Occupancy")("U")
+          .convert_to_container<std::vector<std::string>>();
+
+  ::Json::Value root;
+  for (size_t i = 0; i < cleanScattererTokens.size(); ++i) {
+    root[properties[i]] = cleanScattererTokens[i];
+  }
+
+  ::Json::FastWriter writer;
+  std::string initString = writer.write(root);
+
+  return BraggScattererFactory::Instance().createScatterer(
+      "IsotropicAtomBraggScatterer", initString);
+}
+
+/// Converts tokens for getScatterer method so they can be processed by factory.
+std::vector<std::string>
+IsotropicAtomBraggScattererParser::getCleanScattererTokens(
+    const std::vector<std::string> &tokens) const {
+  std::vector<std::string> cleanTokens;
+
+  // Element
+  cleanTokens.push_back(tokens[0]);
+
+  // X, Y, Z
+  cleanTokens.emplace_back("[" + tokens[1] + "," + tokens[2] + "," + tokens[3] +
+                           "]");
+
+  for (size_t i = 4; i < tokens.size(); ++i) {
+    cleanTokens.push_back(tokens[i]);
+  }
+
+  return cleanTokens;
+}
+
+std::string
+getIsotropicAtomBraggScattererString(const BraggScatterer_sptr &scatterer) {
+  IsotropicAtomBraggScatterer_sptr isotropicAtom =
+      boost::dynamic_pointer_cast<IsotropicAtomBraggScatterer>(scatterer);
+
+  if (!isotropicAtom) {
+    throw std::invalid_argument(
+        "Printing function can only process IsotropicAtomBraggScatterer.");
+  }
+
+  std::string rawPositionString = isotropicAtom->getProperty("Position");
+  std::vector<std::string> positionComponents =
+      getTokenizedPositionString(rawPositionString);
+
+  std::stringstream outStream;
+  outStream << isotropicAtom->getElement() << " " << positionComponents[0]
+            << " " << positionComponents[1] << " " << positionComponents[2]
+            << " " << isotropicAtom->getOccupancy() << " "
+            << isotropicAtom->getU();
+
+  return outStream.str();
+}
 
 } // namespace Geometry
 } // namespace Mantid

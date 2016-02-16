@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 import mantid
 import isis_instrument as instruments
 import ISISCommandInterface as command_iface
@@ -7,6 +7,7 @@ import isis_reduction_steps as reduction_steps
 from mantid.simpleapi import *
 from mantid.kernel import DateAndTime
 import random
+import math
 
 class SANSCommandInterfaceGetAndSetTransmissionSettings(unittest.TestCase):
     def test_that_gets_transmission_monitor(self):
@@ -228,33 +229,176 @@ class TestEventWorkspaceCheck(unittest.TestCase):
         self._clean_up(file_name)
         DeleteWorkspace(ws)
 
-class TestFitRescaleAndShift(unittest.TestCase):
-    def _create_workspace(self, ws_name):
-        CreateSampleWorkspace(OutputWorkspace = ws_name)
-    def test_that_2D_workspace_is_caught(self):
-        #Arrange
-        ws_name1 = "ws_fit_and_shift_test_1"
-        ws_name2 = "ws_fit_and_shift_test_2"
-        self._create_workspace(ws_name1)
-        self._create_workspace(ws_name2)
-        ws1 = mtd[ws_name1]
-        ws2 = mtd[ws_name2]
-
-        scale = 2.4
-        shift = 1.1
-        rAnds = instruments.DetectorBank._RescaleAndShift(scale, shift)
+class SANSCommandInterfaceGetAndSetQResolutionSettings(unittest.TestCase):
+    #Test the input and output mechanims for the QResolution settings
+    def test_full_setup_for_circular_apertures(self):
+        # Arrange
+        command_iface.Clean()
+        command_iface.SANS2D()
+        a1 = 2 # in mm
+        a2 = 3 # in mm
+        delta_r = 4 # in mm
+        collimation_length = 10 # in m
+        norm = reduction_steps.CalculateNormISIS()
+        ReductionSingleton().to_Q = reduction_steps.ConvertToQISIS(norm)
 
         # Act
-        ret_scale, ret_shift = command_iface._fitRescaleAndShift(rAnds,ws1,ws2)
+        command_iface.set_q_resolution_a1(a1 = a1)
+        command_iface.set_q_resolution_a2(a2 = a2)
+        command_iface.set_q_resolution_delta_r(delta_r = delta_r)
+        command_iface.set_q_resolution_collimation_length(collimation_length = collimation_length)
+        command_iface.set_q_resolution_use(use = True)
+        ReductionSingleton().to_Q._set_up_q_resolution_parameters()
 
         # Assert
-        self.assertTrue(ret_scale == scale)
-        self.assertTrue(ret_shift == shift)
+        a1_stored = ReductionSingleton().to_Q.get_q_resolution_a1() # in m 
+        a1_expected = a1/1000.
+        self.assertEqual(a1_stored, a1_expected)
 
-        # Clean up
-        DeleteWorkspace(ws1)
-        DeleteWorkspace(ws2)
+        a2_stored = ReductionSingleton().to_Q.get_q_resolution_a2() # in m
+        a2_expected = a2/1000.
+        self.assertEqual(a2_stored, a2_expected)
 
+        collimation_length_stored = ReductionSingleton().to_Q.get_q_resolution_collimation_length() # in m
+        collimation_length_expected = collimation_length
+        self.assertEqual(collimation_length_stored, collimation_length_expected)
+
+        delta_r_stored = ReductionSingleton().to_Q.get_q_resolution_delta_r() # in m
+        delta_r_expected = delta_r/1000.
+        self.assertEqual(delta_r_stored, delta_r_expected)
+
+    def test_full_setup_for_rectangular_apertures(self):
+        # Arrange
+        command_iface.Clean()
+        command_iface.SANS2D()
+        a1 = 2 # in mm
+        a2 = 3 # in mm
+        delta_r = 4 # in mm
+        collimation_length = 10 # in m
+        h1 = 9 # in mm
+        w1 = 8 # in mm
+        h2 = 7 # in mm
+        w2 = 5 # in mm
+        norm = reduction_steps.CalculateNormISIS()
+        ReductionSingleton().to_Q = reduction_steps.ConvertToQISIS(norm)
+
+        # Act
+        command_iface.set_q_resolution_a1(a1 = a1)
+        command_iface.set_q_resolution_a2(a2 = a2)
+        command_iface.set_q_resolution_delta_r(delta_r = delta_r)
+        command_iface.set_q_resolution_h1(h1 = h1)
+        command_iface.set_q_resolution_w1(w1 = w1)
+        command_iface.set_q_resolution_h2(h2 = h2)
+        command_iface.set_q_resolution_w2(w2 = w2)
+        command_iface.set_q_resolution_collimation_length(collimation_length = collimation_length)
+        command_iface.set_q_resolution_use(use = True)
+        ReductionSingleton().to_Q._set_up_q_resolution_parameters()
+
+        # Assert
+        a1_stored = ReductionSingleton().to_Q.get_q_resolution_a1() # in m 
+        a1_expected = 2*math.sqrt((h1/1000.*h1/1000. + w1/1000.*w1/1000.)/6)
+        self.assertEqual(a1_stored, a1_expected)
+
+        a2_stored = ReductionSingleton().to_Q.get_q_resolution_a2() # in m
+        a2_expected = 2*math.sqrt((h2/1000.*h2/1000. + w2/1000.*w2/1000.)/6)
+        self.assertEqual(a2_stored, a2_expected)
+
+        collimation_length_stored = ReductionSingleton().to_Q.get_q_resolution_collimation_length() # in m
+        collimation_length_expected = collimation_length
+        self.assertEqual(collimation_length_stored, collimation_length_expected)
+
+        delta_r_stored = ReductionSingleton().to_Q.get_q_resolution_delta_r() # in m
+        delta_r_expected = delta_r/1000.
+        self.assertEqual(delta_r_stored, delta_r_expected)
+
+
+    def test_full_setup_for_rectangular_apertures_which_are_only_partially_specified(self):
+        # Arrange
+        command_iface.Clean()
+        command_iface.SANS2D()
+        a1 = 2 # in mm
+        a2 = 3 # in mm
+        delta_r = 4 # in mm
+        collimation_length = 10 # in m
+        h1 = 9 # in mm
+        w1 = 8 # in mm
+        h2 = 7 # in mm
+        # We take out w2, hence we don't have a full rectangular spec
+        norm = reduction_steps.CalculateNormISIS()
+        ReductionSingleton().to_Q = reduction_steps.ConvertToQISIS(norm)
+
+        # Act
+        command_iface.set_q_resolution_a1(a1 = a1)
+        command_iface.set_q_resolution_a2(a2 = a2)
+        command_iface.set_q_resolution_delta_r(delta_r = delta_r)
+        command_iface.set_q_resolution_h1(h1 = h1)
+        command_iface.set_q_resolution_w1(w1 = w1)
+        command_iface.set_q_resolution_h2(h2 = h2)
+
+        command_iface.set_q_resolution_collimation_length(collimation_length = collimation_length)
+        command_iface.set_q_resolution_use(use = True)
+        ReductionSingleton().to_Q._set_up_q_resolution_parameters()
+
+        # Assert
+        a1_stored = ReductionSingleton().to_Q.get_q_resolution_a1() # in m 
+        a1_expected = a1/1000.
+        self.assertEqual(a1_stored, a1_expected)
+
+        a2_stored = ReductionSingleton().to_Q.get_q_resolution_a2() # in m
+        a2_expected = a2/1000.
+        self.assertEqual(a2_stored, a2_expected)
+
+        collimation_length_stored = ReductionSingleton().to_Q.get_q_resolution_collimation_length() # in m
+        collimation_length_expected = collimation_length
+        self.assertEqual(collimation_length_stored, collimation_length_expected)
+
+        delta_r_stored = ReductionSingleton().to_Q.get_q_resolution_delta_r() # in m
+        delta_r_expected = delta_r/1000.
+        self.assertEqual(delta_r_stored, delta_r_expected)
+
+class TestMaskFile(unittest.TestCase):
+    def test_throws_for_user_file_with_invalid_extension(self):
+        # Arrange
+        file_name = "/path1/path2/user_file.abc"
+        command_iface.Clean()
+        command_iface.SANS2D()
+        # Act + Assert
+        args = [file_name]
+        self.assertRaises(RuntimeError, command_iface.MaskFile, *args)
+
+class SANSCommandInterfaceGetAndSetBackgroundCorrectionSettings(unittest.TestCase):
+    def _do_test_correct_setting(self, run_number, is_time, is_mon, is_mean, mon_numbers):
+        # Assert that settings were set
+        setting = ReductionSingleton().get_dark_run_setting(is_time, is_mon)
+        self.assertEquals(setting.run_number, run_number)
+        self.assertEquals(setting.time, is_time)
+        self.assertEquals(setting.mean, is_mean)
+        self.assertEquals(setting.mon, is_mon)
+        self.assertEquals(setting.mon_numbers, mon_numbers)
+
+        # Assert that other settings are None. Hence set up all combinations and remove the one which
+        # has been set up earlier
+        combinations = [[True, True], [True, False], [False, True], [False, False]]
+        selected_combination = [is_time, is_mon]
+        combinations.remove(selected_combination)
+
+        for combination in combinations:
+            self.assertTrue(ReductionSingleton().get_dark_run_setting(combination[0], combination[1]) is None)
+
+    def test_that_correct_setting_can_be_passed_in(self):
+        # Arrange
+        run_number = "test12345"
+        is_time = True
+        is_mon = True
+        is_mean = False
+        mon_numbers= None
+        command_iface.Clean()
+        command_iface.LOQ()
+        # Act
+        command_iface.set_background_correction(run_number, is_time,
+                                                is_mon, is_mean, mon_numbers)
+        # Assert
+        self._do_test_correct_setting(run_number, is_time, is_mon, is_mean, mon_numbers)
 
 if __name__ == "__main__":
     unittest.main()

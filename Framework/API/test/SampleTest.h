@@ -3,6 +3,7 @@
 
 #include "MantidAPI/Sample.h"
 #include "MantidAPI/SampleEnvironment.h"
+#include "MantidGeometry/Crystal/CrystalStructure.h"
 #include "MantidGeometry/Crystal/OrientedLattice.h"
 #include "MantidKernel/Exception.h"
 #include "MantidTestHelpers/ComponentCreationHelper.h"
@@ -199,6 +200,59 @@ public:
     delete latticeA;
   }
 
+  void test_setCrystalStructure() {
+    Sample sample;
+    TS_ASSERT(!sample.hasCrystalStructure());
+    TS_ASSERT_THROWS(sample.getCrystalStructure(), std::runtime_error);
+
+    CrystalStructure structure("3 4 5 90 90 90", "C m m m",
+                               "Fe 0.12 0.23 0.121");
+
+    TS_ASSERT_THROWS_NOTHING(sample.setCrystalStructure(structure));
+    TS_ASSERT(sample.hasCrystalStructure());
+    CrystalStructure fromSample = sample.getCrystalStructure();
+
+    TS_ASSERT(fromSample.spaceGroup());
+    TS_ASSERT_EQUALS(fromSample.spaceGroup()->hmSymbol(), "C m m m");
+  }
+
+  void test_clearCrystalStructure() {
+    Sample sample;
+    TS_ASSERT(!sample.hasCrystalStructure());
+    TS_ASSERT_THROWS(sample.getCrystalStructure(), std::runtime_error);
+
+    CrystalStructure structure("3 4 5 90 90 90", "C m m m",
+                               "Fe 0.12 0.23 0.121");
+    sample.setCrystalStructure(structure);
+    TS_ASSERT(sample.hasCrystalStructure());
+
+    TS_ASSERT_THROWS_NOTHING(sample.clearCrystalStructure());
+    TS_ASSERT(!sample.hasCrystalStructure());
+  }
+
+  void test_crystalStructureCopyConstructorAndAssignment() {
+    Sample sampleA;
+
+    CrystalStructure structure("3 4 5 90 90 90", "C m m m",
+                               "Fe 0.12 0.23 0.121");
+    sampleA.setCrystalStructure(structure);
+    TS_ASSERT(sampleA.hasCrystalStructure());
+
+    Sample sampleB = sampleA;
+    TS_ASSERT(sampleB.hasCrystalStructure());
+
+    CrystalStructure fromA = sampleA.getCrystalStructure();
+    CrystalStructure fromB = sampleB.getCrystalStructure();
+    TS_ASSERT_EQUALS(fromA.spaceGroup()->hmSymbol(),
+                     fromB.spaceGroup()->hmSymbol());
+
+    Sample sampleC(sampleA);
+
+    CrystalStructure fromC = sampleC.getCrystalStructure();
+    TS_ASSERT_EQUALS(fromA.spaceGroup()->hmSymbol(),
+                     fromC.spaceGroup()->hmSymbol());
+  }
+
   void test_Material_Returns_The_Correct_Value() {
     Material vanBlock("vanBlock",
                       Mantid::PhysicalConstants::getNeutronAtom(23, 0), 0.072);
@@ -232,7 +286,7 @@ public:
   void test_Multiple_Samples() {
     Sample sample;
     sample.setName("test name for test_Multiple_Sample");
-    boost::shared_ptr<Sample> sample2 = boost::shared_ptr<Sample>(new Sample());
+    auto sample2 = boost::make_shared<Sample>();
     sample2->setName("test name for test_Multiple_Sample - 2");
 
     TS_ASSERT_EQUALS(sample.size(), 1);
@@ -261,7 +315,7 @@ public:
     sample.setWidth(1.234);
     OrientedLattice latt(4, 5, 6, 90, 91, 92);
     sample.setOrientedLattice(&latt);
-    boost::shared_ptr<Sample> sample2 = boost::shared_ptr<Sample>(new Sample());
+    auto sample2 = boost::make_shared<Sample>();
     sample2->setName("test name for test_Multiple_Sample - 2");
     sample.addSample(sample2);
     TS_ASSERT(sample.getShape().getShapeXML() != "");

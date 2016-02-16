@@ -1,12 +1,12 @@
 #include "MantidAlgorithms/SpecularReflectionPositionCorrect.h"
-#include "MantidAPI/WorkspaceValidators.h"
+
+#include "MantidAPI/MatrixWorkspace.h"
+#include "MantidGeometry/Instrument/ComponentHelper.h"
+#include "MantidGeometry/Instrument/DetectorGroup.h"
+#include "MantidGeometry/Instrument/ReferenceFrame.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/MandatoryValidator.h"
-#include "MantidGeometry/Instrument/DetectorGroup.h"
-#include "MantidGeometry/Instrument/ReferenceFrame.h"
-#include "MantidGeometry/Instrument/ComponentHelper.h"
-#include <boost/make_shared.hpp>
 
 using namespace Mantid::API;
 using namespace Mantid::Geometry;
@@ -25,10 +25,10 @@ const std::string pointDetectorAnalysis = "PointDetectorAnalysis";
  * @return : Parent component.
  */
 IComponent_const_sptr
-getRootComponent(IComponent_const_sptr &currentComponent) {
+getParentComponent(IComponent_const_sptr &currentComponent) {
   if (IComponent_const_sptr parent = currentComponent->getParent()) {
     if (!dynamic_cast<Instrument *>(const_cast<IComponent *>(parent.get()))) {
-      return getRootComponent(parent);
+      currentComponent = parent;
     }
   }
   return currentComponent;
@@ -165,8 +165,8 @@ void SpecularReflectionPositionCorrect::moveDetectors(
       /*
        * We have to move individual components.
        */
-      for (size_t i = 0; i < detectors.size(); ++i) {
-        moveDetectors(toCorrect, detectors[i], sample, upOffset, acrossOffset,
+      for (const auto &detector : detectors) {
+        moveDetectors(toCorrect, detector, sample, upOffset, acrossOffset,
                       detectorPosition); // Recursive call
       }
     }
@@ -175,7 +175,7 @@ void SpecularReflectionPositionCorrect::moveDetectors(
         this->createChildAlgorithm("MoveInstrumentComponent");
     moveComponentAlg->initialize();
     moveComponentAlg->setProperty("Workspace", toCorrect);
-    IComponent_const_sptr root = getRootComponent(detector);
+    IComponent_const_sptr root = getParentComponent(detector);
     const std::string componentName = root->getName();
     moveComponentAlg->setProperty("ComponentName", componentName);
     moveComponentAlg->setProperty("RelativePosition", false);
@@ -231,7 +231,7 @@ void SpecularReflectionPositionCorrect::correctPosition(
 
   double upOffset =
       (beamOffset *
-       std::tan(twoThetaInRad)); // We only correct vertical position
+       std::tan(0.5 * twoThetaInRad)); // We only correct vertical position
 
   // Apply the movements.
   moveDetectors(toCorrect, detector, sample, upOffset, acrossOffset,

@@ -1,9 +1,13 @@
 #include "MantidCrystal/PredictPeaks.h"
+#include "MantidAPI/IMDEventWorkspace.h"
+#include "MantidAPI/MatrixWorkspace.h"
+#include "MantidGeometry/Crystal/BasicHKLFilters.h"
+#include "MantidGeometry/Crystal/HKLFilterWavelength.h"
+#include "MantidGeometry/Crystal/HKLGenerator.h"
+#include "MantidGeometry/Crystal/StructureFactorCalculatorSummation.h"
 #include "MantidGeometry/Objects/InstrumentRayTracer.h"
 #include "MantidKernel/ListValidator.h"
-#include "MantidAPI/WorkspaceValidators.h"
 #include "MantidKernel/EnabledWhenProperty.h"
-#include "MantidAPI/IMDEventWorkspace.h"
 
 using Mantid::Kernel::EnabledWhenProperty;
 
@@ -22,8 +26,7 @@ using namespace Mantid::Kernel;
 /** Constructor
  */
 PredictPeaks::PredictPeaks()
-    : m_runNumber(-1), m_wlMin(0.), m_wlMax(0.), m_inst(), m_pw(),
-      m_numInRange(), m_crystal(), m_minD(0.), m_maxD(0.), m_mat(), m_gonio() {
+    : m_runNumber(-1), m_inst(), m_pw(), m_sfCalculator() {
   m_refConds = getAllReflectionConditions();
 }
 
@@ -64,12 +67,17 @@ void PredictPeaks::init() {
 
   // Build up a list of reflection conditions to use
   std::vector<std::string> propOptions;
-  for (size_t i = 0; i < m_refConds.size(); ++i)
-    propOptions.push_back(m_refConds[i]->getName());
+  for (auto &refCond : m_refConds)
+    propOptions.push_back(refCond->getName());
   declareProperty("ReflectionCondition", "Primitive",
                   boost::make_shared<StringListValidator>(propOptions),
                   "Which reflection condition applies to this crystal, "
                   "reducing the number of expected HKL peaks?");
+
+  declareProperty("CalculateStructureFactors", false,
+                  "Calculate structure factors for the predicted peaks. This "
+                  "option only works if the sample of the input workspace has "
+                  "a crystal structure assigned.");
 
   declareProperty(new WorkspaceProperty<PeaksWorkspace>("HKLPeaksWorkspace", "",
                                                         Direction::Input,
@@ -101,83 +109,31 @@ void PredictPeaks::init() {
                   "An output PeaksWorkspace.");
 }
 
-/** Calculate the prediction for this HKL. Thread-safe.
- *
- * @param h
- * @param k
- * @param l
- * @param doFilter if true, skip unacceptable d-spacings
- */
-void PredictPeaks::doHKL(const double h, const double k, const double l,
-                         bool doFilter) {
-  V3D hkl(h, k, l);
-
-  // Skip those with unacceptable d-spacings
-  double d = m_crystal.d(hkl);
-  if (!doFilter || (d > m_minD && d < m_maxD)) {
-    // The q-vector direction of the peak is = goniometer * ub * hkl_vector
-    // This is in inelastic convention: momentum transfer of the LATTICE!
-    // Also, q does have a 2pi factor = it is equal to 2pi/wavelength.
-    V3D q = m_mat * hkl * (2.0 * M_PI);
-
-    /* The incident neutron wavevector is in the +Z direction, ki = 2*pi/wl (in
-     * z direction).
-     * In the inelastic convention, q = ki - kf.
-     * The final neutron wavector kf = -qx in x; -qy in y; and (-qz+2*pi/wl) in
-     * z.
-     * AND: norm(kf) = norm(ki) = 2*pi/wavelength
-     * THEREFORE: 2*pi/wl = norm(q)^2 / (2*qz)
-     */
-    double norm_q = q.norm();
-    double one_over_wl = ((norm_q * norm_q) / (2.0 * q.Z())) / (2.0 * M_PI);
-    double wl = 1.0 / one_over_wl;
-
-    g_log.debug() << "Peak at " << hkl << " has d-spacing " << d
-                  << " and wavelength " << wl << std::endl;
-
-    // Only keep going for accepted wavelengths.
-    if (wl > 0 && (!doFilter || (wl >= m_wlMin && wl <= m_wlMax))) {
-      PARALLEL_CRITICAL(PredictPeaks_m_numInRange) { m_numInRange++; }
-
-      // Create the peak using the Q in the lab framewith all its info:
-      Peak p(m_inst, q, boost::optional<double>());
-      if (p.findDetector()) {
-        // Only add peaks that hit the detector
-        p.setGoniometerMatrix(m_gonio);
-        // Save the run number found before.
-        p.setRunNumber(m_runNumber);
-        p.setHKL(hkl);
-
-        // Add it to the workspace
-        PARALLEL_CRITICAL(PredictPeaks_appendPeak) { m_pw->addPeak(p); }
-      } // Detector was found
-    }   // (wavelength is okay)
-  }     // (d is acceptable)
-}
-
 //----------------------------------------------------------------------------------------------
 /** Execute the algorithm.
  */
 void PredictPeaks::exec() {
   // Get the input properties
-  Workspace_sptr inBareWS = getProperty("InputWorkspace");
-  ExperimentInfo_sptr inWS;
+  Workspace_sptr rawInputWorkspace = getProperty("InputWorkspace");
+
+  ExperimentInfo_sptr inputExperimentInfo =
+      boost::dynamic_pointer_cast<ExperimentInfo>(rawInputWorkspace);
+
   MatrixWorkspace_sptr matrixWS =
-      boost::dynamic_pointer_cast<MatrixWorkspace>(inBareWS);
+      boost::dynamic_pointer_cast<MatrixWorkspace>(rawInputWorkspace);
   PeaksWorkspace_sptr peaksWS =
-      boost::dynamic_pointer_cast<PeaksWorkspace>(inBareWS);
+      boost::dynamic_pointer_cast<PeaksWorkspace>(rawInputWorkspace);
   IMDEventWorkspace_sptr mdWS =
-      boost::dynamic_pointer_cast<IMDEventWorkspace>(inBareWS);
-  std::vector<Matrix<double>> gonioVec;
-  m_gonio = Matrix<double>(3, 3, true);
-  Mantid::Kernel::DblMatrix gonioLast = Matrix<double>(3, 3, false);
+      boost::dynamic_pointer_cast<IMDEventWorkspace>(rawInputWorkspace);
+
+  std::vector<DblMatrix> gonioVec;
   if (matrixWS) {
-    inWS = matrixWS;
     // Retrieve the goniometer rotation matrix
     try {
-      m_gonio = inWS->mutableRun().getGoniometerMatrix();
-      gonioVec.push_back(m_gonio);
+      DblMatrix goniometerMatrix = matrixWS->run().getGoniometerMatrix();
+      gonioVec.push_back(goniometerMatrix);
     } catch (std::runtime_error &e) {
+      // If there is no goniometer matrix, use identity matrix instead.
       g_log.error() << "Error getting the goniometer rotation matrix from the "
                        "InputWorkspace." << std::endl
                     << e.what() << std::endl;
@@ -185,199 +141,289 @@ void PredictPeaks::exec() {
                       << std::endl;
     }
   } else if (peaksWS) {
-    // We must sort the peaks
+    // Sort peaks by run number so that peaks with equal goniometer matrices are
+    // adjacent
     std::vector<std::pair<std::string, bool>> criteria;
     criteria.push_back(std::pair<std::string, bool>("RunNumber", true));
-    // criteria.push_back(std::pair<std::string, bool>("BankName", true));
-    peaksWS->sort(criteria);
-    inWS = peaksWS;
-    for (int i = 0; i < static_cast<int>(peaksWS->getNumberPeaks()); ++i) {
 
+    peaksWS->sort(criteria);
+
+    // Get all goniometer matrices
+    DblMatrix lastGoniometerMatrix = Matrix<double>(3, 3, false);
+    for (int i = 0; i < static_cast<int>(peaksWS->getNumberPeaks()); ++i) {
       IPeak &p = peaksWS->getPeak(i);
-      m_gonio = p.getGoniometerMatrix();
-      if (!(m_gonio == gonioLast)) {
-        gonioLast = m_gonio;
-        gonioVec.push_back(gonioLast);
+      DblMatrix currentGoniometerMatrix = p.getGoniometerMatrix();
+      if (!(currentGoniometerMatrix == lastGoniometerMatrix)) {
+        gonioVec.push_back(currentGoniometerMatrix);
+        lastGoniometerMatrix = currentGoniometerMatrix;
       }
-    } // for each hkl in the workspace
+    }
+
   } else if (mdWS) {
     if (mdWS->getNumExperimentInfo() <= 0)
       throw std::invalid_argument(
           "Specified a MDEventWorkspace as InputWorkspace but it does not have "
           "any ExperimentInfo associated. Please choose a workspace with a "
           "full instrument and sample.");
-    inWS = mdWS->getExperimentInfo(0);
-    // Retrieve the goniometer rotation matrix
-    for (uint16_t i = 0; i < mdWS->getNumExperimentInfo(); i++) {
-      m_gonio = mdWS->getExperimentInfo(i)->mutableRun().getGoniometerMatrix();
-      gonioVec.push_back(m_gonio);
+
+    inputExperimentInfo = mdWS->getExperimentInfo(0);
+
+    // Retrieve the goniometer rotation matrices for each experiment info
+    for (uint16_t i = 0; i < mdWS->getNumExperimentInfo(); ++i) {
+      try {
+        DblMatrix goniometerMatrix =
+            mdWS->getExperimentInfo(i)->mutableRun().getGoniometerMatrix();
+        gonioVec.push_back(goniometerMatrix);
+      } catch (std::runtime_error &e) {
+        // If there is no goniometer matrix, use identity matrix instead.
+        gonioVec.push_back(DblMatrix(3, 3, true));
+
+        g_log.error()
+            << "Error getting the goniometer rotation matrix from the "
+               "InputWorkspace." << std::endl
+            << e.what() << std::endl;
+        g_log.warning() << "Using identity goniometer rotation matrix instead."
+                        << std::endl;
+      }
     }
   }
-  // Find the run number
-  if (inWS) {
-    m_runNumber = inWS->getRunNumber();
-  } else {
-    throw std::runtime_error("Failed to get run number");
+
+  // If there's no goniometer matrix at this point, push back an identity
+  // matrix.
+  if (gonioVec.empty()) {
+    gonioVec.push_back(DblMatrix(3, 3, true));
   }
 
-  m_wlMin = getProperty("WavelengthMin");
-  m_wlMax = getProperty("WavelengthMax");
-  m_minD = getProperty("MinDSpacing");
-  m_maxD = getProperty("MaxDSpacing");
-  bool RoundHKL = getProperty("RoundHKL");
+  setInstrumentFromInputWorkspace(inputExperimentInfo);
+  setRunNumberFromInputWorkspace(inputExperimentInfo);
 
-  PeaksWorkspace_sptr HKLPeaksWorkspace = getProperty("HKLPeaksWorkspace");
-
-  // Check the values.
-  if (!inWS || !inWS->getInstrument()->getSample())
-    throw std::invalid_argument("Did not specify a valid InputWorkspace with a "
-                                "full instrument and sample.");
-  if (m_wlMin >= m_wlMax)
-    throw std::invalid_argument("WavelengthMin must be < WavelengthMax.");
-  if (m_wlMin < 1e-5)
-    throw std::invalid_argument("WavelengthMin must be stricly positive.");
-  if (m_minD < 1e-4)
-    throw std::invalid_argument("MinDSpacing must be stricly positive.");
-  if (m_minD >= m_maxD)
-    throw std::invalid_argument("MinDSpacing must be < MaxDSpacing.");
-
-  // Get the instrument and its detectors
-  m_inst = inWS->getInstrument();
-
-  // --- Reflection condition ----
-  // Use the primitive by default
-  ReflectionCondition_sptr refCond(new ReflectionConditionPrimitive());
-  // Get it from the property
-  std::string refCondName = getPropertyValue("ReflectionCondition");
-  for (size_t i = 0; i < m_refConds.size(); ++i)
-    if (m_refConds[i]->getName() == refCondName)
-      refCond = m_refConds[i];
+  checkBeamDirection();
 
   // Create the output
-  m_pw = PeaksWorkspace_sptr(new PeaksWorkspace());
-  setProperty<PeaksWorkspace_sptr>("OutputWorkspace", m_pw);
+  m_pw = boost::make_shared<PeaksWorkspace>();
+
   // Copy instrument, sample, etc.
-  m_pw->copyExperimentInfoFrom(inWS.get());
+  m_pw->copyExperimentInfoFrom(inputExperimentInfo.get());
+
+  const Sample &sample = inputExperimentInfo->sample();
 
   // Retrieve the OrientedLattice (UnitCell) from the workspace
-  m_crystal = inWS->sample().getOrientedLattice();
-
-  // Counter of possible peaks
-  m_numInRange = 0;
+  OrientedLattice orientedLattice = sample.getOrientedLattice();
 
   // Get the UB matrix from it
   Matrix<double> ub(3, 3, true);
-  ub = m_crystal.getUB();
-  for (size_t iVec = 0; iVec < gonioVec.size(); ++iVec) {
-    m_gonio = gonioVec[iVec];
+  ub = orientedLattice.getUB();
+
+  std::vector<V3D> possibleHKLs;
+  PeaksWorkspace_sptr possibleHKLWorkspace = getProperty("HKLPeaksWorkspace");
+
+  if (!possibleHKLWorkspace) {
+    fillPossibleHKLsUsingGenerator(orientedLattice, possibleHKLs);
+  } else {
+    fillPossibleHKLsUsingPeaksWorkspace(possibleHKLWorkspace, possibleHKLs);
+  }
+
+  setStructureFactorCalculatorFromSample(sample);
+
+  /* The wavelength filtering can not be done before because it depends
+   * on q being correctly oriented, so an additional filtering step is required.
+   */
+  double lambdaMin = getProperty("WavelengthMin");
+  double lambdaMax = getProperty("WavelengthMax");
+
+  Progress prog(this, 0.0, 1.0, possibleHKLs.size() * gonioVec.size());
+  prog.setNotifyStep(0.01);
+
+  for (auto &goniometerMatrix : gonioVec) {
     // Final transformation matrix (HKL to Q in lab frame)
-    m_mat = m_gonio * ub;
+    DblMatrix orientedUB = goniometerMatrix * ub;
 
-    // Sample position
-    V3D samplePos = m_inst->getSample()->getPos();
+    /* Because of the additional filtering step it's better to keep track of the
+     * allowed peaks with a counter. */
+    HKLFilterWavelength lambdaFilter(orientedUB, lambdaMin, lambdaMax);
 
-    // L1 path and direction
-    V3D beamDir = m_inst->getSource()->getPos() - samplePos;
-    // double L1 = beamDir.normalize(); // Normalize to unity
+    size_t allowedPeakCount = 0;
 
-    if ((fabs(beamDir.X()) > 1e-2) ||
-        (fabs(beamDir.Y()) > 1e-2)) // || (beamDir.Z() < 0))
-      throw std::invalid_argument("Instrument must have a beam direction that "
-                                  "is only in the +Z direction for this "
-                                  "algorithm to be valid..");
+    for (auto &possibleHKL : possibleHKLs) {
+      if (lambdaFilter.isAllowed(possibleHKL)) {
+        ++allowedPeakCount;
+        calculateQAndAddToOutput(possibleHKL, orientedUB, goniometerMatrix);
+      }
+      prog.report();
+    }
 
-    if (HKLPeaksWorkspace) {
-      // --------------Use the HKL from a list in a PeaksWorkspace
-      // --------------------------
-      // Disable some of the other filters
-      m_minD = 0.0;
-      m_maxD = 1e10;
-      m_wlMin = 0.0;
-      m_wlMax = 1e10;
-
-      // cppcheck-suppress syntaxError
-      PRAGMA_OMP(parallel for schedule(dynamic, 1) )
-      for (int i = 0; i < static_cast<int>(HKLPeaksWorkspace->getNumberPeaks());
-           ++i) {
-        PARALLEL_START_INTERUPT_REGION
-
-        IPeak &p = HKLPeaksWorkspace->getPeak(i);
-        // Get HKL from that peak
-        V3D hkl = p.getHKL();
-        // Use the rounded HKL value on option
-        if (RoundHKL)
-          hkl.round();
-        // Predict the HKL of that peak
-        doHKL(hkl[0], hkl[1], hkl[2], false);
-
-        PARALLEL_END_INTERUPT_REGION
-      } // for each hkl in the workspace
-      PARALLEL_CHECK_INTERUPT_REGION
-    } else {
-      // ---------------- Determine which HKL to look for
-      // -------------------------------------
-      // Inverse d-spacing that is the limit to look for.
-      double Qmax = 2. * M_PI / m_minD;
-      V3D hklMin(0, 0, 0);
-      V3D hklMax(0, 0, 0);
-      for (double qx = -1; qx < 2; qx += 2)
-        for (double qy = -1; qy < 2; qy += 2)
-          for (double qz = -1; qz < 2; qz += 2) {
-            // Build a q-vector for this corner of a cube
-            V3D Q(qx, qy, qz);
-            Q *= Qmax;
-            V3D hkl = m_crystal.hklFromQ(Q);
-            // Find the limits of each hkl
-            for (size_t i = 0; i < 3; i++) {
-              if (hkl[i] < hklMin[i])
-                hklMin[i] = hkl[i];
-              if (hkl[i] > hklMax[i])
-                hklMax[i] = hkl[i];
-            }
-          }
-      // Round to nearest int
-      hklMin.round();
-      hklMax.round();
-
-      // How many HKLs is that total?
-      V3D hklDiff = hklMax - hklMin + V3D(1, 1, 1);
-      size_t numHKLs = size_t(hklDiff[0] * hklDiff[1] * hklDiff[2]);
-
-      g_log.information() << "HKL range for d_min of " << m_minD
-                          << "to d_max of " << m_maxD << " is from " << hklMin
-                          << " to " << hklMax << ", a total of " << numHKLs
-                          << " possible HKL's\n";
-
-      if (numHKLs > 10000000000)
-        throw std::invalid_argument("More than 10 billion HKLs to search. Is "
-                                    "your d_min value too small?");
-
-      Progress prog(this, 0.0, 1.0, numHKLs);
-      prog.setNotifyStep(0.01);
-
-      PRAGMA_OMP(parallel for schedule(dynamic, 1) )
-      for (int h = (int)hklMin[0]; h <= (int)hklMax[0]; h++) {
-        PARALLEL_START_INTERUPT_REGION
-        for (int k = (int)hklMin[1]; k <= (int)hklMax[1]; k++) {
-          for (int l = (int)hklMin[2]; l <= (int)hklMax[2]; l++) {
-            if (refCond->isAllowed(h, k, l) &&
-                (abs(h) + abs(k) + abs(l) != 0)) {
-              doHKL(double(h), double(k), double(l), true);
-            } // refl is allowed and not 0,0,0
-            prog.report();
-          } // for each l
-        }   // for each k
-        PARALLEL_END_INTERUPT_REGION
-      } // for each h
-      PARALLEL_CHECK_INTERUPT_REGION
-
-    } // Find the HKL automatically
-
-    g_log.notice() << "Out of " << m_numInRange
+    g_log.notice() << "Out of " << allowedPeakCount
                    << " allowed peaks within parameters, "
                    << m_pw->getNumberPeaks()
                    << " were found to hit a detector.\n";
   }
+
+  setProperty<PeaksWorkspace_sptr>("OutputWorkspace", m_pw);
+}
+
+/// Tries to set the internally stored instrument from an ExperimentInfo-object.
+void PredictPeaks::setInstrumentFromInputWorkspace(
+    const ExperimentInfo_sptr &inWS) {
+  // Check that there is an input workspace that has a sample.
+  if (!inWS || !inWS->getInstrument())
+    throw std::invalid_argument("Did not specify a valid InputWorkspace with a "
+                                "full instrument.");
+
+  m_inst = inWS->getInstrument();
+}
+
+/// Sets the run number from the supplied ExperimentInfo or throws an exception.
+void PredictPeaks::setRunNumberFromInputWorkspace(
+    const ExperimentInfo_sptr &inWS) {
+  if (!inWS) {
+    throw std::runtime_error("Failed to get run number");
+  }
+
+  m_runNumber = inWS->getRunNumber();
+}
+
+/// Checks that the beam direction is +Z, throws exception otherwise.
+void PredictPeaks::checkBeamDirection() const {
+  V3D samplePos = m_inst->getSample()->getPos();
+
+  // L1 path and direction
+  V3D beamDir = m_inst->getSource()->getPos() - samplePos;
+
+  if ((fabs(beamDir.X()) > 1e-2) ||
+      (fabs(beamDir.Y()) > 1e-2)) // || (beamDir.Z() < 0))
+    throw std::invalid_argument("Instrument must have a beam direction that "
+                                "is only in the +Z direction for this "
+                                "algorithm to be valid..");
+}
+
+/// Fills possibleHKLs with all HKLs that are allowed within d- and
+/// lambda-limits.
+void PredictPeaks::fillPossibleHKLsUsingGenerator(
+    const OrientedLattice &orientedLattice,
+    std::vector<V3D> &possibleHKLs) const {
+  double dMin = getProperty("MinDSpacing");
+  double dMax = getProperty("MaxDSpacing");
+
+  // --- Reflection condition ----
+  // Use the primitive by default
+  ReflectionCondition_sptr refCond =
+      boost::make_shared<ReflectionConditionPrimitive>();
+  // Get it from the property
+  std::string refCondName = getPropertyValue("ReflectionCondition");
+  for (const auto &m_refCond : m_refConds)
+    if (m_refCond->getName() == refCondName)
+      refCond = m_refCond;
+
+  HKLGenerator gen(orientedLattice, dMin);
+  auto filter =
+      boost::make_shared<HKLFilterCentering>(refCond) &
+      boost::make_shared<HKLFilterDRange>(orientedLattice, dMin, dMax);
+
+  V3D hklMin = *(gen.begin());
+
+  g_log.information() << "HKL range for d_min of " << dMin << " to d_max of "
+                      << dMax << " is from " << hklMin << " to "
+                      << hklMin * -1.0 << ", a total of " << gen.size()
+                      << " possible HKL's\n";
+
+  if (gen.size() > 10000000000)
+    throw std::invalid_argument("More than 10 billion HKLs to search. Is "
+                                "your d_min value too small?");
+
+  possibleHKLs.clear();
+  possibleHKLs.reserve(gen.size());
+  std::remove_copy_if(gen.begin(), gen.end(), std::back_inserter(possibleHKLs),
+                      (~filter)->fn());
+}
+
+/// Fills possibleHKLs with all HKLs from the supplied PeaksWorkspace.
+void PredictPeaks::fillPossibleHKLsUsingPeaksWorkspace(
+    const PeaksWorkspace_sptr &peaksWorkspace,
+    std::vector<V3D> &possibleHKLs) const {
+  possibleHKLs.clear();
+  possibleHKLs.reserve(peaksWorkspace->getNumberPeaks());
+
+  bool roundHKL = getProperty("RoundHKL");
+
+  for (int i = 0; i < static_cast<int>(peaksWorkspace->getNumberPeaks()); ++i) {
+    IPeak &p = peaksWorkspace->getPeak(i);
+    // Get HKL from that peak
+    V3D hkl = p.getHKL();
+
+    if (roundHKL)
+      hkl.round();
+
+    possibleHKLs.push_back(hkl);
+  } // for each hkl in the workspace
+}
+
+/**
+ * @brief Assigns a StructureFactorCalculator if available in sample.
+ *
+ * This method constructs a StructureFactorCalculator using the CrystalStructure
+ * stored in sample if available. For consistency it sets the OrientedLattice
+ * in the sample as the unit cell of the crystal structure.
+ *
+ * Additionally, the property CalculateStructureFactors is taken into account.
+ * If it's disabled, the calculator will not be assigned, disabling structure
+ * factor calculation.
+ *
+ * @param sample :: Sample, potentially with crystal structure
+ */
+void PredictPeaks::setStructureFactorCalculatorFromSample(
+    const Sample &sample) {
+  bool calculateStructureFactors = getProperty("CalculateStructureFactors");
+
+  if (calculateStructureFactors && sample.hasCrystalStructure()) {
+    CrystalStructure crystalStructure = sample.getCrystalStructure();
+    crystalStructure.setCell(sample.getOrientedLattice());
+
+    m_sfCalculator = StructureFactorCalculatorFactory::create<
+        StructureFactorCalculatorSummation>(crystalStructure);
+  }
+}
+
+/**
+ * @brief Calculates Q from HKL and adds a peak to the output workspace
+ *
+ * This method takes HKL and uses the oriented UB matrix (UB multiplied by the
+ * goniometer matrix) to calculate Q. It then creates a Peak-object using
+ * that Q-vector and the internally stored instrument. If the corresponding
+ * diffracted beam intersects with a detector, the peak is added to the output-
+ * workspace.
+ *
+ * @param hkl
+ * @param orientedUB
+ * @param goniometerMatrix
+ */
+void PredictPeaks::calculateQAndAddToOutput(const V3D &hkl,
+                                            const DblMatrix &orientedUB,
+                                            const DblMatrix &goniometerMatrix) {
+  // The q-vector direction of the peak is = goniometer * ub * hkl_vector
+  // This is in inelastic convention: momentum transfer of the LATTICE!
+  // Also, q does have a 2pi factor = it is equal to 2pi/wavelength.
+  V3D q = orientedUB * hkl * (2.0 * M_PI);
+
+  // Create the peak using the Q in the lab framewith all its info:
+  Peak p(m_inst, q, boost::optional<double>());
+
+  /* The constructor calls setQLabFrame, which already calls findDetector, which
+     is expensive. It's not necessary to call it again, instead it's enough to
+     check whether a detector has already been set. */
+  if (p.getDetector()) {
+    // Only add peaks that hit the detector
+    p.setGoniometerMatrix(goniometerMatrix);
+    // Save the run number found before.
+    p.setRunNumber(m_runNumber);
+    p.setHKL(hkl);
+
+    if (m_sfCalculator) {
+      p.setIntensity(m_sfCalculator->getFSquared(hkl));
+    }
+
+    // Add it to the workspace
+    m_pw->addPeak(p);
+  } // Detector was found
 }
 
 } // namespace Mantid

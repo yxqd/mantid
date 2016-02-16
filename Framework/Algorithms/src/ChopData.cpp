@@ -1,5 +1,9 @@
 #include "MantidAlgorithms/ChopData.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/HistogramValidator.h"
+#include "MantidAPI/SpectraAxisValidator.h"
+#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
+#include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/MultiThreaded.h"
 
 namespace Mantid {
@@ -44,6 +48,9 @@ void ChopData::exec() {
   std::map<int, double> intMap;
   int prelow = -1;
   std::vector<MatrixWorkspace_sptr> workspaces;
+
+  boost::shared_ptr<Progress> progress;
+
   if (maxX < step) {
     throw std::invalid_argument(
         "Step value provided larger than size of workspace.");
@@ -51,6 +58,9 @@ void ChopData::exec() {
 
   if (rLower != EMPTY_DBL() && rUpper != EMPTY_DBL() &&
       monitorWi != EMPTY_INT()) {
+
+    progress = boost::make_shared<Progress>(this, 0, 1, chops * 2);
+
     // Select the spectrum that is to be used to compare the sections of the
     // workspace
     // This will generally be the monitor spectrum.
@@ -77,14 +87,19 @@ void ChopData::exec() {
       if (intMap[i] < intMap[lowest]) {
         lowest = i;
       }
+
+      progress->report();
     }
 
-    std::map<int, double>::iterator nlow = intMap.find(lowest - 1);
+    auto nlow = intMap.find(lowest - 1);
     if (nlow != intMap.end() && intMap[lowest] < (0.1 * nlow->second)) {
       prelow = nlow->first;
     }
-  }
+  } else
+    progress = boost::make_shared<Progress>(this, 0, 1, chops);
+
   int wsCounter(1);
+
   for (int i = 0; i < chops; i++) {
     const double stepDiff = (i * step);
 
@@ -142,13 +157,15 @@ void ChopData::exec() {
     ++wsCounter;
 
     workspaces.push_back(workspace);
+
+    progress->report();
   }
 
   // Create workspace group that holds output workspaces
   WorkspaceGroup_sptr wsgroup = WorkspaceGroup_sptr(new WorkspaceGroup());
 
-  for (auto it = workspaces.begin(); it != workspaces.end(); ++it) {
-    wsgroup->addWorkspace(*it);
+  for (auto &workspace : workspaces) {
+    wsgroup->addWorkspace(workspace);
   }
   // set the output property
   setProperty("OutputWorkspace", wsgroup);

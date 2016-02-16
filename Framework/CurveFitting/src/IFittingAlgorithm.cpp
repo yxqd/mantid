@@ -9,6 +9,7 @@
 #include "MantidAPI/IFunctionMD.h"
 #include "MantidAPI/IFunction1DSpectrum.h"
 #include "MantidAPI/ILatticeFunction.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/MultiDomainFunction.h"
 
 #include "MantidKernel/ListValidator.h"
@@ -27,7 +28,7 @@ IDomainCreator *createDomainCreator(const IFunction *fun, const Workspace *ws,
                                     IPropertyManager *manager,
                                     IDomainCreator::DomainType domainType) {
 
-  IDomainCreator *creator = NULL;
+  IDomainCreator *creator = nullptr;
 
   // ILatticeFunction requires API::LatticeDomain.
   if (dynamic_cast<const ILatticeFunction *>(fun)) {
@@ -85,10 +86,7 @@ void IFittingAlgorithm::init() {
   declareProperty("IgnoreInvalidData", false,
                   "Flag to ignore infinities, NaNs and data with zero errors.");
 
-  std::vector<std::string> domainTypes;
-  domainTypes.push_back("Simple");
-  domainTypes.push_back("Sequential");
-  domainTypes.push_back("Parallel");
+  std::vector<std::string> domainTypes{"Simple", "Sequential", "Parallel"};
   declareProperty(
       "DomainType", "Simple",
       Kernel::IValidator_sptr(
@@ -216,9 +214,10 @@ void IFittingAlgorithm::addWorkspace(const std::string &workspacePropertyName,
     boost::shared_ptr<MultiDomainCreator> multiCreator =
         boost::dynamic_pointer_cast<MultiDomainCreator>(m_domainCreator);
     if (!multiCreator) {
+      auto &reference = *m_domainCreator.get();
       throw std::runtime_error(
           std::string("MultiDomainCreator expected, found ") +
-          typeid(*m_domainCreator.get()).name());
+          typeid(reference).name());
     }
     if (!multiCreator->hasCreator(index)) {
       creator->declareDatasetProperties(suffix, addProperties);
@@ -240,10 +239,10 @@ void IFittingAlgorithm::addWorkspaces() {
         new MultiDomainCreator(this, m_workspacePropertyNames));
   }
   auto props = getProperties();
-  for (auto prop = props.begin(); prop != props.end(); ++prop) {
-    if ((**prop).direction() == Kernel::Direction::Input &&
-        dynamic_cast<API::IWorkspaceProperty *>(*prop)) {
-      const std::string workspacePropertyName = (**prop).name();
+  for (auto &prop : props) {
+    if ((*prop).direction() == Kernel::Direction::Input &&
+        dynamic_cast<API::IWorkspaceProperty *>(prop)) {
+      const std::string workspacePropertyName = (*prop).name();
       API::Workspace_const_sptr ws = getProperty(workspacePropertyName);
       IDomainCreator *creator =
           createDomainCreator(m_function.get(), ws.get(), workspacePropertyName,

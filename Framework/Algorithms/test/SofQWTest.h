@@ -3,6 +3,8 @@
 
 #include <cxxtest/TestSuite.h>
 #include "MantidAlgorithms/SofQW.h"
+#include "MantidAPI/Axis.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidDataHandling/LoadNexusProcessed.h"
 
 #include <boost/make_shared.hpp>
@@ -59,11 +61,6 @@ public:
   void testVersion() {
     Mantid::Algorithms::SofQW sqw;
     TS_ASSERT_EQUALS(sqw.version(), 1);
-  }
-
-  void testCategory() {
-    Mantid::Algorithms::SofQW sqw;
-    TS_ASSERT_EQUALS(sqw.category(), "Inelastic");
   }
 
   void testInit() {

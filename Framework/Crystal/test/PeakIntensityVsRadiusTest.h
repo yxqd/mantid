@@ -2,6 +2,7 @@
 #define MANTID_CRYSTAL_PEAKINTENSITYVSRADIUSTEST_H_
 
 #include "MantidCrystal/PeakIntensityVsRadius.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidDataObjects/Peak.h"
 #include "MantidDataObjects/PeaksWorkspace.h"
 #include "MantidGeometry/Instrument.h"
@@ -11,8 +12,6 @@
 #include "MantidTestHelpers/ComponentCreationHelper.h"
 #include "MantidAPI/FrameworkManager.h"
 #include <cxxtest/TestSuite.h>
-#include <iomanip>
-#include <iostream>
 
 using namespace Mantid;
 using namespace Mantid::Crystal;

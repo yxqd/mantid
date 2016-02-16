@@ -2,15 +2,18 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidDataHandling/LoadIDFFromNexus.h"
-#include "MantidKernel/ConfigService.h"
 #include "MantidAPI/FileProperty.h"
-#include <Poco/Path.h>
-#include <Poco/File.h>
+#include "MantidAPI/MatrixWorkspace.h"
+#include "MantidGeometry/Instrument.h"
+#include "MantidKernel/ConfigService.h"
+
 #include <Poco/DOM/Document.h>
 #include <Poco/DOM/DOMParser.h>
 #include <Poco/DOM/Element.h>
 #include <Poco/DOM/NodeList.h>
 #include <Poco/DOM/NodeIterator.h>
+#include <Poco/File.h>
+#include <Poco/Path.h>
 
 using Poco::XML::DOMParser;
 using Poco::XML::Document;
@@ -39,11 +42,8 @@ void LoadIDFFromNexus::init() {
                                              Direction::InOut),
       "The name of the workspace in which to attach the imported instrument");
 
-  std::vector<std::string> exts;
-  exts.push_back(".nxs");
-  exts.push_back(".nxs.h5");
   declareProperty(
-      new FileProperty("Filename", "", FileProperty::Load, exts),
+      new FileProperty("Filename", "", FileProperty::Load, {".nxs", ".nxs.h5"}),
       "The name (including its full or relative path) of the Nexus file to "
       "attempt to load the instrument from.");
 
@@ -158,12 +158,11 @@ LoadIDFFromNexus::getParameterCorrectionFile(const std::string &instName) {
 
   std::vector<std::string> directoryNames =
       ConfigService::Instance().getInstrumentDirectories();
-  for (auto instDirs_itr = directoryNames.begin();
-       instDirs_itr != directoryNames.end(); ++instDirs_itr) {
+  for (auto &directoryName : directoryNames) {
     // This will iterate around the directories from user ->etc ->install, and
     // find the first appropriate file
     Poco::Path iPath(
-        *instDirs_itr,
+        directoryName,
         "embedded_instrument_corrections"); // Go to correction file subfolder
     // First see if the directory exists
     Poco::File ipDir(iPath);
@@ -282,11 +281,9 @@ void LoadIDFFromNexus::LoadParameters(
         ConfigService::Instance().getInstrumentDirectories();
     const std::string instrumentName =
         localWorkspace->getInstrument()->getName();
-    for (auto instDirs_itr = directoryNames.begin();
-         instDirs_itr != directoryNames.end(); ++instDirs_itr) {
+    for (auto directoryName : directoryNames) {
       // This will iterate around the directories from user ->etc ->install, and
       // find the first appropriate file
-      std::string directoryName = *instDirs_itr;
       const std::string paramFile =
           directoryName + instrumentName + "_Parameters.xml";
 

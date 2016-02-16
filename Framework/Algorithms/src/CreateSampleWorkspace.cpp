@@ -1,7 +1,10 @@
 #include "MantidAlgorithms/CreateSampleWorkspace.h"
+#include "MantidAPI/Axis.h"
+#include "MantidAPI/FunctionFactory.h"
+#include "MantidAPI/FunctionDomain1D.h"
+#include "MantidAPI/FunctionProperty.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidDataObjects/EventWorkspace.h"
-#include "MantidAPI/FunctionProperty.h"
 #include "MantidGeometry/Objects/ShapeFactory.h"
 #include "MantidGeometry/Instrument/ReferenceFrame.h"
 #include "MantidGeometry/Instrument/RectangularDetector.h"
@@ -9,8 +12,7 @@
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/UnitFactory.h"
 #include "MantidKernel/MersenneTwister.h"
-#include "MantidAPI/FunctionFactory.h"
-#include "MantidAPI/FunctionDomain1D.h"
+
 #include <cmath>
 #include <ctime>
 #include <numeric>
@@ -31,7 +33,7 @@ DECLARE_ALGORITHM(CreateSampleWorkspace)
 //----------------------------------------------------------------------------------------------
 /** Constructor
  */
-CreateSampleWorkspace::CreateSampleWorkspace() : m_randGen(NULL) {}
+CreateSampleWorkspace::CreateSampleWorkspace() : m_randGen(nullptr) {}
 
 //----------------------------------------------------------------------------------------------
 /** Destructor
@@ -59,9 +61,7 @@ void CreateSampleWorkspace::init() {
   declareProperty(
       new WorkspaceProperty<>("OutputWorkspace", "", Direction::Output),
       "An output workspace.");
-  std::vector<std::string> typeOptions;
-  typeOptions.push_back("Histogram");
-  typeOptions.push_back("Event");
+  std::vector<std::string> typeOptions{"Histogram", "Event"};
   declareProperty("WorkspaceType", "Histogram",
                   boost::make_shared<StringListValidator>(typeOptions),
                   "The type of workspace to create (default: Histogram)");
@@ -71,18 +71,18 @@ void CreateSampleWorkspace::init() {
   //$PC0$ is the far left of the data, and $PC10$ is the far right, and
   // therefore will often not be used
   //$PC5$ is the centre of the data
-  m_preDefinedFunctionmap.insert(std::pair<std::string, std::string>(
+  m_preDefinedFunctionmap.emplace(
       "One Peak", "name=LinearBackground, A0=0.3; name=Gaussian, "
-                  "PeakCentre=$PC5$, Height=10, Sigma=0.7;"));
-  m_preDefinedFunctionmap.insert(std::pair<std::string, std::string>(
+                  "PeakCentre=$PC5$, Height=10, Sigma=0.7;");
+  m_preDefinedFunctionmap.emplace(
       "Multiple Peaks", "name=LinearBackground, A0=0.3;name=Gaussian, "
                         "PeakCentre=$PC3$, Height=10, Sigma=0.7;name=Gaussian, "
-                        "PeakCentre=$PC6$, Height=8, Sigma=0.5"));
-  m_preDefinedFunctionmap.insert(std::pair<std::string, std::string>(
-      "Flat background", "name=LinearBackground, A0=1;"));
-  m_preDefinedFunctionmap.insert(std::pair<std::string, std::string>(
-      "Exp Decay", "name=ExpDecay, Height=100, Lifetime=1000;"));
-  m_preDefinedFunctionmap.insert(std::pair<std::string, std::string>(
+                        "PeakCentre=$PC6$, Height=8, Sigma=0.5");
+  m_preDefinedFunctionmap.emplace("Flat background",
+                                  "name=LinearBackground, A0=1;");
+  m_preDefinedFunctionmap.emplace("Exp Decay",
+                                  "name=ExpDecay, Height=100, Lifetime=1000;");
+  m_preDefinedFunctionmap.emplace(
       "Powder Diffraction",
       "name= LinearBackground,A0=0.0850208,A1=-4.89583e-06;"
       "name=Gaussian,Height=0.584528,PeakCentre=$PC1$,Sigma=14.3772;"
@@ -93,25 +93,24 @@ void CreateSampleWorkspace::init() {
       "name=Gaussian,Height=3.64069,PeakCentre=$PC6$,Sigma=19.2404;"
       "name=Gaussian,Height=2.8998,PeakCentre=$PC7$,Sigma=21.1127;"
       "name=Gaussian,Height=2.05237,PeakCentre=$PC8$,Sigma=21.9932;"
-      "name=Gaussian,Height=8.40976,PeakCentre=$PC9$,Sigma=25.2751;"));
-  m_preDefinedFunctionmap.insert(std::pair<std::string, std::string>(
+      "name=Gaussian,Height=8.40976,PeakCentre=$PC9$,Sigma=25.2751;");
+  m_preDefinedFunctionmap.emplace(
       "Quasielastic", "name=Lorentzian,FWHM=0.3,PeakCentre=$PC5$,Amplitude=0.8;"
                       "name=Lorentzian,FWHM=0.1,PeakCentre=$PC5$,Amplitude=1;"
-                      "name=LinearBackground,A0=0.1"));
-  m_preDefinedFunctionmap.insert(std::pair<std::string, std::string>(
+                      "name=LinearBackground,A0=0.1");
+  m_preDefinedFunctionmap.emplace(
       "Quasielastic Tunnelling",
       "name=LinearBackground,A0=0.1;"
       "name=Lorentzian,FWHM=0.1,PeakCentre=$PC5$,Amplitude=1;"
       "name=Lorentzian,FWHM=0.05,PeakCentre=$PC7$,Amplitude=0.04;"
       "name=Lorentzian,FWHM=0.05,PeakCentre=$PC3$,Amplitude=0.04;"
       "name=Lorentzian,FWHM=0.05,PeakCentre=$PC8$,Amplitude=0.02;"
-      "name=Lorentzian,FWHM=0.05,PeakCentre=$PC2$,Amplitude=0.02"));
-  m_preDefinedFunctionmap.insert(
-      std::pair<std::string, std::string>("User Defined", ""));
+      "name=Lorentzian,FWHM=0.05,PeakCentre=$PC2$,Amplitude=0.02");
+  m_preDefinedFunctionmap.emplace("User Defined", "");
   std::vector<std::string> functionOptions;
-  for (auto iterator = m_preDefinedFunctionmap.begin();
-       iterator != m_preDefinedFunctionmap.end(); iterator++) {
-    functionOptions.push_back(iterator->first);
+  functionOptions.reserve(m_preDefinedFunctionmap.size());
+  for (const auto &preDefinedFunction : m_preDefinedFunctionmap) {
+    functionOptions.push_back(preDefinedFunction.first);
   }
   declareProperty("Function", "One Peak",
                   boost::make_shared<StringListValidator>(functionOptions),
@@ -199,28 +198,34 @@ void CreateSampleWorkspace::exec() {
   if (!m_randGen) {
     int seedValue = 0;
     if (isRandom) {
-      seedValue = static_cast<int>(std::time(0));
+      seedValue = static_cast<int>(std::time(nullptr));
     }
     m_randGen = new Kernel::MersenneTwister(seedValue);
   }
 
+  int numPixels = numBanks * bankPixelWidth * bankPixelWidth;
+
+  Progress progress(this, 0, 1, numBanks);
+
   // Create an instrument with one or more rectangular banks.
   Instrument_sptr inst = createTestInstrumentRectangular(
-      numBanks, bankPixelWidth, pixelSpacing, bankDistanceFromSample,
+      progress, numBanks, bankPixelWidth, pixelSpacing, bankDistanceFromSample,
       sourceSampleDistance);
 
   int num_bins = static_cast<int>((xMax - xMin) / binWidth);
+
   MatrixWorkspace_sptr ws;
   if (wsType == "Event") {
-    ws = createEventWorkspace(numBanks * bankPixelWidth * bankPixelWidth,
-                              num_bins, numEvents, xMin, binWidth,
+    ws = createEventWorkspace(numPixels, num_bins, numEvents, xMin, binWidth,
                               bankPixelWidth * bankPixelWidth, inst,
                               functionString, isRandom);
   } else {
-    ws = createHistogramWorkspace(
-        numBanks * bankPixelWidth * bankPixelWidth, num_bins, xMin, binWidth,
-        bankPixelWidth * bankPixelWidth, inst, functionString, isRandom);
+    ws = createHistogramWorkspace(numPixels, num_bins, xMin, binWidth,
+                                  bankPixelWidth * bankPixelWidth, inst,
+                                  functionString, isRandom);
   }
+  // add chopper
+  this->addChopperParameters(ws);
 
   // Set the Unit of the X Axis
   try {
@@ -248,6 +253,34 @@ void CreateSampleWorkspace::exec() {
   // Assign it to the output workspace property
   setProperty("OutputWorkspace", ws);
   ;
+}
+/** Add chopper to the existing matrix workspace
+@param ws  -- shared pointer to existing matrix workspace which has instrument
+and chopper
+
+@returns workspace modified to have Fermi chopper added to it.
+*/
+void CreateSampleWorkspace::addChopperParameters(
+    API::MatrixWorkspace_sptr &ws) {
+
+  auto testInst = ws->getInstrument();
+  auto chopper = testInst->getComponentByName("chopper-position");
+
+  // add chopper parameters
+  auto &paramMap = ws->instrumentParameters();
+  const std::string description(
+      "The initial rotation phase of the disk used to calculate the time"
+      " for neutrons arriving at the chopper according to the formula time = "
+      "delay + initial_phase/Speed");
+  paramMap.add<double>("double", chopper.get(), "initial_phase", -3000.,
+                       &description);
+  paramMap.add<std::string>("string", chopper.get(), "ChopperDelayLog",
+                            "fermi_delay");
+  paramMap.add<std::string>("string", chopper.get(), "ChopperSpeedLog",
+                            "fermi_speed");
+  paramMap.add<std::string>("string", chopper.get(), "FilterBaseLog",
+                            "is_running");
+  paramMap.add<bool>("bool", chopper.get(), "filter_with_derivative", false);
 }
 
 /** Create histogram workspace
@@ -320,7 +353,7 @@ EventWorkspace_sptr CreateSampleWorkspace::createEventWorkspace(
 
   // we need to normalise the results and then multiply by the number of events
   // to find the events per bin
-  double sum_of_elems = std::accumulate(yValues.begin(), yValues.end(), 0);
+  double sum_of_elems = std::accumulate(yValues.begin(), yValues.end(), 0.0);
   double event_distrib_factor = numEvents / sum_of_elems;
   std::transform(yValues.begin(), yValues.end(), yValues.begin(),
                  std::bind1st(std::multiplies<double>(), event_distrib_factor));
@@ -425,6 +458,7 @@ void CreateSampleWorkspace::replaceAll(std::string &str,
  *(pixels*0.008, pixels*0.008, Z)
  * Pixels are 4 mm wide.
  *
+ * @param progress :: progress indicator
  * @param num_banks :: number of rectangular banks to create
  * @param pixels :: number of pixels in each direction.
  * @param pixelSpacing :: padding between pixels
@@ -434,13 +468,13 @@ void CreateSampleWorkspace::replaceAll(std::string &str,
  * @returns A shared pointer to the generated instrument
  */
 Instrument_sptr CreateSampleWorkspace::createTestInstrumentRectangular(
-    int num_banks, int pixels, double pixelSpacing,
+    API::Progress &progress, int num_banks, int pixels, double pixelSpacing,
     const double bankDistanceFromSample, const double sourceSampleDistance) {
-  boost::shared_ptr<Instrument> testInst(new Instrument("basic_rect"));
+  auto testInst = boost::make_shared<Instrument>("basic_rect");
   // The instrument is going to be set up with z as the beam axis and y as the
   // vertical axis.
   testInst->setReferenceFrame(
-      boost::shared_ptr<ReferenceFrame>(new ReferenceFrame(Y, Z, Left, "")));
+      boost::make_shared<ReferenceFrame>(Y, Z, Left, ""));
 
   const double cylRadius(pixelSpacing / 2);
   const double cylHeight(0.0002);
@@ -470,6 +504,8 @@ Instrument_sptr CreateSampleWorkspace::createTestInstrumentRectangular(
     testInst->add(bank);
     // Set the bank along the z-axis of the instrument. (beam direction).
     bank->setPos(V3D(0.0, 0.0, bankDistanceFromSample * banknum));
+
+    progress.report();
   }
 
   // Define a source component
@@ -478,6 +514,12 @@ Instrument_sptr CreateSampleWorkspace::createTestInstrumentRectangular(
   source->setPos(V3D(0.0, 0.0, -sourceSampleDistance));
   testInst->add(source);
   testInst->markAsSource(source);
+
+  // Add chopper
+  ObjComponent *chopper = new ObjComponent(
+      "chopper-position", Object_sptr(new Object), testInst.get());
+  chopper->setPos(V3D(0.0, 0.0, -0.25 * sourceSampleDistance));
+  testInst->add(chopper);
 
   // Define a sample as a simple sphere
   Object_sptr sampleSphere =

@@ -5,6 +5,7 @@
 #include "MantidTestHelpers/WorkspaceCreationHelper.h"
 
 #include "MantidAlgorithms/AlignDetectors.h"
+#include "MantidAPI/Axis.h"
 #include "MantidDataHandling/LoadNexus.h"
 #include "MantidDataHandling/LoadEventPreNexus.h"
 #include "MantidDataObjects/EventWorkspace.h"
@@ -36,7 +37,6 @@ public:
   void testTheBasics() {
     TS_ASSERT_EQUALS(align.name(), "AlignDetectors");
     TS_ASSERT_EQUALS(align.version(), 1);
-    TS_ASSERT_EQUALS(align.category(), "Diffraction");
   }
 
   void testInit() {

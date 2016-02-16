@@ -2,9 +2,11 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/ModeratorTzeroLinear.h"
-#include "MantidAPI/WorkspaceValidators.h"
-#include "MantidDataObjects/Workspace2D.h"
+#include "MantidAPI/Axis.h"
+#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidDataObjects/EventWorkspace.h"
+#include "MantidDataObjects/Workspace2D.h"
 #include "MantidKernel/UnitFactory.h"
 
 #include <boost/lexical_cast.hpp>
@@ -116,7 +118,7 @@ void ModeratorTzeroLinear::exec() {
   // Run execEvent if eventWorkSpace
   EventWorkspace_const_sptr eventWS =
       boost::dynamic_pointer_cast<const EventWorkspace>(inputWS);
-  if (eventWS != NULL) {
+  if (eventWS != nullptr) {
     execEvent();
     return;
   }

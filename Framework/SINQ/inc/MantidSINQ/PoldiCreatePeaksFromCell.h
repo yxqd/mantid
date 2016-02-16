@@ -44,25 +44,18 @@ namespace Poldi {
 class MANTID_SINQ_DLL PoldiCreatePeaksFromCell : public API::Algorithm {
 public:
   PoldiCreatePeaksFromCell();
-  virtual ~PoldiCreatePeaksFromCell();
+  ~PoldiCreatePeaksFromCell() override;
 
-  virtual const std::string name() const;
-  virtual int version() const;
-  virtual const std::string category() const;
-  virtual const std::string summary() const;
+  const std::string name() const override;
+  int version() const override;
+  const std::string category() const override;
+  const std::string summary() const override;
 
-  virtual std::map<std::string, std::string> validateInputs();
+  std::map<std::string, std::string> validateInputs() override;
 
 protected:
   Geometry::SpaceGroup_const_sptr
   getSpaceGroup(const std::string &spaceGroupString) const;
-
-  Geometry::CompositeBraggScatterer_sptr
-  getScatterers(const std::string &scattererString) const;
-  Geometry::BraggScatterer_sptr
-  getScatterer(const std::string &singleScatterer) const;
-  std::vector<std::string>
-  getCleanScattererTokens(const std::vector<std::string> &tokens) const;
 
   double getDMaxValue(const Geometry::UnitCell &unitCell) const;
 
@@ -76,8 +69,8 @@ protected:
           Geometry::Group::Orthogonal) const;
 
 private:
-  void init();
-  void exec();
+  void init() override;
+  void exec() override;
 };
 
 } // namespace SINQ

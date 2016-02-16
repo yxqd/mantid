@@ -1,14 +1,15 @@
 #include "MantidDataHandling/LoadILLIndirect.h"
+#include "MantidAPI/Axis.h"
 #include "MantidAPI/FileProperty.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/RegisterFileLoader.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidKernel/UnitFactory.h"
 #include "MantidGeometry/Instrument/ComponentHelper.h"
 
 #include <boost/algorithm/string.hpp>
 
 #include <nexus/napi.h>
-#include <iostream>
-#include <iomanip> // std::setw
 
 namespace Mantid {
 namespace DataHandling {
@@ -27,7 +28,7 @@ LoadILLIndirect::LoadILLIndirect()
     : API::IFileLoader<Kernel::NexusDescriptor>(), m_numberOfTubes(0),
       m_numberOfPixelsPerTube(0), m_numberOfChannels(0),
       m_numberOfSimpleDetectors(0), m_numberOfHistograms(0) {
-  m_supportedInstruments.push_back("IN16B");
+  m_supportedInstruments.emplace_back("IN16B");
 }
 
 //----------------------------------------------------------------------------------------------
@@ -43,7 +44,9 @@ const std::string LoadILLIndirect::name() const { return "LoadILLIndirect"; }
 int LoadILLIndirect::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
-const std::string LoadILLIndirect::category() const { return "DataHandling"; }
+const std::string LoadILLIndirect::category() const {
+  return "DataHandling\\Nexus";
+}
 
 //----------------------------------------------------------------------------------------------
 
@@ -342,6 +345,8 @@ void LoadILLIndirect::runLoadInstrument() {
   try {
     loadInst->setPropertyValue("InstrumentName", m_instrumentName);
     loadInst->setProperty<MatrixWorkspace_sptr>("Workspace", m_localWorkspace);
+    loadInst->setProperty("RewriteSpectraMap",
+                          Mantid::Kernel::OptionalBool(true));
     loadInst->execute();
 
   } catch (...) {

@@ -1,6 +1,7 @@
 #ifndef LoadRaw3TEST_H_
 #define LoadRaw3TEST_H_
 
+#include "MantidAPI/Axis.h"
 #include "MantidAPI/AnalysisDataService.h"
 #include "MantidAPI/FrameworkManager.h"
 #include "MantidAPI/WorkspaceFactory.h"
@@ -515,6 +516,11 @@ public:
     // Check the proton charge has been set correctly
     TS_ASSERT_DELTA(output2D->run().getProtonCharge(), 171.0353, 0.0001)
 
+    // Test monitors attached:
+    auto monitorsAttached = output2D->monitorWorkspace();
+    TS_ASSERT(monitorsAttached);
+    auto realMonWs = boost::dynamic_pointer_cast<Workspace2D>(monitorsAttached);
+    TS_ASSERT_EQUALS(realMonWs.get(), monitoroutput2D.get())
     //----------------------------------------------------------------------
     // Tests taken from LoadInstrumentTest to check Child Algorithm is running
     // properly

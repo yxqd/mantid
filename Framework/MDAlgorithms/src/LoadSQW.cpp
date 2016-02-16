@@ -13,7 +13,6 @@
 #include "MantidKernel/ThreadScheduler.h"
 #include "MantidMDAlgorithms/LoadSQW.h"
 #include "MantidAPI/RegisterFileLoader.h"
-#include <iostream>
 #include <cfloat>
 #include "MantidDataObjects/MDBox.h"
 #include "MantidDataObjects/BoxControllerNeXusIO.h"
@@ -106,7 +105,7 @@ void LoadSQW::exec() {
   parseMetadata(m_fileName);
 
   // Create a new output workspace.
-  MDEventWorkspace<MDEvent<4>, 4> *pWs = new MDEventWorkspace<MDEvent<4>, 4>;
+  auto pWs = new MDEventWorkspace<MDEvent<4>, 4>;
   Mantid::API::IMDEventWorkspace_sptr ws(pWs);
 
   // Add dimensions onto workspace.
@@ -244,7 +243,7 @@ void LoadSQW::readEvents(
   // For tracking when to split boxes
   size_t eventsAdded = 0;
   BoxController_sptr bc = ws->getBoxController();
-  DiskBuffer *dbuf(NULL);
+  DiskBuffer *dbuf(nullptr);
   if (bc->isFileBacked())
     dbuf = bc->getFileIO();
 
@@ -409,15 +408,18 @@ void LoadSQW::buildMDDimsBase(
     std::vector<Mantid::Geometry::MDHistoDimensionBuilder> &DimVector) {
   std::vector<std::string> dimID(4, "qx");
   std::vector<std::string> dimUnit(4, "A^-1");
+  std::vector<std::string> dimFrameName(4, "HKL");
   dimID[1] = "qy";
   dimID[2] = "qz";
   dimID[3] = "en";
   dimUnit[3] = "meV";
+  dimFrameName[3] = "meV";
   DimVector.resize(4);
   for (size_t i = 0; i < 4; i++) {
     DimVector[i].setId(dimID[i]);
     DimVector[i].setUnits(dimUnit[i]);
     DimVector[i].setName(dimID[i]);
+    DimVector[i].setFrameName(dimFrameName[i]);
   }
 }
 
@@ -704,7 +706,7 @@ void LoadSQW::readBoxSizes() {
 
   m_boxSizes.resize(m_dataPositions.mdImageSize);
   m_fileStream.seekg(m_dataPositions.n_cell_pix_start, std::ios::beg);
-  m_fileStream.read((char *)(&m_boxSizes[0]),
+  m_fileStream.read(reinterpret_cast<char *>(&m_boxSizes[0]),
                     m_dataPositions.mdImageSize * sizeof(uint64_t));
 }
 
@@ -721,25 +723,27 @@ void dataPositions::parse_sqw_main_header(
   std::vector<char> data_buffer(4 * 3);
   dataStream.read(&data_buffer[0], 4);
 
-  unsigned int file_name_length = *((uint32_t *)(&data_buffer[0]));
+  unsigned int file_name_length =
+      *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
   // skip main header file name
   dataStream.seekg(file_name_length, std::ios_base::cur);
 
   dataStream.read(&data_buffer[0], 4);
-  unsigned int file_path_length = *((uint32_t *)(&data_buffer[0]));
+  unsigned int file_path_length =
+      *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
 
   // skip main header file path
   dataStream.seekg(file_path_length, std::ios_base::cur);
 
   dataStream.read(&data_buffer[0], 4);
-  unsigned int file_title = *((uint32_t *)(&data_buffer[0]));
+  unsigned int file_title = *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
 
   // skip ws title
   dataStream.seekg(file_title, std::ios_base::cur);
 
   // identify number of file headers, contributed into the dataset
   dataStream.read(&data_buffer[0], 4);
-  unsigned int nFiles = *((uint32_t *)(&data_buffer[0]));
+  unsigned int nFiles = *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
 
   /// allocate space for the component headers positions;
   this->component_headers_starts.assign(nFiles, 0);
@@ -772,12 +776,14 @@ std::streamoff dataPositions::parse_component_header(
 
   dataStream.read(&data_buffer[0], 4);
 
-  unsigned int file_name_length = *((uint32_t *)(&data_buffer[0]));
+  unsigned int file_name_length =
+      *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
   // skip component header file name
   dataStream.seekg(file_name_length, std::ios_base::cur);
 
   dataStream.read(&data_buffer[0], 4);
-  unsigned int file_path_length = *((uint32_t *)(&data_buffer[0]));
+  unsigned int file_path_length =
+      *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
 
   // skip component header file path
   dataStream.seekg(file_path_length, std::ios_base::cur);
@@ -787,7 +793,7 @@ std::streamoff dataPositions::parse_component_header(
 
   // read number of energy bins;
   dataStream.read(&data_buffer[0], 4);
-  unsigned int nEn_bins = *((uint32_t *)(&data_buffer[0]));
+  unsigned int nEn_bins = *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
   // skip energy values;
   dataStream.seekg(4 * (nEn_bins), std::ios_base::cur);
 
@@ -797,8 +803,8 @@ std::streamoff dataPositions::parse_component_header(
   // get labels matrix size;
   dataStream.read(&data_buffer[0], 8);
 
-  unsigned int nRows = *((uint32_t *)(&data_buffer[0]));
-  unsigned int nCols = *((uint32_t *)(&data_buffer[4]));
+  unsigned int nRows = *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
+  unsigned int nCols = *(reinterpret_cast<uint32_t *>(&data_buffer[4]));
 
   // skip labels
   dataStream.seekg(nRows * nCols, std::ios_base::cur);
@@ -823,17 +829,19 @@ dataPositions::parse_sqw_detpar(std::ifstream &dataStream,
   dataStream.seekg(shift, std::ios_base::cur);
 
   dataStream.read(&data_buffer[0], 4);
-  unsigned int file_name_length = *((uint32_t *)(&data_buffer[0]));
+  unsigned int file_name_length =
+      *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
   // skip component header file name
   dataStream.seekg(file_name_length, std::ios_base::cur);
 
   dataStream.read(&data_buffer[0], 4);
-  unsigned int file_path_length = *((uint32_t *)(&data_buffer[0]));
+  unsigned int file_path_length =
+      *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
   // skip component header file path
   dataStream.seekg(file_path_length, std::ios_base::cur);
 
   dataStream.read(&data_buffer[0], 4);
-  unsigned int num_detectors = *((uint32_t *)(&data_buffer[0]));
+  unsigned int num_detectors = *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
   // skip detector information
   dataStream.seekg(num_detectors * 6 * 4, std::ios_base::cur);
 
@@ -858,18 +866,21 @@ void dataPositions::parse_data_locations(std::ifstream &dataStream,
 
   dataStream.read(&data_buffer[0], 4);
 
-  unsigned int file_name_length = *((uint32_t *)(&data_buffer[0]));
+  unsigned int file_name_length =
+      *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
   // skip dummy file name
   dataStream.seekg(file_name_length, std::ios_base::cur);
 
   dataStream.read(&data_buffer[0], 4);
-  unsigned int file_path_length = *((uint32_t *)(&data_buffer[0]));
+  unsigned int file_path_length =
+      *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
 
   // skip dummy file path
   dataStream.seekg(file_path_length, std::ios_base::cur);
 
   dataStream.read(&data_buffer[0], 4);
-  unsigned int data_title_length = *((uint32_t *)(&data_buffer[0]));
+  unsigned int data_title_length =
+      *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
 
   // skip data title
   dataStream.seekg(data_title_length, std::ios_base::cur);
@@ -881,15 +892,15 @@ void dataPositions::parse_data_locations(std::ifstream &dataStream,
   // get label information and skip labels;
   dataStream.read(&data_buffer[0], 8);
 
-  unsigned int n_labels = *((uint32_t *)(&data_buffer[0]));
-  unsigned int labels_length = *((uint32_t *)(&data_buffer[4]));
+  unsigned int n_labels = *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
+  unsigned int labels_length = *(reinterpret_cast<uint32_t *>(&data_buffer[4]));
   dataStream.seekg(n_labels * labels_length, std::ios_base::cur);
 
   this->npax_start = dataStream.tellg();
 
   dataStream.read(&data_buffer[0], 4);
 
-  unsigned int npax = *((uint32_t *)(&data_buffer[0]));
+  unsigned int npax = *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
   unsigned int niax = 4 - npax;
   if (niax != 0) {
     dataStream.seekg(3 * niax * 4, std::ios_base::cur);
@@ -904,7 +915,8 @@ void dataPositions::parse_data_locations(std::ifstream &dataStream,
     for (unsigned int i = 0; i < npax; i++) {
       dataStream.read(&data_buffer[0], 4);
 
-      unsigned int nAxisPoints = *((uint32_t *)(&data_buffer[0]));
+      unsigned int nAxisPoints =
+          *(reinterpret_cast<uint32_t *>(&data_buffer[0]));
       nBins[i] = nAxisPoints - 1;
       mdImageSize *= nBins[i];
       dataStream.seekg(nAxisPoints * 4, std::ios_base::cur);
@@ -954,7 +966,8 @@ void dataPositions::parse_data_locations(std::ifstream &dataStream,
   // skip redundant field and read nPix (number of data points)
   dataStream.read(&data_buffer[0], 12);
 
-  nDataPoints = (size_t)(*((uint64_t *)(&data_buffer[4])));
+  nDataPoints =
+      static_cast<size_t>(*(reinterpret_cast<uint64_t *>(&data_buffer[4])));
   this->pix_start = dataStream.tellg();
 }
 

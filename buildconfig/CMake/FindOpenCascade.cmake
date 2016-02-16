@@ -3,22 +3,17 @@
 # OPENCASCADE_LIBRARIES libraries to link against
 # OPENCASCADE_FOUND If false, do not try to use OPENCASCADE
 
-find_path ( OPENCASCADE_INCLUDE_DIR Standard.hxx PATHS
-                /usr/include/opencascade
-                /usr/include/oce
-                /usr/local/include/opencascade
-                /usr/local/include/oce
-                /usr/local/inc
-                /opt/OpenCASCADE/inc
-                ${CMAKE_INCLUDE_PATH}/OpenCascade
-                $ENV{CASROOT}/inc
+find_path ( OPENCASCADE_INCLUDE_DIR Standard.hxx 
+            PATHS /opt/OpenCASCADE/inc $ENV{CASROOT}/inc
+            PATH_SUFFIXES opencascade oce
 )
 
 if ( WIN32 )
   add_definitions ( -DWNT )
 endif ( WIN32 )
 
-find_path ( OPENCASCADE_LIBRARY_DIR libTKernel.so PATHS
+find_path ( OPENCASCADE_LIBRARY_DIR NAMES libTKernel.so libTKernel.dylib PATHS
+                /usr/local/lib
                 /opt/OpenCASCADE/lib64
                 $ENV{CASROOT}/lib64
                 /opt/OpenCASCADE/lib

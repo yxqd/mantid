@@ -30,7 +30,8 @@ DECLARE_ALGORITHM(SaveDiffCal)
 //----------------------------------------------------------------------------------------------
 /** Constructor
  */
-SaveDiffCal::SaveDiffCal() {}
+SaveDiffCal::SaveDiffCal()
+    : m_numValues(0), m_calibrationWS(), m_detidToIndex() {}
 
 //----------------------------------------------------------------------------------------------
 /** Destructor
@@ -47,7 +48,7 @@ int SaveDiffCal::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
 const std::string SaveDiffCal::category() const {
-  return "DataHandling;Diffraction";
+  return "DataHandling\\Instrument;Diffraction\\DataHandling";
 }
 
 /// Algorithm's summary for use in the GUI and help. @see Algorithm::summary
@@ -235,10 +236,10 @@ void SaveDiffCal::generateDetidToIndex() {
   }
 }
 
-bool SaveDiffCal::tableHasColumn(const std::string name) const {
+bool SaveDiffCal::tableHasColumn(const std::string ColumnName) const {
   const std::vector<std::string> names = m_calibrationWS->getColumnNames();
-  for (auto it = names.begin(); it != names.end(); ++it) {
-    if (name == (*it))
+  for (const auto &name : names) {
+    if (name == ColumnName)
       return true;
   }
 

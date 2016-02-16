@@ -40,7 +40,9 @@ set ( SRC_FILES
 	src/ClearInstrumentParameters.cpp
 	src/ClearMaskFlag.cpp
 	src/CloneWorkspace.cpp
+	src/Comment.cpp
 	src/CommutativeBinaryOperation.cpp
+	src/CompareWorkspaces.cpp
 	src/ConjoinWorkspaces.cpp
 	src/ConvertAxesToRealSpace.cpp
 	src/ConvertAxisByFormula.cpp
@@ -105,6 +107,7 @@ set ( SRC_FILES
 	src/ExtractMaskToTable.cpp
 	src/ExtractSingleSpectrum.cpp
 	src/ExtractSpectra.cpp
+	src/ExtractUnmaskedSpectra.cpp
 	src/FFT.cpp
 	src/FFTDerivative.cpp
 	src/FFTSmooth.cpp
@@ -126,8 +129,10 @@ set ( SRC_FILES
 	src/FlatPlateAbsorption.cpp
 	src/GeneralisedSecondDifference.cpp
 	src/GenerateEventsFilter.cpp
+	src/GenerateIPythonNotebook.cpp
 	src/GeneratePeaks.cpp
 	src/GeneratePythonScript.cpp
+	src/GetAllEi.cpp
 	src/GetDetOffsetsMultiPeaks.cpp
 	src/GetDetectorOffsets.cpp
 	src/GetEi.cpp
@@ -149,6 +154,7 @@ set ( SRC_FILES
 	src/MaskBinsFromTable.cpp
 	src/MaskDetectorsIf.cpp
 	src/Max.cpp
+	src/MaxEnt.cpp
 	src/MaxMin.cpp
 	src/MedianDetectorTest.cpp
 	src/MergeRuns.cpp
@@ -220,7 +226,6 @@ set ( SRC_FILES
 	src/SampleCorrections/MayersSampleCorrection.cpp
 	src/SampleCorrections/MayersSampleCorrectionStrategy.cpp
 	src/SassenaFFT.cpp
-	src/SaveGSASInstrumentFile.cpp
 	src/Scale.cpp
 	src/ScaleX.cpp
 	src/Segfault.cpp
@@ -270,7 +275,7 @@ set ( SRC_FILES
 	src/WienerSmooth.cpp
 	src/WorkspaceJoiners.cpp
 	src/XDataConverter.cpp
-    src/GenerateIPythonNotebook.cpp)
+)
 
 set ( INC_FILES
 	#	inc/MantidAlgorithms/Q1DTOF.h
@@ -314,7 +319,9 @@ set ( INC_FILES
 	inc/MantidAlgorithms/ClearInstrumentParameters.h
 	inc/MantidAlgorithms/ClearMaskFlag.h
 	inc/MantidAlgorithms/CloneWorkspace.h
+	inc/MantidAlgorithms/Comment.h
 	inc/MantidAlgorithms/CommutativeBinaryOperation.h
+	inc/MantidAlgorithms/CompareWorkspaces.h
 	inc/MantidAlgorithms/ConjoinWorkspaces.h
 	inc/MantidAlgorithms/ConvertAxesToRealSpace.h
 	inc/MantidAlgorithms/ConvertAxisByFormula.h
@@ -379,6 +386,7 @@ set ( INC_FILES
 	inc/MantidAlgorithms/ExtractMaskToTable.h
 	inc/MantidAlgorithms/ExtractSingleSpectrum.h
 	inc/MantidAlgorithms/ExtractSpectra.h
+	inc/MantidAlgorithms/ExtractUnmaskedSpectra.h
 	inc/MantidAlgorithms/FFT.h
 	inc/MantidAlgorithms/FFTDerivative.h
 	inc/MantidAlgorithms/FFTSmooth.h
@@ -401,8 +409,10 @@ set ( INC_FILES
 	inc/MantidAlgorithms/GSLFunctions.h
 	inc/MantidAlgorithms/GeneralisedSecondDifference.h
 	inc/MantidAlgorithms/GenerateEventsFilter.h
+	inc/MantidAlgorithms/GenerateIPythonNotebook.h
 	inc/MantidAlgorithms/GeneratePeaks.h
 	inc/MantidAlgorithms/GeneratePythonScript.h
+	inc/MantidAlgorithms/GetAllEi.h
 	inc/MantidAlgorithms/GetDetOffsetsMultiPeaks.h
 	inc/MantidAlgorithms/GetDetectorOffsets.h
 	inc/MantidAlgorithms/GetEi.h
@@ -424,6 +434,7 @@ set ( INC_FILES
 	inc/MantidAlgorithms/MaskBinsFromTable.h
 	inc/MantidAlgorithms/MaskDetectorsIf.h
 	inc/MantidAlgorithms/Max.h
+	inc/MantidAlgorithms/MaxEnt.h
 	inc/MantidAlgorithms/MaxMin.h
 	inc/MantidAlgorithms/MedianDetectorTest.h
 	inc/MantidAlgorithms/MergeRuns.h
@@ -495,7 +506,6 @@ set ( INC_FILES
 	inc/MantidAlgorithms/SampleCorrections/MayersSampleCorrection.h
 	inc/MantidAlgorithms/SampleCorrections/MayersSampleCorrectionStrategy.h
 	inc/MantidAlgorithms/SassenaFFT.h
-	inc/MantidAlgorithms/SaveGSASInstrumentFile.h
 	inc/MantidAlgorithms/Scale.h
 	inc/MantidAlgorithms/ScaleX.h
 	inc/MantidAlgorithms/Segfault.h
@@ -546,7 +556,7 @@ set ( INC_FILES
 	inc/MantidAlgorithms/WienerSmooth.h
 	inc/MantidAlgorithms/WorkspaceJoiners.h
 	inc/MantidAlgorithms/XDataConverter.h
-    inc/MantidAlgorithms/GenerateIPythonNotebook.h)
+)
 
 set(SRC_UNITY_IGNORE_FILES src/AlignDetectors.cpp
     src/FFTSmooth.cpp
@@ -600,7 +610,9 @@ set ( TEST_FILES
 	ClearInstrumentParametersTest.h
 	ClearMaskFlagTest.h
 	CloneWorkspaceTest.h
+	CommentTest.h
 	CommutativeBinaryOperationTest.h
+	CompareWorkspacesTest.h
 	ConjoinWorkspacesTest.h
 	ConvertAxesToRealSpaceTest.h
 	ConvertAxisByFormulaTest.h
@@ -661,6 +673,7 @@ set ( TEST_FILES
 	ExtractMaskToTableTest.h
 	ExtractSingleSpectrumTest.h
 	ExtractSpectraTest.h
+	ExtractUnmaskedSpectraTest.h
 	FFTDerivativeTest.h
 	FFTSmooth2Test.h
 	FFTTest.h
@@ -684,6 +697,7 @@ set ( TEST_FILES
 	GenerateIPythonNotebookTest.h
 	GeneratePeaksTest.h
 	GeneratePythonScriptTest.h
+	GetAllEiTest.h
 	GetDetOffsetsMultiPeaksTest.h
 	GetDetectorOffsetsTest.h
 	GetEiTest.h
@@ -701,6 +715,7 @@ set ( TEST_FILES
 	LorentzCorrectionTest.h
 	MaskBinsFromTableTest.h
 	MaskBinsTest.h
+	MaxEntTest.h
 	MaxMinTest.h
 	MayersSampleCorrectionStrategyTest.h
 	MayersSampleCorrectionTest.h
@@ -765,7 +780,6 @@ set ( TEST_FILES
 	RingProfileTest.h
 	SANSCollimationLengthEstimatorTest.h
 	SassenaFFTTest.h
-	SaveGSASInstrumentFileTest.h
 	ScaleTest.h
 	ScaleXTest.h
 	SetInstrumentParameterTest.h
@@ -822,7 +836,8 @@ enable_precompiled_headers ( inc/MantidAlgorithms/PrecompiledHeader.h SRC_FILES 
 # Add the target for this directory
 add_library ( Algorithms ${SRC_FILES} ${INC_FILES})
 # Set the name of the generated library
-set_target_properties ( Algorithms PROPERTIES OUTPUT_NAME MantidAlgorithms )
+set_target_properties ( Algorithms PROPERTIES OUTPUT_NAME MantidAlgorithms
+						           COMPILE_DEFINITIONS "IN_MANTID_ALGORITHMS" )
 
 if (OSX_VERSION VERSION_GREATER 10.8)
   set_target_properties ( Algorithms PROPERTIES INSTALL_RPATH "@loader_path/../Contents/MacOS")

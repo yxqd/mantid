@@ -3,6 +3,7 @@
 
 #include <cxxtest/TestSuite.h>
 #include "MantidDataHandling/LoadSNSspec.h"
+#include "MantidAPI/MatrixWorkspace.h"
 
 using namespace Mantid::API;
 
@@ -21,8 +22,6 @@ public:
   void testName() { TS_ASSERT_EQUALS(loader.name(), "LoadSNSspec"); }
 
   void testVersion() { TS_ASSERT_EQUALS(loader.version(), 1); }
-
-  void testCategory() { TS_ASSERT_EQUALS(loader.category(), "DataHandling"); }
 
   void testInit() {
     TS_ASSERT_THROWS_NOTHING(loader.initialize());

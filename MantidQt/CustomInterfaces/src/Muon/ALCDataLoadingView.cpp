@@ -11,17 +11,20 @@ namespace MantidQt
 {
 namespace CustomInterfaces
 {
-  ALCDataLoadingView::ALCDataLoadingView(QWidget* widget)
-    : m_widget(widget), m_dataCurve(new QwtPlotCurve()), m_dataErrorCurve(NULL)
-  {}
+/// This is the string "Auto", used for last file
+const std::string ALCDataLoadingView::g_autoString = "Auto";
 
-  ALCDataLoadingView::~ALCDataLoadingView() {
-    m_dataCurve->detach();
-    delete m_dataCurve;
-    if (m_dataErrorCurve) {
-      m_dataErrorCurve->detach();
-      delete m_dataErrorCurve;
-    }
+ALCDataLoadingView::ALCDataLoadingView(QWidget *widget)
+    : m_widget(widget), m_dataCurve(new QwtPlotCurve()),
+      m_dataErrorCurve(NULL) {}
+
+ALCDataLoadingView::~ALCDataLoadingView() {
+  m_dataCurve->detach();
+  delete m_dataCurve;
+  if (m_dataErrorCurve) {
+    m_dataErrorCurve->detach();
+    delete m_dataErrorCurve;
+  }
   }
 
   void ALCDataLoadingView::initialize()
@@ -31,6 +34,7 @@ namespace CustomInterfaces
     connect(m_ui.firstRun, SIGNAL(fileFindingFinished()), SIGNAL(firstRunSelected()));
 
     connect(m_ui.help, SIGNAL(clicked()), this, SLOT(help()));
+    connect(m_ui.lastRunAuto, SIGNAL(stateChanged(int)), this, SLOT(checkBoxAutoChanged(int)));
 
     m_ui.dataPlot->setCanvasBackground(Qt::white);
     m_ui.dataPlot->setAxisFont(QwtPlot::xBottom, m_widget->font());
@@ -40,6 +44,18 @@ namespace CustomInterfaces
     m_dataCurve->setSymbol(QwtSymbol(QwtSymbol::Ellipse, QBrush(), QPen(), QSize(7,7)));
     m_dataCurve->setRenderHint(QwtPlotItem::RenderAntialiased, true);
     m_dataCurve->attach(m_ui.dataPlot);
+
+    // The following lines disable the groups' titles when the
+    // group is disabled
+    QPalette palette;
+    palette.setColor(QPalette::Disabled, QPalette::WindowText,
+                     QApplication::palette().color(QPalette::Disabled,
+                                                   QPalette::WindowText));
+    m_ui.dataGroup->setPalette(palette);
+    m_ui.deadTimeGroup->setPalette(palette);
+    m_ui.detectorGroupingGroup->setPalette(palette);
+    m_ui.periodsGroup->setPalette(palette);
+    m_ui.calculationGroup->setPalette(palette);
   }
 
   std::string ALCDataLoadingView::firstRun() const
@@ -54,16 +70,24 @@ namespace CustomInterfaces
     }
   }
 
-  std::string ALCDataLoadingView::lastRun() const
-  {
-    if (m_ui.lastRun->isValid())
-    {
-      return m_ui.lastRun->getFirstFilename().toStdString();
+  /**
+   * If the last run is valid, return the filename.
+   * If user entered "Auto", return this.
+   * Otherwise, return an empty string.
+   */
+  std::string ALCDataLoadingView::lastRun() const {
+    std::string toReturn("");
+
+    if (m_ui.lastRun->isValid()) {
+      toReturn = m_ui.lastRun->getFirstFilename().toStdString();
+      QString userInput = m_ui.lastRun->getText();
+      if (0 ==
+          userInput.compare(QString(autoString().c_str()),
+                            Qt::CaseInsensitive)) {
+        toReturn = autoString();
+      }
     }
-    else
-    {
-      return "";
-    }
+    return toReturn;
   }
 
   std::string ALCDataLoadingView::log() const
@@ -155,6 +179,7 @@ namespace CustomInterfaces
     m_dataErrorCurve =
         new MantidQt::MantidWidgets::ErrorCurve(m_dataCurve, errors);
     m_dataErrorCurve->attach(m_ui.dataPlot);
+    m_dataErrorCurve->setItemAttribute(QwtPlotItem::AutoScale, true);
 
     m_ui.dataPlot->replot();
   }
@@ -221,15 +246,49 @@ namespace CustomInterfaces
     MantidQt::API::HelpWindow::showCustomInterface(NULL, QString("Muon_ALC"));
   }
 
-  void ALCDataLoadingView::setWaitingCursor()
-  {
-    QApplication::setOverrideCursor(Qt::WaitCursor);
+  void ALCDataLoadingView::disableAll() {
+
+    // Disable all the widgets in the view
+    m_ui.dataGroup->setEnabled(false);
+    m_ui.deadTimeGroup->setEnabled(false);
+    m_ui.detectorGroupingGroup->setEnabled(false);
+    m_ui.periodsGroup->setEnabled(false);
+    m_ui.calculationGroup->setEnabled(false);
+    m_ui.load->setEnabled(false);
+
   }
 
-  void ALCDataLoadingView::restoreCursor()
-  {
-    QApplication::restoreOverrideCursor();
+  void ALCDataLoadingView::enableAll() {
+
+    // Enable all the widgets in the view
+    m_ui.deadTimeGroup->setEnabled(true);
+    m_ui.dataGroup->setEnabled(true);
+    m_ui.detectorGroupingGroup->setEnabled(true);
+    m_ui.periodsGroup->setEnabled(true);
+    m_ui.calculationGroup->setEnabled(true);
+    m_ui.load->setEnabled(true);
+
   }
 
-} // namespace CustomInterfaces
-} // namespace MantidQt
+  /**
+   * Called when the check state of the "Auto" checkbox changes.
+   * Set text before setting read-only to validate the right text.
+   * @param state :: [input] Check state - member of Qt::CheckState enum
+   */
+  void ALCDataLoadingView::checkBoxAutoChanged(int state) {
+    // Tell the presenter about the change
+    emit lastRunAutoCheckedChanged(state);
+    if (state == Qt::Checked) {
+      // Auto mode on
+      m_ui.lastRun->setText(autoString().c_str());
+      m_ui.lastRun->setReadOnly(true);
+    } else {
+      // Replace "auto" with the currently loaded file
+      // The search is necessary to clear the validator
+      m_ui.lastRun->setFileTextWithSearch(m_currentAutoFile.c_str());
+      m_ui.lastRun->setReadOnly(false);
+    }
+  }
+
+  } // namespace CustomInterfaces
+  } // namespace MantidQt

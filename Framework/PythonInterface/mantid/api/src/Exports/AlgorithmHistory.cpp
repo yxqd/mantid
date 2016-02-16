@@ -28,9 +28,8 @@ boost::python::object
 getChildrenAsList(boost::shared_ptr<AlgorithmHistory> self) {
   boost::python::list names;
   const auto histories = self->getChildHistories();
-  Mantid::API::AlgorithmHistories::const_iterator itr = histories.begin();
-  for (; itr != histories.end(); ++itr) {
-    names.append(*itr);
+  for (const auto &historie : histories) {
+    names.append(historie);
   }
   return names;
 }
@@ -44,12 +43,8 @@ getChildrenAsList(boost::shared_ptr<AlgorithmHistory> self) {
 boost::python::object getPropertiesAsList(AlgorithmHistory &self) {
   boost::python::list names;
   const auto histories = self.getProperties();
-  std::vector<Mantid::Kernel::PropertyHistory_sptr>::const_iterator iend =
-      histories.end();
-  for (std::vector<Mantid::Kernel::PropertyHistory_sptr>::const_iterator itr =
-           histories.begin();
-       itr != iend; ++itr) {
-    names.append(*itr);
+  for (const auto &historie : histories) {
+    names.append(historie);
   }
   return names;
 }
@@ -58,40 +53,42 @@ void export_AlgorithmHistory() {
   register_ptr_to_python<Mantid::API::AlgorithmHistory_sptr>();
 
   class_<AlgorithmHistory>("AlgorithmHistory", no_init)
-      .def("name", &AlgorithmHistory::name,
+      .def("name", &AlgorithmHistory::name, arg("self"),
            return_value_policy<copy_const_reference>(),
            "Returns the name of the algorithm.")
 
-      .def("version", &AlgorithmHistory::version,
+      .def("version", &AlgorithmHistory::version, arg("self"),
            return_value_policy<copy_const_reference>(),
            "Returns the version of the algorithm.")
 
       .def("executionDuration", &AlgorithmHistory::executionDuration,
-           "Returns the execution duration of the algorithm.")
+           arg("self"), "Returns the execution duration of the algorithm.")
 
-      .def("executionDate", &AlgorithmHistory::executionDate,
+      .def("executionDate", &AlgorithmHistory::executionDate, arg("self"),
            "Returns the execution date of the algorithm.")
 
-      .def("execCount", &AlgorithmHistory::execCount,
+      .def("execCount", &AlgorithmHistory::execCount, arg("self"),
            return_value_policy<copy_const_reference>(),
            "Returns the execution number of the algorithm.")
 
-      .def("childHistorySize", &AlgorithmHistory::childHistorySize,
+      .def("childHistorySize", &AlgorithmHistory::childHistorySize, arg("self"),
            "Returns the number of the child algorithms.")
 
       .def("getChildAlgorithmHistory",
-           &AlgorithmHistory::getChildAlgorithmHistory, arg("index"),
+           &AlgorithmHistory::getChildAlgorithmHistory,
+           (arg("self"), arg("index")),
            "Returns the child algorithm at the given index in the history")
 
-      .def("getChildHistories", &getChildrenAsList, "Returns a list of child "
-                                                    "algorithm histories for "
-                                                    "this algorithm history.")
+      .def("getChildHistories", &getChildrenAsList, arg("self"),
+           "Returns a list of child "
+           "algorithm histories for "
+           "this algorithm history.")
 
-      .def("getProperties", &getPropertiesAsList,
+      .def("getProperties", &getPropertiesAsList, arg("self"),
            "Returns properties for this algorithm history.")
 
       .def("getChildAlgorithm", &AlgorithmHistory::getChildAlgorithm,
-           arg("index"),
+           (arg("self"), arg("index")),
            "Returns the algorithm at the given index in the history")
       // ----------------- Operators --------------------------------------
       .def(self_ns::str(self));

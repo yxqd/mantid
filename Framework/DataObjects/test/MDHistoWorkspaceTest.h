@@ -6,6 +6,7 @@
 #include "MantidDataObjects/WorkspaceSingleValue.h"
 #include "MantidGeometry/MDGeometry/MDHistoDimension.h"
 #include "MantidGeometry/MDGeometry/MDBoxImplicitFunction.h"
+#include "MantidGeometry/MDGeometry/QSample.h"
 #include "MantidKernel/System.h"
 #include "MantidKernel/Timer.h"
 #include "MantidKernel/VMD.h"
@@ -16,10 +17,9 @@
 #include <boost/scoped_array.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <cxxtest/TestSuite.h>
-#include <iomanip>
-#include <iostream>
 #include "MantidAPI/ExperimentInfo.h"
 #include "MantidKernel/Strings.h"
+#include "PropertyManagerHelper.h"
 
 using namespace Mantid::DataObjects;
 using namespace Mantid::DataObjects;
@@ -78,10 +78,15 @@ public:
 
   //--------------------------------------------------------------------------------------
   void test_constructor() {
-    MDHistoDimension_sptr dimX(new MDHistoDimension("X", "x", "m", -10, 10, 5));
-    MDHistoDimension_sptr dimY(new MDHistoDimension("Y", "y", "m", -10, 10, 5));
-    MDHistoDimension_sptr dimZ(new MDHistoDimension("Z", "z", "m", -10, 10, 5));
-    MDHistoDimension_sptr dimT(new MDHistoDimension("T", "t", "m", -10, 10, 5));
+    Mantid::Geometry::GeneralFrame frame("m", "m");
+    MDHistoDimension_sptr dimX(
+        new MDHistoDimension("X", "x", frame, -10, 10, 5));
+    MDHistoDimension_sptr dimY(
+        new MDHistoDimension("Y", "y", frame, -10, 10, 5));
+    MDHistoDimension_sptr dimZ(
+        new MDHistoDimension("Z", "z", frame, -10, 10, 5));
+    MDHistoDimension_sptr dimT(
+        new MDHistoDimension("T", "t", frame, -10, 10, 5));
 
     MDHistoWorkspace ws(dimX, dimY, dimZ, dimT);
 
@@ -154,8 +159,11 @@ public:
   //---------------------------------------------------------------------------------------------------
   /** Create a dense histogram with only 2 dimensions */
   void test_constructor_fewerDimensions() {
-    MDHistoDimension_sptr dimX(new MDHistoDimension("X", "x", "m", -10, 10, 5));
-    MDHistoDimension_sptr dimY(new MDHistoDimension("Y", "y", "m", -10, 10, 5));
+    Mantid::Geometry::GeneralFrame frame("m", "m");
+    MDHistoDimension_sptr dimX(
+        new MDHistoDimension("X", "x", frame, -10, 10, 5));
+    MDHistoDimension_sptr dimY(
+        new MDHistoDimension("Y", "y", frame, -10, 10, 5));
 
     MDHistoWorkspace ws(dimX, dimY);
 
@@ -183,9 +191,10 @@ public:
   /** Create a dense histogram with 7 dimensions */
   void test_constructor_MoreThanFourDimensions() {
     std::vector<MDHistoDimension_sptr> dimensions;
+    Mantid::Geometry::GeneralFrame frame("m", "m");
     for (size_t i = 0; i < 7; i++) {
       dimensions.push_back(MDHistoDimension_sptr(
-          new MDHistoDimension("Dim", "Dim", "m", -10, 10, 3)));
+          new MDHistoDimension("Dim", "Dim", frame, -10, 10, 3)));
     }
 
     MDHistoWorkspace ws(dimensions);
@@ -238,7 +247,9 @@ public:
 
   //---------------------------------------------------------------------------------------------------
   void test_getVertexesArray_1D() {
-    MDHistoDimension_sptr dimX(new MDHistoDimension("X", "x", "m", -10, 10, 5));
+    Mantid::Geometry::GeneralFrame frame("m", "m");
+    MDHistoDimension_sptr dimX(
+        new MDHistoDimension("X", "x", frame, -10, 10, 5));
     MDHistoWorkspace ws(dimX);
     size_t numVertices;
     coord_t *v1 = ws.getVertexesArray(0, numVertices);
@@ -255,8 +266,11 @@ public:
 
   //---------------------------------------------------------------------------------------------------
   void test_getVertexesArray_2D() {
-    MDHistoDimension_sptr dimX(new MDHistoDimension("X", "x", "m", -10, 10, 5));
-    MDHistoDimension_sptr dimY(new MDHistoDimension("Y", "y", "m", -10, 10, 5));
+    Mantid::Geometry::GeneralFrame frame("m", "m");
+    MDHistoDimension_sptr dimX(
+        new MDHistoDimension("X", "x", frame, -10, 10, 5));
+    MDHistoDimension_sptr dimY(
+        new MDHistoDimension("Y", "y", frame, -10, 10, 5));
     MDHistoWorkspace ws(dimX, dimY);
     size_t numVertices, i;
 
@@ -280,9 +294,13 @@ public:
 
   //---------------------------------------------------------------------------------------------------
   void test_getVertexesArray_3D() {
-    MDHistoDimension_sptr dimX(new MDHistoDimension("X", "x", "m", -10, 10, 5));
-    MDHistoDimension_sptr dimY(new MDHistoDimension("Y", "y", "m", -9, 10, 5));
-    MDHistoDimension_sptr dimZ(new MDHistoDimension("Z", "z", "m", -8, 10, 5));
+    Mantid::Geometry::GeneralFrame frame("m", "m");
+    MDHistoDimension_sptr dimX(
+        new MDHistoDimension("X", "x", frame, -10, 10, 5));
+    MDHistoDimension_sptr dimY(
+        new MDHistoDimension("Y", "y", frame, -9, 10, 5));
+    MDHistoDimension_sptr dimZ(
+        new MDHistoDimension("Z", "z", frame, -8, 10, 5));
     MDHistoWorkspace ws(dimX, dimY, dimZ);
     size_t numVertices, i;
 
@@ -296,10 +314,13 @@ public:
 
   //---------------------------------------------------------------------------------------------------
   void test_getCenter_3D() {
+    Mantid::Geometry::GeneralFrame frame("m", "m");
     MDHistoDimension_sptr dimX(
-        new MDHistoDimension("X", "x", "m", -10, 10, 20));
-    MDHistoDimension_sptr dimY(new MDHistoDimension("Y", "y", "m", -9, 10, 19));
-    MDHistoDimension_sptr dimZ(new MDHistoDimension("Z", "z", "m", -8, 10, 18));
+        new MDHistoDimension("X", "x", frame, -10, 10, 20));
+    MDHistoDimension_sptr dimY(
+        new MDHistoDimension("Y", "y", frame, -9, 10, 19));
+    MDHistoDimension_sptr dimZ(
+        new MDHistoDimension("Z", "z", frame, -8, 10, 18));
     MDHistoWorkspace ws(dimX, dimY, dimZ);
     VMD v = ws.getCenter(0);
     TS_ASSERT_DELTA(v[0], -9.5, 1e-5);
@@ -310,13 +331,15 @@ public:
   //---------------------------------------------------------------------------------------------------
   /** Test for a possible seg-fault if nx != ny etc. */
   void test_uneven_numbers_of_bins() {
-    MDHistoDimension_sptr dimX(new MDHistoDimension("X", "x", "m", -10, 10, 5));
+    Mantid::Geometry::GeneralFrame frame("m", "m");
+    MDHistoDimension_sptr dimX(
+        new MDHistoDimension("X", "x", frame, -10, 10, 5));
     MDHistoDimension_sptr dimY(
-        new MDHistoDimension("Y", "y", "m", -10, 10, 10));
+        new MDHistoDimension("Y", "y", frame, -10, 10, 10));
     MDHistoDimension_sptr dimZ(
-        new MDHistoDimension("Z", "z", "m", -10, 10, 20));
+        new MDHistoDimension("Z", "z", frame, -10, 10, 20));
     MDHistoDimension_sptr dimT(
-        new MDHistoDimension("T", "t", "m", -10, 10, 10));
+        new MDHistoDimension("T", "t", frame, -10, 10, 10));
 
     MDHistoWorkspace ws(dimX, dimY, dimZ, dimT);
 
@@ -347,10 +370,13 @@ public:
 
   //---------------------------------------------------------------------------------------------------
   void test_createIterator() {
+    Mantid::Geometry::GeneralFrame frame("m", "m");
     MDHistoDimension_sptr dimX(
-        new MDHistoDimension("X", "x", "m", -10, 10, 10));
-    MDHistoDimension_sptr dimY(new MDHistoDimension("Y", "y", "m", -9, 10, 10));
-    MDHistoDimension_sptr dimZ(new MDHistoDimension("Z", "z", "m", -8, 10, 10));
+        new MDHistoDimension("X", "x", frame, -10, 10, 10));
+    MDHistoDimension_sptr dimY(
+        new MDHistoDimension("Y", "y", frame, -9, 10, 10));
+    MDHistoDimension_sptr dimZ(
+        new MDHistoDimension("Z", "z", frame, -8, 10, 10));
     MDHistoWorkspace ws(dimX, dimY, dimZ);
     IMDIterator *it = ws.createIterator();
     TS_ASSERT(it);
@@ -368,14 +394,15 @@ public:
   //---------------------------------------------------------------------------------------------------
   // Test for the IMDWorkspace aspects of MDWorkspace.
   void testGetNonIntegratedDimensions() {
+    Mantid::Geometry::GeneralFrame frame("m", "m");
     MDHistoDimension_sptr dimX(
-        new MDHistoDimension("X", "x", "m", -10, 10, 1)); // Integrated.
+        new MDHistoDimension("X", "x", frame, -10, 10, 1)); // Integrated.
     MDHistoDimension_sptr dimY(
-        new MDHistoDimension("Y", "y", "m", -10, 10, 10));
+        new MDHistoDimension("Y", "y", frame, -10, 10, 10));
     MDHistoDimension_sptr dimZ(
-        new MDHistoDimension("Z", "z", "m", -10, 10, 20));
+        new MDHistoDimension("Z", "z", frame, -10, 10, 20));
     MDHistoDimension_sptr dimT(
-        new MDHistoDimension("T", "t", "m", -10, 10, 10));
+        new MDHistoDimension("T", "t", frame, -10, 10, 10));
 
     MDHistoWorkspace ws(dimX, dimY, dimZ, dimT);
     Mantid::Geometry::VecIMDDimension_const_sptr vecNonIntegratedDims =
@@ -396,20 +423,24 @@ public:
     // outputs like this.
     std::string expectedXML =
         std::string("<DimensionSet>") + "<Dimension ID=\"x\">" +
-        "<Name>X</Name>" + "<Units>m</Units>" + "<Frame>Unknown frame</Frame>" +
+        "<Name>X</Name>" + "<Units>m</Units>" +
+        "<Frame>My General Frame</Frame>" +
         "<UpperBounds>10.0000</UpperBounds>" +
         "<LowerBounds>-10.0000</LowerBounds>" +
         "<NumberOfBins>5</NumberOfBins>" + "</Dimension>" +
         "<Dimension ID=\"y\">" + "<Name>Y</Name>" + "<Units>m</Units>" +
-        "<Frame>Unknown frame</Frame>" + "<UpperBounds>10.0000</UpperBounds>" +
+        "<Frame>My General Frame</Frame>" +
+        "<UpperBounds>10.0000</UpperBounds>" +
         "<LowerBounds>-10.0000</LowerBounds>" +
         "<NumberOfBins>5</NumberOfBins>" + "</Dimension>" +
         "<Dimension ID=\"z\">" + "<Name>Z</Name>" + "<Units>m</Units>" +
-        "<Frame>Unknown frame</Frame>" + "<UpperBounds>10.0000</UpperBounds>" +
+        "<Frame>My General Frame</Frame>" +
+        "<UpperBounds>10.0000</UpperBounds>" +
         "<LowerBounds>-10.0000</LowerBounds>" +
         "<NumberOfBins>5</NumberOfBins>" + "</Dimension>" +
         "<Dimension ID=\"t\">" + "<Name>T</Name>" + "<Units>m</Units>" +
-        "<Frame>Unknown frame</Frame>" + "<UpperBounds>10.0000</UpperBounds>" +
+        "<Frame>My General Frame</Frame>" +
+        "<UpperBounds>10.0000</UpperBounds>" +
         "<LowerBounds>-10.0000</LowerBounds>" +
         "<NumberOfBins>5</NumberOfBins>" + "</Dimension>" + "<XDimension>" +
         "<RefDimensionId>x</RefDimensionId>" + "</XDimension>" +
@@ -418,11 +449,15 @@ public:
         "<RefDimensionId>z</RefDimensionId>" + "</ZDimension>" +
         "<TDimension>" + "<RefDimensionId>t</RefDimensionId>" +
         "</TDimension>" + "</DimensionSet>";
-
-    MDHistoDimension_sptr dimX(new MDHistoDimension("X", "x", "m", -10, 10, 5));
-    MDHistoDimension_sptr dimY(new MDHistoDimension("Y", "y", "m", -10, 10, 5));
-    MDHistoDimension_sptr dimZ(new MDHistoDimension("Z", "z", "m", -10, 10, 5));
-    MDHistoDimension_sptr dimT(new MDHistoDimension("T", "t", "m", -10, 10, 5));
+    Mantid::Geometry::GeneralFrame frame("My General Frame", "m");
+    MDHistoDimension_sptr dimX(
+        new MDHistoDimension("X", "x", frame, -10, 10, 5));
+    MDHistoDimension_sptr dimY(
+        new MDHistoDimension("Y", "y", frame, -10, 10, 5));
+    MDHistoDimension_sptr dimZ(
+        new MDHistoDimension("Z", "z", frame, -10, 10, 5));
+    MDHistoDimension_sptr dimT(
+        new MDHistoDimension("T", "t", frame, -10, 10, 5));
 
     MDHistoWorkspace ws(dimX, dimY, dimZ, dimT);
 
@@ -479,8 +514,42 @@ public:
   }
 
   //---------------------------------------------------------------------------------------------------
-  /** Line along X, going positive */
-  void test_getLinePlot_horizontal() {
+  void test_getSignalWithMaskAtVMD() {
+    // 2D workspace with signal[i] = i (linear index)
+    MDHistoWorkspace_sptr ws =
+        MDEventsTestHelper::makeFakeMDHistoWorkspace(1.0, 2, 10, 20);
+    for (size_t i = 0; i < 100; i++) {
+      ws->setSignalAt(i, double(i));
+      ws->setNumEventsAt(i, 10.0);
+    }
+
+    std::vector<coord_t> min;
+    std::vector<coord_t> max;
+    min.push_back(0);
+    min.push_back(0);
+    max.push_back(5);
+    max.push_back(5);
+
+    // Mask part of the workspace
+    MDImplicitFunction *function = new MDBoxImplicitFunction(min, max);
+    ws->setMDMasking(function);
+
+    IMDWorkspace_sptr iws(ws);
+
+    // Testing with isnan() as following commented line doesn't work
+    // when MDMaskValue is NaN.
+    // TS_ASSERT_DELTA(iws->getSignalWithMaskAtVMD(VMD(0.5, 0.5)), MDMaskValue,
+    // 1e-6);
+    TS_ASSERT(boost::math::isnan(iws->getSignalAtVMD(VMD(0.5, 0.5))));
+    TS_ASSERT(boost::math::isnan(iws->getSignalWithMaskAtVMD(VMD(0.5, 0.5))));
+
+    TS_ASSERT(boost::math::isnan(
+        iws->getSignalAtVMD(VMD(3.5, 0.5), VolumeNormalization)));
+    TS_ASSERT(boost::math::isnan(
+        iws->getSignalWithMaskAtVMD(VMD(3.5, 0.5), VolumeNormalization)));
+  }
+
+  void test_getLinePlot() {
     MDHistoWorkspace_sptr ws =
         MDEventsTestHelper::makeFakeMDHistoWorkspace(1.0, 2, 10);
     for (size_t i = 0; i < 100; i++)
@@ -491,6 +560,57 @@ public:
     std::vector<signal_t> y;
     std::vector<signal_t> e;
     ws->getLinePlot(start, end, NoNormalization, x, y, e);
+    TS_ASSERT_EQUALS(x.size(), 500);
+    TS_ASSERT_DELTA(x[0], 0.0, 1e-5);
+    TS_ASSERT_DELTA(x[50], 0.9018, 1e-5);
+    TS_ASSERT_DELTA(x[100], 1.8036, 1e-5);
+    TS_ASSERT_DELTA(x[499], 9.0, 1e-5);
+
+    TS_ASSERT_EQUALS(y.size(), 500);
+    TS_ASSERT_DELTA(y[0], 0.0, 1e-5);
+    TS_ASSERT_DELTA(y[50], 1.0, 1e-5);
+    TS_ASSERT_DELTA(y[100], 2.0, 1e-5);
+  }
+
+  void test_getLinePlotWithMaskedData() {
+    MDHistoWorkspace_sptr ws =
+        MDEventsTestHelper::makeFakeMDHistoWorkspace(1.0, 2, 10);
+    for (size_t i = 0; i < 100; i++)
+      ws->setSignalAt(i, double(i));
+
+    std::vector<coord_t> min{0, 0};
+    std::vector<coord_t> max{5, 5};
+
+    // Mask part of the workspace
+    MDImplicitFunction *function = new MDBoxImplicitFunction(min, max);
+    ws->setMDMasking(function);
+
+    VMD start(0.5, 0.5);
+    VMD end(9.5, 0.5);
+    std::vector<coord_t> x;
+    std::vector<signal_t> y;
+    std::vector<signal_t> e;
+    ws->getLinePlot(start, end, NoNormalization, x, y, e);
+
+    // Masked points omitted
+    TS_ASSERT_EQUALS(y.size(), 250);
+    // Unmasked value
+    TS_ASSERT_DELTA(y[200], 8.0, 1e-5);
+  }
+
+  //---------------------------------------------------------------------------------------------------
+  /** Line along X, going positive */
+  void test_getLineData_horizontal() {
+    MDHistoWorkspace_sptr ws =
+        MDEventsTestHelper::makeFakeMDHistoWorkspace(1.0, 2, 10);
+    for (size_t i = 0; i < 100; i++)
+      ws->setSignalAt(i, double(i));
+    VMD start(0.5, 0.5);
+    VMD end(9.5, 0.5);
+    std::vector<coord_t> x;
+    std::vector<signal_t> y;
+    std::vector<signal_t> e;
+    ws->getLineData(start, end, NoNormalization, x, y, e);
     TS_ASSERT_EQUALS(x.size(), 11);
     TS_ASSERT_DELTA(x[0], 0.0, 1e-5);
     TS_ASSERT_DELTA(x[1], 0.5, 1e-5);
@@ -505,7 +625,36 @@ public:
 
   //---------------------------------------------------------------------------------------------------
   /** Line along X, going positive */
-  void test_getLinePlot_3D() {
+  void test_getLineData_horizontal_withMask() {
+    MDHistoWorkspace_sptr ws =
+        MDEventsTestHelper::makeFakeMDHistoWorkspace(1.0, 2, 10);
+    for (size_t i = 0; i < 100; i++)
+      ws->setSignalAt(i, double(i));
+
+    std::vector<coord_t> min{0, 0};
+    std::vector<coord_t> max{5, 5};
+
+    // Mask part of the workspace
+    MDImplicitFunction *function = new MDBoxImplicitFunction(min, max);
+    ws->setMDMasking(function);
+
+    VMD start(0.5, 0.5);
+    VMD end(9.5, 0.5);
+    std::vector<coord_t> x;
+    std::vector<signal_t> y;
+    std::vector<signal_t> e;
+    ws->getLineData(start, end, NoNormalization, x, y, e);
+
+    TS_ASSERT_EQUALS(y.size(), 10);
+    // Masked value should be zero
+    TS_ASSERT(boost::math::isnan(y[2]));
+    // Unmasked value
+    TS_ASSERT_DELTA(y[9], 9.0, 1e-5);
+  }
+
+  //---------------------------------------------------------------------------------------------------
+  /** Line along X, going positive */
+  void test_getLineData_3D() {
     MDHistoWorkspace_sptr ws =
         MDEventsTestHelper::makeFakeMDHistoWorkspace(1.0, 3, 10);
     for (size_t i = 0; i < 1000; i++)
@@ -515,7 +664,7 @@ public:
     std::vector<coord_t> x;
     std::vector<signal_t> y;
     std::vector<signal_t> e;
-    ws->getLinePlot(start, end, NoNormalization, x, y, e);
+    ws->getLineData(start, end, NoNormalization, x, y, e);
     TS_ASSERT_EQUALS(x.size(), 11);
     TS_ASSERT_DELTA(x[0], 0.0, 1e-5);
     TS_ASSERT_DELTA(x[1], 0.5, 1e-5);
@@ -530,7 +679,7 @@ public:
 
   //---------------------------------------------------------------------------------------------------
   /** Line along X, going negative */
-  void test_getLinePlot_horizontal_backwards() {
+  void test_getLineData_horizontal_backwards() {
     MDHistoWorkspace_sptr ws =
         MDEventsTestHelper::makeFakeMDHistoWorkspace(1.0, 2, 10);
     for (size_t i = 0; i < 100; i++)
@@ -540,7 +689,7 @@ public:
     std::vector<coord_t> x;
     std::vector<signal_t> y;
     std::vector<signal_t> e;
-    ws->getLinePlot(start, end, NoNormalization, x, y, e);
+    ws->getLineData(start, end, NoNormalization, x, y, e);
     TS_ASSERT_EQUALS(x.size(), 11);
     TS_ASSERT_DELTA(x[0], 0.0, 1e-5);
     TS_ASSERT_DELTA(x[1], 0.5, 1e-5);
@@ -555,7 +704,7 @@ public:
 
   //---------------------------------------------------------------------------------------------------
   /** Diagonal line at 45 degrees crosses through 3 bins */
-  void test_getLinePlot_diagonal() {
+  void test_getLineData_diagonal() {
     MDHistoWorkspace_sptr ws =
         MDEventsTestHelper::makeFakeMDHistoWorkspace(1.0, 2, 10);
     for (size_t i = 0; i < 100; i++)
@@ -565,7 +714,7 @@ public:
     std::vector<coord_t> x;
     std::vector<signal_t> y;
     std::vector<signal_t> e;
-    ws->getLinePlot(start, end, NoNormalization, x, y, e);
+    ws->getLineData(start, end, NoNormalization, x, y, e);
     std::cout << "X\n" << Strings::join(x.begin(), x.end(), ",") << std::endl;
     std::cout << "Y\n" << Strings::join(y.begin(), y.end(), ",") << std::endl;
 
@@ -583,7 +732,7 @@ public:
 
   //---------------------------------------------------------------------------------------------------
   /** Line along X, going positive, starting before and ending after limits */
-  void test_getLinePlot_horizontal_pastEdges() {
+  void test_getLineData_horizontal_pastEdges() {
     MDHistoWorkspace_sptr ws =
         MDEventsTestHelper::makeFakeMDHistoWorkspace(1.0, 2, 10);
     for (size_t i = 0; i < 100; i++)
@@ -593,7 +742,7 @@ public:
     std::vector<coord_t> x;
     std::vector<signal_t> y;
     std::vector<signal_t> e;
-    ws->getLinePlot(start, end, NoNormalization, x, y, e);
+    ws->getLineData(start, end, NoNormalization, x, y, e);
     TS_ASSERT_EQUALS(x.size(), 11);
     TS_ASSERT_DELTA(x[0], 0.5, 1e-5);
     TS_ASSERT_DELTA(x[1], 1.5, 1e-5);
@@ -608,7 +757,7 @@ public:
 
   //---------------------------------------------------------------------------------------------------
   /** Line that completely misses the workspace */
-  void test_getLinePlot_totallyOutOfBounds() {
+  void test_getLineData_totallyOutOfBounds() {
     MDHistoWorkspace_sptr ws =
         MDEventsTestHelper::makeFakeMDHistoWorkspace(1.0, 2, 10);
     for (size_t i = 0; i < 100; i++)
@@ -618,7 +767,7 @@ public:
     std::vector<coord_t> x;
     std::vector<signal_t> y;
     std::vector<signal_t> e;
-    ws->getLinePlot(start, end, NoNormalization, x, y, e);
+    ws->getLineData(start, end, NoNormalization, x, y, e);
     TS_ASSERT_EQUALS(x.size(), 2);
     TS_ASSERT_DELTA(x[0], 0, 1e-5);
     // NAN for Y
@@ -967,17 +1116,33 @@ public:
                       Mantid::Kernel::None, ws->getSpecialCoordinateSystem());
   }
 
-  void test_setSpecialCoordinateSystem_default() {
-    MDHistoWorkspace_sptr ws =
-        MDEventsTestHelper::makeFakeMDHistoWorkspace(1, 1);
-    TS_ASSERT_EQUALS(Mantid::Kernel::None, ws->getSpecialCoordinateSystem());
+  void test_getSpecialCoordinateSystem_when_MDFrames_are_set() {
+    // Arrange
+    Mantid::Geometry::QSample frame1;
+    Mantid::Geometry::QSample frame2;
+    Mantid::coord_t min = 0;
+    Mantid::coord_t max = 10;
+    size_t bins = 2;
+    auto dimension1 = boost::make_shared<MDHistoDimension>(
+        "QSampleX", "QSampleX", frame1, min, max, bins);
+    auto dimension2 = boost::make_shared<MDHistoDimension>(
+        "QSampleY", "QSampleY", frame2, min, max, bins);
+    auto ws = boost::make_shared<Mantid::DataObjects::MDHistoWorkspace>(
+        dimension1, dimension2);
 
-    ws->setCoordinateSystem(Mantid::Kernel::QLab);
-    TS_ASSERT_EQUALS(Mantid::Kernel::QLab, ws->getSpecialCoordinateSystem());
+    // Act
+    auto specialCoordinates = ws->getSpecialCoordinateSystem();
+
+    // Assert
+    TSM_ASSERT_EQUALS("Should detect QSample as the SpecialCoordinate",
+                      specialCoordinates,
+                      Mantid::Kernel::SpecialCoordinateSystem::QSample);
   }
 
   void test_displayNormalizationDefault() {
-    MDHistoDimension_sptr dimX(new MDHistoDimension("X", "x", "m", -10, 10, 5));
+    Mantid::Geometry::GeneralFrame frame("m", "m");
+    MDHistoDimension_sptr dimX(
+        new MDHistoDimension("X", "x", frame, -10, 10, 5));
     // Constructor variant 1.
     MDHistoWorkspace ws1(dimX);
     TS_ASSERT_EQUALS(Mantid::API::NoNormalization, ws1.displayNormalization());
@@ -994,10 +1159,10 @@ public:
   }
 
   void test_setDisplayNormalization() {
-
     auto targetDisplayNormalization = Mantid::API::VolumeNormalization;
-
-    MDHistoDimension_sptr dimX(new MDHistoDimension("X", "x", "m", -10, 10, 5));
+    Mantid::Geometry::GeneralFrame frame("m", "m");
+    MDHistoDimension_sptr dimX(
+        new MDHistoDimension("X", "x", frame, -10, 10, 5));
     // Constructor variant 1.
     MDHistoWorkspace ws1(dimX, dimX, dimX, dimX, targetDisplayNormalization);
     TS_ASSERT_EQUALS(targetDisplayNormalization, ws1.displayNormalization());
@@ -1015,6 +1180,42 @@ public:
     // Quick check of clone
     auto clone = ws3.clone();
     TS_ASSERT_EQUALS(targetDisplayNormalization, clone->displayNormalization());
+  }
+
+  /**
+  * Test declaring an input IMDHistoWorkspace and retrieving as const_sptr or
+  * sptr
+  */
+  void testGetProperty_const_sptr() {
+    const std::string wsName = "InputWorkspace";
+    Mantid::Geometry::GeneralFrame frame("m", "m");
+    MDHistoDimension_sptr dimX(
+        new MDHistoDimension("X", "x", frame, -10, 10, 5));
+    IMDHistoWorkspace_sptr wsInput(new MDHistoWorkspace(
+        dimX, dimX, dimX, dimX, Mantid::API::VolumeNormalization));
+    PropertyManagerHelper manager;
+    manager.declareProperty(wsName, wsInput, Direction::Input);
+
+    // Check property can be obtained as const_sptr or sptr
+    IMDHistoWorkspace_const_sptr wsConst;
+    IMDHistoWorkspace_sptr wsNonConst;
+    TS_ASSERT_THROWS_NOTHING(
+        wsConst = manager.getValue<IMDHistoWorkspace_const_sptr>(wsName));
+    TS_ASSERT(wsConst != NULL);
+    TS_ASSERT_THROWS_NOTHING(
+        wsNonConst = manager.getValue<IMDHistoWorkspace_sptr>(wsName));
+    TS_ASSERT(wsNonConst != NULL);
+    TS_ASSERT_EQUALS(wsConst, wsNonConst);
+
+    // Check TypedValue can be cast to const_sptr or to sptr
+    PropertyManagerHelper::TypedValue val(manager, wsName);
+    IMDHistoWorkspace_const_sptr wsCastConst;
+    IMDHistoWorkspace_sptr wsCastNonConst;
+    TS_ASSERT_THROWS_NOTHING(wsCastConst = (IMDHistoWorkspace_const_sptr)val);
+    TS_ASSERT(wsCastConst != NULL);
+    TS_ASSERT_THROWS_NOTHING(wsCastNonConst = (IMDHistoWorkspace_sptr)val);
+    TS_ASSERT(wsCastNonConst != NULL);
+    TS_ASSERT_EQUALS(wsCastConst, wsCastNonConst);
   }
 };
 

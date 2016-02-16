@@ -7,6 +7,7 @@
 #include "MantidGeometry/MDGeometry/QLab.h"
 #include "MantidGeometry/MDGeometry/QSample.h"
 #include "MantidGeometry/MDGeometry/HKL.h"
+#include "MantidGeometry/MDGeometry/UnknownFrame.h"
 #include "MantidGeometry/DllConfig.h"
 #include <memory>
 
@@ -52,7 +53,7 @@ class MANTID_GEOMETRY_DLL MDFrameFactory
     : public Kernel::ChainableFactory<MDFrameFactory, MDFrame,
                                       MDFrameArgument> {
 public:
-  virtual ~MDFrameFactory() {}
+  ~MDFrameFactory() override {}
 };
 
 /// Helper typedef
@@ -65,37 +66,46 @@ typedef std::unique_ptr<MDFrameFactory> MDFrameFactory_uptr;
 /// GeneralFrameFactory derived MDFrameFactory type
 class MANTID_GEOMETRY_DLL GeneralFrameFactory : public MDFrameFactory {
 private:
-  GeneralFrame *createRaw(const MDFrameArgument &argument) const;
+  GeneralFrame *createRaw(const MDFrameArgument &argument) const override;
 
 public:
-  bool canInterpret(const MDFrameArgument &) const;
+  bool canInterpret(const MDFrameArgument &) const override;
 };
 
 /// QLabFrameFactory derived MDFrameFactory type
 class MANTID_GEOMETRY_DLL QLabFrameFactory : public MDFrameFactory {
 private:
-  QLab *createRaw(const MDFrameArgument &argument) const;
+  QLab *createRaw(const MDFrameArgument &argument) const override;
 
 public:
-  bool canInterpret(const MDFrameArgument &argument) const;
+  bool canInterpret(const MDFrameArgument &argument) const override;
 };
 
 /// QSampleFrameFactory derived MDFrameFactory type
 class MANTID_GEOMETRY_DLL QSampleFrameFactory : public MDFrameFactory {
 private:
-  QSample *createRaw(const MDFrameArgument &argument) const;
+  QSample *createRaw(const MDFrameArgument &argument) const override;
 
 public:
-  bool canInterpret(const MDFrameArgument &argument) const;
+  bool canInterpret(const MDFrameArgument &argument) const override;
 };
 
 /// HKLFrame derived MDFrameFactory type
 class MANTID_GEOMETRY_DLL HKLFrameFactory : public MDFrameFactory {
 private:
-  HKL *createRaw(const MDFrameArgument &argument) const;
+  HKL *createRaw(const MDFrameArgument &argument) const override;
 
 public:
-  bool canInterpret(const MDFrameArgument &argument) const;
+  bool canInterpret(const MDFrameArgument &argument) const override;
+};
+
+/// Unknown Frame derived MDFrameFactory type
+class MANTID_GEOMETRY_DLL UnknownFrameFactory : public MDFrameFactory {
+private:
+  UnknownFrame *createRaw(const MDFrameArgument &argument) const override;
+
+public:
+  bool canInterpret(const MDFrameArgument &argument) const override;
 };
 
 /// Make a complete factory chain

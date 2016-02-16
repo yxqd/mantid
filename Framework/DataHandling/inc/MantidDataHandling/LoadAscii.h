@@ -5,6 +5,7 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAPI/IFileLoader.h"
+#include "MantidAPI/DeprecatedAlgorithm.h"
 
 namespace Mantid {
 namespace DataHandling {
@@ -45,24 +46,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 File change history is stored at: <https://github.com/mantidproject/mantid>.
 Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
-class DLLExport LoadAscii : public API::IFileLoader<Kernel::FileDescriptor> {
+class DLLExport LoadAscii : public API::IFileLoader<Kernel::FileDescriptor>,
+                            public API::DeprecatedAlgorithm {
 public:
   /// Default constructor
   LoadAscii();
   /// The name of the algorithm
-  virtual const std::string name() const { return "LoadAscii"; }
+  const std::string name() const override { return "LoadAscii"; }
   /// Summary of algorithms purpose
-  virtual const std::string summary() const {
+  const std::string summary() const override {
     return "Loads data from a text file and stores it in a 2D workspace "
            "(Workspace2D class).";
   }
 
   /// The version number
-  virtual int version() const { return 1; }
+  int version() const override { return 1; }
   /// The category
-  virtual const std::string category() const { return "DataHandling\\Text"; }
+  const std::string category() const override { return "DataHandling\\Text"; }
   /// Returns a confidence value that this algorithm can load a file
-  virtual int confidence(Kernel::FileDescriptor &descriptor) const;
+  int confidence(Kernel::FileDescriptor &descriptor) const override;
 
 protected:
   /// Process the header information within the file.
@@ -86,9 +88,9 @@ protected:
 
 private:
   /// Declare properties
-  void init();
+  void init() override;
   /// Execute the algorithm
-  void exec();
+  void exec() override;
 
   /// Map the separator options to their string equivalents
   std::map<std::string, std::string> m_separatorIndex;

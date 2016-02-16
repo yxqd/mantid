@@ -1,8 +1,7 @@
-#include <algorithm>
-#include <fstream>
-
 #include "MantidDataHandling/LoadSpiceXML2DDet.h"
+#include "MantidAPI/Axis.h"
 #include "MantidAPI/FileProperty.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/ITableWorkspace.h"
 #include "MantidAPI/WorkspaceProperty.h"
 #include "MantidAPI/WorkspaceFactory.h"
@@ -20,6 +19,9 @@
 #include <Poco/DOM/NodeIterator.h>
 #include <Poco/DOM/NodeList.h>
 #include <Poco/SAX/InputSource.h>
+
+#include <algorithm>
+#include <fstream>
 
 namespace Mantid {
 namespace DataHandling {
@@ -166,7 +168,9 @@ const std::string LoadSpiceXML2DDet::name() const {
 int LoadSpiceXML2DDet::version() const { return 1; }
 
 //----------------------------------------------------------------------------------------------
-const std::string LoadSpiceXML2DDet::category() const { return "DataHandling"; }
+const std::string LoadSpiceXML2DDet::category() const {
+  return "DataHandling\\XML";
+}
 
 //----------------------------------------------------------------------------------------------
 const std::string LoadSpiceXML2DDet::summary() const {
@@ -178,10 +182,9 @@ const std::string LoadSpiceXML2DDet::summary() const {
  * @brief LoadSpiceXML2DDet::init
  */
 void LoadSpiceXML2DDet::init() {
-  std::vector<std::string> xmlext;
-  xmlext.push_back(".xml");
   declareProperty(
-      new FileProperty("Filename", "", FileProperty::FileAction::Load, xmlext),
+      new FileProperty("Filename", "", FileProperty::FileAction::Load,
+                       {".xml"}),
       "XML file name for one scan including 2D detectors counts from SPICE");
 
   declareProperty(
@@ -557,8 +560,7 @@ void LoadSpiceXML2DDet::setupSampleLogFromSpiceTable(
     for (size_t ic = 1; ic < colnames.size(); ++ic) {
       double logvalue = spicetablews->cell<double>(ir, ic);
       std::string &logname = colnames[ic];
-      TimeSeriesProperty<double> *newlogproperty =
-          new TimeSeriesProperty<double>(logname);
+      auto newlogproperty = new TimeSeriesProperty<double>(logname);
       newlogproperty->addValue(anytime, logvalue);
       matrixws->mutableRun().addProperty(newlogproperty);
     }
@@ -602,6 +604,9 @@ bool LoadSpiceXML2DDet::getHB3AWavelength(MatrixWorkspace_sptr dataws,
       if (fabs(m1pos - (-25.870000)) < 0.2) {
         wavelength = 1.003;
         haswavelength = true;
+      } else if (fabs(m1pos - (-39.17)) < 0.2) {
+        wavelength = 1.5424;
+        haswavelength = true;
       } else {
         g_log.warning() << "m1 position " << m1pos
                         << " does not have defined mapping to "
@@ -614,6 +619,9 @@ bool LoadSpiceXML2DDet::getHB3AWavelength(MatrixWorkspace_sptr dataws,
       double m1pos = atof(dataws->run().getProperty("_m1")->value().c_str());
       if (fabs(m1pos - (-25.870000)) < 0.2) {
         wavelength = 1.003;
+        haswavelength = true;
+      } else if (fabs(m1pos - (-39.17)) < 0.2) {
+        wavelength = 1.5424;
         haswavelength = true;
       } else {
         g_log.warning() << "m1 position " << m1pos
@@ -668,7 +676,8 @@ void LoadSpiceXML2DDet::loadInstrument(API::MatrixWorkspace_sptr matrixws,
     loadinst->setProperty("Filename", idffilename);
   } else
     loadinst->setProperty("InstrumentName", "HB3A");
-  loadinst->setProperty("RewriteSpectraMap", true);
+  loadinst->setProperty("RewriteSpectraMap",
+                        Mantid::Kernel::OptionalBool(true));
   loadinst->execute();
   if (loadinst->isExecuted())
     matrixws = loadinst->getProperty("Workspace");

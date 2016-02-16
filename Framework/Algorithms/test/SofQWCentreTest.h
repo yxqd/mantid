@@ -3,6 +3,7 @@
 
 #include <cxxtest/TestSuite.h>
 #include "MantidAlgorithms/SofQWCentre.h"
+#include "MantidAPI/Axis.h"
 #include "MantidDataHandling/LoadNexusProcessed.h"
 
 #include "SofQWTest.h"
@@ -19,11 +20,6 @@ public:
   void testVersion() {
     Mantid::Algorithms::SofQWCentre sqw;
     TS_ASSERT_EQUALS(sqw.version(), 1);
-  }
-
-  void testCategory() {
-    Mantid::Algorithms::SofQWCentre sqw;
-    TS_ASSERT_EQUALS(sqw.category(), "Inelastic");
   }
 
   void testInit() {

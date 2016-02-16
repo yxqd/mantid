@@ -2,16 +2,19 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/TOFSANSResolution.h"
-#include "MantidAPI/WorkspaceValidators.h"
-#include "MantidDataObjects/EventWorkspace.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/EventList.h"
+#include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/Workspace2D.h"
-#include "MantidKernel/RebinParamsValidator.h"
+#include "MantidGeometry/IDetector.h"
+#include "MantidGeometry/Instrument.h"
 #include "MantidKernel/ArrayProperty.h"
+#include "MantidKernel/BoundedValidator.h"
+#include "MantidKernel/RebinParamsValidator.h"
 #include "MantidKernel/VectorHelper.h"
 
 #include "boost/math/special_functions/fpclassify.hpp"
-#include "MantidKernel/BoundedValidator.h"
 
 namespace Mantid {
 namespace Algorithms {
@@ -34,8 +37,7 @@ void TOFSANSResolution::init() {
           boost::make_shared<WorkspaceUnitValidator>("MomentumTransfer")),
       "Name the workspace to calculate the resolution for");
 
-  auto wsValidator = boost::make_shared<CompositeValidator>();
-  wsValidator->add<WorkspaceUnitValidator>("Wavelength");
+  auto wsValidator = boost::make_shared<WorkspaceUnitValidator>("Wavelength");
   declareProperty(new WorkspaceProperty<>("ReducedWorkspace", "",
                                           Direction::Input, wsValidator),
                   "I(Q) workspace");
@@ -172,9 +174,10 @@ void TOFSANSResolution::exec() {
       // TODO: change this so that we don't have to pass in the binning
       // parameters
       if (binParams[1] > 0.0) {
-        iq = (int)floor((q - binParams[0]) / binParams[1]);
+        iq = static_cast<int>(floor((q - binParams[0]) / binParams[1]));
       } else {
-        iq = (int)floor(log(q / binParams[0]) / log(1.0 - binParams[1]));
+        iq = static_cast<int>(
+            floor(log(q / binParams[0]) / log(1.0 - binParams[1])));
       }
 
       const double L2 = scattered_flight_path.norm();

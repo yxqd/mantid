@@ -40,54 +40,53 @@ namespace PythonInterface {
  * This is essentially a transparent layer that handles the function calls up
  *into Python.
  */
-class IPeakFunctionAdapter : public virtual API::IPeakFunction,
-                             public virtual IFunction1DAdapter {
+class IPeakFunctionAdapter : public API::IPeakFunction,
+                             public IFunction1DAdapter {
 public:
   /// A constructor that looks like a Python __init__ method
   IPeakFunctionAdapter(PyObject *self);
 
   /// Calls 'centre' method in Python
-  double centre() const;
+  double centre() const override;
   /// Calls 'height' method in Python
-  double height() const;
+  double height() const override;
   /// Calls 'setCentre' method in Python
-  void setCentre(const double c);
+  void setCentre(const double c) override;
   /// Calls 'setHeight' method in Python
-  void setHeight(const double h);
+  void setHeight(const double h) override;
 
   /// Calls Python fwhm method
-  double fwhm() const;
+  double fwhm() const override;
   /// Called by framework when the width is changed
-  void setFwhm(const double w);
+  void setFwhm(const double w) override;
 
   /// Required to solve compiler ambiguity between IPeakFunction &
   /// IFunction1DAdapter
   void function1D(double *out, const double *xValues,
-                  const size_t nData) const {
+                  const size_t nData) const override {
     IPeakFunction::function1D(out, xValues, nData);
   }
   /// Required to solve compiler ambiguity between IPeakFunction &
   /// IFunction1DAdapter
   void functionDeriv1D(API::Jacobian *out, const double *xValues,
-                       const size_t nData) {
+                       const size_t nData) override {
     IPeakFunction::functionDeriv1D(out, xValues, nData);
   }
 
   /// Implemented Base-class method
   void functionLocal(double *out, const double *xValues,
-                     const size_t nData) const;
+                     const size_t nData) const override;
   /// Python-type signature for above method
   boost::python::object functionLocal(const boost::python::object &xvals) const;
   /// Implemented base-class method
   void functionDerivLocal(API::Jacobian *out, const double *xValues,
-                          const size_t nData);
+                          const size_t nData) override;
   /// Python signature
   void functionDerivLocal(const boost::python::object &xvals,
                           boost::python::object &jacobian);
 
 private:
   /// The PyObject must be supplied to construct the object
-  DISABLE_DEFAULT_CONSTRUCT(IPeakFunctionAdapter)
   DISABLE_COPY_AND_ASSIGN(IPeakFunctionAdapter)
 };
 }

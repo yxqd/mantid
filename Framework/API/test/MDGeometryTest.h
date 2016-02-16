@@ -6,12 +6,11 @@
 #include "MantidKernel/System.h"
 #include "MantidKernel/Timer.h"
 #include <cxxtest/TestSuite.h>
-#include <iomanip>
-#include <iostream>
 #include "MantidKernel/VMD.h"
 #include "MantidAPI/IMDWorkspace.h"
 #include "MantidTestHelpers/FakeObjects.h"
 #include "MantidAPI/NullCoordTransform.h"
+#include "MantidGeometry/MDGeometry/QSample.h"
 
 using namespace Mantid;
 using namespace Mantid::Kernel;
@@ -28,8 +27,9 @@ public:
   void test_initGeometry() {
     MDGeometry g;
     std::vector<IMDDimension_sptr> dims;
-    IMDDimension_sptr dim1(new MDHistoDimension("Qx", "Qx", "Ang", -1, +1, 10));
-    IMDDimension_sptr dim2(new MDHistoDimension("Qy", "Qy", "Ang", -1, +1, 20));
+    const Mantid::Geometry::QSample frame;
+    IMDDimension_sptr dim1(new MDHistoDimension("Qx", "Qx", frame, -1, +1, 10));
+    IMDDimension_sptr dim2(new MDHistoDimension("Qy", "Qy", frame, -1, +1, 20));
     dims.push_back(dim1);
     dims.push_back(dim2);
     g.initGeometry(dims);
@@ -74,8 +74,10 @@ public:
 
   void test_clear_original_workspaces() {
     MDGeometry geometry;
-    boost::shared_ptr<WorkspaceTester> ws0(new WorkspaceTester());
-    boost::shared_ptr<WorkspaceTester> ws1(new WorkspaceTester());
+    boost::shared_ptr<WorkspaceTester> ws0 =
+        boost::make_shared<WorkspaceTester>();
+    boost::shared_ptr<WorkspaceTester> ws1 =
+        boost::make_shared<WorkspaceTester>();
     geometry.setOriginalWorkspace(ws0, 0);
     geometry.setOriginalWorkspace(ws1, 1);
     TS_ASSERT_EQUALS(2, geometry.numOriginalWorkspaces());
@@ -86,16 +88,19 @@ public:
   void test_copy_constructor() {
     MDGeometry g;
     std::vector<IMDDimension_sptr> dims;
-    IMDDimension_sptr dim0(new MDHistoDimension("Qx", "Qx", "Ang", -1, +1, 0));
-    IMDDimension_sptr dim1(new MDHistoDimension("Qy", "Qy", "Ang", -1, +1, 0));
+    const Mantid::Geometry::QSample frame;
+    IMDDimension_sptr dim0(new MDHistoDimension("Qx", "Qx", frame, -1, +1, 0));
+    IMDDimension_sptr dim1(new MDHistoDimension("Qy", "Qy", frame, -1, +1, 0));
     dims.push_back(dim0);
     dims.push_back(dim1);
     g.initGeometry(dims);
     g.setBasisVector(0, VMD(1.2, 3.4));
     g.setBasisVector(1, VMD(1.2, 3.4));
     g.setOrigin(VMD(4, 5));
-    boost::shared_ptr<WorkspaceTester> ws0(new WorkspaceTester());
-    boost::shared_ptr<WorkspaceTester> ws1(new WorkspaceTester());
+    boost::shared_ptr<WorkspaceTester> ws0 =
+        boost::make_shared<WorkspaceTester>();
+    boost::shared_ptr<WorkspaceTester> ws1 =
+        boost::make_shared<WorkspaceTester>();
     g.setOriginalWorkspace(ws0, 0);
     g.setOriginalWorkspace(ws1, 1);
     g.setTransformFromOriginal(new NullCoordTransform(5), 0);
@@ -136,11 +141,12 @@ public:
   /** Adding dimension info and searching for it back */
   void test_addDimension_getDimension() {
     MDGeometry g;
+    const Mantid::Geometry::QSample frame;
     MDHistoDimension_sptr dim(
-        new MDHistoDimension("Qx", "Qx", "Ang", -1, +1, 0));
+        new MDHistoDimension("Qx", "Qx", frame, -1, +1, 0));
     TS_ASSERT_THROWS_NOTHING(g.addDimension(dim);)
     MDHistoDimension_sptr dim2(
-        new MDHistoDimension("Qy", "Qy", "Ang", -1, +1, 0));
+        new MDHistoDimension("Qy", "Qy", frame, -1, +1, 0));
     TS_ASSERT_THROWS_NOTHING(g.addDimension(dim2);)
     TS_ASSERT_EQUALS(g.getNumDims(), 2);
     TS_ASSERT_EQUALS(g.getDimension(0)->getName(), "Qx");
@@ -152,14 +158,16 @@ public:
 
   void test_transformDimensions() {
     MDGeometry g;
+    const Mantid::Geometry::QSample frame;
     MDHistoDimension_sptr dim(
-        new MDHistoDimension("Qx", "Qx", "Ang", -1, +1, 0));
+        new MDHistoDimension("Qx", "Qx", frame, -1, +1, 0));
     TS_ASSERT_THROWS_NOTHING(g.addDimension(dim);)
     MDHistoDimension_sptr dim2(
-        new MDHistoDimension("Qy", "Qy", "Ang", -2, +2, 0));
+        new MDHistoDimension("Qy", "Qy", frame, -2, +2, 0));
     TS_ASSERT_THROWS_NOTHING(g.addDimension(dim2);)
     TS_ASSERT_EQUALS(g.getNumDims(), 2);
-    boost::shared_ptr<WorkspaceTester> ws(new WorkspaceTester());
+    boost::shared_ptr<WorkspaceTester> ws =
+        boost::make_shared<WorkspaceTester>();
     g.setOriginalWorkspace(ws);
     TS_ASSERT(g.hasOriginalWorkspace());
 
@@ -195,7 +203,8 @@ public:
   void test_OriginalWorkspace() {
     MDGeometry g;
     TS_ASSERT(!g.hasOriginalWorkspace());
-    boost::shared_ptr<WorkspaceTester> ws(new WorkspaceTester());
+    boost::shared_ptr<WorkspaceTester> ws =
+        boost::make_shared<WorkspaceTester>();
     g.setOriginalWorkspace(ws);
     TS_ASSERT(g.hasOriginalWorkspace());
   }
@@ -203,8 +212,10 @@ public:
   void test_OriginalWorkspace_multiple() {
     MDGeometry g;
     TS_ASSERT(!g.hasOriginalWorkspace());
-    boost::shared_ptr<WorkspaceTester> ws0(new WorkspaceTester());
-    boost::shared_ptr<WorkspaceTester> ws1(new WorkspaceTester());
+    boost::shared_ptr<WorkspaceTester> ws0 =
+        boost::make_shared<WorkspaceTester>();
+    boost::shared_ptr<WorkspaceTester> ws1 =
+        boost::make_shared<WorkspaceTester>();
     g.setOriginalWorkspace(ws0);
     g.setOriginalWorkspace(ws1, 1);
     TS_ASSERT(g.hasOriginalWorkspace());
@@ -218,7 +229,8 @@ public:
   void test_OriginalWorkspace_gets_deleted() {
     MDGeometry g;
     {
-      boost::shared_ptr<WorkspaceTester> ws(new WorkspaceTester());
+      boost::shared_ptr<WorkspaceTester> ws =
+          boost::make_shared<WorkspaceTester>();
       AnalysisDataService::Instance().addOrReplace("MDGeometryTest_originalWS",
                                                    ws);
       g.setOriginalWorkspace(ws);
@@ -228,7 +240,8 @@ public:
     TS_ASSERT(g.getOriginalWorkspace())
 
     // Create a different workspace and delete that
-    boost::shared_ptr<WorkspaceTester> ws2(new WorkspaceTester());
+    boost::shared_ptr<WorkspaceTester> ws2 =
+        boost::make_shared<WorkspaceTester>();
     AnalysisDataService::Instance().addOrReplace("MDGeometryTest_some_other_ws",
                                                  ws2);
     AnalysisDataService::Instance().remove("MDGeometryTest_some_other_ws");
@@ -262,8 +275,9 @@ public:
   void test_all_normalized() {
     MDGeometry geometry;
     std::vector<IMDDimension_sptr> dims;
-    IMDDimension_sptr dim1(new MDHistoDimension("Qx", "Qx", "Ang", -1, +1, 10));
-    IMDDimension_sptr dim2(new MDHistoDimension("Qy", "Qy", "Ang", -1, +1, 20));
+    const Mantid::Geometry::QSample frame;
+    IMDDimension_sptr dim1(new MDHistoDimension("Qx", "Qx", frame, -1, +1, 10));
+    IMDDimension_sptr dim2(new MDHistoDimension("Qy", "Qy", frame, -1, +1, 20));
     dims.push_back(dim1);
     dims.push_back(dim2);
     geometry.initGeometry(dims);

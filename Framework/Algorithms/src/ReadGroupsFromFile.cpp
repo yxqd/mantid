@@ -1,24 +1,23 @@
 //----------------------------------------------------------------------
 // Includes
 //----------------------------------------------------------------------
-#include <fstream>
-
 #include "MantidAlgorithms/ReadGroupsFromFile.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/InstrumentDataService.h"
+#include "MantidAPI/InstrumentValidator.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceProperty.h"
-#include "MantidAPI/WorkspaceValidators.h"
 #include "MantidDataObjects/Workspace2D.h"
-#include "MantidKernel/ConfigService.h"
 #include "MantidKernel/ListValidator.h"
-#include "MantidKernel/System.h"
 
 // Poco XML Headers for Grouping File
 #include <Poco/DOM/Document.h>
 #include <Poco/DOM/DOMParser.h>
 #include <Poco/DOM/Element.h>
 #include <Poco/DOM/NodeList.h>
+
+#include <fstream>
 
 using namespace Mantid::API;
 using namespace Mantid::Kernel;
@@ -54,17 +53,13 @@ void ReadGroupsFromFile::init() {
                   "workspace.");
 
   // The calibration file that contains the grouping information
-  std::vector<std::string> exts;
-  exts.push_back(".cal");
-  exts.push_back(".xml");
   declareProperty(
-      new FileProperty("GroupingFileName", "", FileProperty::Load, exts),
+      new FileProperty("GroupingFileName", "", FileProperty::Load,
+                       {".cal", ".xml"}),
       "Either as a XML grouping file (see [[GroupDetectors]]) or as a "
       "[[CalFile]] (.cal extension).");
   // Flag to consider unselected detectors in the cal file
-  std::vector<std::string> select;
-  select.push_back("True");
-  select.push_back("False");
+  std::vector<std::string> select{"True", "False"};
   declareProperty("ShowUnselected", "True",
                   boost::make_shared<StringListValidator>(select),
                   "Whether to show detectors that are not in any group");
@@ -229,12 +224,11 @@ void ReadGroupsFromFile::readXMLGroupingFile(const std::string &filename) {
     Poco::StringTokenizer data(ids, ",", Poco::StringTokenizer::TOK_TRIM);
 
     if (data.begin() != data.end()) {
-      for (Poco::StringTokenizer::Iterator it = data.begin(); it != data.end();
-           ++it) {
+      for (const auto &value : data) {
         // cast the string to an int
         int detID;
         try {
-          detID = boost::lexical_cast<int>(*it);
+          detID = boost::lexical_cast<int>(value);
         } catch (boost::bad_lexical_cast &) {
           throw Mantid::Kernel::Exception::FileError(
               "Could cast string to integer in input XML file", filename);

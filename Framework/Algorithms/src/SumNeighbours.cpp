@@ -2,14 +2,15 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/SumNeighbours.h"
+#include "MantidAPI/InstrumentValidator.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/EventList.h"
 #include "MantidGeometry/IComponent.h"
 #include "MantidGeometry/ICompAssembly.h"
 #include "MantidGeometry/Instrument/RectangularDetector.h"
-#include "MantidAPI/WorkspaceValidators.h"
-#include <boost/algorithm/string.hpp>
 #include "MantidKernel/BoundedValidator.h"
+
+#include <boost/algorithm/string.hpp>
 
 namespace Mantid {
 namespace Algorithms {
@@ -73,6 +74,10 @@ void SumNeighbours::exec() {
 
   Mantid::API::MatrixWorkspace_sptr outWS;
 
+  Progress progress(this, 0, 1, 2);
+
+  progress.report("Smoothing Neighbours...");
+
   IAlgorithm_sptr smooth = createChildAlgorithm("SmoothNeighbours");
   smooth->setProperty("InputWorkspace", inWS);
   if (rect) {
@@ -86,6 +91,8 @@ void SumNeighbours::exec() {
     smooth->setProperty("SumNumberOfNeighbours", SumX * SumY);
   }
   smooth->executeAsChildAlg();
+
+  progress.report();
   // Get back the result
   outWS = smooth->getProperty("OutputWorkspace");
   // Cast to the matrixOutputWS and save it

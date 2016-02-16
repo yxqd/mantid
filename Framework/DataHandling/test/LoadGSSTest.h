@@ -4,6 +4,8 @@
 #include "cxxtest/TestSuite.h"
 #include "MantidDataHandling/LoadGSS.h"
 #include "MantidAPI/AlgorithmManager.h"
+#include "MantidAPI/Axis.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidTestHelpers/ScopedFileHelper.h"
 
 using namespace Mantid;
@@ -16,7 +18,6 @@ public:
     Mantid::DataHandling::LoadGSS loader;
     TS_ASSERT_THROWS_NOTHING(loader.initialize())
     TS_ASSERT_EQUALS(loader.name(), "LoadGSS")
-    TS_ASSERT_EQUALS(loader.category(), "Diffraction;DataHandling\\Text")
     TS_ASSERT_EQUALS(loader.version(), 1)
   }
 

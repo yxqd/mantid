@@ -1,7 +1,6 @@
 //--------------------------------
 // Includes
 //--------------------------------
-#include <math.h>
 #include "MantidDataHandling/SetSampleMaterial.h"
 #include "MantidAPI/ExperimentInfo.h"
 #include "MantidAPI/Workspace.h"
@@ -13,6 +12,10 @@
 #include "MantidKernel/Material.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/PhysicalConstants.h"
+
+#include <boost/scoped_ptr.hpp>
+
+#include <math.h>
 
 using namespace Mantid::PhysicalConstants;
 
@@ -29,9 +32,7 @@ const std::string SetSampleMaterial::name() const {
 
 int SetSampleMaterial::version() const { return (1); }
 
-const std::string SetSampleMaterial::category() const {
-  return "Sample;DataHandling";
-}
+const std::string SetSampleMaterial::category() const { return "Sample"; }
 
 using namespace Mantid::DataHandling;
 using namespace Mantid::API;

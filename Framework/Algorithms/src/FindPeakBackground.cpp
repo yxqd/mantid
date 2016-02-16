@@ -57,10 +57,7 @@ void FindPeakBackground::init() {
                   "The window is the same for all indices in workspace. The "
                   "length must be exactly two.");
 
-  std::vector<std::string> bkgdtypes;
-  bkgdtypes.push_back("Flat");
-  bkgdtypes.push_back("Linear");
-  bkgdtypes.push_back("Quadratic");
+  std::vector<std::string> bkgdtypes{"Flat", "Linear", "Quadratic"};
   declareProperty("BackgroundType", "Linear",
                   boost::make_shared<StringListValidator>(bkgdtypes),
                   "Type of Background.");
@@ -140,7 +137,7 @@ void FindPeakBackground::exec() {
 
   double Ymean, Yvariance, Ysigma;
   MantidVec maskedY;
-  MantidVec::const_iterator in = std::min_element(inpY.begin(), inpY.end());
+  auto in = std::min_element(inpY.cbegin(), inpY.cend());
   double bkg0 = inpY[in - inpY.begin()];
   for (size_t l = l0; l < n; ++l) {
     maskedY.push_back(inpY[l] - bkg0);
@@ -157,7 +154,7 @@ void FindPeakBackground::exec() {
     Statistics stats = getStatistics(maskedY);
     Ymean = stats.mean;
     Yvariance = stats.standard_deviation * stats.standard_deviation;
-    Ysigma = std::sqrt((moment4(maskedY, n - l0, Ymean) -
+    Ysigma = std::sqrt((moment4(maskedY, static_cast<size_t>(xn), Ymean) -
                         (xn - 3.0) / (xn - 1.0) * Yvariance) /
                        xn);
     MantidVec::const_iterator it =

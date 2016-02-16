@@ -47,26 +47,32 @@ public:
 /// QUnit base
 class DLLExport QUnit : public MDUnit {
 public:
-  virtual ~QUnit();
-  bool isQUnit() const;
+  ~QUnit() override;
+  bool isQUnit() const override;
 };
 
 /// Dimensionless RLU
 class DLLExport ReciprocalLatticeUnit : public QUnit {
 public:
-  UnitLabel getUnitLabel() const;
-  bool canConvertTo(const MDUnit &other) const;
-  ReciprocalLatticeUnit *clone() const;
-  virtual ~ReciprocalLatticeUnit();
+  ReciprocalLatticeUnit();
+  ReciprocalLatticeUnit(const UnitLabel &unitLabel);
+  UnitLabel getUnitLabel() const override;
+  bool canConvertTo(const MDUnit &other) const override;
+  ReciprocalLatticeUnit *clone() const override;
+  ~ReciprocalLatticeUnit() override;
+
+private:
+  bool isSpecialRLUUnitLabel() const;
+  UnitLabel m_unitLabel;
 };
 
 /// Inverse Angstroms unit
 class DLLExport InverseAngstromsUnit : public QUnit {
 public:
-  UnitLabel getUnitLabel() const;
-  bool canConvertTo(const MDUnit &other) const;
-  InverseAngstromsUnit *clone() const;
-  virtual ~InverseAngstromsUnit();
+  UnitLabel getUnitLabel() const override;
+  bool canConvertTo(const MDUnit &other) const override;
+  InverseAngstromsUnit *clone() const override;
+  ~InverseAngstromsUnit() override;
 };
 
 class DLLExport LabelUnit : public MDUnit {
@@ -75,11 +81,11 @@ private:
 
 public:
   LabelUnit(const UnitLabel &unitLabel);
-  UnitLabel getUnitLabel() const;
-  bool canConvertTo(const MDUnit &other) const;
-  bool isQUnit() const;
-  virtual ~LabelUnit();
-  LabelUnit *clone() const;
+  UnitLabel getUnitLabel() const override;
+  bool canConvertTo(const MDUnit &other) const override;
+  bool isQUnit() const override;
+  ~LabelUnit() override;
+  LabelUnit *clone() const override;
 };
 
 typedef std::unique_ptr<MDUnit> MDUnit_uptr;

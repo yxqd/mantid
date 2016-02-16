@@ -1,6 +1,11 @@
-#include "MantidAPI/AnalysisDataService.h"
 #include "MantidQtCustomInterfaces/Indirect/CalculatePaalmanPings.h"
 #include "MantidQtCustomInterfaces/UserInputValidator.h"
+#include "MantidAPI/AnalysisDataService.h"
+#include "MantidAPI/Axis.h"
+#include "MantidAPI/MatrixWorkspace.h"
+#include "MantidGeometry/Instrument.h"
+#include "MantidKernel/Unit.h"
+#include "MantidKernel/Material.h"
 #include "MantidQtMantidWidgets/WorkspaceSelector.h"
 
 #include <QLineEdit>
@@ -122,8 +127,9 @@ void CalculatePaalmanPings::run() {
     break;
   }
 
-  const QString outputWsName =
+  QString outputWsName =
       sampleWsName.left(nameCutIndex) + "_" + correctionType + "_abs";
+
   absCorAlgo->setProperty("OutputWorkspace", outputWsName.toStdString());
 
   // Add corrections algorithm to queue
@@ -155,6 +161,25 @@ bool CalculatePaalmanPings::doValidation(bool silent) {
   UserInputValidator uiv;
 
   uiv.checkDataSelectorIsValid("Sample", m_uiForm.dsSample);
+
+  const auto sampleChem =
+	  m_uiForm.leSampleChemicalFormula->text().toStdString();
+  const auto containerChem =
+	  m_uiForm.leCanChemicalFormula->text().toStdString();
+  try {
+	  Mantid::Kernel::Material::parseChemicalFormula(sampleChem);
+  }
+  catch (std::runtime_error &ex) {
+	  UNUSED_ARG(ex);
+	  uiv.addErrorMessage("Chemical Formula for Sample was not recognised.");
+  }
+  try {
+	  Mantid::Kernel::Material::parseChemicalFormula(containerChem);
+  }
+  catch (std::runtime_error &ex) {
+	  UNUSED_ARG(ex);
+	  uiv.addErrorMessage("Chemical Formula for Container was not recognised.");
+  }
 
   // Validate chemical formula
   if (uiv.checkFieldIsNotEmpty("Sample Chemical Formula",

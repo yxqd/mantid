@@ -1,17 +1,15 @@
-#include "MantidAPI/FileProperty.h"
-#include "MantidAPI/WorkspaceValidators.h"
-#include "MantidDataHandling/LoadCalFile.h"
 #include "MantidDataHandling/LoadDspacemap.h"
+#include "MantidAPI/FileProperty.h"
+#include "MantidDataHandling/LoadCalFile.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/GroupingWorkspace.h"
 #include "MantidDataObjects/OffsetsWorkspace.h"
-#include "MantidKernel/V3D.h"
-#include "MantidKernel/BinaryFile.h"
-#include "MantidKernel/PhysicalConstants.h"
-#include "MantidKernel/System.h"
-#include "MantidKernel/UnitFactory.h"
 #include "MantidGeometry/IDetector.h"
+#include "MantidKernel/BinaryFile.h"
 #include "MantidKernel/ListValidator.h"
+#include "MantidKernel/PhysicalConstants.h"
+#include "MantidKernel/UnitFactory.h"
+#include "MantidKernel/V3D.h"
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
@@ -43,17 +41,12 @@ void LoadDspacemap::init() {
   // 3 properties for getting the right instrument
   LoadCalFile::getInstrument3WaysInit(this);
 
-  std::vector<std::string> exts;
-  exts.push_back(".dat");
-  exts.push_back(".bin");
+  declareProperty(
+      new FileProperty("Filename", "", FileProperty::Load, {".dat", ".bin"}),
+      "The DspacemapFile containing the d-space mapping.");
 
-  declareProperty(new FileProperty("Filename", "", FileProperty::Load, exts),
-                  "The DspacemapFile containing the d-space mapping.");
-
-  std::vector<std::string> propOptions;
-  propOptions.push_back("POWGEN");
-  propOptions.push_back("VULCAN-ASCII");
-  propOptions.push_back("VULCAN-Binary");
+  std::vector<std::string> propOptions{"POWGEN", "VULCAN-ASCII",
+                                       "VULCAN-Binary"};
   declareProperty("FileType", "POWGEN",
                   boost::make_shared<StringListValidator>(propOptions),
                   "The type of file being read.");
@@ -208,8 +201,7 @@ void LoadDspacemap::CalculateOffsetsFromVulcanFactors(
   Kernel::V3D referencePos;
   detid_t anydetinrefmodule = 21 * 1250 + 5;
 
-  std::map<detid_t, Geometry::IDetector_const_sptr>::iterator det_iter =
-      allDetectors.find(anydetinrefmodule);
+  auto det_iter = allDetectors.find(anydetinrefmodule);
 
   if (det_iter == allDetectors.end()) {
     throw std::invalid_argument("Any Detector ID is Instrument's detector");
@@ -349,7 +341,7 @@ void LoadDspacemap::readVulcanAsciiFile(const std::string &fileName,
     int32_t udet;
     double correction;
     istr >> udet >> correction;
-    vulcan.insert(std::make_pair(udet, correction));
+    vulcan.emplace(udet, correction);
     numentries++;
   }
 
@@ -381,10 +373,9 @@ void LoadDspacemap::readVulcanBinaryFile(const std::string &fileName,
   BinaryFile<VulcanCorrectionFactor> file(fileName);
   std::vector<VulcanCorrectionFactor> *results = file.loadAll();
   if (results) {
-    for (std::vector<VulcanCorrectionFactor>::iterator it = results->begin();
-         it != results->end(); ++it) {
+    for (auto &result : *results) {
       // std::cout << it->pixelID << " :! " << it->factor << std::endl;
-      vulcan[static_cast<detid_t>(it->pixelID)] = it->factor;
+      vulcan[static_cast<detid_t>(result.pixelID)] = result.factor;
     }
   }
 

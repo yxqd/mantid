@@ -5,6 +5,9 @@
 #include "MantidKernel/System.h"
 #include "MantidDataObjects/OffsetsWorkspace.h"
 #include "MantidDataObjects/PeaksWorkspace.h"
+#include "MantidAPI/IFunction.h"
+#include "MantidAPI/ILatticeFunction.h"
+#include "MantidGeometry/Crystal/UnitCell.h"
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_multifit_nlin.h>
 #include <gsl/gsl_multimin.h>
@@ -44,36 +47,32 @@ public:
   /// Default constructorMatrix
   OptimizeLatticeForCellType();
   /// Destructor
-  virtual ~OptimizeLatticeForCellType();
+  ~OptimizeLatticeForCellType() override;
   /// Algorithm's name for identification overriding a virtual method
-  virtual const std::string name() const {
+  const std::string name() const override {
     return "OptimizeLatticeForCellType";
   }
   /// Summary of algorithms purpose
-  virtual const std::string summary() const {
+  const std::string summary() const override {
     return "Optimize lattice parameters for cell type.";
   }
 
   /// Algorithm's version for identification overriding a virtual method
-  virtual int version() const { return 1; }
+  int version() const override { return 1; }
   /// Algorithm's category for identification overriding a virtual method
-  virtual const std::string category() const { return "Crystal"; }
-  /// Call TOFLattice as a Child Algorithm to get statistics of the peaks
-  double optLatticeSum(std::string inname, std::string cell_type,
-                       std::vector<double> &params);
-  void optLattice(std::string inname, std::vector<double> &params, double *out);
+  const std::string category() const override { return "Crystal\\Cell"; }
+
+  API::ILatticeFunction_sptr
+  getLatticeFunction(const std::string &cellType,
+                     const Geometry::UnitCell &cell) const;
 
 private:
   // Overridden Algorithm methods
-  void init();
-  void exec();
+  void init() override;
+  void exec() override;
   /// Function to find peaks near detector edge
   bool edgePixel(DataObjects::PeaksWorkspace_sptr ws, std::string bankName,
                  int col, int row, int Edge);
-  Kernel::DblMatrix aMatrix(std::vector<double> lattice);
-  void calculateErrors(size_t npeaks, std::string inname, std::string cell_type,
-                       std::vector<double> &Params, std::vector<double> &sigabc,
-                       double chisq);
 };
 
 } // namespace Algorithm

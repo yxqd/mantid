@@ -3,11 +3,13 @@
 //----------------------
 #include "MantidQtCustomInterfaces/Indirect/IndirectDiffractionReduction.h"
 
-#include "MantidQtAPI/HelpWindow.h"
-#include "MantidQtAPI/ManageUserDirectories.h"
 #include "MantidAPI/AlgorithmManager.h"
+#include "MantidAPI/MatrixWorkspace.h"
+#include "MantidGeometry/Instrument.h"
 #include "MantidKernel/Logger.h"
 #include "MantidKernel/MultiFileNameParser.h"
+#include "MantidQtAPI/HelpWindow.h"
+#include "MantidQtAPI/ManageUserDirectories.h"
 
 #include <QDesktopServices>
 #include <QUrl>
@@ -259,11 +261,11 @@ void IndirectDiffractionReduction::runGenericReduction(QString instName,
   // Get save formats
   std::vector<std::string> saveFormats;
   if (m_uiForm.ckGSS->isChecked())
-    saveFormats.push_back("gss");
+    saveFormats.emplace_back("gss");
   if (m_uiForm.ckNexus->isChecked())
-    saveFormats.push_back("nxs");
+    saveFormats.emplace_back("nxs");
   if (m_uiForm.ckAscii->isChecked())
-    saveFormats.push_back("ascii");
+    saveFormats.emplace_back("ascii");
 
   // Set algorithm properties
   msgDiffReduction->setProperty("Instrument", instName.toStdString());
@@ -345,6 +347,12 @@ void IndirectDiffractionReduction::runOSIRISdiffonlyReduction() {
                                    m_uiForm.ckLoadLogs->isChecked());
   osirisDiffReduction->setProperty("OutputWorkspace",
                                    drangeWsName.toStdString());
+  auto specMin =
+      boost::lexical_cast<std::string, int>(m_uiForm.spSpecMin->value());
+  auto specMax =
+      boost::lexical_cast<std::string, int>(m_uiForm.spSpecMax->value());
+  osirisDiffReduction->setProperty("SpectraMin", specMin);
+  osirisDiffReduction->setProperty("SpectraMax", specMax);
 
   osirisDiffReduction->setProperty("DetectDRange", !manualDRange);
   if (manualDRange)
@@ -507,9 +515,6 @@ void IndirectDiffractionReduction::instrumentSelected(
     m_uiForm.ckSumFiles->setEnabled(false);
     m_uiForm.ckSumFiles->setChecked(false);
 
-    // Disable spectra range
-    m_uiForm.spSpecMin->setEnabled(false);
-    m_uiForm.spSpecMax->setEnabled(false);
   } else {
     // Re-enable sum files
     m_uiForm.ckSumFiles->setToolTip("");
@@ -550,7 +555,8 @@ void IndirectDiffractionReduction::loadSettings() {
   QSettings settings;
   QString dataDir = QString::fromStdString(
                         Mantid::Kernel::ConfigService::Instance().getString(
-                            "datasearch.directories")).split(";")[0];
+                            "datasearch.directories"))
+                        .split(";")[0];
 
   settings.beginGroup(m_settingsGroup);
   settings.setValue("last_directory", dataDir);

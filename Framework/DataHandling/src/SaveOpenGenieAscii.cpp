@@ -1,19 +1,22 @@
 //---------------------------------------------------
 // Includes
 //---------------------------------------------------
-#include "MantidAPI/FileProperty.h"
 #include "MantidDataHandling/SaveOpenGenieAscii.h"
+
+#include "MantidAPI/FileProperty.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/Exception.h"
 #include "MantidKernel/VisibleWhenProperty.h"
 #include "MantidKernel/Property.h"
 
+#include <Poco/File.h>
+#include <Poco/Path.h>
+
 #include <exception>
 #include <fstream>
 #include <list>
 #include <vector>
-#include <Poco/File.h>
-#include <Poco/Path.h>
 
 namespace Mantid {
 namespace DatHandling {
@@ -41,14 +44,10 @@ void SaveOpenGenieAscii::init() {
       "The name of the workspace containing the data you wish to save");
 
   // Declare required parameters, filename with ext {.his} and input
-  // workspac
-  std::vector<std::string> his_exts;
-  his_exts.push_back(".his");
-  his_exts.push_back(".txt");
-  his_exts.push_back("");
-  declareProperty(
-      new API::FileProperty("Filename", "", API::FileProperty::Save, his_exts),
-      "The filename to use for the saved data");
+  // workspace
+  declareProperty(new API::FileProperty("Filename", "", API::FileProperty::Save,
+                                        {".his", ".txt", ""}),
+                  "The filename to use for the saved data");
   declareProperty("IncludeHeader", true,
                   "Whether to include the header lines (default: true)");
   std::vector<std::string> header(2);
@@ -107,8 +106,8 @@ void SaveOpenGenieAscii::exec() {
 
   // writes out x, y, e to vector
   std::string alpha;
-  for (int Num = 0; Num < 3; Num++) {
-    alpha = Alpha[Num];
+  for (const auto &Num : Alpha) {
+    alpha = Num;
     axisToFile(alpha, singleSpc, fourspc, nBins, isHistogram);
   }
 
@@ -240,10 +239,10 @@ std::string SaveOpenGenieAscii::getAxisValues(std::string alpha, int bin,
 void SaveOpenGenieAscii::getSampleLogs(std::string fourspc) {
   const std::vector<Property *> &logData = ws->run().getLogData();
 
-  for (auto log = logData.begin(); log != logData.end(); ++log) {
-    std::string name = (*log)->name();
-    std::string type = (*log)->type();
-    std::string value = (*log)->value();
+  for (auto log : logData) {
+    std::string name = log->name();
+    std::string type = log->type();
+    std::string value = log->value();
 
     if (type.std::string::find("vector") &&
         type.std::string::find("double") != std::string::npos) {

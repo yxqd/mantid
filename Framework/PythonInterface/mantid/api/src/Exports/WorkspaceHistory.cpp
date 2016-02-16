@@ -26,9 +26,8 @@ namespace Policies = Mantid::PythonInterface::Policies;
 boost::python::object getHistoriesAsList(WorkspaceHistory &self) {
   boost::python::list names;
   const auto histories = self.getAlgorithmHistories();
-  Mantid::API::AlgorithmHistories::const_iterator itr = histories.begin();
-  for (; itr != histories.end(); ++itr) {
-    names.append(*itr);
+  for (const auto &historie : histories) {
+    names.append(historie);
   }
   return names;
 }
@@ -38,27 +37,31 @@ void export_WorkspaceHistory() {
 
   class_<WorkspaceHistory, boost::noncopyable>("WorkspaceHistory", no_init)
 
-      .def("getAlgorithmHistories", &getHistoriesAsList,
+      .def("getAlgorithmHistories", &getHistoriesAsList, arg("self"),
            "Returns a list of algorithm histories for this workspace history.")
 
       .def("getAlgorithmHistory", &WorkspaceHistory::getAlgorithmHistory,
-           arg("index"), return_value_policy<Policies::RemoveConstSharedPtr>(),
+           (arg("self"), arg("index")),
+           return_value_policy<Policies::RemoveConstSharedPtr>(),
            "Returns the algorithm history at the given index in the history")
 
-      .def("size", &WorkspaceHistory::size,
+      .def("size", &WorkspaceHistory::size, arg("self"),
            "Returns the number of algorithms in the immediate history")
 
-      .def("empty", &WorkspaceHistory::empty,
+      .def("empty", &WorkspaceHistory::empty, arg("self"),
            "Returns whether the history has any entries")
 
-      .def("lastAlgorithm", &WorkspaceHistory::lastAlgorithm,
+      .def("lastAlgorithm", &WorkspaceHistory::lastAlgorithm, arg("self"),
            "Returns the last algorithm run on this workspace so that its "
            "properties can be accessed")
 
       .def("getAlgorithm", &WorkspaceHistory::getAlgorithm,
+           (arg("self"), arg("index")),
            "Returns the algorithm at the given index in the history")
 
       // ----------------- Operators --------------------------------------
-      .def("__getitem__", &WorkspaceHistory::getAlgorithm)
+      .def("__getitem__", &WorkspaceHistory::getAlgorithm,
+           (arg("self"), arg("index")),
+           "Create an algorithm from a history record at a given index")
       .def(self_ns::str(self));
 }

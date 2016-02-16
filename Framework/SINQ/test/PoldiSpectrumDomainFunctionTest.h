@@ -12,7 +12,6 @@
 #include "MantidAPI/FunctionValues.h"
 #include "MantidAPI/FunctionFactory.h"
 #include "MantidAPI/MultiDomainFunction.h"
-#include "MantidCurveFitting/Gaussian.h"
 #include "MantidCurveFitting/FitMW.h"
 #include "MantidCurveFitting/Jacobian.h"
 
@@ -36,7 +35,7 @@ public:
   PoldiSpectrumDomainFunctionTest() {
     m_detector = boost::shared_ptr<ConfiguredHeliumDetector>(
         new ConfiguredHeliumDetector);
-    m_chopper = boost::shared_ptr<MockChopper>(new MockChopper);
+    m_chopper = boost::make_shared<MockChopper>();
 
     m_spectrum = PoldiSourceSpectrum_sptr(new ConfiguredSpectrum);
 

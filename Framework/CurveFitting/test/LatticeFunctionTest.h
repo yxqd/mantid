@@ -9,6 +9,7 @@
 #include "MantidAPI/LatticeDomain.h"
 #include "MantidAPI/ITableWorkspace.h"
 #include "MantidAPI/TableRow.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidGeometry/Crystal/UnitCell.h"
 
 using Mantid::CurveFitting::LatticeFunction;
@@ -27,22 +28,22 @@ public:
   }
   static void destroySuite(LatticeFunctionTest *suite) { delete suite; }
 
-  void testSetCrystalSystem() {
+  void testSetLatticeSystem() {
     LatticeFunction fn;
     fn.initialize();
 
-    TS_ASSERT_THROWS_NOTHING(fn.setCrystalSystem("Cubic"));
-    TS_ASSERT_THROWS_NOTHING(fn.setCrystalSystem("Tetragonal"));
-    TS_ASSERT_THROWS_NOTHING(fn.setCrystalSystem("triclinic"));
+    TS_ASSERT_THROWS_NOTHING(fn.setLatticeSystem("Cubic"));
+    TS_ASSERT_THROWS_NOTHING(fn.setLatticeSystem("Tetragonal"));
+    TS_ASSERT_THROWS_NOTHING(fn.setLatticeSystem("triclinic"));
 
-    TS_ASSERT_THROWS(fn.setCrystalSystem("DoesNotExist"),
+    TS_ASSERT_THROWS(fn.setLatticeSystem("DoesNotExist"),
                      std::invalid_argument);
 
-    fn.setCrystalSystem("Cubic");
+    fn.setLatticeSystem("Cubic");
     // a and ZeroShift
     TS_ASSERT_EQUALS(fn.nParams(), 2);
 
-    fn.setCrystalSystem("Hexagonal");
+    fn.setLatticeSystem("Hexagonal");
     // a, c and ZeroShift
     TS_ASSERT_EQUALS(fn.nParams(), 3);
 
@@ -100,15 +101,11 @@ public:
     fn.initialize();
 
     // Al2O3, from PoldiCreatePeaksFromCell system test.
-    fn.setCrystalSystem("Hexagonal");
+    fn.setLatticeSystem("Hexagonal");
     fn.setParameter("a", 4.7605);
     fn.setParameter("c", 12.9956);
 
-    std::vector<V3D> hkls;
-    hkls.push_back(V3D(1, 0, -2));
-    hkls.push_back(V3D(1, 0, 4));
-    hkls.push_back(V3D(0, 0, 6));
-    hkls.push_back(V3D(5, -2, -5));
+    std::vector<V3D> hkls{{1, 0, -2}, {1, 0, 4}, {0, 0, 6}, {5, -2, -5}};
 
     LatticeDomain domain(hkls);
     FunctionValues values(domain);
@@ -138,7 +135,7 @@ public:
 
     IFunction_sptr fn =
         FunctionFactory::Instance().createFunction("LatticeFunction");
-    fn->setAttributeValue("CrystalSystem", "Cubic");
+    fn->setAttributeValue("LatticeSystem", "Cubic");
     fn->addTies("ZeroShift=0.0");
     fn->setParameter("a", 5);
 

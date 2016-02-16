@@ -2,17 +2,18 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/Regroup.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/Axis.h"
+#include "MantidAPI/CommonBinsValidator.h"
+#include "MantidAPI/HistogramValidator.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidKernel/ArrayProperty.h"
+#include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/RebinParamsValidator.h"
 
-#include <sstream>
-#include <numeric>
 #include <algorithm>
-#include <functional>
 #include <cmath>
-
-#include <iostream>
+#include <functional>
+#include <numeric>
 
 namespace Mantid {
 namespace Algorithms {
@@ -194,9 +195,8 @@ int Regroup::newAxis(const std::vector<double> &params,
   int isteps = ibounds - 1; // highest index in params array containing a step
 
   xcurr = params[0];
-  std::vector<double>::const_iterator iup =
-      std::find_if(xold.begin(), xold.end(),
-                   std::bind2nd(std::greater_equal<double>(), xcurr));
+  auto iup = std::find_if(xold.cbegin(), xold.cend(),
+                          std::bind2nd(std::greater_equal<double>(), xcurr));
   if (iup != xold.end()) {
     xcurr = *iup;
     xnew.push_back(xcurr);

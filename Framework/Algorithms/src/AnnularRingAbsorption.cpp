@@ -1,18 +1,21 @@
 #include "MantidAlgorithms/AnnularRingAbsorption.h"
 
 #include "MantidAPI/SampleEnvironment.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
 
+#include "MantidGeometry/Instrument.h"
 #include "MantidGeometry/Instrument/ObjComponent.h"
 #include "MantidGeometry/Instrument/ReferenceFrame.h"
 #include "MantidGeometry/Objects/Object.h"
 #include "MantidGeometry/Objects/ShapeFactory.h"
 
 #include "MantidKernel/Atom.h"
-#include "MantidKernel/NeutronAtom.h"
 #include "MantidKernel/BoundedValidator.h"
+#include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/Material.h"
 #include "MantidKernel/MandatoryValidator.h"
+#include "MantidKernel/NeutronAtom.h"
 #include "MantidKernel/V3D.h"
 
 #include <boost/format.hpp>

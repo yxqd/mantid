@@ -1,20 +1,24 @@
 //----------------------------------------------------------------------
 // Includes
 //----------------------------------------------------------------------
+#include "MantidAPI/Axis.h"
+#include "MantidAPI/FileProperty.h"
+#include "MantidAPI/RegisterFileLoader.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataHandling/LoadAscii.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidKernel/UnitFactory.h"
-#include "MantidAPI/FileProperty.h"
-#include "MantidAPI/RegisterFileLoader.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/Strings.h"
-#include <fstream>
 
-#include <boost/tokenizer.hpp>
-#include <Poco/StringTokenizer.h>
 // String utilities
 #include <boost/algorithm/string.hpp>
+#include <boost/tokenizer.hpp>
+
+#include <Poco/StringTokenizer.h>
+
+#include <fstream>
 
 namespace Mantid {
 namespace DataHandling {
@@ -24,7 +28,9 @@ using namespace Kernel;
 using namespace API;
 
 /// Empty constructor
-LoadAscii::LoadAscii() : m_columnSep(), m_separatorIndex() {}
+LoadAscii::LoadAscii() : m_columnSep(), m_separatorIndex() {
+  this->useAlgorithm("LoadAscii", 2);
+}
 
 /**
  * Return the confidence with with this algorithm can load the file
@@ -276,11 +282,8 @@ int LoadAscii::splitIntoColumns(std::list<std::string> &columns,
 void LoadAscii::fillInputValues(std::vector<double> &values,
                                 const std::list<std::string> &columns) const {
   values.resize(columns.size());
-  std::list<std::string>::const_iterator iend = columns.end();
   int i = 0;
-  for (std::list<std::string>::const_iterator itr = columns.begin();
-       itr != iend; ++itr) {
-    std::string value = *itr;
+  for (auto value : columns) {
     boost::trim(value);
     boost::to_lower(value);
     if (value == "nan" || value == "1.#qnan") // ignores nans (not a number) and
@@ -300,13 +303,8 @@ void LoadAscii::fillInputValues(std::vector<double> &values,
 //--------------------------------------------------------------------------
 /// Initialisation method.
 void LoadAscii::init() {
-  std::vector<std::string> exts;
-  exts.push_back(".dat");
-  exts.push_back(".txt");
-  exts.push_back(".csv");
-  exts.push_back("");
-
-  declareProperty(new FileProperty("Filename", "", FileProperty::Load, exts),
+  declareProperty(new FileProperty("Filename", "", FileProperty::Load,
+                                   {".dat", ".txt", ".csv", ""}),
                   "The name of the text file to read, including its full or "
                   "relative path. The file extension must be .tst, .dat, or "
                   ".csv");

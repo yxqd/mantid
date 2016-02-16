@@ -1,9 +1,9 @@
 #include "MantidAlgorithms/ReflectometryReductionOneAuto.h"
-#include "MantidAPI/WorkspaceValidators.h"
-#include "MantidKernel/ListValidator.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidKernel/ArrayProperty.h"
-#include "MantidKernel/EnabledWhenProperty.h"
 #include "MantidKernel/BoundedValidator.h"
+#include "MantidKernel/EnabledWhenProperty.h"
+#include "MantidKernel/ListValidator.h"
 #include "MantidKernel/RebinParamsValidator.h"
 #include <boost/optional.hpp>
 #include <boost/assign/list_of.hpp>
@@ -57,9 +57,8 @@ void ReflectometryReductionOneAuto::init() {
           "InputWorkspace", "", Direction::Input, PropertyMode::Mandatory),
       "Input run in TOF or Lambda");
 
-  std::vector<std::string> analysis_modes;
-  analysis_modes.push_back("PointDetectorAnalysis");
-  analysis_modes.push_back("MultiDetectorAnalysis");
+  std::vector<std::string> analysis_modes{"PointDetectorAnalysis",
+                                          "MultiDetectorAnalysis"};
   auto analysis_mode_validator =
       boost::make_shared<StringListValidator>(analysis_modes);
 
@@ -110,9 +109,8 @@ void ReflectometryReductionOneAuto::init() {
                   "I0 monitor workspace index");
   declareProperty(new PropertyWithValue<std::string>("ProcessingInstructions",
                                                      "", Direction::Input),
-                  "Processing commands to select and add spectrum to make a "
-                  "detector workspace. See [[PeformIndexOperations]] for "
-                  "syntax.");
+                  "Grouping pattern of workspace indices to yield only the"
+                  " detectors of interest. See GroupDetectors for syntax.");
   declareProperty("WavelengthMin", Mantid::EMPTY_DBL(),
                   "Wavelength Min in angstroms", Direction::Input);
   declareProperty("WavelengthMax", Mantid::EMPTY_DBL(),
@@ -155,7 +153,6 @@ void ReflectometryReductionOneAuto::init() {
   declareProperty("StrictSpectrumChecking", true,
                   "Strict checking between spectrum numbers in input "
                   "workspaces and transmission workspaces.");
-
   std::vector<std::string> correctionAlgorithms = boost::assign::list_of(
       "None")("AutoDetect")("PolynomialCorrection")("ExponentialCorrection");
   declareProperty("CorrectionAlgorithm", "AutoDetect",
@@ -355,7 +352,6 @@ void ReflectometryReductionOneAuto::exec() {
                            wavelength_integration_max);
     refRedOne->setProperty("CorrectDetectorPositions", correct_positions);
     refRedOne->setProperty("StrictSpectrumChecking", strict_spectrum_checking);
-
     if (correction_algorithm == "PolynomialCorrection") {
       // Copy across the polynomial
       refRedOne->setProperty("CorrectionAlgorithm", "PolynomialCorrection");
@@ -521,11 +517,60 @@ bool ReflectometryReductionOneAuto::checkGroups() {
   }
   return false;
 }
+/**
+ * Sum over transmission group workspaces to produce one
+ * workspace.
+ * @param transGroup : The transmission group to be processed
+ * @return A workspace pointer containing the sum of transmission workspaces.
+ */
+Mantid::API::Workspace_sptr
+ReflectometryReductionOneAuto::sumOverTransmissionGroup(
+    WorkspaceGroup_sptr &transGroup) {
+  // Handle transmission runs
+
+  // we clone the first member of transmission group as to
+  // avoid addition in place which would affect the original
+  // workspace member.
+  //
+  // We used .release because clone() will return a unique_ptr.
+  // we need to release the ownership of the pointer so that it
+  // can be cast into a shared_ptr of type Workspace.
+  Workspace_sptr transmissionRunSum(transGroup->getItem(0)->clone().release());
+
+  // make a variable to store the overall total of the summation
+  MatrixWorkspace_sptr total;
+  // set up and initialize plus algorithm.
+  auto plusAlg = this->createChildAlgorithm("Plus");
+  plusAlg->setChild(true);
+  // plusAlg->setRethrows(true);
+  plusAlg->initialize();
+  // now accumalate the group members
+  for (size_t item = 1; item < transGroup->size(); ++item) {
+    plusAlg->setProperty("LHSWorkspace", transmissionRunSum);
+    plusAlg->setProperty("RHSWorkspace", transGroup->getItem(item));
+    plusAlg->setProperty("OutputWorkspace", transmissionRunSum);
+    plusAlg->execute();
+    total = plusAlg->getProperty("OutputWorkspace");
+  }
+  return total;
+}
 
 bool ReflectometryReductionOneAuto::processGroups() {
+  // isPolarizationCorrectionOn is used to decide whether
+  // we should process our Transmission WorkspaceGroup members
+  // as individuals (not multiperiod) when PolarizationCorrection is off,
+  // or sum over all of the workspaces in the group
+  // and used that sum as our TransmissionWorkspace when PolarizationCorrection
+  // is on.
+  const bool isPolarizationCorrectionOn =
+      this->getPropertyValue("PolarizationAnalysis") !=
+      noPolarizationCorrectionMode();
+  // Get our input workspace group
   auto group = AnalysisDataService::Instance().retrieveWS<WorkspaceGroup>(
       getPropertyValue("InputWorkspace"));
+  // Get name of IvsQ workspace
   const std::string outputIvsQ = this->getPropertyValue("OutputWorkspace");
+  // Get name of IvsLam workspace
   const std::string outputIvsLam =
       this->getPropertyValue("OutputWorkspaceWavelength");
 
@@ -537,11 +582,11 @@ bool ReflectometryReductionOneAuto::processGroups() {
 
   // Copy all the non-workspace properties over
   std::vector<Property *> props = this->getProperties();
-  for (auto prop = props.begin(); prop != props.end(); ++prop) {
-    if (*prop) {
-      IWorkspaceProperty *wsProp = dynamic_cast<IWorkspaceProperty *>(*prop);
+  for (auto &prop : props) {
+    if (prop) {
+      IWorkspaceProperty *wsProp = dynamic_cast<IWorkspaceProperty *>(prop);
       if (!wsProp)
-        alg->setPropertyValue((*prop)->name(), (*prop)->value());
+        alg->setPropertyValue(prop->name(), prop->value());
     }
   }
 
@@ -553,12 +598,17 @@ bool ReflectometryReductionOneAuto::processGroups() {
         AnalysisDataService::Instance().retrieveWS<Workspace>(firstTrans);
     firstTransG = boost::dynamic_pointer_cast<WorkspaceGroup>(firstTransWS);
 
-    if (!firstTransG)
+    if (!firstTransG) {
+      // we only have one transmission workspace, so we use it as it is.
       alg->setProperty("FirstTransmissionRun", firstTrans);
-    else if (group->size() != firstTransG->size())
+    } else if (group->size() != firstTransG->size() &&
+               !isPolarizationCorrectionOn) {
+      // if they are not the same size then we cannot associate a transmission
+      // group workspace member with every input group workpspace member.
       throw std::runtime_error("FirstTransmissionRun WorkspaceGroup must be "
                                "the same size as the InputWorkspace "
                                "WorkspaceGroup");
+    }
   }
 
   const std::string secondTrans =
@@ -570,13 +620,18 @@ bool ReflectometryReductionOneAuto::processGroups() {
     secondTransG = boost::dynamic_pointer_cast<WorkspaceGroup>(secondTransWS);
 
     if (!secondTransG)
+      // we only have one transmission workspace, so we use it as it is.
       alg->setProperty("SecondTransmissionRun", secondTrans);
-    else if (group->size() != secondTransG->size())
+
+    else if (group->size() != secondTransG->size() &&
+             !isPolarizationCorrectionOn) {
+      // if they are not the same size then we cannot associate a transmission
+      // group workspace member with every input group workpspace member.
       throw std::runtime_error("SecondTransmissionRun WorkspaceGroup must be "
                                "the same size as the InputWorkspace "
                                "WorkspaceGroup");
+    }
   }
-
   std::vector<std::string> IvsQGroup, IvsLamGroup;
 
   // Execute algorithm over each group member (or period, if this is
@@ -588,18 +643,37 @@ bool ReflectometryReductionOneAuto::processGroups() {
     const std::string IvsLamName =
         outputIvsLam + "_" + boost::lexical_cast<std::string>(i + 1);
 
-    alg->setProperty("InputWorkspace", group->getItem(i)->name());
-    alg->setProperty("OutputWorkspace", IvsQName);
-    alg->setProperty("OutputWorkspaceWavelength", IvsLamName);
+    // If our transmission run is a group and PolarizationCorrection is on
+    // then we sum our transmission group members.
+    //
+    // This is done inside of the for loop to avoid the wrong workspace being
+    // used when these arguments are passed through to the exec() method.
+    // If this is not set in the loop, exec() will fetch the first workspace
+    // from the specified Transmission Group workspace that the user entered.
+    if (firstTransG && isPolarizationCorrectionOn) {
+      auto firstTransmissionSum = sumOverTransmissionGroup(firstTransG);
+      alg->setProperty("FirstTransmissionRun", firstTransmissionSum);
+    }
+    if (secondTransG && isPolarizationCorrectionOn) {
+      auto secondTransmissionSum = sumOverTransmissionGroup(secondTransG);
+      alg->setProperty("SecondTransmissionRun", secondTransmissionSum);
+    }
 
-    // Handle transmission runs
-    if (firstTransG)
+    // Otherwise, if polarization correction is off, we process them
+    // using one transmission group member at a time.
+    if (firstTransG && !isPolarizationCorrectionOn) // polarization off
       alg->setProperty("FirstTransmissionRun", firstTransG->getItem(i)->name());
-    if (secondTransG)
+    if (secondTransG && !isPolarizationCorrectionOn) // polarization off
       alg->setProperty("SecondTransmissionRun",
                        secondTransG->getItem(i)->name());
 
+    alg->setProperty("InputWorkspace", group->getItem(i)->name());
+    alg->setProperty("OutputWorkspace", IvsQName);
+    alg->setProperty("OutputWorkspaceWavelength", IvsLamName);
     alg->execute();
+
+    MatrixWorkspace_sptr tempFirstTransWS =
+        alg->getProperty("FirstTransmissionRun");
 
     IvsQGroup.push_back(IvsQName);
     IvsLamGroup.push_back(IvsLamName);
@@ -624,8 +698,7 @@ bool ReflectometryReductionOneAuto::processGroups() {
 
   // If this is a multiperiod workspace and we have polarization corrections
   // enabled
-  if (this->getPropertyValue("PolarizationAnalysis") !=
-      noPolarizationCorrectionMode()) {
+  if (isPolarizationCorrectionOn) {
     if (group->isMultiperiod()) {
       // Perform polarization correction over the IvsLam group
       Algorithm_sptr polAlg =
@@ -654,6 +727,7 @@ bool ReflectometryReductionOneAuto::processGroups() {
             outputIvsLam + "_" + boost::lexical_cast<std::string>(i + 1);
         alg->setProperty("InputWorkspace", IvsLamName);
         alg->setProperty("OutputWorkspace", IvsQName);
+        alg->setProperty("CorrectionAlgorithm", "None");
         alg->setProperty("OutputWorkspaceWavelength", IvsLamName);
         alg->execute();
       }

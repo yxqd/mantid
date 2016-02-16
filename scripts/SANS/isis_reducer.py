@@ -1,4 +1,4 @@
-#pylint: disable=invalid-name
+﻿#pylint: disable=invalid-name
 """
     ISIS-specific implementation of the SANS Reducer.
 
@@ -101,12 +101,6 @@ class Can(Sample):
 
         super(Can, self).set_run(run, reload, period, reducer)
 
-        # currently, no slices will be applied to Can #8535
-        for period in reversed(range(self.loader.periods_in_file)):
-            self.loader.move2ws(period)
-            name = self.loader.wksp_name
-            if su.isEventWorkspace(name):
-                su.fromEvent2Histogram(mtd[name], self.get_monitor())
 
 class ISISReducer(Reducer):
     """
@@ -223,6 +217,8 @@ class ISISReducer(Reducer):
         self._slices_def = []
         self._slice_index = 0
 
+        # As mentioned above, this is not a reductions step!
+        
 
     def _clean_loaded_data(self):
         self._sample_run = Sample()
@@ -260,6 +256,10 @@ class ISISReducer(Reducer):
 
         self.settings = get_settings_object()
 
+        # Dark Run Subtraction handler. This is not a step but a utility class
+        # which gets used during cropping and Tranmission calculation
+        self.dark_run_subtraction = isis_reduction_steps.DarkRunSubtraction()
+
 
     def set_instrument(self, configuration):
         """
@@ -270,7 +270,6 @@ class ISISReducer(Reducer):
         super(ISISReducer, self).set_instrument(configuration)
         center = self.instrument.get_default_beam_center()
         self._beam_finder = isis_reduction_steps.BaseBeamFinder(center[0], center[1])
-
 
     def set_sample(self, run, reload, period):
         """
@@ -667,7 +666,95 @@ class ISISReducer(Reducer):
             try:
                 if wk and wk in mtd:
                     DeleteWorkspace(Workspace=wk)
+            # pylint: disable=bare-except
             except:
                 #if the workspace can't be deleted this function does nothing
                 pass
+    def get_reduction_steps(self):
+        '''
+        Provides a way to access the reduction steps
+        @returns the reduction steps
+        '''
+        return self._reduction_steps
 
+    def perform_consistency_check(self):
+        '''
+        Runs the consistency check over all reduction steps
+        '''
+        was_empty = False
+        if not self._reduction_steps:
+            self._to_steps()
+            was_empty = True
+
+        try:
+            to_check = self._reduction_steps
+            for element in to_check:
+                element.run_consistency_check()
+        except RuntimeError, details:
+            if was_empty:
+                self._reduction_steps = None
+            raise RuntimeError(str(details))
+
+    def update_beam_center(self):
+        """
+        Gets a possible new beam center position from the instrument after translation
+        or rotation. Previously this was not necessary as the reducer told the instrument
+        how to position, but now the instrument can get further positioning information
+        from the Instrument Parameter File.
+        """
+        centre_pos1, centre_pos2 = self.instrument.get_updated_beam_centre_after_move()
+        # Update the beam centre finder for the rear
+        self._beam_finder.update_beam_center(centre_pos1, centre_pos2)
+
+    def add_dark_run_setting(self, dark_run_setting):
+        '''
+        Adds a dark run setting to the dark run subtraction
+        @param dark_run_setting: a dark run setting
+        '''
+        self.dark_run_subtraction.add_setting(dark_run_setting)
+
+    def get_dark_run_setting(self, is_time, is_mon):
+        '''
+        Gets one of the four dark run setttings
+        @param is_time: is it time_based or not
+        @param is_mon: monitors or not
+        @returns the requested setting
+        '''
+        setting = None
+        if is_time and is_mon:
+            setting = self.dark_run_subtraction.get_time_based_setting_monitors()
+        elif is_time and not is_mon:
+            setting = self.dark_run_subtraction.get_time_based_setting_detectors()
+        elif not is_time and is_mon:
+            setting = self.dark_run_subtraction.get_uamp_based_setting_monitors()
+        elif not is_time and not is_mon:
+            setting = self.dark_run_subtraction.get_uamp_based_setting_detectors()
+        return setting
+
+    def clear_dark_run_settings(self):
+        self.dark_run_subtraction.clear_settings()
+
+    def is_based_on_event(self):
+        '''
+        One way to determine if we are dealing with an original event workspace
+        is if the monitor workspace was loaded separately
+        @returns true if the input was an event workspace
+        '''
+        was_event = False
+        if self.is_can():
+            sample = self.get_can()
+            try:
+                dummy_ws = mtd[can.loader.wksp_name + "_monitors"]
+                was_event = True
+            # pylint: disable=bare-except
+            except:
+                was_event = False
+        else:
+            sample = self.get_sample()
+            try:
+                dummy_ws = mtd[sample.loader.wksp_name + "_monitors"]
+                was_event = True
+            # pylint: disable=bare-except
+            except:
+                was_event = False
+        return was_event

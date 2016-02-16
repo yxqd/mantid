@@ -41,17 +41,21 @@ namespace Geometry {
 */
 
 class MANTID_GEOMETRY_DLL General : public Quadratic {
+private:
+  General *doClone() const override;
+
+protected:
+  General(const General &);
+  General &operator=(const General &);
+
 public:
   General();
-  General(const General &);
-  General *clone() const;
-  General &operator=(const General &);
-  ~General();
+  std::unique_ptr<General> clone() const;
 
-  int setSurface(const std::string &);
-  void setBaseEqn();
+  int setSurface(const std::string &) override;
+  void setBaseEqn() override;
   void getBoundingBox(double &xmax, double &ymax, double &zmax, double &xmin,
-                      double &ymin, double &zmin);
+                      double &ymin, double &zmin) override;
 };
 
 } // NAMESPACE Geometry

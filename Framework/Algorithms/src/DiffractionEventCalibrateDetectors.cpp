@@ -4,28 +4,27 @@
 #include "MantidAlgorithms/DiffractionEventCalibrateDetectors.h"
 #include "MantidAlgorithms/GSLFunctions.h"
 #include "MantidAPI/FileProperty.h"
+#include "MantidAPI/IFunction.h"
+#include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/TableRow.h"
 #include "MantidAPI/TextAxis.h"
-#include "MantidAPI/IFunction.h"
 #include "MantidDataObjects/EventList.h"
 #include "MantidDataObjects/EventWorkspace.h"
+#include "MantidDataObjects/GroupingWorkspace.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidGeometry/Instrument/RectangularDetector.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/CPUTimer.h"
 #include "MantidKernel/Exception.h"
 #include "MantidKernel/UnitFactory.h"
-#include <cmath>
-#include <iomanip>
-#include <numeric>
-#include <Poco/File.h>
-#include <sstream>
-#include <fstream>
-#include "MantidDataObjects/GroupingWorkspace.h"
-#include "MantidAPI/AlgorithmFactory.h"
-#include "MantidAPI/WorkspaceValidators.h"
 #include "MantidKernel/BoundedValidator.h"
-#include "MantidAPI/MatrixWorkspace.h"
+
+#include <Poco/File.h>
+#include <cmath>
+#include <numeric>
+#include <fstream>
+#include <sstream>
 
 namespace Mantid {
 namespace Algorithms {
@@ -54,7 +53,7 @@ DiffractionEventCalibrateDetectors::~DiffractionEventCalibrateDetectors() {}
 static double gsl_costFunction(const gsl_vector *v, void *params) {
   double x, y, z, rotx, roty, rotz;
   std::string detname, inname, outname, peakOpt, rb_param, groupWSName;
-  std::string *p = (std::string *)params;
+  std::string *p = reinterpret_cast<std::string *>(params);
   detname = p[0];
   inname = p[1];
   outname = p[2];
@@ -194,8 +193,7 @@ double DiffractionEventCalibrateDetectors::intensity(
 
   // Find point of peak centre
   const MantidVec &yValues = outputW->readY(0);
-  MantidVec::const_iterator it =
-      std::max_element(yValues.begin(), yValues.end());
+  auto it = std::max_element(yValues.begin(), yValues.end());
   double peakHeight = *it;
   if (peakHeight == 0)
     return -0.000;
@@ -420,7 +418,7 @@ void DiffractionEventCalibrateDetectors::exec() {
     std::cout << tim << " to CreateGroupingWorkspace" << std::endl;
 
     const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex;
-    gsl_multimin_fminimizer *s = NULL;
+    gsl_multimin_fminimizer *s = nullptr;
     gsl_vector *ss, *x;
     gsl_multimin_function minex_func;
 

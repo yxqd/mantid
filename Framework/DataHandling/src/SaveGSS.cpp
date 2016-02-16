@@ -2,16 +2,18 @@
 // Includes
 //---------------------------------------------------
 #include "MantidDataHandling/SaveGSS.h"
-#include "MantidAPI/FileProperty.h"
-#include "MantidAPI/WorkspaceValidators.h"
+
 #include "MantidAPI/AlgorithmHistory.h"
+#include "MantidAPI/FileProperty.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
+#include "MantidGeometry/Instrument.h"
 #include "MantidKernel/TimeSeriesProperty.h"
 #include "MantidKernel/ListValidator.h"
+
 #include <boost/math/special_functions/fpclassify.hpp>
 #include <Poco/File.h>
 #include <Poco/Path.h>
 #include <fstream>
-#include <iomanip>
 
 namespace Mantid {
 namespace DataHandling {
@@ -97,7 +99,7 @@ void SaveGSS::init() {
 void getFocusedPos(MatrixWorkspace_const_sptr wksp, const int spectrum,
                    double &l1, double &l2, double &tth, double &difc) {
   Geometry::Instrument_const_sptr instrument = wksp->getInstrument();
-  if (instrument == NULL) {
+  if (instrument == nullptr) {
     l1 = 0.;
     l2 = 0.;
     tth = 0.;
@@ -105,7 +107,7 @@ void getFocusedPos(MatrixWorkspace_const_sptr wksp, const int spectrum,
   }
   Geometry::IComponent_const_sptr source = instrument->getSource();
   Geometry::IComponent_const_sptr sample = instrument->getSample();
-  if (source == NULL || sample == NULL) {
+  if (source == nullptr || sample == nullptr) {
     l1 = 0.;
     l2 = 0.;
     tth = 0.;
@@ -204,7 +206,7 @@ void SaveGSS::writeGSASFile(const std::string &outfilename, bool append,
   Geometry::IComponent_const_sptr source;
   Geometry::IComponent_const_sptr sample;
   bool has_instrument = false;
-  if (instrument != NULL) {
+  if (instrument != nullptr) {
     source = instrument->getSource();
     sample = instrument->getSample();
     if (source && sample)
@@ -377,7 +379,7 @@ void writeLogValue(std::ostream &os, const Run &runinfo,
   Kernel::Property *prop = runinfo.getProperty(name);
 
   // Return without a valid pointer to property
-  if (prop == NULL) {
+  if (prop == nullptr) {
     os << defValue;
     return;
   }
@@ -411,6 +413,7 @@ void writeLogValue(std::ostream &os, const Run &runinfo,
 void SaveGSS::writeHeaders(const std::string &format, std::stringstream &os,
                            double primaryflightpath) const {
   const Run &runinfo = inputWS->run();
+  std::ios::fmtflags fflags(os.flags());
 
   // Run number
   if (format.compare(SLOG) == 0) {
@@ -427,7 +430,7 @@ void SaveGSS::writeHeaders(const std::string &format, std::stringstream &os,
     // the instrument parameter file
     if (runinfo.hasProperty("iparm_file")) {
       Kernel::Property *prop = runinfo.getProperty("iparm_file");
-      if (prop != NULL && (!prop->value().empty())) {
+      if (prop != nullptr && (!prop->value().empty())) {
         std::stringstream line;
         line << "#Instrument parameter file: " << prop->value();
         os << std::setw(80) << std::left << line.str() << "\n";
@@ -469,11 +472,10 @@ void SaveGSS::writeHeaders(const std::string &format, std::stringstream &os,
     bool norm_by_monitor = false;
     const Mantid::API::AlgorithmHistories &algohist =
         inputWS->getHistory().getAlgorithmHistories();
-    for (Mantid::API::AlgorithmHistories::const_iterator it = algohist.begin();
-         it != algohist.end(); ++it) {
-      if ((*it)->name().compare("NormaliseByCurrent") == 0)
+    for (const auto &algo : algohist) {
+      if (algo->name().compare("NormaliseByCurrent") == 0)
         norm_by_current = true;
-      if ((*it)->name().compare("NormaliseToMonitor") == 0)
+      if (algo->name().compare("NormaliseToMonitor") == 0)
         norm_by_monitor = true;
     }
     os << "#";
@@ -484,6 +486,8 @@ void SaveGSS::writeHeaders(const std::string &format, std::stringstream &os,
     os << "\n";
   }
 
+  os.flags(fflags);
+
   return;
 }
 
@@ -492,10 +496,12 @@ void SaveGSS::writeHeaders(const std::string &format, std::stringstream &os,
   */
 inline void writeBankLine(std::stringstream &out, const std::string &bintype,
                           const int banknum, const size_t datasize) {
+  std::ios::fmtflags fflags(out.flags());
   out << "BANK " << std::fixed << std::setprecision(0)
       << banknum // First bank should be 1 for GSAS; this can be changed
       << std::fixed << " " << datasize << std::fixed << " " << datasize
       << std::fixed << " " << bintype;
+  out.flags(fflags);
 }
 
 //----------------------------------------------------------------------------------------------

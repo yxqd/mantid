@@ -1,6 +1,8 @@
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/AnalysisDataService.h"
 #include "MantidAPI/ITableWorkspace.h"
+#include "MantidKernel/ICatalogInfo.h"
+#include "MantidKernel/UserCatalogInfo.h"
 #include "MantidKernel/ConfigService.h"
 #include "MantidKernel/FacilityInfo.h"
 #include "MantidQtMantidWidgets/CatalogSearch.h"
@@ -242,6 +244,7 @@ namespace MantidQt
 
       // This will contain the list of column names.
       QStringList columnHeaders;
+      columnHeaders.reserve(static_cast<int>(workspace->columnCount()));
 
       // Add the data from the workspace to the search results table.
       for(size_t col = 0 ; col < workspace->columnCount(); col++)
@@ -439,32 +442,49 @@ namespace MantidQt
       std::map<std::string, std::string> searchFieldInput;
 
       // Left side of form.
-      searchFieldInput.insert(std::pair<std::string, std::string>("InvestigationName", m_icatUiForm.InvestigationName->text().toStdString()));
-      searchFieldInput.insert(std::pair<std::string, std::string>("Instrument", m_icatUiForm.Instrument->currentText().toStdString()));
+      searchFieldInput.emplace(
+          "InvestigationName",
+          m_icatUiForm.InvestigationName->text().toStdString());
+      searchFieldInput.emplace(
+          "Instrument", m_icatUiForm.Instrument->currentText().toStdString());
       if (m_icatUiForm.RunRange->text().size() > 2)
       {
-        searchFieldInput.insert(std::pair<std::string, std::string>("RunRange", m_icatUiForm.RunRange->text().toStdString()));
+        searchFieldInput.emplace("RunRange",
+                                 m_icatUiForm.RunRange->text().toStdString());
       }
-      searchFieldInput.insert(std::pair<std::string, std::string>("InvestigatorSurname", m_icatUiForm.InvestigatorSurname->text().toStdString()));
-      searchFieldInput.insert(std::pair<std::string, std::string>("DataFileName", m_icatUiForm.DataFileName->text().toStdString()));
-      searchFieldInput.insert(std::pair<std::string, std::string>("InvestigationId", m_icatUiForm.InvestigationId->text().toStdString()));
+      searchFieldInput.emplace(
+          "InvestigatorSurname",
+          m_icatUiForm.InvestigatorSurname->text().toStdString());
+      searchFieldInput.emplace("DataFileName",
+                               m_icatUiForm.DataFileName->text().toStdString());
+      searchFieldInput.emplace(
+          "InvestigationId",
+          m_icatUiForm.InvestigationId->text().toStdString());
 
       // Right side of form.
       if (m_icatUiForm.StartDate->text().size() > 2)
       {
-        searchFieldInput.insert(std::pair<std::string, std::string>("StartDate", m_icatUiForm.StartDate->text().toStdString()));
+        searchFieldInput.emplace("StartDate",
+                                 m_icatUiForm.StartDate->text().toStdString());
       }
       if (m_icatUiForm.EndDate->text().size() > 2)
       {
-        searchFieldInput.insert(std::pair<std::string, std::string>("EndDate", m_icatUiForm.EndDate->text().toStdString()));
+        searchFieldInput.emplace("EndDate",
+                                 m_icatUiForm.EndDate->text().toStdString());
       }
-      searchFieldInput.insert(std::pair<std::string, std::string>("Keywords", m_icatUiForm.Keywords->text().toStdString()));
-      searchFieldInput.insert(std::pair<std::string, std::string>("SampleName", m_icatUiForm.SampleName->text().toStdString()));
-      searchFieldInput.insert(std::pair<std::string, std::string>("InvestigationType", m_icatUiForm.InvestigationType->currentText().toStdString()));
+      searchFieldInput.emplace("Keywords",
+                               m_icatUiForm.Keywords->text().toStdString());
+      searchFieldInput.emplace("SampleName",
+                               m_icatUiForm.SampleName->text().toStdString());
+      searchFieldInput.emplace(
+          "InvestigationType",
+          m_icatUiForm.InvestigationType->currentText().toStdString());
 
       // Since we check if the field is empty in the algorithm, there's no need to check if advanced was clicked.
       // If the "My data only" field is checked. We return the state of the checkbox (1 is true, 0 is false).
-      searchFieldInput.insert(std::pair<std::string, std::string>("MyData", boost::lexical_cast<std::string>(m_icatUiForm.myDataCbox->isChecked())));
+      searchFieldInput.emplace("MyData",
+                               boost::lexical_cast<std::string>(
+                                   m_icatUiForm.myDataCbox->isChecked()));
 
       return (searchFieldInput);
     }
@@ -610,9 +630,15 @@ namespace MantidQt
       // Update the label to inform the user that searching is in progress.
       m_icatUiForm.searchResultsLbl->setText("searching investigations...");
 
+      // Get previous sorting parameters
+      QTableWidget* resultsTable = m_icatUiForm.searchResultsTbl;
+      int sort_section = resultsTable->horizontalHeader()->sortIndicatorSection();
+      Qt::SortOrder sort_order = resultsTable->horizontalHeader()->sortIndicatorOrder();
+
       // Remove previous search results.
       std::string searchResults = "searchResults";
-      clearSearch(m_icatUiForm.searchResultsTbl, searchResults);
+
+      clearSearch(resultsTable, searchResults);
 
       auto sessionIDs = m_catalogSelector->getSelectedCatalogSessions();
       // Obtain the number of results for paging.
@@ -635,7 +661,7 @@ namespace MantidQt
       m_icatUiForm.searchResultsLbl->setText(QString::number(numrows) + " investigations found.");
 
       // Populate the result table from the searchResult workspace.
-      populateResultTable();
+      populateResultTable(sort_section, sort_order);
     }
 
     /**
@@ -710,8 +736,10 @@ namespace MantidQt
 
     /**
      * Outputs the results of the search into the "Search results" table.
+     * @param sort_section :: An int giving the column number by which to sort the data (0 will sort by StartDate)
+     * @param sort_order :: A Qt::SortOrder giving the order of sorting
      */
-    void CatalogSearch::populateResultTable()
+    void CatalogSearch::populateResultTable(int sort_section, Qt::SortOrder sort_order)
     {
       // Obtain a pointer to the "searchResults" workspace where the search results are saved if it exists.
       Mantid::API::ITableWorkspace_sptr workspace;
@@ -759,9 +787,14 @@ namespace MantidQt
       //Resize InvestigationID column to fit contents
       resultsTable->resizeColumnToContents(headerIndexByName(resultsTable, "InvestigationID"));
 
-      // Sort by endDate with the most recent being first.
+      // Sort by specified column or by descending StartDate if none specified
       resultsTable->setSortingEnabled(true);
-      resultsTable->sortByColumn(headerIndexByName(resultsTable, "Start date"),Qt::DescendingOrder);
+      if (sort_section == 0) {
+        resultsTable->sortByColumn(headerIndexByName(resultsTable, "Start date"),Qt::DescendingOrder);
+      } else {
+          resultsTable->sortByColumn(sort_section, sort_order);
+      }
+
     }
 
     /**
@@ -986,10 +1019,13 @@ namespace MantidQt
       {
         if (table->item(row, 0)->checkState())
         {
-          fileInfo.push_back(std::make_pair(
-              table->item(row, headerIndexByName(table, "Id"))->text().toLongLong(),
-              table->item(row, headerIndexByName(table, "Name"))->text().toStdString())
-          );
+          fileInfo.emplace_back(
+              table->item(row, headerIndexByName(table, "Id"))
+                  ->text()
+                  .toLongLong(),
+              table->item(row, headerIndexByName(table, "Name"))
+                  ->text()
+                  .toStdString());
         }
       }
       return (fileInfo);
@@ -1053,10 +1089,19 @@ namespace MantidQt
      */
     void CatalogSearch::disableDownloadButtonIfArchives(int row)
     {
+      using namespace Mantid::Kernel;
+
       QTableWidget* table = m_icatUiForm.dataFileResultsTbl;
       // The location of the file selected in the archives.
       std::string location = table->item(row,headerIndexByName(table, "Location"))->text().toStdString();
-      Mantid::Kernel::CatalogInfo catalogInfo = Mantid::Kernel::ConfigService::Instance().getFacility().catalogInfo();
+
+      // Create and use the user-set ConfigInformation.
+      std::unique_ptr<CatalogConfigService> catConfigService(
+          makeCatalogConfigServiceAdapter(ConfigService::Instance()));
+      UserCatalogInfo catalogInfo(
+          ConfigService::Instance().getFacility().catalogInfo(),
+          *catConfigService);
+
       std::string fileLocation = catalogInfo.transformArchivePath(location);
 
       std::ifstream hasAccessToArchives(fileLocation.c_str());

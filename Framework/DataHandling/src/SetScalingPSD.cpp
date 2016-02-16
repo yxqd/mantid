@@ -4,14 +4,17 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidDataHandling/SetScalingPSD.h"
+#include "LoadRaw/isisraw.h"
+#include "MantidAPI/Axis.h"
+#include "MantidAPI/FileProperty.h"
+#include "MantidAPI/MatrixWorkspace.h"
+#include "MantidGeometry/Instrument/ComponentHelper.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/BoundedValidator.h"
-#include "MantidGeometry/Instrument/ComponentHelper.h"
-#include "MantidAPI/FileProperty.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidKernel/V3D.h"
+
 #include <cmath>
 #include <fstream>
-#include "LoadRaw/isisraw.h"
 
 namespace Mantid {
 namespace DataHandling {
@@ -31,11 +34,9 @@ SetScalingPSD::SetScalingPSD() : Algorithm(), m_scalingOption(0) {}
  */
 void SetScalingPSD::init() {
   // Declare required input parameters for algorithm
-  std::vector<std::string> exts;
-  exts.push_back(".sca");
-  exts.push_back(".raw");
   declareProperty(
-      new FileProperty("ScalingFilename", "", FileProperty::Load, exts),
+      new FileProperty("ScalingFilename", "", FileProperty::Load,
+                       {".sca", ".raw"}),
       "The name of the scaling calibrations file to read, including its\n"
       "full or relative path. The file extension must be either .sca or\n"
       ".raw (filenames are case sensitive on linux)");
@@ -248,7 +249,7 @@ void SetScalingPSD::movePos(API::MatrixWorkspace_sptr &WS,
   *   @param scaleMap :: A map of integer detectorID and corresponding scaling
   * (in Y)
   */
-  std::map<int, Kernel::V3D>::iterator iter = posMap.begin();
+  auto iter = posMap.begin();
   Geometry::ParameterMap &pmap = WS->instrumentParameters();
   boost::shared_ptr<const Instrument> inst = WS->getInstrument();
   boost::shared_ptr<const IComponent> comp;
@@ -267,8 +268,8 @@ void SetScalingPSD::movePos(API::MatrixWorkspace_sptr &WS,
   // double prog=0.5;
   Progress prog(this, 0.5, 1.0, static_cast<int>(m_vectDet.size()));
   // loop over detector (IComps)
-  for (size_t id = 0; id < m_vectDet.size(); id++) {
-    comp = m_vectDet[id];
+  for (auto &id : m_vectDet) {
+    comp = id;
     boost::shared_ptr<const IDetector> det =
         boost::dynamic_pointer_cast<const IDetector>(comp);
     int idet = 0;
@@ -282,7 +283,7 @@ void SetScalingPSD::movePos(API::MatrixWorkspace_sptr &WS,
         *det, pmap, iter->second, Geometry::ComponentHelper::Relative);
 
     // Set the "sca" instrument parameter
-    std::map<int, double>::iterator it = scaleMap.find(idet);
+    auto it = scaleMap.find(idet);
     if (it != scaleMap.end()) {
       scale = it->second;
       if (minScale > scale)
@@ -342,7 +343,7 @@ void SetScalingPSD::getDetPositionsFromRaw(std::string rawfile,
   (void)rawfile; // Avoid compiler warning
 
   // open raw file
-  ISISRAW iraw(NULL);
+  ISISRAW iraw(nullptr);
   if (iraw.readFromFile(m_filename.c_str(), false) != 0) {
     g_log.error("Unable to open file " + m_filename);
     throw Exception::FileError("Unable to open File:", m_filename);

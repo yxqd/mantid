@@ -16,6 +16,7 @@
 
 #include "MantidTestHelpers/ComponentCreationHelper.h"
 #include "MantidTestHelpers/NexusTestHelper.h"
+#include "PropertyManagerHelper.h"
 
 #include <nexus/NeXusFile.hpp>
 #include <nexus/NeXusException.hpp>
@@ -76,7 +77,7 @@ public:
 
   void test_GetSetInstrument_default() {
     ExperimentInfo ws;
-    boost::shared_ptr<Instrument> inst1(new Instrument());
+    boost::shared_ptr<Instrument> inst1 = boost::make_shared<Instrument>();
     inst1->setName("MyTestInst");
     ws.setInstrument(inst1);
 
@@ -273,7 +274,7 @@ public:
     ws.mutableSample().setName("test");
     OrientedLattice latt(1, 2, 3, 90, 90, 90);
     ws.mutableSample().setOrientedLattice(&latt);
-    boost::shared_ptr<Instrument> inst1(new Instrument());
+    boost::shared_ptr<Instrument> inst1 = boost::make_shared<Instrument>();
     inst1->setName("MyTestInst");
     ws.setInstrument(inst1);
     ws.setModeratorModel(new FakeSource);
@@ -290,7 +291,7 @@ public:
     ws.mutableSample().setName("test");
     OrientedLattice latt(1, 2, 3, 90, 90, 90);
     ws.mutableSample().setOrientedLattice(&latt);
-    boost::shared_ptr<Instrument> inst1(new Instrument());
+    boost::shared_ptr<Instrument> inst1 = boost::make_shared<Instrument>();
     inst1->setName("MyTestInst");
     ws.setInstrument(inst1);
     ws.setModeratorModel(new FakeSource);
@@ -307,7 +308,7 @@ public:
     ws.mutableSample().setName("test");
     OrientedLattice latt(1, 2, 3, 90, 90, 90);
     ws.mutableSample().setOrientedLattice(&latt);
-    boost::shared_ptr<Instrument> inst1(new Instrument());
+    boost::shared_ptr<Instrument> inst1 = boost::make_shared<Instrument>();
     inst1->setName("MyTestInst");
     ws.setInstrument(inst1);
     ws.setModeratorModel(new FakeSource);
@@ -417,10 +418,8 @@ public:
     TS_ASSERT(det);
 
     // Set a mapping
-    std::vector<Mantid::detid_t> group(2, 1);
-    group[1] = 2;
-    Mantid::det2group_map mapping;
-    mapping.insert(std::make_pair(1, group));
+    std::vector<Mantid::detid_t> group{1, 2};
+    Mantid::det2group_map mapping{{1, group}};
     exptInfo->cacheDetectorGroupings(mapping);
 
     TS_ASSERT_THROWS_NOTHING(det = exptInfo->getDetectorByID(1));
@@ -445,7 +444,7 @@ public:
   test_Setting_Group_Lookup_To_Non_Empty_Map_Allows_Retrieval_Of_Correct_IDs() {
     ExperimentInfo expt;
     std::map<Mantid::detid_t, std::vector<Mantid::detid_t>> mappings;
-    mappings.insert(std::make_pair(1, std::vector<Mantid::detid_t>(1, 2)));
+    mappings.emplace(1, std::vector<Mantid::detid_t>(1, 2));
     expt.cacheDetectorGroupings(mappings);
 
     std::vector<Mantid::detid_t> ids;
@@ -493,8 +492,7 @@ public:
         else
           ft.to.setFromISO8601("2100-01-01T00:00:00");
 
-        idfFiles.insert(std::pair<std::string, fromToEntry>(
-            l_filenamePart.substr(0, found), ft));
+        idfFiles.emplace(l_filenamePart.substr(0, found), ft);
         idfIdentifiers.insert(l_filenamePart.substr(0, found));
       }
     }
@@ -566,7 +564,7 @@ public:
     NexusTestHelper th(true);
     th.createFile(filename);
     ExperimentInfo ws;
-    boost::shared_ptr<Instrument> inst1(new Instrument());
+    boost::shared_ptr<Instrument> inst1 = boost::make_shared<Instrument>();
     inst1->setName("GEM");
     inst1->setFilename("GEM_Definition.xml");
     inst1->setXmlText("");
@@ -592,7 +590,7 @@ public:
     NexusTestHelper th(true);
     th.createFile(filename);
     ExperimentInfo ws;
-    boost::shared_ptr<Instrument> inst1(new Instrument());
+    boost::shared_ptr<Instrument> inst1 = boost::make_shared<Instrument>();
     inst1->setName("");
     inst1->setFilename("");
     inst1->setXmlText("");
@@ -693,6 +691,38 @@ public:
     TS_ASSERT_EQUALS(params.size(), 613); // Check size of parameter string
   }
 
+  /**
+  * Test declaring an ExperimentInfo property and retrieving as const or
+  * non-const
+  */
+  void testGetProperty_const_sptr() {
+    const std::string eiName = "InputEi";
+    ExperimentInfo_sptr eiInput(new ExperimentInfo());
+    PropertyManagerHelper manager;
+    manager.declareProperty(eiName, eiInput, Mantid::Kernel::Direction::Input);
+
+    // Check property can be obtained as const_sptr or sptr
+    ExperimentInfo_const_sptr eiConst;
+    ExperimentInfo_sptr eiNonConst;
+    TS_ASSERT_THROWS_NOTHING(
+        eiConst = manager.getValue<ExperimentInfo_const_sptr>(eiName));
+    TS_ASSERT(eiConst != NULL);
+    TS_ASSERT_THROWS_NOTHING(eiNonConst =
+                                 manager.getValue<ExperimentInfo_sptr>(eiName));
+    TS_ASSERT(eiNonConst != NULL);
+    TS_ASSERT_EQUALS(eiConst, eiNonConst);
+
+    // Check TypedValue can be cast to const_sptr or to sptr
+    PropertyManagerHelper::TypedValue val(manager, eiName);
+    ExperimentInfo_const_sptr eiCastConst;
+    ExperimentInfo_sptr eiCastNonConst;
+    TS_ASSERT_THROWS_NOTHING(eiCastConst = (ExperimentInfo_const_sptr)val);
+    TS_ASSERT(eiCastConst != NULL);
+    TS_ASSERT_THROWS_NOTHING(eiCastNonConst = (ExperimentInfo_sptr)val);
+    TS_ASSERT(eiCastNonConst != NULL);
+    TS_ASSERT_EQUALS(eiCastConst, eiCastNonConst);
+  }
+
 private:
   void addInstrumentWithParameter(ExperimentInfo &expt, const std::string &name,
                                   const std::string &value) {
@@ -730,7 +760,7 @@ private:
 
   ExperimentInfo_sptr createTestInfoWithChopperPoints(const size_t npoints) {
     ExperimentInfo_sptr exptInfo(new ExperimentInfo);
-    boost::shared_ptr<Instrument> inst1(new Instrument());
+    boost::shared_ptr<Instrument> inst1 = boost::make_shared<Instrument>();
     inst1->setName("MyTestInst");
     auto source = new ObjComponent("source");
     inst1->add(source);

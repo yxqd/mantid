@@ -4,8 +4,6 @@
 #include <cxxtest/TestSuite.h>
 #include "MantidKernel/Timer.h"
 #include "MantidKernel/System.h"
-#include <iostream>
-#include <iomanip>
 
 #include "MantidAPI/EnabledWhenWorkspaceIsType.h"
 #include "MantidKernel/PropertyManagerOwner.h"
@@ -34,8 +32,10 @@ public:
   };
 
   void test_enable_disable() {
-    boost::shared_ptr<WorkspaceTester> ws1(new WorkspaceTester);
-    boost::shared_ptr<WorkspaceTesterSubClass> ws2(new WorkspaceTesterSubClass);
+    boost::shared_ptr<WorkspaceTester> ws1 =
+        boost::make_shared<WorkspaceTester>();
+    boost::shared_ptr<WorkspaceTesterSubClass> ws2 =
+        boost::make_shared<WorkspaceTesterSubClass>();
     AnalysisDataService::Instance().addOrReplace("tester", ws1);
     AnalysisDataService::Instance().addOrReplace("testersub", ws2);
 

@@ -3,6 +3,7 @@
 //------------------------------------------------------
 #include "MantidDataHandling/LoadSampleDetailsFromRaw.h"
 #include "MantidAPI/FileProperty.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/Sample.h"
 
 // The isis RAW data structure
@@ -27,11 +28,9 @@ void LoadSampleDetailsFromRaw::init() {
       new WorkspaceProperty<>("InputWorkspace", "", Direction::Input),
       "The sample details are attached to this workspace.");
 
-  std::vector<std::string> exts;
-  exts.push_back("raw");
-  exts.push_back(".s*");
-  declareProperty(new FileProperty("Filename", "", FileProperty::Load, exts),
-                  "The raw file containing the sample geometry information.");
+  declareProperty(
+      new FileProperty("Filename", "", FileProperty::Load, {"raw", ".s*"}),
+      "The raw file containing the sample geometry information.");
 }
 
 /**
@@ -42,12 +41,12 @@ void LoadSampleDetailsFromRaw::exec() {
 
   std::string filename = getPropertyValue("Filename");
   FILE *file = fopen(filename.c_str(), "rb");
-  if (file == NULL) {
+  if (file == nullptr) {
     g_log.error("Unable to open file " + filename);
     throw Exception::FileError("Unable to open File:", filename);
   }
 
-  ISISRAW2 *isis_raw = new ISISRAW2;
+  auto isis_raw = new ISISRAW2;
   isis_raw->ioRAW(file, true);
   fclose(file);
 

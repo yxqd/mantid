@@ -2,18 +2,16 @@
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/RegisterFileLoader.h"
-#include "MantidAPI/WorkspaceValidators.h"
 #include "MantidKernel/UnitFactory.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidGeometry/Instrument/RectangularDetector.h"
 #include "MantidGeometry/Objects/ShapeFactory.h"
 #include "MantidNexus/NexusClasses.h"
 
-//#include <Poco/File.h>
-
 namespace Mantid {
 namespace DataHandling {
 namespace ANSTO {
+
 // ProgressTracker
 ProgressTracker::ProgressTracker(API::Progress &progBar, const char *msg,
                                  int64_t target, size_t count)
@@ -49,79 +47,79 @@ void ProgressTracker::complete() {
   }
 }
 
+// EventProcessor
+EventProcessor::EventProcessor(const std::vector<bool> &roi,
+                               const size_t stride, const double period,
+                               const double phase, const double tofMinBoundary,
+                               const double tofMaxBoundary)
+    : m_roi(roi), m_stride(stride), m_period(period), m_phase(phase),
+      m_tofMinBoundary(tofMinBoundary), m_tofMaxBoundary(tofMaxBoundary) {}
+void EventProcessor::endOfFrame() { endOfFrameImpl(); }
+void EventProcessor::addEvent(size_t x, size_t y, double tof) {
+  // tof correction
+  if (m_period > 0.0) {
+    tof += m_phase;
+    while (tof > m_period)
+      tof -= m_period;
+    while (tof < 0)
+      tof += m_period;
+  }
+
+  // check if event is in valid range
+  if ((y < m_stride) && (m_tofMinBoundary <= tof) &&
+      (tof <= m_tofMaxBoundary)) {
+
+    // detector id
+    size_t id = m_stride * x + y;
+
+    // check if neutron is in region of intreset
+    if (m_roi[id])
+      addEventImpl(id, tof);
+  }
+}
+
 // EventCounter
-EventCounter::EventCounter(std::vector<size_t> &eventCounts,
-                           const std::vector<bool> &mask,
-                           const std::vector<int> &offsets, size_t stride,
-                           size_t pixelsCutOffL, size_t tubeBinning,
-                           size_t finalBinsY, double periode, double phase)
-    : m_eventCounts(eventCounts), m_mask(mask), m_offsets(offsets),
-      m_stride(stride), m_pixelsCutOffL(pixelsCutOffL),
-      m_tubeBinning(tubeBinning), m_finalBinsY(finalBinsY),
+EventCounter::EventCounter(const std::vector<bool> &roi, const size_t stride,
+                           const double period, const double phase,
+                           const double tofMinBoundary,
+                           const double tofMaxBoundary,
+                           std::vector<size_t> &eventCounts)
+    : EventProcessor(roi, stride, period, phase, tofMinBoundary,
+                     tofMaxBoundary),
+      m_eventCounts(eventCounts), m_numFrames(0),
       m_tofMin(std::numeric_limits<double>::max()),
-      m_tofMax(std::numeric_limits<double>::min()), m_period(periode),
-      m_phase(phase) {}
+      m_tofMax(std::numeric_limits<double>::min()) {}
+size_t EventCounter::numFrames() const { return m_numFrames; }
 double EventCounter::tofMin() const {
   return m_tofMin <= m_tofMax ? m_tofMin : 0.0;
 }
 double EventCounter::tofMax() const {
   return m_tofMin <= m_tofMax ? m_tofMax : 0.0;
 }
-void EventCounter::addEvent(size_t x, size_t y, double tof) {
-  // correction
-  if (m_period > 0.0) {
-    tof += m_phase;
-    while (tof > m_period)
-      tof -= m_period;
-    while (tof < 0)
-      tof += m_period;
-  }
+void EventCounter::endOfFrameImpl() { m_numFrames++; }
+void EventCounter::addEventImpl(size_t id, double tof) {
+  if (m_tofMin > tof)
+    m_tofMin = tof;
+  if (m_tofMax < tof)
+    m_tofMax = tof;
 
-  y = y + (size_t)m_offsets[x];
-  if (y < m_stride) { // sufficient because yNew is size_t
-    if (m_mask[m_stride * x + y]) {
-      if (m_tofMin > tof)
-        m_tofMin = tof;
-      if (m_tofMax < tof)
-        m_tofMax = tof;
-
-      // transformation to bin index
-      size_t j = (y - m_pixelsCutOffL) / m_tubeBinning;
-
-      m_eventCounts[m_finalBinsY * x + j]++;
-    }
-  }
+  m_eventCounts[id]++;
 }
 
 // EventAssigner
-EventAssigner::EventAssigner(std::vector<EventVector_pt> &eventVectors,
-                             const std::vector<bool> &mask,
-                             const std::vector<int> &offsets, size_t stride,
-                             size_t pixelsCutOffL, size_t tubeBinning,
-                             size_t finalBinsY, double periode, double phase)
-    : m_eventVectors(eventVectors), m_mask(mask), m_offsets(offsets),
-      m_stride(stride), m_pixelsCutOffL(pixelsCutOffL),
-      m_tubeBinning(tubeBinning), m_finalBinsY(finalBinsY), m_period(periode),
-      m_phase(phase) {}
-void EventAssigner::addEvent(size_t x, size_t y, double tof) {
-  // correction
-  if (m_period > 0.0) {
-    tof += m_phase;
-    while (tof > m_period)
-      tof -= m_period;
-    while (tof < 0)
-      tof += m_period;
-  }
-
-  y = y + (size_t)m_offsets[x];
-  if (y < m_stride) { // sufficient because yNew is size_t
-    if (m_mask[m_stride * x + y]) {
-      // transformation to bin index
-      size_t j = (y - m_pixelsCutOffL) / m_tubeBinning;
-
-      m_eventVectors[m_finalBinsY * x + j]->push_back(tof);
-    }
-  }
+EventAssigner::EventAssigner(const std::vector<bool> &roi, const size_t stride,
+                             const double period, const double phase,
+                             const double tofMinBoundary,
+                             const double tofMaxBoundary,
+                             std::vector<EventVector_pt> &eventVectors)
+    : EventProcessor(roi, stride, period, phase, tofMinBoundary,
+                     tofMaxBoundary),
+      m_eventVectors(eventVectors) {}
+void EventAssigner::endOfFrameImpl() {
+  // ignore
+}
+void EventAssigner::addEventImpl(size_t id, double tof) {
+  m_eventVectors[id]->push_back(tof);
 }
 
 // FastReadOnlyFile
@@ -150,16 +148,16 @@ FastReadOnlyFile::FastReadOnlyFile(const char *filename) {
 }
 FastReadOnlyFile::~FastReadOnlyFile() {
   fclose(m_handle);
-  m_handle = NULL;
+  m_handle = nullptr;
 }
 void *FastReadOnlyFile::handle() const { return m_handle; }
 bool FastReadOnlyFile::read(void *buffer, uint32_t size) {
-  return 1 == fread(buffer, (size_t)size, 1, m_handle);
+  return 1 == fread(buffer, static_cast<size_t>(size), 1, m_handle);
 }
 bool FastReadOnlyFile::seek(int64_t offset, int whence, int64_t *newPosition) {
   return (0 == fseek(m_handle, offset, whence)) &&
-         ((newPosition == NULL) ||
-          (0 <= (*newPosition = (int64_t)ftell(m_handle))));
+         ((newPosition == nullptr) ||
+          (0 <= (*newPosition = static_cast<int64_t>(ftell(m_handle)))));
 }
 #endif
 
@@ -178,10 +176,10 @@ template <size_t N> int64_t octalToInt(char(&str)[N]) {
 
 // construction
 File::File(const std::string &path)
-    : m_good(true), m_file(path.c_str()), m_selected((size_t)-1), m_position(0),
-      m_size(0), m_bufferPosition(0), m_bufferAvailable(0) {
+    : m_good(true), m_file(path.c_str()), m_selected(static_cast<size_t>(-1)),
+      m_position(0), m_size(0), m_bufferPosition(0), m_bufferAvailable(0) {
 
-  m_good = m_file.handle() != NULL;
+  m_good = m_file.handle() != nullptr;
   while (m_good) {
     EntryHeader header;
     int64_t position;
@@ -204,7 +202,7 @@ File::File(const std::string &path)
       m_fileInfos.push_back(fileInfo);
     }
 
-    size_t offset = (size_t)(fileInfo.Size % 512);
+    size_t offset = static_cast<size_t>(fileInfo.Size % 512);
     if (offset != 0)
       offset = 512 - offset;
 
@@ -241,24 +239,24 @@ bool File::select(const char *file) {
       return m_good &= m_file.seek(info.Offset, SEEK_SET);
     }
 
-  m_selected = (size_t)-1;
+  m_selected = static_cast<size_t>(-1);
   m_position = 0;
   m_size = 0;
   return false;
 }
 bool File::skip(uint64_t offset) {
-  if (!m_good || (m_selected == (size_t)-1))
+  if (!m_good || (m_selected == static_cast<size_t>(-1)))
     return false;
 
-  bool overrun = offset > (uint64_t)(m_size - m_position);
+  bool overrun = offset > static_cast<uint64_t>(m_size - m_position);
   if (overrun)
     offset = m_size - m_position;
 
   m_position += offset;
 
-  uint64_t bufferPosition = (uint64_t)m_bufferPosition + offset;
+  uint64_t bufferPosition = static_cast<uint64_t>(m_bufferPosition) + offset;
   if (bufferPosition <= m_bufferAvailable)
-    m_bufferPosition = (size_t)bufferPosition;
+    m_bufferPosition = static_cast<size_t>(bufferPosition);
   else {
     m_good &= m_file.seek(bufferPosition - m_bufferAvailable, SEEK_CUR);
 
@@ -269,13 +267,13 @@ bool File::skip(uint64_t offset) {
   return m_good && !overrun;
 }
 size_t File::read(void *dst, size_t size) {
-  if (!m_good || (m_selected == (size_t)-1))
+  if (!m_good || (m_selected == static_cast<size_t>(-1)))
     return 0;
 
-  if ((int64_t)size > (m_size - m_position))
-    size = (size_t)(m_size - m_position);
+  if (static_cast<int64_t>(size) > (m_size - m_position))
+    size = static_cast<size_t>(m_size - m_position);
 
-  auto ptr = (uint8_t *)dst;
+  auto ptr = reinterpret_cast<uint8_t *>(dst);
   size_t result = 0;
 
   if (m_bufferPosition != m_bufferAvailable) {
@@ -292,8 +290,8 @@ size_t File::read(void *dst, size_t size) {
   }
 
   while (size != 0) {
-    auto bytesToRead =
-        (uint32_t)std::min<size_t>(size, std::numeric_limits<uint32_t>::max());
+    auto bytesToRead = static_cast<uint32_t>(
+        std::min<size_t>(size, std::numeric_limits<uint32_t>::max()));
 
     m_good &= m_file.read(ptr, bytesToRead);
     if (!m_good)
@@ -309,7 +307,7 @@ size_t File::read(void *dst, size_t size) {
   return result;
 }
 int File::read_byte() {
-  if (!m_good || (m_selected == (size_t)-1))
+  if (!m_good || (m_selected == static_cast<size_t>(-1)))
     return -1;
 
   if (m_bufferPosition == m_bufferAvailable) {
@@ -319,8 +317,8 @@ int File::read_byte() {
     m_bufferPosition = 0;
     m_bufferAvailable = 0;
 
-    uint32_t size =
-        (uint32_t)std::min<int64_t>(sizeof(m_buffer), m_size - m_position);
+    uint32_t size = static_cast<uint32_t>(
+        std::min<int64_t>(sizeof(m_buffer), m_size - m_position));
     m_good &= m_file.read(m_buffer, size);
 
     if (m_good)
@@ -332,7 +330,8 @@ int File::read_byte() {
   m_position++;
   return m_buffer[m_bufferPosition++];
 }
-}
-}
-} // namespace
-} // namespace
+
+} // Tar
+} // ANSTO
+} // DataHandling
+} // Mantid

@@ -107,11 +107,35 @@ void CheckMantidVersion::exec() {
   if (!json.empty()) {
     Json::Reader r;
     Json::Value root;
-    r.parse(json, root);
+    bool parseOK = r.parse(json, root);
+    if (!parseOK) {
+      // just warning. The parser is able to get relevant info even if there are
+      // formatting issues like missing quotes or brackets.
+      g_log.warning() << "Error found when parsing version information "
+                         "retrieved from GitHub as a JSON string. "
+                         "Error trying to parse this JSON string: " << json
+                      << std::endl
+                      << ". Parsing error details: "
+                      << r.getFormattedErrorMessages() << std::endl;
+    }
 
-    std::string gitHubVersionTag = root["tag_name"].asString();
+    std::string gitHubVersionTag;
+    try {
+      gitHubVersionTag = root["tag_name"].asString();
+    } catch (std::runtime_error &re) {
+      g_log.error()
+          << "Error while trying to get the field 'tag_name' from "
+             "the version information retrieved from GitHub. This "
+             "algorithm cannot continue and will stop now. Error details: "
+          << re.what() << std::endl;
+
+      mostRecentVersion = "Could not get information from GitHub";
+      setProperty("MostRecentVersion", mostRecentVersion);
+      setProperty("IsNewVersionAvailable", isNewVersionAvailable);
+      return;
+    }
+
     mostRecentVersion = cleanVersionTag(gitHubVersionTag);
-
     isNewVersionAvailable =
         isVersionMoreRecent(currentVersion, mostRecentVersion);
     if (isNewVersionAvailable) {
@@ -154,7 +178,7 @@ CheckMantidVersion::splitVersionString(const std::string &versionString) const {
   Poco::StringTokenizer tokenizer(versionString, ".",
                                   Poco::StringTokenizer::TOK_TRIM |
                                       Poco::StringTokenizer::TOK_IGNORE_EMPTY);
-  Poco::StringTokenizer::Iterator h = tokenizer.begin();
+  auto h = tokenizer.begin();
 
   for (; h != tokenizer.end(); ++h) {
     try {
@@ -216,11 +240,11 @@ std::string CheckMantidVersion::getVersionsFromGitHub(const std::string &url) {
   std::ostringstream os;
   int tzd = 0;
 
-  inetHelper.headers().insert(std::make_pair(
+  inetHelper.headers().emplace(
       "if-modified-since",
       Poco::DateTimeFormatter::format(
           Poco::DateTimeParser::parse(MantidVersion::releaseDate(), tzd),
-          Poco::DateTimeFormat::HTTP_FORMAT)));
+          Poco::DateTimeFormat::HTTP_FORMAT));
   inetHelper.sendRequest(url, os);
   std::string retVal = os.str();
 

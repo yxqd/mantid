@@ -18,7 +18,8 @@ createLabel(const object &ascii, const object &utf8, const object &latex) {
     auto length = PyUnicode_GetSize(utf8Ptr);
     typedef UnitLabel::Utf8String::value_type Utf8Char;
     boost::scoped_array<Utf8Char> buffer(new Utf8Char[length]);
-    PyUnicode_AsWideChar((PyUnicodeObject *)utf8Ptr, buffer.get(), length);
+    PyUnicode_AsWideChar(reinterpret_cast<PyUnicodeObject *>(utf8Ptr),
+                         buffer.get(), length);
 
     auto *rawBuffer = buffer.get();
     return boost::make_shared<UnitLabel>(
@@ -52,18 +53,19 @@ void export_UnitLabel() {
       .def(init<UnitLabel::AsciiString>(
           (arg("ascii")), "Construct a label from a plain-text string"))
 
-      .def("ascii", &UnitLabel::ascii,
+      .def("ascii", &UnitLabel::ascii, arg("self"),
            return_value_policy<copy_const_reference>(),
            "Return the label as a plain-text string")
 
-      .def("utf8", &utf8ToUnicode, "Return the label as a unicode string")
+      .def("utf8", &utf8ToUnicode, arg("self"),
+           "Return the label as a unicode string")
 
       .def("latex", &UnitLabel::latex,
-           return_value_policy<copy_const_reference>(),
+           return_value_policy<copy_const_reference>(), arg("self"),
            "Return the label as a plain-text string with latex formatting")
 
       // special functions
       .def("__str__", &UnitLabel::ascii,
-           return_value_policy<copy_const_reference>())
-      .def("__unicode__", &utf8ToUnicode);
+           return_value_policy<copy_const_reference>(), arg("self"))
+      .def("__unicode__", &utf8ToUnicode, arg("self"));
 }

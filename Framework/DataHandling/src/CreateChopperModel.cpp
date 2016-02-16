@@ -1,5 +1,6 @@
 #include "MantidDataHandling/CreateChopperModel.h"
 #include "MantidAPI/FermiChopperModel.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/MandatoryValidator.h"
@@ -28,7 +29,7 @@ int CreateChopperModel::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
 const std::string CreateChopperModel::category() const {
-  return "DataHandling";
+  return "DataHandling\\Instrument";
 }
 
 //----------------------------------------------------------------------------------------------

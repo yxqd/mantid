@@ -1,7 +1,7 @@
 #include "MantidAlgorithms/LorentzCorrection.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/Progress.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidKernel/MultiThreaded.h"
 #include <boost/make_shared.hpp>
 #include <boost/shared_ptr.hpp>
@@ -34,7 +34,9 @@ LorentzCorrection::~LorentzCorrection() {}
 int LorentzCorrection::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
-const std::string LorentzCorrection::category() const { return "Crystal"; }
+const std::string LorentzCorrection::category() const {
+  return "Crystal\\Corrections";
+}
 
 /// Algorithm's summary for use in the GUI and help. @see Algorithm::summary
 const std::string LorentzCorrection::summary() const {

@@ -10,7 +10,9 @@
 #include "MantidTestHelpers/SANSInstrumentCreationHelper.h"
 #include "MantidTestHelpers/WorkspaceCreationHelper.h"
 #include "MantidAPI/AnalysisDataService.h"
+#include "MantidAPI/Axis.h"
 #include "MantidDataHandling/LoadInstrument.h"
+#include "MantidGeometry/Instrument.h"
 #include "MantidKernel/UnitFactory.h"
 
 /*****************************************************
@@ -75,6 +77,8 @@ void SANSInstrumentCreationHelper::runLoadInstrument(
   loadInst.setPropertyValue("Filename", "IDFs_for_UNIT_TESTING/" +
                                             instrumentID + "_Definition.xml");
   loadInst.setProperty<MatrixWorkspace_sptr>("Workspace", workspace);
+  loadInst.setProperty("RewriteSpectraMap",
+                       Mantid::Kernel::OptionalBool(false));
   loadInst.execute();
 }
 

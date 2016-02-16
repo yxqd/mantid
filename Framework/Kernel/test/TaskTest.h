@@ -2,12 +2,9 @@
 #define TASKTEST_H_
 
 #include <cxxtest/TestSuite.h>
-
+#include <boost/make_shared.hpp>
 #include <MantidKernel/Timer.h>
 #include "MantidKernel/Task.h"
-
-#include <iostream>
-#include <iomanip>
 
 using namespace Mantid::Kernel;
 
@@ -33,7 +30,7 @@ public:
 
   void test_mutex() {
     MyTask t;
-    boost::shared_ptr<Mutex> mut(new Mutex());
+    auto mut = boost::make_shared<Mutex>();
     t.setMutex(mut);
     TS_ASSERT_EQUALS(mut, t.getMutex());
   }

@@ -75,15 +75,18 @@ bool FileDescriptor::isAscii(std::istream &data, const size_t nbytes) {
 */
 bool FileDescriptor::isAscii(FILE *file, const size_t nbytes) {
   // read the data and reset the seek index back to the beginning
-  char *data = new char[nbytes];
+  auto data = new char[nbytes];
   char *pend = &data[fread(data, 1, nbytes, file)];
-  fseek(file, 0, SEEK_SET);
+  int retval = fseek(file, 0, SEEK_SET);
+  if (retval < 0)
+    throw std::runtime_error("FileDescriptor::isAscii - Cannot change position "
+                             "to the beginning of the file with fseek");
 
   // Call it a binary file if we find a non-ascii character in the
   // first nbytes bytes of the file.
   bool result = true;
   for (char *p = data; p < pend; ++p) {
-    unsigned long ch = (unsigned long)*p;
+    unsigned long ch = static_cast<unsigned long>(*p);
     if (!(ch <= 0x7F)) {
       result = false;
       break;

@@ -45,42 +45,33 @@ public:
   MultipleScatteringCylinderAbsorption();
 
   /// Destructor
-  virtual ~MultipleScatteringCylinderAbsorption();
+  ~MultipleScatteringCylinderAbsorption() override;
 
   /// Algorithm's name for identification overriding a virtual method
-  virtual const std::string name() const;
+  const std::string name() const override;
 
   /// Algorithm's version for identification overriding a virtual method
-  virtual int version() const;
+  int version() const override;
 
   /// Algorithm's category for identification overriding a virtual method
-  virtual const std::string category() const;
+  const std::string category() const override;
 
   /// Summary of algorithms purpose
-  virtual const std::string summary() const {
+  const std::string summary() const override {
     return "Multiple scattering absorption correction, originally used to "
            "correct vanadium spectrum at IPNS.";
   }
 
 private:
   // Overridden Algorithm methods
-  void init();
-  void exec();
-
-  // Attenuation Factor
-  double AttFac(const double sigir, const double sigsr,
-                const std::vector<double> &Z);
-
-  // Set up "Z" array for specified angle
-  void ZSet(const double angle_deg, std::vector<double> &Z);
-
-  // Wavelength function
-  double wavelength(double path_length_m, double tof_us);
+  void init() override;
+  void exec() override;
 
   /// MultipleScatteringCylinderAbsorption correction calculation.
-  void apply_msa_correction(double total_path, double angle_deg, double radius,
-                            double coeff1, double coeff2, double coeff3,
-                            std::vector<double> &tof,
+  void apply_msa_correction(const double angle_deg, const double radius,
+                            const double coeff1, const double coeff2,
+                            const double coeff3,
+                            const std::vector<double> &wavelength,
                             std::vector<double> &y_val,
                             std::vector<double> &errors);
 };

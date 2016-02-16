@@ -22,7 +22,8 @@ using Environment::CallMethod0;
  */
 template <typename BaseAlgorithm>
 AlgorithmAdapter<BaseAlgorithm>::AlgorithmAdapter(PyObject *self)
-    : BaseAlgorithm(), m_self(self), m_isRunningObj(NULL), m_wikiSummary("") {
+    : BaseAlgorithm(), m_self(self), m_isRunningObj(nullptr),
+      m_wikiSummary("") {
   // Cache the isRunning call to save the lookup each time it is called
   // as it is most likely called in a loop
 
@@ -86,8 +87,22 @@ bool AlgorithmAdapter<BaseAlgorithm>::checkGroupsDefault() {
  */
 template <typename BaseAlgorithm>
 const std::string AlgorithmAdapter<BaseAlgorithm>::category() const {
-  return CallMethod0<std::string>::dispatchWithDefaultReturn(
-      getSelf(), "category", defaultCategory());
+  const std::string algDefaultCategory = defaultCategory();
+  const std::string algCategory =
+      CallMethod0<std::string>::dispatchWithDefaultReturn(getSelf(), "category",
+                                                          algDefaultCategory);
+  if (algCategory == algDefaultCategory) {
+    // output a warning
+    const std::string &name = getSelf()->ob_type->tp_name;
+    int version = CallMethod0<int>::dispatchWithDefaultReturn(
+        getSelf(), "version", defaultVersion());
+    this->getLogger().warning()
+        << "Python Algorithm " << name << " v" << version
+        << " does not have a category defined. See "
+           "http://www.mantidproject.org/Basic_PythonAlgorithm_Structure"
+        << std::endl;
+  }
+  return algCategory;
 }
 
 /**
@@ -127,7 +142,7 @@ bool AlgorithmAdapter<BaseAlgorithm>::isRunning() const {
     return SuperClass::isRunning();
   } else {
     Environment::GlobalInterpreterLock gil;
-    PyObject *result = PyObject_CallObject(m_isRunningObj, NULL);
+    PyObject *result = PyObject_CallObject(m_isRunningObj, nullptr);
     if (PyErr_Occurred())
       Environment::throwRuntimeError(true);
     if (PyBool_Check(result))

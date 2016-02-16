@@ -4,12 +4,11 @@
 #include <cxxtest/TestSuite.h>
 #include "MantidDataObjects/Peak.h"
 #include "MantidDataObjects/PeakColumn.h"
+#include "MantidKernel/Exception.h"
 
 #include "MantidTestHelpers/ComponentCreationHelper.h"
 
 #include <boost/make_shared.hpp>
-#include <iostream>
-#include <iomanip>
 
 using namespace Mantid::DataObjects;
 

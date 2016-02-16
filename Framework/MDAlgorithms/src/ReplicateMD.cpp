@@ -148,11 +148,13 @@ const std::string ReplicateMD::name() const { return "ReplicateMD"; }
 int ReplicateMD::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
-const std::string ReplicateMD::category() const { return "MDAlgorithms"; }
+const std::string ReplicateMD::category() const {
+  return "MDAlgorithms\\Creation";
+}
 
 /// Algorithm's summary for use in the GUI and help. @see Algorithm::summary
 const std::string ReplicateMD::summary() const {
-  return "This is a algorithm to create a higher dimensional dataset by "
+  return "This is an algorithm to create a higher dimensional dataset by "
          "replicating along an additional axis";
 }
 
@@ -185,9 +187,9 @@ std::map<std::string, std::string> ReplicateMD::validateInputs() {
   IMDHistoWorkspace_sptr dataWS = this->getProperty("DataWorkspace");
   if (shapeWS->getNonIntegratedDimensions().size() !=
       dataWS->getNonIntegratedDimensions().size() + 1) {
-    errorMap.insert(std::make_pair(
+    errorMap.emplace(
         "DataWorkspace",
-        "Expect to have n-1 non-interated dimensions of ShapeWorkspace"));
+        "Expect to have n-1 non-interated dimensions of ShapeWorkspace");
   }
 
   size_t nonMatchingCount = 0;
@@ -207,7 +209,7 @@ std::map<std::string, std::string> ReplicateMD::validateInputs() {
           stream << "Dimension with id " << shapeDim->getDimensionId()
                  << "in ShapeWorkspace has a different number of bins as the "
                     "same id dimension in the DataWorkspace";
-          errorMap.insert(std::make_pair("DataWorkspace", stream.str()));
+          errorMap.emplace("DataWorkspace", stream.str());
         }
       }
     } else {
@@ -217,10 +219,10 @@ std::map<std::string, std::string> ReplicateMD::validateInputs() {
 
   // Check number of missing/integrated dimensions
   if (nonMatchingCount != 1) {
-    errorMap.insert(std::make_pair("DataWorkspace",
-                                   "There should be ONLY 1 dimension present "
-                                   "in the ShapeWorkspace that is not present "
-                                   "(or integrated out) in the DataWorkspace"));
+    errorMap.emplace("DataWorkspace",
+                     "There should be ONLY 1 dimension present "
+                     "in the ShapeWorkspace that is not present "
+                     "(or integrated out) in the DataWorkspace");
   }
 
   return errorMap;
@@ -324,7 +326,7 @@ void ReplicateMD::exec() {
                            .getNumOMPThreads(); // NThreads to Request
 
   // collection of iterators
-  auto iterators = outputWS->createIterators(nThreads, NULL);
+  auto iterators = outputWS->createIterators(nThreads, nullptr);
 
   PARALLEL_FOR_NO_WSP_CHECK()
   for (int it = 0; it < int(iterators.size()); ++it) {

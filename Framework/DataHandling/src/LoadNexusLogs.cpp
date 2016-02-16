@@ -28,6 +28,52 @@ using API::MatrixWorkspace_sptr;
 using API::FileProperty;
 using std::size_t;
 
+namespace {
+
+/**
+ * @brief loadAndApplyMeasurementInfo
+ * @param file : Nexus::File pointer
+ * @param workspace : Pointer to the workspace to set logs on
+ * @return True only if reading and execution successful.
+ */
+bool loadAndApplyMeasurementInfo(::NeXus::File *const file,
+                                 API::MatrixWorkspace &workspace) {
+
+  bool successfullyApplied = false;
+  try {
+    file->openGroup("measurement", "NXcollection");
+
+    // If we can open the measurement group. We assume that the following will
+    // be avaliable.
+    file->openData("id");
+    workspace.mutableRun().addLogData(
+        new Mantid::Kernel::PropertyWithValue<std::string>("measurement_id",
+                                                           file->getStrData()));
+    file->closeData();
+    file->openData("label");
+    workspace.mutableRun().addLogData(
+        new Mantid::Kernel::PropertyWithValue<std::string>("measurement_label",
+                                                           file->getStrData()));
+    file->closeData();
+    file->openData("subid");
+    workspace.mutableRun().addLogData(
+        new Mantid::Kernel::PropertyWithValue<std::string>("measurement_subid",
+                                                           file->getStrData()));
+    file->closeData();
+    file->openData("type");
+    workspace.mutableRun().addLogData(
+        new Mantid::Kernel::PropertyWithValue<std::string>("measurement_type",
+                                                           file->getStrData()));
+    file->closeData();
+    file->closeGroup();
+    successfullyApplied = true;
+  } catch (::NeXus::Exception &) {
+    successfullyApplied = false;
+  }
+  return successfullyApplied;
+}
+}
+
 /// Empty default constructor
 LoadNexusLogs::LoadNexusLogs() {}
 
@@ -37,12 +83,10 @@ void LoadNexusLogs::init() {
       new WorkspaceProperty<MatrixWorkspace>("Workspace", "Anonymous",
                                              Direction::InOut),
       "The name of the workspace that will be filled with the logs.");
-  std::vector<std::string> exts;
-  exts.push_back(".nxs");
-  exts.push_back(".n*");
-  declareProperty(new FileProperty("Filename", "", FileProperty::Load, exts),
-                  "Path to the .nxs file to load. Can be an EventNeXus or a "
-                  "histogrammed NeXus.");
+  declareProperty(
+      new FileProperty("Filename", "", FileProperty::Load, {".nxs", ".n*"}),
+      "Path to the .nxs file to load. Can be an EventNeXus or a "
+      "histogrammed NeXus.");
   declareProperty(
       new PropertyWithValue<bool>("OverwriteLogs", true, Direction::Input),
       "If true then existing logs will be overwritten, if false they will "
@@ -124,6 +168,9 @@ void LoadNexusLogs::exec() {
     }
   }
 
+  // If there's measurement information, load that info as logs.
+  loadAndApplyMeasurementInfo(&file, *workspace);
+
   // Freddie Akeroyd 12/10/2011
   // current ISIS implementation contains an additional indirection between
   // collected frames via an
@@ -182,9 +229,9 @@ void LoadNexusLogs::exec() {
       ptime.reserve(event_frame_number.size());
       std::vector<Mantid::Kernel::DateAndTime> plogt = plog->timesAsVector();
       std::vector<double> plogv = plog->valuesAsVector();
-      for (size_t i = 0; i < event_frame_number.size(); ++i) {
-        ptime.push_back(plogt[event_frame_number[i]]);
-        pval.push_back(plogv[event_frame_number[i]]);
+      for (auto number : event_frame_number) {
+        ptime.push_back(plogt[number]);
+        pval.push_back(plogv[number]);
       }
       pcharge->create(ptime, pval);
       pcharge->setUnits("uAh");
@@ -220,7 +267,7 @@ void LoadNexusLogs::exec() {
       // Try and integrate the proton logs
       try {
         // Use the DAS logs to integrate the proton charge (if any).
-        workspace->mutableRun().integrateProtonCharge();
+        workspace->mutableRun().getProtonCharge();
       } catch (Exception::NotFoundError &) {
         // Ignore not found property error.
       }
@@ -384,7 +431,7 @@ void LoadNexusLogs::loadSELog(
   //   value_log - A time series entry. This can contain a corrupt value entry
   //   so if it does use the value one
   //   value - A single value float entry
-  Kernel::Property *logValue(NULL);
+  Kernel::Property *logValue(nullptr);
   std::map<std::string, std::string> entries = file.getEntries();
   if (entries.find("value_log") != entries.end()) {
     try {
@@ -526,7 +573,7 @@ LoadNexusLogs::createTimeSeries(::NeXus::File &file,
       throw;
     }
     // Make an int TSP
-    TimeSeriesProperty<int> *tsp = new TimeSeriesProperty<int>(prop_name);
+    auto tsp = new TimeSeriesProperty<int>(prop_name);
     tsp->create(start_time, time_double, values);
     tsp->setUnits(value_units);
     g_log.debug() << "   done reading \"value\" array\n";
@@ -548,8 +595,7 @@ LoadNexusLogs::createTimeSeries(::NeXus::File &file,
     // The string may contain non-printable (i.e. control) characters, replace
     // these
     std::replace_if(values.begin(), values.end(), iscntrl, ' ');
-    TimeSeriesProperty<std::string> *tsp =
-        new TimeSeriesProperty<std::string>(prop_name);
+    auto tsp = new TimeSeriesProperty<std::string>(prop_name);
     std::vector<DateAndTime> times;
     DateAndTime::createVector(start_time, time_double, times);
     const size_t ntimes = times.size();
@@ -570,7 +616,7 @@ LoadNexusLogs::createTimeSeries(::NeXus::File &file,
       file.closeData();
       throw;
     }
-    TimeSeriesProperty<double> *tsp = new TimeSeriesProperty<double>(prop_name);
+    auto tsp = new TimeSeriesProperty<double>(prop_name);
     tsp->create(start_time, time_double, values);
     tsp->setUnits(value_units);
     g_log.debug() << "   done reading \"value\" array\n";

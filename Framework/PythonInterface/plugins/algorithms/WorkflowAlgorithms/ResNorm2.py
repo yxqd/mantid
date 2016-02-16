@@ -1,22 +1,25 @@
 #pylint: disable=no-init
 from mantid.api import (PythonAlgorithm, AlgorithmFactory, MatrixWorkspaceProperty,
-                        WorkspaceGroup, WorkspaceGroupProperty)
+                        WorkspaceGroup, WorkspaceGroupProperty, ITableWorkspaceProperty,
+                        Progress, PropertyMode)
 from mantid.kernel import Direction
 from mantid.simpleapi import *
 
 
 class ResNorm(PythonAlgorithm):
 
+    _res_clone = None
     _res_ws = None
     _van_ws = None
     _e_min = None
     _e_max = None
     _create_output = None
     _out_ws = None
+    _out_ws_table = None
 
 
     def category(self):
-        return "Workflow\\MIDAS;PythonAlgorithms"
+        return "Workflow\\MIDAS"
 
 
     def summary(self):
@@ -53,6 +56,11 @@ class ResNorm(PythonAlgorithm):
                                                     direction=Direction.Output),
                              doc='Fitted parameter output')
 
+        self.declareProperty(ITableWorkspaceProperty('OutputWorkspaceTable', '',
+                                                     optional=PropertyMode.Optional,
+                                                     direction=Direction.Output),
+                             doc='Table workspace of fit parameters')
+
 
     def validateInputs(self):
         self._get_properties()
@@ -84,7 +92,11 @@ class ResNorm(PythonAlgorithm):
 
 
     def PyExec(self):
-        from IndirectCommon import getWSprefix
+        res_clone_name = '__' + self._res_ws
+        res_clone_ws= CloneWorkspace(InputWorkspace=self._res_ws, OutputWorkspace=res_clone_name)
+
+        if self._create_output:
+            self._out_ws_table = self.getPropertyValue('OutputWorkspaceTable')
 
         # Process vanadium workspace
         van_ws = ConvertSpectrumAxis(InputWorkspace=self._van_ws,
@@ -99,27 +111,34 @@ class ResNorm(PythonAlgorithm):
 
         # Process resolution workspace
         padded_res_ws = self._process_res_ws(num_hist)
-
+        prog_namer = Progress(self, start=0.0, end=0.02, nreports=num_hist)
         input_str = ''
         for idx in range(num_hist):
             input_str += '%s,i%d;' % (padded_res_ws, idx)
+            prog_namer.report('Generating PlotPeak input string')
 
-        out_name = getWSprefix(self._res_ws) + 'ResNorm_Fit'
+        base_name = padded_res_ws.getName()
+        out_name = '%sResNorm_Fit' % (base_name[:-3])
         function = 'name=TabulatedFunction,Workspace=%s,Scaling=1,Shift=0,XScaling=1,ties=(Shift=0)' % self._van_ws
 
-        fit_params = PlotPeakByLogValue(Input=input_str,
-                                        OutputWorkspace=out_name,
-                                        Function=function,
-                                        FitType='Individual',
-                                        PassWSIndexToFunction=True,
-                                        CreateOutput=self._create_output,
-                                        StartX=self._e_min,
-                                        EndX=self._e_max)
+        plot_peaks = self.createChildAlgorithm(name='PlotPeakByLogValue', startProgress=0.02, endProgress=0.94, enableLogging=True)
+        plot_peaks.setProperty('Input', input_str)
+        plot_peaks.setProperty('OutputWorkspace', out_name)
+        plot_peaks.setProperty('Function', function)
+        plot_peaks.setProperty('FitType', 'Individual')
+        plot_peaks.setProperty('PassWSIndexToFunction', True)
+        plot_peaks.setProperty('CreateOutput', self._create_output)
+        plot_peaks.setProperty('StartX', self._e_min)
+        plot_peaks.setProperty('EndX', self._e_max)
+        plot_peaks.execute()
+        fit_params = plot_peaks.getProperty('OutputWorkspace').value
 
         params = {'XScaling':'Stretch', 'Scaling':'Intensity'}
         result_workspaces = []
+        prog_process = Progress(self, start=0.94, end=1.0, nreports=3)
         for param_name, output_name in params.items():
             result_workspaces.append(self._process_fit_params(fit_params, param_name, v_values, v_unit, output_name))
+            prog_process.report('Processing Fit data')
 
         GroupWorkspaces(InputWorkspaces=result_workspaces,
                         OutputWorkspace=self._out_ws)
@@ -127,9 +146,15 @@ class ResNorm(PythonAlgorithm):
 
         DeleteWorkspace(van_ws)
         DeleteWorkspace(padded_res_ws)
-        if not self._create_output:
-            DeleteWorkspace(fit_params)
+        prog_process.report('Deleting workspaces')
 
+        if self._create_output:
+            self.setProperty('OutputWorkspaceTable', fit_params)
+
+        prog_process.report('Add or replace Resolution workspace')
+        res_name = res_clone_name[2:]
+        RenameWorkspace(InputWorkspace=res_clone_name,OutputWorkspace=res_name)
+        mtd.addOrReplace(res_name, res_clone_ws)
 
     def _process_res_ws(self, num_hist):
         """

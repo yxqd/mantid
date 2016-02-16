@@ -1,19 +1,16 @@
 #include "MantidAlgorithms/GetDetectorOffsets.h"
+#include "MantidAPI/CompositeFunction.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/FunctionFactory.h"
-#include "MantidAPI/WorkspaceValidators.h"
 #include "MantidAPI/IPeakFunction.h"
-#include "MantidAPI/IBackgroundFunction.h"
-#include "MantidAPI/CompositeFunction.h"
-#include "MantidDataObjects/OffsetsWorkspace.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidDataObjects/MaskWorkspace.h"
-#include <boost/math/special_functions/fpclassify.hpp>
-#include <fstream>
-#include <iomanip>
-#include <ostream>
-#include <sstream>
+#include "MantidDataObjects/OffsetsWorkspace.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/ListValidator.h"
+
+#include <boost/math/special_functions/fpclassify.hpp>
+#include <sstream>
 
 namespace Mantid {
 namespace Algorithms {
@@ -77,9 +74,7 @@ void GetDetectorOffsets::init() {
   declareProperty("MaxOffset", 1.0,
                   "Maximum absolute value of offsets; default is 1");
 
-  std::vector<std::string> modes;
-  modes.push_back("Relative");
-  modes.push_back("Absolute");
+  std::vector<std::string> modes{"Relative", "Absolute"};
 
   declareProperty("OffsetMode", "Relative",
                   boost::make_shared<StringListValidator>(modes),
@@ -190,8 +185,7 @@ void GetDetectorOffsets::exec() {
 double GetDetectorOffsets::fitSpectra(const int64_t s, bool isAbsolbute) {
   // Find point of peak centre
   const MantidVec &yValues = inputW->readY(s);
-  MantidVec::const_iterator it =
-      std::max_element(yValues.begin(), yValues.end());
+  auto it = std::max_element(yValues.cbegin(), yValues.cend());
   const double peakHeight = *it;
   const double peakLoc = inputW->readX(s)[it - yValues.begin()];
   // Return if peak of Cross Correlation is nan (Happens when spectra is zero)
@@ -258,8 +252,7 @@ IFunction_sptr GetDetectorOffsets::createFunction(const double peakHeight,
   const double sigma(10.0);
   peak->setFwhm(2.0 * std::sqrt(2.0 * std::log(2.0)) * sigma);
 
-  CompositeFunction *fitFunc =
-      new CompositeFunction(); // Takes ownership of the functions
+  auto fitFunc = new CompositeFunction(); // Takes ownership of the functions
   fitFunc->addFunction(background);
   fitFunc->addFunction(peak);
 

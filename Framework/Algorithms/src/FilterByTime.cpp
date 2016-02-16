@@ -2,15 +2,12 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/FilterByTime.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/EventWorkspace.h"
-#include "MantidAPI/WorkspaceValidators.h"
-#include "MantidKernel/UnitFactory.h"
-#include "MantidKernel/PhysicalConstants.h"
-#include "MantidKernel/DateAndTime.h"
-#include "MantidAPI/FileProperty.h"
-
-#include <fstream>
 #include "MantidKernel/BoundedValidator.h"
+#include "MantidKernel/DateAndTime.h"
+#include "MantidKernel/PhysicalConstants.h"
+#include "MantidKernel/UnitFactory.h"
 
 namespace Mantid {
 namespace Algorithms {

@@ -1,18 +1,22 @@
 #include "MantidAlgorithms/GetEi2.h"
 
-#include "MantidKernel/PhysicalConstants.h"
-#include "MantidKernel/VectorHelper.h"
-#include "MantidAPI/WorkspaceValidators.h"
 #include "MantidAPI/IEventWorkspace.h"
+#include "MantidAPI/HistogramValidator.h"
+#include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
+#include "MantidGeometry/Instrument.h"
 #include "MantidGeometry/Instrument/DetectorGroup.h"
 #include "MantidGeometry/IObjComponent.h"
+#include "MantidGeometry/muParser_Silent.h"
+#include "MantidKernel/BoundedValidator.h"
+#include "MantidKernel/CompositeValidator.h"
+#include "MantidKernel/PhysicalConstants.h"
+#include "MantidKernel/VectorHelper.h"
 
 #include <boost/lexical_cast.hpp>
 #include <cmath>
 #include <algorithm>
 #include <sstream>
-#include "MantidKernel/BoundedValidator.h"
-#include "MantidGeometry/muParser_Silent.h"
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
@@ -392,7 +396,7 @@ double GetEi2::calculatePeakWidthAtHalfHeight(
   const MantidVec &Ys = data_ws->readY(0);
   const MantidVec &Es = data_ws->readE(0);
 
-  MantidVec::const_iterator peakIt = std::max_element(Ys.begin(), Ys.end());
+  auto peakIt = std::max_element(Ys.cbegin(), Ys.cend());
   double bkg_val = *std::min_element(Ys.begin(), Ys.end());
   if (*peakIt == bkg_val) {
     throw std::invalid_argument("No peak in the range specified as minimal and "
@@ -529,11 +533,11 @@ double GetEi2::calculatePeakWidthAtHalfHeight(
   int64_t ipk_int = static_cast<int64_t>(iPeak) -
                     im; //       ! peak position in internal array
   double hby2 = 0.5 * peak_y[ipk_int];
-  int64_t ip1(0), ip2(0);
   double xp_hh(0);
 
   int64_t nyvals = static_cast<int64_t>(peak_y.size());
   if (peak_y[nyvals - 1] < hby2) {
+    int64_t ip1(0), ip2(0);
     for (int64_t i = ipk_int; i < nyvals; ++i) {
       if (peak_y[i] < hby2) {
         // after this point the intensity starts to go below half-height
@@ -566,9 +570,9 @@ double GetEi2::calculatePeakWidthAtHalfHeight(
     xp_hh = peak_x[nyvals - 1];
   }
 
-  int64_t im1(0), im2(0);
   double xm_hh(0);
   if (peak_y[0] < hby2) {
+    int64_t im1(0), im2(0);
     for (int64_t i = ipk_int; i >= 0; --i) {
       if (peak_y[i] < hby2) {
         im1 = i + 1; // ! after this point the intensity starts to go below
@@ -665,19 +669,20 @@ void GetEi2::integrate(double &integral_val, double &integral_err,
   // MG: Note that this is integration of a point data set from libisis
   // @todo: Move to Kernel::VectorHelper and improve performance
 
-  MantidVec::const_iterator lowit = std::lower_bound(x.begin(), x.end(), xmin);
-  MantidVec::difference_type ml = std::distance(x.begin(), lowit);
-  MantidVec::const_iterator highit = std::upper_bound(lowit, x.end(), xmax);
-  MantidVec::difference_type mu = std::distance(x.begin(), highit);
+  auto lowit = std::lower_bound(x.cbegin(), x.cend(), xmin);
+  MantidVec::difference_type ml = std::distance(x.cbegin(), lowit);
+  auto highit = std::upper_bound(lowit, x.cend(), xmax);
+  MantidVec::difference_type mu = std::distance(x.cbegin(), highit);
   if (mu > 0)
     --mu;
 
   MantidVec::size_type nx(x.size());
   if (mu < ml) {
     // special case of no data points in the integration range
-    unsigned int ilo = std::max<unsigned int>((unsigned int)ml - 1, 0);
-    unsigned int ihi =
-        std::min<unsigned int>((unsigned int)mu + 1, (unsigned int)nx);
+    unsigned int ilo =
+        std::max<unsigned int>(static_cast<unsigned int>(ml) - 1, 0);
+    unsigned int ihi = std::min<unsigned int>(static_cast<unsigned int>(mu) + 1,
+                                              static_cast<unsigned int>(nx));
     double fraction = (xmax - xmin) / (x[ihi] - x[ilo]);
     integral_val =
         0.5 * fraction * (s[ihi] * ((xmax - x[ilo]) + (xmin - x[ilo])) +
@@ -730,7 +735,7 @@ void GetEi2::integrate(double &integral_val, double &integral_err,
     double err_hi = e[mu] * (x[mu - 1] - xneff);
     integral_err += err_lo * err_lo + err_hi * err_hi;
   } else {
-    for (int i = (int)ml; i < mu; ++i) {
+    for (int i = static_cast<int>(ml); i < mu; ++i) {
       integral_val += (s[i + 1] + s[i]) * (x[i + 1] - x[i]);
       if (i < mu - 1) {
         double ierr = e[i + 1] * (x[i + 2] - x[i]);

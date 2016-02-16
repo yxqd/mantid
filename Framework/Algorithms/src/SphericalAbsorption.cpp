@@ -2,14 +2,18 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/SphericalAbsorption.h"
-#include "MantidAPI/WorkspaceValidators.h"
-#include "MantidGeometry/Objects/ShapeFactory.h"
-#include "MantidKernel/UnitFactory.h"
-#include "MantidKernel/Fast_Exponential.h"
-#include "MantidKernel/VectorHelper.h"
+#include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/Sample.h"
+#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/Workspace2D.h"
+#include "MantidGeometry/Objects/ShapeFactory.h"
 #include "MantidKernel/BoundedValidator.h"
+#include "MantidKernel/CompositeValidator.h"
+#include "MantidKernel/Fast_Exponential.h"
+#include "MantidKernel/UnitFactory.h"
+#include "MantidKernel/VectorHelper.h"
 
 using namespace Mantid::PhysicalConstants;
 
@@ -25,7 +29,7 @@ using namespace API;
 using namespace DataObjects;
 
 SphericalAbsorption::SphericalAbsorption()
-    : API::Algorithm(), m_inputWS(), m_sampleObject(NULL), m_beamDirection(),
+    : API::Algorithm(), m_inputWS(), m_sampleObject(nullptr), m_beamDirection(),
       m_L1s(), m_elementVolumes(), m_elementPositions(), m_numVolumeElements(0),
       m_sampleVolume(0.), m_refAtten(0.0), m_scattering(0.), n_lambda(0),
       x_step(0), m_emode(0), m_lambdaFixed(0.) {}
@@ -77,6 +81,10 @@ void SphericalAbsorption::exec() {
   correctionFactors->setYUnitLabel("Attenuation factor");
   double m_sphRadius = getProperty("SphericalSampleRadius"); // in cm
 
+  Progress progress(this, 0, 1, 2);
+
+  progress.report("AnvredCorrection");
+
   IAlgorithm_sptr anvred = createChildAlgorithm("AnvredCorrection");
   anvred->setProperty<MatrixWorkspace_sptr>("InputWorkspace", m_inputWS);
   anvred->setProperty<MatrixWorkspace_sptr>("OutputWorkspace",
@@ -87,6 +95,9 @@ void SphericalAbsorption::exec() {
   anvred->setProperty("LinearAbsorptionCoef", m_refAtten);
   anvred->setProperty("Radius", m_sphRadius);
   anvred->executeAsChildAlg();
+
+  progress.report();
+
   // Get back the result
   correctionFactors = anvred->getProperty("OutputWorkspace");
   setProperty("OutputWorkspace", correctionFactors);

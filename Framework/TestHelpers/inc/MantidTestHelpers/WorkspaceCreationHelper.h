@@ -24,6 +24,7 @@
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceGroup_fwd.h"
 #include "MantidGeometry/Instrument/Detector.h"
+#include "MantidKernel/make_unique.h"
 
 namespace Mantid {
 namespace DataObjects {
@@ -46,34 +47,34 @@ public:
     return out;
   }
 };
-/** mock algorithn for doing logging/progress reporting*/
+/** mock algorithm for doing logging/progress reporting*/
 class MockAlgorithm : public Mantid::API::Algorithm {
 public:
   MockAlgorithm(size_t nSteps = 100);
-  ~MockAlgorithm(){};
+  ~MockAlgorithm() override{};
 
   /// Algorithm's name for identification
-  virtual const std::string name() const { return "MockAlgorithm"; };
+  const std::string name() const override { return "MockAlgorithm"; };
   /// Algorithm's version for identification
-  virtual int version() const { return 1; };
+  int version() const override { return 1; };
   /// Algorithm's category for identification
-  virtual const std::string category() const { return "Test"; }
+  const std::string category() const override { return "Test"; }
   /// Algorithm's summary.
-  virtual const std::string summary() const { return "Test summary."; }
+  const std::string summary() const override { return "Test summary."; }
 
   Mantid::Kernel::Logger &getLogger() { return g_log; }
 
   Mantid::API::Progress *getProgress() { return m_Progress.get(); }
   void resetProgress(size_t nSteps) {
-    m_Progress = std::auto_ptr<Mantid::API::Progress>(
-        new Mantid::API::Progress(this, 0, 1, nSteps));
+    m_Progress =
+        Mantid::Kernel::make_unique<Mantid::API::Progress>(this, 0, 1, nSteps);
   }
 
 private:
-  void init(){};
-  void exec(){};
+  void init() override{};
+  void exec() override{};
 
-  std::auto_ptr<Mantid::API::Progress> m_Progress;
+  std::unique_ptr<Mantid::API::Progress> m_Progress;
   /// logger -> to provide logging,
   static Mantid::Kernel::Logger &g_log;
 };
@@ -178,8 +179,8 @@ void addNoise(Mantid::API::MatrixWorkspace_sptr ws, double noise,
 /**
  * Create a test workspace with a fully defined instrument
  * Each spectra will have a cylindrical detector defined 2*cylinder_radius away
- * from the centre of the
- * pervious.
+ * from the centre of the previous.
+ *
  * Data filled with: Y: 2.0, E: sqrt(2.0), X: nbins of width 1 starting at 0
  */
 Mantid::DataObjects::Workspace2D_sptr create2DWorkspaceWithFullInstrument(
@@ -262,7 +263,7 @@ CreateRandomEventWorkspace(size_t numbins, size_t numpixels,
 
 Mantid::API::MatrixWorkspace_sptr
 CreateGroupedWorkspace2D(size_t numHist, int numBins, double binDelta);
-// grouped workpsace with detectors arranges in rings in centre and into boxes
+// grouped workspace with detectors arranges in rings in center and into boxes
 // outside
 Mantid::API::MatrixWorkspace_sptr CreateGroupedWorkspace2DWithRingsAndBoxes(
     size_t RootOfNumHist = 10, int numBins = 10, double binDelta = 1.0);

@@ -2,12 +2,12 @@
 #define MANTID_DATAHANDLING_LOADPRENEXUSTEST_H_
 
 #include <cxxtest/TestSuite.h>
-#include "MantidKernel/Timer.h"
-#include "MantidKernel/System.h"
-#include <iostream>
-#include <iomanip>
 
 #include "MantidDataHandling/LoadPreNexus.h"
+
+#include "MantidAPI/MatrixWorkspace.h"
+#include "MantidKernel/Timer.h"
+#include "MantidKernel/System.h"
 
 using namespace Mantid;
 using namespace Mantid::DataHandling;

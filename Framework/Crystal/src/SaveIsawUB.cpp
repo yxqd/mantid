@@ -37,12 +37,8 @@ void SaveIsawUB::init() {
       new WorkspaceProperty<Workspace>("InputWorkspace", "", Direction::Input),
       "An input workspace containing the orientation matrix.");
 
-  std::vector<std::string> exts;
-  exts.push_back(".mat");
-  exts.push_back(".ub");
-  exts.push_back(".txt");
-
-  declareProperty(new FileProperty("Filename", "", FileProperty::Save, exts),
+  declareProperty(new FileProperty("Filename", "", FileProperty::Save,
+                                   {".mat", ".ub", ".txt"}),
                   "Path to an ISAW-style UB matrix text file.");
 }
 
@@ -97,7 +93,7 @@ void SaveIsawUB::exec() {
     ExperimentInfo_sptr ws;
     IMDEventWorkspace_sptr MDWS =
         boost::dynamic_pointer_cast<IMDEventWorkspace>(ws1);
-    if (MDWS != NULL) {
+    if (MDWS != nullptr) {
       ws = MDWS->getExperimentInfo(0);
     } else {
       ws = boost::dynamic_pointer_cast<ExperimentInfo>(ws1);

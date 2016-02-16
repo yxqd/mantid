@@ -1,3 +1,4 @@
+﻿#pylint: disable=too-many-lines
 #pylint: disable=invalid-name
 #########################################################
 # This module contains utility functions common to the
@@ -6,7 +7,7 @@
 from mantid.simpleapi import *
 from mantid.api import IEventWorkspace, MatrixWorkspace, WorkspaceGroup, FileLoaderRegistry
 import mantid
-from mantid.kernel import time_duration
+from mantid.kernel import time_duration, DateAndTime
 import inspect
 import math
 import os
@@ -16,8 +17,10 @@ import numpy as np
 
 sanslog = Logger("SANS")
 ADDED_EVENT_DATA_TAG = '_added_event_data'
-REG_DATA_NAME = '-add' + ADDED_EVENT_DATA_TAG + '[_1-9]*$'
-REG_DATA_MONITORS_NAME = '-add_monitors' + ADDED_EVENT_DATA_TAG + '[_1-9]*$'
+ADD_TAG = '-add'
+ADD_MONITORS_TAG = '-add_monitors'
+REG_DATA_NAME = ADD_TAG  + ADDED_EVENT_DATA_TAG + '[_1-9]*$'
+REG_DATA_MONITORS_NAME = ADD_MONITORS_TAG + ADDED_EVENT_DATA_TAG + '[_1-9]*$'
 ZERO_ERROR_DEFAULT = 1e6
 INCIDENT_MONITOR_TAG = '_incident_monitor'
 
@@ -698,6 +701,7 @@ def get_masked_det_ids(ws):
             break
         if det.isMasked():
             yield det.getID()
+
 def create_zero_error_free_workspace(input_workspace_name, output_workspace_name):
     '''
     Creates a cloned workspace where all zero-error values have been replaced with a large value
@@ -847,7 +851,23 @@ class PlusWorkspaces(object):
         @param time_shift :: unused parameter
         """
         dummy_shift = time_shift
-        Plus(LHSWorkspace=LHS_workspace,RHSWorkspace= RHS_workspace,OutputWorkspace= output_workspace)
+        lhs_ws = self._get_workspace(LHS_workspace)
+        rhs_ws = self._get_workspace(RHS_workspace)
+
+        # Apply shift to RHS sample logs where necessary. This is a hack because Plus cannot handle
+        # cummulative time series correctly at this point
+        cummulative_correction = CummulativeTimeSeriesPropertyAdder()
+        cummulative_correction. extract_sample_logs_from_workspace(lhs_ws, rhs_ws)
+        Plus(LHSWorkspace = LHS_workspace, RHSWorkspace = RHS_workspace, OutputWorkspace = output_workspace)
+        out_ws = self._get_workspace(output_workspace)
+        cummulative_correction.apply_cummulative_logs_to_workspace(out_ws)
+
+    def _get_workspace(self, workspace):
+        if isinstance(workspace, MatrixWorkspace):
+            return workspace
+        elif isinstance(workspace, basestring) and mtd.doesExist(workspace):
+            return mtd[workspace]
+
 
 class OverlayWorkspaces(object):
     """
@@ -871,6 +891,11 @@ class OverlayWorkspaces(object):
         time_difference = self._extract_time_difference_in_seconds(lhs_ws, rhs_ws)
         total_time_shift = time_difference + time_shift
 
+        # Apply shift to RHS sample logs where necessary. This is a hack because Plus cannot handle
+        # cummulative time series correctly at this point
+        cummulative_correction = CummulativeTimeSeriesPropertyAdder()
+        cummulative_correction. extract_sample_logs_from_workspace(lhs_ws, rhs_ws)
+
         # Create a temporary workspace with shifted time values from RHS, if the shift is necesary
         temp = rhs_ws
         temp_ws_name = 'shifted'
@@ -879,6 +904,10 @@ class OverlayWorkspaces(object):
 
         # Add the LHS and shifted workspace
         Plus(LHSWorkspace=LHS_workspace,RHSWorkspace= temp ,OutputWorkspace= output_workspace)
+
+        #Apply sample log correciton
+        out_ws = self._get_workspace(output_workspace)
+        cummulative_correction.apply_cummulative_logs_to_workspace(out_ws)
 
         # Remove the shifted workspace
         if mtd.doesExist(temp_ws_name):
@@ -903,6 +932,7 @@ class OverlayWorkspaces(object):
         elif isinstance(workspace, basestring) and mtd.doesExist(workspace):
             return mtd[workspace]
 
+#pylint: disable=too-few-public-methods
 class TimeShifter(object):
     """
     The time shifter stores all time shifts for all runs which are to be added. If there is
@@ -927,6 +957,272 @@ class TimeShifter(object):
         except ValueError:
             pass# Log here
         return float_element
+
+def transfer_special_sample_logs(from_ws, to_ws):
+    '''
+    Transfers selected sample logs from one workspace to another
+    '''
+    single_valued_names = [ "gd_prtn_chrg"]
+    time_series_names = ['good_uah_log', 'good_frames']
+    type_map = {'good_uah_log': float , 'good_frames' : int, "gd_prtn_chrg" : float}
+
+    run_from = from_ws.getRun()
+    run_to = to_ws.getRun()
+
+    # Populate the time series
+    for time_series_name in time_series_names:
+        if (run_from.hasProperty(time_series_name) and
+            run_to.hasProperty(time_series_name)):
+
+            times = run_from.getProperty(time_series_name).times
+            values = run_from.getProperty(time_series_name).value
+
+            prop = run_to.getProperty(time_series_name)
+            prop.clear()
+            for index in range(0, len(times)):
+                prop.addValue(times[index],
+                              type_map[time_series_name](values[index]))
+
+    alg_log = AlgorithmManager.createUnmanaged("AddSampleLog")
+    alg_log.initialize()
+    alg_log.setChild(True)
+    for single_valued_name in single_valued_names:
+        if (run_from.hasProperty(single_valued_name) and
+            run_to.hasProperty(single_valued_name)):
+            value = run_from.getProperty(single_valued_name).value
+            alg_log.setProperty("Workspace", to_ws)
+            alg_log.setProperty("LogName", single_valued_name)
+            alg_log.setProperty("LogText", str(type_map[single_valued_name](value)))
+            alg_log.setProperty("LogType", "Number")
+            alg_log.execute()
+
+#pylint: disable=too-many-instance-attributes
+class CummulativeTimeSeriesPropertyAdder(object):
+    '''
+    Apply shift to RHS sample logs where necessary. This is a hack because Plus cannot handle
+    cummulative time series correctly at this point.
+    '''
+    def __init__(self, total_time_shift_seconds = 0):
+        super(CummulativeTimeSeriesPropertyAdder, self).__init__()
+        self._time_series = ['good_uah_log', 'good_frames']
+        self._single_valued= ["gd_prtn_chrg"]
+
+        self._original_times_lhs = dict()
+        self._original_values_lhs = dict()
+        self._original_times_rhs = dict()
+        self._original_values_rhs = dict()
+
+        self._original_single_valued_lhs = dict()
+        self._original_single_valued_rhs = dict()
+
+        self._start_time_lhs = None
+        self._start_time_rhs = None
+        self._total_time_shift_nano_seconds = int(total_time_shift_seconds*1e9)
+
+        self._type_map = {'good_uah_log': float , 'good_frames' : int, "gd_prtn_chrg" : float}
+
+    def extract_sample_logs_from_workspace(self, lhs, rhs):
+        '''
+        When adding specific logs, we need to make sure that the values are added correctly.
+        @param lhs: the lhs workspace
+        @param rhs: the rhs workspace
+        '''
+        run_lhs = lhs.getRun()
+        run_rhs = rhs.getRun()
+        # Get the cummulative time s
+        for element in self._time_series:
+            if (run_lhs.hasProperty(element) and
+                run_rhs.hasProperty(element)):
+                # Get values for lhs
+                property_lhs = run_lhs.getProperty(element)
+                self._original_times_lhs[element] = property_lhs.times
+                self._original_values_lhs[element] = property_lhs.value
+
+                # Get values for rhs
+                property_rhs = run_rhs.getProperty(element)
+                self._original_times_rhs[element] = property_rhs.times
+                self._original_values_rhs[element] = property_rhs.value
+
+        for element in self._single_valued:
+            if (run_lhs.hasProperty(element) and
+                run_rhs.hasProperty(element)):
+                # Get the values for lhs
+                property_lhs = run_lhs.getProperty(element)
+                self._original_single_valued_lhs[element] = property_lhs.value
+
+                # Get the values for rhs
+                property_rhs = run_rhs.getProperty(element)
+                self._original_single_valued_rhs[element] = property_rhs.value
+
+        log_name_start_time = "start_time"
+        if (run_lhs.hasProperty(log_name_start_time) and
+            run_rhs.hasProperty(log_name_start_time)):
+            convert_to_date = lambda val: DateAndTime(val) if isinstance(val, str) else val
+            self._start_time_lhs = convert_to_date(run_lhs.getProperty(log_name_start_time).value)
+            self._start_time_rhs = convert_to_date(run_rhs.getProperty(log_name_start_time).value)
+
+    def apply_cummulative_logs_to_workspace(self, workspace):
+        '''
+        Restore the original values for the shifted properties
+        @param workspace: the workspace which requires correction.
+        '''
+        for element in self._time_series:
+            if (element in self._original_times_rhs and
+                element in self._original_values_rhs):
+                run = workspace.getRun()
+                prop = run.getProperty(element)
+                prop.clear()
+                # Get the cummulated values and times
+                times, values = self._get_cummulative_sample_logs(element)
+                self._populate_property(prop, times, values, self._type_map[element])
+
+        self._update_single_valued_entries(workspace)
+
+
+    def _update_single_valued_entries(self, workspace):
+        '''
+        We need to update single-valued entries which are based on the
+        cummulative time series
+        @param workspace: the workspace which requires the changes
+        '''
+        run = workspace.getRun()
+
+        alg_log = AlgorithmManager.createUnmanaged("AddSampleLog")
+        alg_log.initialize()
+        alg_log.setChild(True)
+        for element in self._single_valued:
+            if run.hasProperty(element):
+                type_converter = self._type_map[element]
+                new_value = type_converter(self._original_single_valued_lhs[element] +
+                                           self._original_single_valued_rhs[element])
+                alg_log.setProperty("Workspace", workspace)
+                alg_log.setProperty("LogName", element)
+                alg_log.setProperty("LogText", str(new_value))
+                alg_log.setProperty("LogType", "Number")
+                alg_log.execute()
+
+    def _get_cummulative_sample_logs(self, log_name):
+        '''
+        Gets the added sample logs for a particular log.
+        @param log_name: the name of the logs
+        @param an array with times and an array with values
+        '''
+        # Remove data from the beginning of the measurement
+        times_lhs, values_lhs, times_rhs, values_rhs = self._get_corrected_times_and_values(log_name)
+
+        # Create the actual entries and not the cumulated ones
+        values_raw_lhs = self._get_raw_values(values_lhs)
+        values_raw_rhs = self._get_raw_values(values_rhs)
+
+        # Shift the times of the rhs workspace if required
+        times_rhs = self._shift_time_series(times_rhs)
+
+        # Now merge and sort the two entries
+        time_merged, value_merged = self._create_merged_values_and_times(times_lhs, values_raw_lhs, times_rhs, values_raw_rhs)
+
+        # Create cummulated values
+        time_final = time_merged
+        value_final = self._create_cummulated_values(value_merged)
+
+        return time_final, value_final
+
+    def _create_cummulated_values(self, values):
+        '''
+        Creates cummulated values
+        @param time: a time array
+        @param value: a value array which is the basis for the accumulation
+        '''
+        values_accumulated = []
+        for index in range(0, len(values)):
+            if index == 0:
+                values_accumulated.append(values[index])
+            else:
+                values_accumulated.append(values_accumulated[index - 1] + values[index])
+        return values_accumulated
+
+    def _create_merged_values_and_times(self, times_lhs, values_lhs, times_rhs, values_rhs):
+        times = []
+        times.extend(times_lhs)
+        times.extend(times_rhs)
+
+        values = []
+        values.extend(values_lhs)
+        values.extend(values_rhs)
+
+        zipped = zip(times, values)
+        # We sort via the times
+        zipped.sort(key = lambda z : z[0])
+        unzipped = zip(*zipped)
+        return unzipped[0], unzipped[1]
+
+    def _shift_time_series(self, time_series):
+        shifted_series = []
+        for element in time_series:
+            shifted_series.append(element + self._total_time_shift_nano_seconds)
+        return shifted_series
+
+    def _get_raw_values(self, values):
+        '''
+        We extract the original data from the cummulative
+        series.
+        '''
+        raw_values = []
+        for index in range(0, len(values)):
+            if index == 0:
+                raw_values.append(values[index])
+            else:
+                element = values[index] - values[index-1]
+                raw_values.append(element)
+        return raw_values
+
+    def _get_corrected_times_and_values(self, log_name):
+        '''
+        Removes times before time 0
+        @param log_name: the log to consider
+        '''
+        start_time_lhs = self._start_time_lhs
+        start_time_rhs = self._start_time_rhs
+
+        times_lhs = self._original_times_lhs[log_name]
+        times_rhs = self._original_times_rhs[log_name]
+
+        values_lhs = self._original_values_lhs[log_name]
+        values_rhs = self._original_values_rhs[log_name]
+
+        # At this point we assume that the values are sorted.
+        # We search for the index which is larger or equal to the
+        # start time
+
+        index_lhs = self._find_start_time_index(times_lhs, start_time_lhs)
+        index_rhs = self._find_start_time_index(times_rhs, start_time_rhs)
+
+        times_lhs_corrected = times_lhs[index_lhs:]
+        values_lhs_corrected = values_lhs[index_lhs:]
+
+        times_rhs_corrected = times_rhs[index_rhs:]
+        values_rhs_corrected = values_rhs[index_rhs:]
+
+        return times_lhs_corrected, values_lhs_corrected, times_rhs_corrected, values_rhs_corrected
+
+    def _find_start_time_index(self, time_series, start_time):
+        index = 0
+        for element in time_series:
+            if element > start_time or element == start_time:
+                break
+            index += 1
+        return index
+
+    def _populate_property(self, prop, times, values, type_converter):
+        '''
+        Populates a time series property
+        @param property: the time series property
+        @param times: the times array
+        @param values: the values array
+        @param type_converter: a type converter
+        '''
+        for index in range(0, len(times)):
+            prop.addValue(times[index],
+                          type_converter(values[index]))
 
 def load_monitors_for_multiperiod_event_data(workspace, data_file, monitor_appendix):
     '''
@@ -975,12 +1271,19 @@ def is_convertible_to_float(input_value):
     '''
     Check if the input can be converted to float
     @param input_value :: a general input
+    @returns true if input can be converted to float else false
     '''
-    try:
-        dummy_converted = float(input_value)
-    except ValueError:
-        return False
-    return True
+    is_convertible = True
+    if not input_value:
+        is_convertible = False
+    else:
+        try:
+            dummy_converted = float(input_value)
+            is_convertible = True
+        except ValueError:
+            is_convertible = False
+    return is_convertible
+
 
 def is_valid_xml_file_list(input_value):
     '''
@@ -1011,6 +1314,15 @@ def convert_to_string_list(to_convert):
     string_list = to_convert.replace(" ", "").split(",")
     output_string = "[" + ','.join("'"+element+"'" for element in string_list) + "]"
     return output_string
+
+def convert_to_list_of_strings(to_convert):
+    '''
+    Converts a string of comma-separted values to a list of strings
+    @param to_convert: the string to convert
+    @returns a list of strings
+    '''
+    values = to_convert.split(",")
+    return [element.strip() for element in values]
 
 def can_load_as_event_workspace(filename):
     '''
@@ -1132,7 +1444,158 @@ def is_1D_workspace(workspace):
     else:
         return False
 
+def meter_2_millimeter(num):
+    '''
+    Converts from m to mm
+    @param float in m
+    @returns float in mm
+    '''
+    return num*1000.
 
+def millimeter_2_meter(num):
+    '''
+    Converts from mm to m
+    @param float in mm
+    @returns float in m
+    '''
+    return num/1000.
+
+def correct_q_resolution_for_can(original_workspace, can_workspace, subtracted_workspace):
+    '''
+    We need to transfer the DX error values from the original workspaces to the subtracted
+    workspace. Richard wants us to ignore potential DX values for the CAN workspace (they
+    would be very small any way). The Q Resolution functionality only exists currently
+    for 1D, ie when only one spectrum is present.
+    @param original_workspace: the original workspace
+    @param can_workspace: the can workspace
+    @param subtracted_workspace: the subtracted workspace
+    '''
+    dummy1 = can_workspace
+    if original_workspace.getNumberHistograms() == 1 and original_workspace.hasDx(0):
+        subtracted_workspace.setDx(0, original_workspace.dataDx(0))
+
+def correct_q_resolution_for_merged(count_ws_front, count_ws_rear,
+                                    output_ws, scale):
+    '''
+    We need to transfer the DX error values from the original workspaces to the merged worksapce.
+    We have:
+    C(Q) = Sum_all_lambda_for_particular_Q(Counts(lambda))
+    weightedQRes(Q) = Sum_all_lambda_for_particular_Q(Counts(lambda)* qRes(lambda))
+    ResQ(Q) = weightedQRes(Q)/C(Q)
+    Richard suggested:
+    ResQMerged(Q) = (weightedQRes_FRONT(Q)*scale + weightedQRes_REAR(Q))/
+                    (C_FRONT(Q)*scale + C_REAR(Q))
+    Note that we drop the shift here.
+    The Q Resolution functionality only exists currently
+    for 1D, ie when only one spectrum is present.
+    @param count_ws_front: the front counts
+    @param count_ws_rear: the rear counts
+    @param output_ws: the output workspace
+    '''
+    def divide_q_resolution_by_counts(q_res, counts):
+        # We are dividing DX by Y. Note that len(DX) = len(Y) + 1
+        # Unfortunately, we need some knowlege about the Q1D algorithm here.
+        # The two last entries of DX are duplicate in Q1D and this is how we
+        # treat it here.
+        q_res_buffer = np.divide(q_res[0:-1],counts)
+        q_res_buffer = np.append(q_res_buffer, q_res_buffer[-1])
+        return q_res_buffer
+
+    def multiply_q_resolution_by_counts(q_res, counts):
+         # We are dividing DX by Y. Note that len(DX) = len(Y) + 1
+        # Unfortunately, we need some knowlege about the Q1D algorithm here.
+        # The two last entries of DX are duplicate in Q1D and this is how we
+        # treat it here.
+        q_res_buffer = np.multiply(q_res[0:-1],counts)
+        q_res_buffer = np.append(q_res_buffer, q_res_buffer[-1])
+        return q_res_buffer
+
+    if count_ws_rear.getNumberHistograms() != 1:
+        return
+
+    # We require both count workspaces to contain the DX value
+    if not count_ws_rear.hasDx(0) or not count_ws_front.hasDx(0):
+        return
+
+    q_resolution_front = count_ws_front.readDx(0)
+    q_resolution_rear = count_ws_rear.readDx(0)
+    counts_front = count_ws_front.readY(0)
+    counts_rear = count_ws_rear.readY(0)
+
+    # We need to make sure that the workspaces match in length
+    if ((len(q_resolution_front) != len(q_resolution_rear)) or
+       (len(counts_front) != len(counts_rear))):
+        return
+
+    # Get everything for the FRONT detector
+    q_res_front_norm_free = multiply_q_resolution_by_counts(q_resolution_front, counts_front)
+    q_res_front_norm_free = q_res_front_norm_free*scale
+    counts_front = counts_front*scale
+
+    # Get everything for the REAR detector
+    q_res_rear_norm_free = multiply_q_resolution_by_counts(q_resolution_rear, counts_rear)
+
+    # Now add and divide
+    new_q_res= np.add(q_res_front_norm_free, q_res_rear_norm_free)
+    new_counts = np.add(counts_front,counts_rear)
+    q_resolution = divide_q_resolution_by_counts(new_q_res,new_counts)
+
+    # Set the dx error
+    output_ws.setDx(0, q_resolution)
+
+
+def is_valid_user_file_extension(user_file):
+    '''
+    Check if the file name has a valid extension for user files
+    @param user_file: the name of the user file
+    @returns true if it is valid, else false
+    '''
+    allowed_values = ['.TXT']
+    # We need to allow for old user file formats. They started with a number.
+    # But there doesn't seem to be a general format. As a very basic check
+    # we make sure that the ending starts with a number
+    pattern = r'^\.[0-9]+'
+
+    filename, file_extension = os.path.splitext(user_file)
+    file_extension = file_extension.upper()
+    dummy_file = filename
+    is_allowed = False
+    if file_extension in allowed_values or re.match(pattern, file_extension):
+        is_allowed = True
+    return is_allowed
+
+def createUnmanagedAlgorithm(name, **kwargs):
+    '''
+    This creates an unmanged child algorithm with the
+    provided proeprties set. The returned algorithm has
+    not been executed yet.
+    '''
+    alg = AlgorithmManager.createUnmanaged(name)
+    alg.initialize()
+    alg.setChild(True)
+    for key, value in kwargs.iteritems():
+        alg.setProperty(key, value)
+    return alg
+
+def extract_fit_parameters(rAnds):
+    '''
+    @param rAnds: a rescale and shift object
+    @returns a scale factor, a shift factor and a fit mode
+    '''
+    scale_factor = rAnds.scale
+    shift_factor = rAnds.shift
+
+    # Set the fit mode
+    fit_mode = None
+    if rAnds.fitScale and rAnds.fitShift:
+        fit_mode = "Both"
+    elif rAnds.fitScale:
+        fit_mode = "ScaleOnly"
+    elif rAnds.fitShift:
+        fit_mode = "ShiftOnly"
+    else:
+        fit_mode = "None"
+    return scale_factor, shift_factor, fit_mode
 ###############################################################################
 ######################### Start of Deprecated Code ############################
 ###############################################################################

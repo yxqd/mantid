@@ -3,6 +3,8 @@
 
 #include "MantidAPI/Algorithm.h"
 #include "MantidAPI/AnalysisDataService.h"
+#include "MantidAPI/Axis.h"
+#include "MantidAPI/ExperimentInfo.h"
 #include "MantidAPI/FrameworkManager.h"
 #include "MantidAPI/InstrumentDataService.h"
 #include "MantidAPI/Workspace.h"
@@ -16,11 +18,10 @@
 #include "MantidKernel/Strings.h"
 #include "MantidTestHelpers/WorkspaceCreationHelper.h"
 #include <cxxtest/TestSuite.h>
+
 #include <fstream>
-#include <iostream>
 #include <string>
 #include <vector>
-#include "MantidAPI/ExperimentInfo.h"
 
 using namespace Mantid;
 using namespace Mantid::API;
@@ -75,6 +76,7 @@ public:
     TS_ASSERT_EQUALS(ws2D->getNumberHistograms(), 2584);
 
     loader.setPropertyValue("Filename", "HET_Definition.xml");
+    loader.setProperty("RewriteSpectraMap", OptionalBool(true));
     inputFile = loader.getPropertyValue("Filename");
     loader.setPropertyValue("Workspace", wsName);
 
@@ -157,13 +159,14 @@ public:
 
     // Check running algorithm for same XML file leads to same instrument object
     // being attached
-    boost::shared_ptr<Instrument> instr(new Instrument());
+    boost::shared_ptr<Instrument> instr = boost::make_shared<Instrument>();
     output->setInstrument(instr);
     TS_ASSERT_EQUALS(output->getInstrument()->baseInstrument(), instr);
     LoadInstrument loadAgain;
     TS_ASSERT_THROWS_NOTHING(loadAgain.initialize());
     loadAgain.setPropertyValue("Filename", inputFile);
     loadAgain.setPropertyValue("Workspace", wsName);
+    loadAgain.setProperty("RewriteSpectraMap", OptionalBool(true));
     TS_ASSERT_THROWS_NOTHING(loadAgain.execute());
     TS_ASSERT_EQUALS(output->getInstrument()->baseInstrument(), i);
 
@@ -189,8 +192,8 @@ public:
 
     // put this workspace in the data service
     TS_ASSERT_THROWS_NOTHING(AnalysisDataService::Instance().add(wsName, ws2D));
-
     loaderSLS.setPropertyValue("Filename", "SANDALS_Definition.xml");
+    loaderSLS.setProperty("RewriteSpectraMap", OptionalBool(true));
     inputFile = loaderSLS.getPropertyValue("Filename");
 
     loaderSLS.setPropertyValue("Workspace", wsName);
@@ -257,6 +260,7 @@ public:
     TS_ASSERT_THROWS_NOTHING(AnalysisDataService::Instance().add(wsName, ws2D));
 
     loaderNIMROD.setPropertyValue("Filename", "NIM_Definition.xml");
+    loaderNIMROD.setProperty("RewriteSpectraMap", OptionalBool(true));
     inputFile = loaderNIMROD.getPropertyValue("Filename");
 
     loaderNIMROD.setPropertyValue("Workspace", wsName);
@@ -361,6 +365,7 @@ public:
     MatrixWorkspace_sptr ws =
         WorkspaceFactory::Instance().create("Workspace2D", 1, 1, 1);
     loader.setProperty("Workspace", ws);
+    loader.setProperty("RewriteSpectraMap", OptionalBool(true));
     TS_ASSERT(loader.execute());
 
     // This kind of IDF should lead to 2 instrument definitions - the physical
@@ -460,6 +465,7 @@ public:
     LoadInstrument instLoader;
     instLoader.setRethrows(true);
     instLoader.initialize();
+    instLoader.setProperty("RewriteSpectraMap", OptionalBool(true));
     instLoader.setProperty("Workspace", WorkspaceFactory::Instance().create(
                                             "EventWorkspace", 1, 1, 1));
     instLoader.setProperty("InstrumentXML", instrumentXML);
@@ -478,7 +484,7 @@ public:
     instLoader.setProperty("Workspace", WorkspaceFactory::Instance().create(
                                             "EventWorkspace", 1, 1, 1));
     instLoader.setProperty("InstrumentXML", "<doesn't matter what>");
-
+    instLoader.setProperty("RewriteSpectraMap", OptionalBool(true));
     TS_ASSERT(!instLoader.execute())
   }
 
@@ -489,6 +495,7 @@ public:
                                             "EventWorkspace", 1, 1, 1));
     instLoader.setProperty("InstrumentXML", "<instrument>");
     instLoader.setProperty("InstrumentName", "Nonsense");
+    instLoader.setProperty("RewriteSpectraMap", OptionalBool(true));
 
     TS_ASSERT(!instLoader.execute())
   }
@@ -533,6 +540,7 @@ public:
     instLoader.setProperty("Workspace", WorkspaceFactory::Instance().create(
                                             "EventWorkspace", 1, 1, 1));
     instLoader.setProperty("InstrumentXML", instrumentXML);
+    instLoader.setProperty("RewriteSpectraMap", OptionalBool(true));
     instLoader.setProperty(
         "InstrumentName",
         "Nonsense"); // Want to make sure it doesn't matter what we call it
@@ -553,6 +561,7 @@ public:
     instLoader.setProperty("Workspace", WorkspaceFactory::Instance().create(
                                             "EventWorkspace", 1, 1, 1));
     instLoader.setProperty("InstrumentXML", instrumentXMLwithView);
+    instLoader.setProperty("RewriteSpectraMap", OptionalBool(true));
     instLoader.setProperty(
         "InstrumentName",
         "Nonsense"); // Want to make sure it doesn't matter what we call it
@@ -591,6 +600,7 @@ private:
 
     // load IDF
     loader.setPropertyValue("Filename", filename);
+    loader.setProperty("RewriteSpectraMap", OptionalBool(true));
     inputFile = loader.getPropertyValue("Filename");
     loader.setPropertyValue("Workspace", wsName);
     TS_ASSERT_THROWS_NOTHING(loader.execute());
@@ -644,6 +654,7 @@ public:
       // Load it fresh
       LoadInstrument loader;
       loader.initialize();
+      loader.setProperty("RewriteSpectraMap", OptionalBool(true));
       loader.setProperty("Workspace", ws);
       loader.setPropertyValue("Filename", filename);
       loader.execute();

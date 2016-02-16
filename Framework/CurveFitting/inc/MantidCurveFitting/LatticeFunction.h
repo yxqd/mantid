@@ -4,7 +4,7 @@
 #include "MantidKernel/System.h"
 #include "MantidAPI/ILatticeFunction.h"
 
-#include "MantidCurveFitting/PawleyFunction.h"
+#include "MantidCurveFitting/Functions/PawleyFunction.h"
 
 namespace Mantid {
 namespace CurveFitting {
@@ -44,24 +44,24 @@ namespace CurveFitting {
 class DLLExport LatticeFunction : public API::ILatticeFunction {
 public:
   LatticeFunction();
-  virtual ~LatticeFunction() {}
+  ~LatticeFunction() override {}
 
-  std::string name() const { return "LatticeFunction"; }
+  std::string name() const override { return "LatticeFunction"; }
 
   void functionLattice(const API::LatticeDomain &latticeDomain,
-                       API::FunctionValues &values) const;
+                       API::FunctionValues &values) const override;
 
-  void setCrystalSystem(const std::string &crystalSystem);
-  void setUnitCell(const std::string &unitCellString);
-  void setUnitCell(const Geometry::UnitCell &unitCell);
-  Geometry::UnitCell getUnitCell() const;
+  void setLatticeSystem(const std::string &crystalSystem) override;
+  void setUnitCell(const std::string &unitCellString) override;
+  void setUnitCell(const Geometry::UnitCell &unitCell) override;
+  Geometry::UnitCell getUnitCell() const override;
 
 protected:
-  void init();
-  void beforeDecoratedFunctionSet(const API::IFunction_sptr &fn);
+  void init() override;
+  void beforeDecoratedFunctionSet(const API::IFunction_sptr &fn) override;
 
 private:
-  PawleyParameterFunction_sptr m_cellParameters;
+  Functions::PawleyParameterFunction_sptr m_cellParameters;
 };
 
 typedef boost::shared_ptr<LatticeFunction> LatticeFunction_sptr;

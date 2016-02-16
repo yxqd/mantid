@@ -1,14 +1,14 @@
 #include "MantidMDAlgorithms/ConvertToDetectorFaceMD.h"
-#include "MantidKernel/System.h"
+#include "MantidAPI/Axis.h"
 #include "MantidAPI/IMDEventWorkspace.h"
-#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidKernel/ArrayLengthValidator.h"
-#include "MantidDataObjects/EventWorkspace.h"
 #include "MantidKernel/Strings.h"
-#include "MantidGeometry/Instrument/RectangularDetector.h"
-#include "MantidKernel/ArrayProperty.h"
-#include "MantidGeometry/MDGeometry/MDHistoDimension.h"
+#include "MantidKernel/System.h"
+#include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/MDEventFactory.h"
+#include "MantidGeometry/Instrument/RectangularDetector.h"
+#include "MantidGeometry/MDGeometry/MDHistoDimension.h"
+#include "MantidKernel/ArrayProperty.h"
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
@@ -45,7 +45,7 @@ int ConvertToDetectorFaceMD::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
 const std::string ConvertToDetectorFaceMD::category() const {
-  return "MDAlgorithms";
+  return "MDAlgorithms\\Creation";
 }
 
 //----------------------------------------------------------------------------------------------
@@ -99,19 +99,20 @@ void ConvertToDetectorFaceMD::convertEventList(
   typename std::vector<T> &events = *events_ptr;
 
   // Iterators to start/end
-  typename std::vector<T>::iterator it = events.begin();
-  typename std::vector<T>::iterator it_end = events.end();
+  auto it = events.begin();
+  auto it_end = events.end();
 
   for (; it != it_end; it++) {
     coord_t tof = static_cast<coord_t>(it->tof());
     if (nd == 3) {
       coord_t center[3] = {x, y, tof};
-      out_events.push_back(MDE(float(it->weight()), float(it->errorSquared()),
-                               runIndex, detectorID, center));
+      out_events.emplace_back(float(it->weight()), float(it->errorSquared()),
+                              runIndex, detectorID, center);
     } else if (nd == 4) {
       coord_t center[4] = {x, y, tof, bankNum};
-      out_events.push_back(MDE(float(it->weight()), float(it->errorSquared()),
-                               runIndex, detectorID, center));
+      out_events.emplace_back(static_cast<float>(it->weight()),
+                              static_cast<float>(it->errorSquared()), runIndex,
+                              detectorID, center);
     }
   }
 
@@ -140,10 +141,10 @@ ConvertToDetectorFaceMD::getBanks() {
     std::vector<IComponent_const_sptr> comps;
     inst->getChildren(comps, true);
 
-    for (size_t i = 0; i < comps.size(); i++) {
+    for (auto &comp : comps) {
       // Retrieve it
       RectangularDetector_const_sptr det =
-          boost::dynamic_pointer_cast<const RectangularDetector>(comps[i]);
+          boost::dynamic_pointer_cast<const RectangularDetector>(comp);
       if (det) {
         std::string name = det->getName();
         if (name.size() < 5)
@@ -157,20 +158,19 @@ ConvertToDetectorFaceMD::getBanks() {
     }
   } else {
     // -- Find detectors using the numbers given ---
-    for (auto bankNum = bankNums.begin(); bankNum != bankNums.end();
-         bankNum++) {
+    for (auto &bankNum : bankNums) {
       std::string bankName =
-          "bank" + Mantid::Kernel::Strings::toString(*bankNum);
+          "bank" + Mantid::Kernel::Strings::toString(bankNum);
       IComponent_const_sptr comp = inst->getComponentByName(bankName);
       RectangularDetector_const_sptr det =
           boost::dynamic_pointer_cast<const RectangularDetector>(comp);
       if (det)
-        banks[*bankNum] = det;
+        banks[bankNum] = det;
     }
   }
 
-  for (auto bank = banks.begin(); bank != banks.end(); bank++) {
-    RectangularDetector_const_sptr det = bank->second;
+  for (auto &bank : banks) {
+    RectangularDetector_const_sptr det = bank.second;
     // Track the largest detector
     if (det->xpixels() > m_numXPixels)
       m_numXPixels = det->xpixels();
@@ -212,30 +212,35 @@ void ConvertToDetectorFaceMD::exec() {
   if (ax0->getValue(ax0->length() - 1) > tof_max)
     tof_max = ax0->getValue(ax0->length() - 1);
 
+  // Get MDFrame of General Frame type
+  Mantid::Geometry::GeneralFrame framePixel(
+      Mantid::Geometry::GeneralFrame::GeneralFrameName, "pixel");
+  Mantid::Geometry::GeneralFrame frameTOF(
+      Mantid::Geometry::GeneralFrame::GeneralFrameName, ax0->unit()->label());
+
   // ------------------ Build all the dimensions ----------------------------
   MDHistoDimension_sptr dimX(
-      new MDHistoDimension("x", "x", "pixel", static_cast<coord_t>(0),
+      new MDHistoDimension("x", "x", framePixel, static_cast<coord_t>(0),
                            static_cast<coord_t>(m_numXPixels), m_numXPixels));
   MDHistoDimension_sptr dimY(
-      new MDHistoDimension("y", "y", "pixel", static_cast<coord_t>(0),
+      new MDHistoDimension("y", "y", framePixel, static_cast<coord_t>(0),
                            static_cast<coord_t>(m_numYPixels), m_numYPixels));
   std::string TOFname = ax0->title();
   if (TOFname.empty())
     TOFname = ax0->unit()->unitID();
   MDHistoDimension_sptr dimTOF(new MDHistoDimension(
-      TOFname, TOFname, ax0->unit()->label(), static_cast<coord_t>(tof_min),
+      TOFname, TOFname, frameTOF, static_cast<coord_t>(tof_min),
       static_cast<coord_t>(tof_max), ax0->length()));
 
-  std::vector<IMDDimension_sptr> dims;
-  dims.push_back(dimX);
-  dims.push_back(dimY);
-  dims.push_back(dimTOF);
+  std::vector<IMDDimension_sptr> dims{dimX, dimY, dimTOF};
 
   if (banks.size() > 1) {
+    Mantid::Geometry::GeneralFrame frameNumber(
+        Mantid::Geometry::GeneralFrame::GeneralFrameName, "number");
     int min = banks.begin()->first;
     int max = banks.rbegin()->first + 1;
     MDHistoDimension_sptr dimBanks(new MDHistoDimension(
-        "bank", "bank", "number", static_cast<coord_t>(min),
+        "bank", "bank", frameNumber, static_cast<coord_t>(min),
         static_cast<coord_t>(max), max - min));
     dims.push_back(dimBanks);
   }
@@ -260,9 +265,9 @@ void ConvertToDetectorFaceMD::exec() {
   uint16_t runIndex = outWS->addExperimentInfo(ei);
 
   // ---------------- Convert each bank --------------------------------------
-  for (auto it = banks.begin(); it != banks.end(); it++) {
-    int bankNum = it->first;
-    RectangularDetector_const_sptr det = it->second;
+  for (auto &bank : banks) {
+    int bankNum = bank.first;
+    RectangularDetector_const_sptr det = bank.second;
     for (int x = 0; x < det->xpixels(); x++)
       for (int y = 0; y < det->ypixels(); y++) {
         // Find the workspace index for this pixel coordinate

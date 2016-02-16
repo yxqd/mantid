@@ -1,19 +1,18 @@
 #include "MantidAlgorithms/Stitch1D.h"
 #include "MantidAPI/WorkspaceProperty.h"
 #include "MantidAPI/MatrixWorkspace.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/HistogramValidator.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/PropertyWithValue.h"
 #include "MantidKernel/RebinParamsValidator.h"
 #include "MantidKernel/MultiThreaded.h"
 #include "MantidKernel/BoundedValidator.h"
 
-#include <boost/make_shared.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/math/special_functions.hpp>
-#include <vector>
 #include <algorithm>
 
 using namespace Mantid::Kernel;
@@ -640,20 +639,20 @@ void Stitch1D::reinsertSpecialValues(MatrixWorkspace_sptr ws) {
     // Copy over the data
     MantidVec &sourceY = ws->dataY(i);
 
-    for (size_t j = 0; j < m_nanYIndexes[i].size(); ++j) {
-      sourceY[m_nanYIndexes[i][j]] = std::numeric_limits<double>::quiet_NaN();
+    for (auto j : m_nanYIndexes[i]) {
+      sourceY[j] = std::numeric_limits<double>::quiet_NaN();
     }
 
-    for (size_t j = 0; j < m_infYIndexes[i].size(); ++j) {
-      sourceY[m_infYIndexes[i][j]] = std::numeric_limits<double>::infinity();
+    for (auto j : m_infYIndexes[i]) {
+      sourceY[j] = std::numeric_limits<double>::infinity();
     }
 
-    for (size_t j = 0; j < m_nanEIndexes[i].size(); ++j) {
-      sourceY[m_nanEIndexes[i][j]] = std::numeric_limits<double>::quiet_NaN();
+    for (auto j : m_nanEIndexes[i]) {
+      sourceY[j] = std::numeric_limits<double>::quiet_NaN();
     }
 
-    for (size_t j = 0; j < m_infEIndexes[i].size(); ++j) {
-      sourceY[m_infEIndexes[i][j]] = std::numeric_limits<double>::infinity();
+    for (auto j : m_infEIndexes[i]) {
+      sourceY[j] = std::numeric_limits<double>::infinity();
     }
 
     PARALLEL_END_INTERUPT_REGION

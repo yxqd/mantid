@@ -13,7 +13,7 @@ Kernel::Logger g_log("DeprecatedAlgorithm");
 
 /// Does nothing other than make the compiler happy.
 DeprecatedAlgorithm::DeprecatedAlgorithm()
-    : m_replacementAlgorithm(), m_replacementVersion(-1), m_deprecatdDate() {}
+    : m_replacementAlgorithm(), m_replacementVersion(-1), m_deprecatedDate() {}
 
 /// Does nothing other than make the compiler happy.
 DeprecatedAlgorithm::~DeprecatedAlgorithm() {}
@@ -37,7 +37,7 @@ void DeprecatedAlgorithm::useAlgorithm(const std::string &replacement,
 
 /// The date the algorithm was deprecated on
 void DeprecatedAlgorithm::deprecatedDate(const std::string &date) {
-  this->m_deprecatdDate = "";
+  this->m_deprecatedDate = "";
   if (date.empty()) {
     // TODO warn people that it wasn't set
     return;
@@ -46,19 +46,19 @@ void DeprecatedAlgorithm::deprecatedDate(const std::string &date) {
     // TODO warn people that it wasn't set
     return;
   }
-  this->m_deprecatdDate = date;
+  this->m_deprecatedDate = date;
 }
 
 /// This merely prints the deprecation error for people to see.
 const std::string DeprecatedAlgorithm::deprecationMsg(const IAlgorithm *algo) {
   std::stringstream msg;
-  if (algo != NULL)
+  if (algo != nullptr)
     msg << algo->name() << " is ";
 
   msg << "deprecated";
 
-  if (!this->m_deprecatdDate.empty())
-    msg << " (on " << this->m_deprecatdDate << ")";
+  if (!this->m_deprecatedDate.empty())
+    msg << " (on " << this->m_deprecatedDate << ")";
 
   if (this->m_replacementAlgorithm.empty()) {
     msg << " and has no replacement.";

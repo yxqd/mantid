@@ -15,8 +15,31 @@ This algorithm filters events from an
 `SplittersWorkspace <http://www.mantidproject.org/SplittersWorkspace>`_ containing a series of
 splitters (i.e., `SplittingIntervals <http://www.mantidproject.org/SplittingInterval>`_).
 
-Output
+Inputs
 ######
+Algorithm *FilterEvents* takes 2 mandatory input Workspaces and 1 optional Workspace.
+One of mandatory workspace is the EventWorkspace where the events are filtered from.
+The other mandatory workspace is workspace containing splitters. 
+It can be either a MatrixWorkspace or a SplittersWorkspace.
+
+The optional workspace is a TableWorkspace for information of splitters.
+
+Algorithm *GenerateEventsFilter* creates both the splitters' workspace and splitter information workspace.
+
+
+Splitters in relative time
+==========================
+
+As the splitters' workspace is in format of MatrixWorkspace,
+its time, i.e., the value in X vector, can be relative time.
+
+Property *RelativeTime* flags that the splitters' time is relative.
+Property *FilterStartTime* specifies the starting time of the filter.
+Or the shift of time of the splitters.
+If it is not specified, then the algorithm will search for sample log *run_start*.
+
+Outputs
+#######
 
 The output will be one or multiple workspaces according to the number of
 index in splitters. The output workspace name is the combination of
@@ -175,14 +198,13 @@ Output:
 
 .. testoutput:: FilterEventTOFCorrection
 
-    workspace tempsplitws_0 has 124 events
-    workspace tempsplitws_1 has 16937 events
-    workspace tempsplitws_2 has 9987 events
-    workspace tempsplitws_3 has 6962 events
-    workspace tempsplitws_4 has 22529 events
-    workspace tempsplitws_5 has 5124 events
-    workspace tempsplitws_unfiltered has 50603 events
-
+    workspace tempsplitws_0 has 123 events
+    workspace tempsplitws_1 has 16951 events
+    workspace tempsplitws_2 has 9972 events
+    workspace tempsplitws_3 has 7019 events
+    workspace tempsplitws_4 has 22514 events
+    workspace tempsplitws_5 has 5082 events
+    workspace tempsplitws_unfiltered has 50605 events
 
 .. categories::
 

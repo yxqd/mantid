@@ -1,7 +1,7 @@
 #ifndef MANTIDQTCUSTOMINTERFACES_TOMOGRAPHY_TOMOPATHSCONFIG_H_
 #define MANTIDQTCUSTOMINTERFACES_TOMOGRAPHY_TOMOPATHSCONFIG_H_
 
-#include "MantidKernel/System.h"
+#include "MantidQtCustomInterfaces/DllConfig.h"
 #include "MantidQtCustomInterfaces/Tomography/ToolConfigAstraToolbox.h"
 #include "MantidQtCustomInterfaces/Tomography/ToolConfigCustom.h"
 #include "MantidQtCustomInterfaces/Tomography/ToolConfigTomoPy.h"
@@ -18,7 +18,7 @@ that define where the data for a particular dataset can be found, and
 that are normally required to run reconstruction tools but also pre-
 and post- processing steps.
 
-Copyright &copy; 2014,205 ISIS Rutherford Appleton Laboratory, NScD
+Copyright &copy; 2014,2015 ISIS Rutherford Appleton Laboratory, NScD
 Oak Ridge National Laboratory & European Spallation Source
 
 This file is part of Mantid.
@@ -39,7 +39,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 File change history is stored at: <https://github.com/mantidproject/mantid>
 Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
-class DLLExport TomoPathsConfig {
+class MANTIDQT_CUSTOMINTERFACES_DLL TomoPathsConfig {
 public:
   /**
    * Default constructor, makes a paths configuration which probably

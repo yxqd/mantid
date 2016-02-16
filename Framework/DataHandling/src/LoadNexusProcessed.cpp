@@ -8,6 +8,7 @@
 #include "MantidAPI/NumericAxis.h"
 #include "MantidAPI/RegisterFileLoader.h"
 #include "MantidAPI/TextAxis.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceGroup.h"
 #include "MantidDataHandling/LoadNexusProcessed.h"
 #include "MantidDataObjects/EventWorkspace.h"
@@ -29,9 +30,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/shared_array.hpp>
 
-#include <Poco/StringTokenizer.h>
-
 #include <nexus/NeXusException.hpp>
+
+#include <Poco/StringTokenizer.h>
 
 namespace Mantid {
 namespace DataHandling {
@@ -193,7 +194,7 @@ bool isMultiPeriodFile(int nWorkspaceEntries, Workspace_sptr sampleWS,
 LoadNexusProcessed::LoadNexusProcessed()
     : m_shared_bins(false), m_xbins(), m_axis1vals(), m_list(false),
       m_interval(false), m_spec_min(0), m_spec_max(Mantid::EMPTY_INT()),
-      m_spec_list(), m_filtered_spec_idxs(), m_cppFile(NULL) {}
+      m_spec_list(), m_filtered_spec_idxs(), m_cppFile(nullptr) {}
 
 /// Delete NexusFileIO in destructor
 LoadNexusProcessed::~LoadNexusProcessed() { delete m_cppFile; }
@@ -216,12 +217,9 @@ int LoadNexusProcessed::confidence(Kernel::NexusDescriptor &descriptor) const {
  */
 void LoadNexusProcessed::init() {
   // Declare required input parameters for algorithm
-  std::vector<std::string> exts;
-  exts.push_back(".nxs");
-  exts.push_back(".nx5");
-  exts.push_back(".xml");
   declareProperty(
-      new FileProperty("Filename", "", FileProperty::Load, exts),
+      new FileProperty("Filename", "", FileProperty::Load,
+                       {".nxs", ".nx5", ".xml"}),
       "The name of the Nexus file to read, as a full or relative path.");
   declareProperty(new WorkspaceProperty<Workspace>("OutputWorkspace", "",
                                                    Direction::Output),
@@ -236,13 +234,13 @@ void LoadNexusProcessed::init() {
   auto mustBePositive = boost::make_shared<BoundedValidator<int64_t>>();
   mustBePositive->setLower(0);
 
-  declareProperty("SpectrumMin", (int64_t)1, mustBePositive,
+  declareProperty("SpectrumMin", static_cast<int64_t>(1), mustBePositive,
                   "Number of first spectrum to read.");
-  declareProperty("SpectrumMax", (int64_t)Mantid::EMPTY_INT(), mustBePositive,
-                  "Number of last spectrum to read.");
+  declareProperty("SpectrumMax", static_cast<int64_t>(Mantid::EMPTY_INT()),
+                  mustBePositive, "Number of last spectrum to read.");
   declareProperty(new ArrayProperty<int64_t>("SpectrumList"),
                   "List of spectrum numbers to read.");
-  declareProperty("EntryNumber", (int64_t)0, mustBePositive,
+  declareProperty("EntryNumber", static_cast<int64_t>(0), mustBePositive,
                   "0 indicates that every entry is loaded, into a separate "
                   "workspace within a group. "
                   "A positive number identifies one entry to be loaded, into "
@@ -1044,7 +1042,6 @@ API::Workspace_sptr LoadNexusProcessed::loadPeaksEntry(NXEntry &entry) {
 
   // Coordinates - Older versions did not have the separate field but used a log
   // value
-  uint32_t loadCoord(0);
   const std::string peaksWSName = "peaks_workspace";
   try {
     m_cppFile->openGroup(peaksWSName, "NXentry");
@@ -1055,6 +1052,7 @@ API::Workspace_sptr LoadNexusProcessed::loadPeaksEntry(NXEntry &entry) {
         peaksWSName + ". Lower level error description: " + re.what());
   }
   try {
+    uint32_t loadCoord(0);
     m_cppFile->readData("coordinate_system", loadCoord);
     peakWS->setCoordinateSystem(
         static_cast<Kernel::SpecialCoordinateSystem>(loadCoord));
@@ -1071,19 +1069,34 @@ API::Workspace_sptr LoadNexusProcessed::loadPeaksEntry(NXEntry &entry) {
       }
     }
   }
+
+  std::string m_QConvention = "Inelastic";
+  try {
+    m_cppFile->getAttr("QConvention", m_QConvention);
+  } catch (std::exception &) {
+  }
+
   // peaks_workspace
   m_cppFile->closeGroup();
 
+  // Change convention of loaded file to that in Preferen
+  double qSign = 1.0;
+  std::string convention = ConfigService::Instance().getString("Q.convention");
+  if (convention != m_QConvention)
+    qSign = -1.0;
+
   for (int r = 0; r < numberPeaks; r++) {
     Kernel::V3D v3d;
-    v3d[2] = 1.0;
+    if (convention == "Crystallography")
+      v3d[2] = -1.0;
+    else
+      v3d[2] = 1.0;
     Geometry::IPeak *p;
     p = peakWS->createPeak(v3d);
     peakWS->addPeak(*p);
   }
 
-  for (size_t i = 0; i < columnNames.size(); i++) {
-    const std::string str = columnNames[i];
+  for (auto str : columnNames) {
     if (!str.compare("column_1")) {
       NXInt nxInt = nx_tw.openNXInt(str.c_str());
       nxInt.load();
@@ -1100,7 +1113,7 @@ API::Workspace_sptr LoadNexusProcessed::loadPeaksEntry(NXEntry &entry) {
       nxDouble.load();
 
       for (int r = 0; r < numberPeaks; r++) {
-        double val = nxDouble[r];
+        double val = qSign * nxDouble[r];
         peakWS->getPeak(r).setH(val);
       }
     }
@@ -1110,7 +1123,7 @@ API::Workspace_sptr LoadNexusProcessed::loadPeaksEntry(NXEntry &entry) {
       nxDouble.load();
 
       for (int r = 0; r < numberPeaks; r++) {
-        double val = nxDouble[r];
+        double val = qSign * nxDouble[r];
         peakWS->getPeak(r).setK(val);
       }
     }
@@ -1120,7 +1133,7 @@ API::Workspace_sptr LoadNexusProcessed::loadPeaksEntry(NXEntry &entry) {
       nxDouble.load();
 
       for (int r = 0; r < numberPeaks; r++) {
-        double val = nxDouble[r];
+        double val = qSign * nxDouble[r];
         peakWS->getPeak(r).setL(val);
       }
     }
@@ -1293,6 +1306,11 @@ API::MatrixWorkspace_sptr LoadNexusProcessed::loadNonEventEntry(
     fracarea = wksp_cls.openNXDouble("frac_area");
   }
 
+  // Check for x errors; as with fracArea we set it to xbins
+  // although in this case it would never be used.
+  auto hasXErrors = wksp_cls.isValid("xerrors");
+  auto xErrors = hasXErrors ? wksp_cls.openNXDouble("xerrors") : errors;
+
   int64_t blocksize(8);
   // const int fullblocks = nspectra / blocksize;
   // size of the workspace
@@ -1325,26 +1343,27 @@ API::MatrixWorkspace_sptr LoadNexusProcessed::loadNonEventEntry(
                        progressScaler * static_cast<double>(hist_index) /
                            static_cast<double>(read_stop),
                    "Reading workspace data...");
-          loadBlock(data, errors, fracarea, hasFracArea, blocksize, nchannels,
-                    hist_index, wsIndex, local_workspace);
+          loadBlock(data, errors, fracarea, hasFracArea, xErrors, hasXErrors,
+                    blocksize, nchannels, hist_index, wsIndex, local_workspace);
         }
         int64_t finalblock = m_spec_max - 1 - read_stop;
         if (finalblock > 0) {
-          loadBlock(data, errors, fracarea, hasFracArea, finalblock, nchannels,
-                    hist_index, wsIndex, local_workspace);
+          loadBlock(data, errors, fracarea, hasFracArea, xErrors, hasXErrors,
+                    finalblock, nchannels, hist_index, wsIndex,
+                    local_workspace);
         }
       }
       // if spectrum list property is set read each spectrum separately by
       // setting blocksize=1
       if (m_list) {
-        std::vector<int64_t>::iterator itr = m_spec_list.begin();
+        auto itr = m_spec_list.begin();
         for (; itr != m_spec_list.end(); ++itr) {
           int64_t specIndex = (*itr) - 1;
           progress(progressBegin +
                        progressScaler * static_cast<double>(specIndex) /
                            static_cast<double>(m_spec_list.size()),
                    "Reading workspace data...");
-          loadBlock(data, errors, fracarea, hasFracArea,
+          loadBlock(data, errors, fracarea, hasFracArea, xErrors, hasXErrors,
                     static_cast<int64_t>(1), nchannels, specIndex, wsIndex,
                     local_workspace);
         }
@@ -1355,13 +1374,13 @@ API::MatrixWorkspace_sptr LoadNexusProcessed::loadNonEventEntry(
                      progressScaler * static_cast<double>(hist_index) /
                          static_cast<double>(read_stop),
                  "Reading workspace data...");
-        loadBlock(data, errors, fracarea, hasFracArea, blocksize, nchannels,
-                  hist_index, wsIndex, local_workspace);
+        loadBlock(data, errors, fracarea, hasFracArea, xErrors, hasXErrors,
+                  blocksize, nchannels, hist_index, wsIndex, local_workspace);
       }
       int64_t finalblock = total_specs - read_stop;
       if (finalblock > 0) {
-        loadBlock(data, errors, fracarea, hasFracArea, finalblock, nchannels,
-                  hist_index, wsIndex, local_workspace);
+        loadBlock(data, errors, fracarea, hasFracArea, xErrors, hasXErrors,
+                  finalblock, nchannels, hist_index, wsIndex, local_workspace);
       }
     }
 
@@ -1383,26 +1402,28 @@ API::MatrixWorkspace_sptr LoadNexusProcessed::loadNonEventEntry(
                        progressScaler * static_cast<double>(hist_index) /
                            static_cast<double>(read_stop),
                    "Reading workspace data...");
-          loadBlock(data, errors, fracarea, hasFracArea, xbins, blocksize,
-                    nchannels, hist_index, wsIndex, local_workspace);
+          loadBlock(data, errors, fracarea, hasFracArea, xErrors, hasXErrors,
+                    xbins, blocksize, nchannels, hist_index, wsIndex,
+                    local_workspace);
         }
         int64_t finalblock = m_spec_max - 1 - read_stop;
         if (finalblock > 0) {
-          loadBlock(data, errors, fracarea, hasFracArea, xbins, finalblock,
-                    nchannels, hist_index, wsIndex, local_workspace);
+          loadBlock(data, errors, fracarea, hasFracArea, xErrors, hasXErrors,
+                    xbins, finalblock, nchannels, hist_index, wsIndex,
+                    local_workspace);
         }
       }
       //
       if (m_list) {
-        std::vector<int64_t>::iterator itr = m_spec_list.begin();
+        auto itr = m_spec_list.begin();
         for (; itr != m_spec_list.end(); ++itr) {
           int64_t specIndex = (*itr) - 1;
           progress(progressBegin +
                        progressScaler * static_cast<double>(specIndex) /
                            static_cast<double>(read_stop),
                    "Reading workspace data...");
-          loadBlock(data, errors, fracarea, hasFracArea, xbins, 1, nchannels,
-                    specIndex, wsIndex, local_workspace);
+          loadBlock(data, errors, fracarea, hasFracArea, xErrors, hasXErrors,
+                    xbins, 1, nchannels, specIndex, wsIndex, local_workspace);
         }
       }
     } else {
@@ -1411,13 +1432,15 @@ API::MatrixWorkspace_sptr LoadNexusProcessed::loadNonEventEntry(
                      progressScaler * static_cast<double>(hist_index) /
                          static_cast<double>(read_stop),
                  "Reading workspace data...");
-        loadBlock(data, errors, fracarea, hasFracArea, xbins, blocksize,
-                  nchannels, hist_index, wsIndex, local_workspace);
+        loadBlock(data, errors, fracarea, hasFracArea, xErrors, hasXErrors,
+                  xbins, blocksize, nchannels, hist_index, wsIndex,
+                  local_workspace);
       }
       int64_t finalblock = total_specs - read_stop;
       if (finalblock > 0) {
-        loadBlock(data, errors, fracarea, hasFracArea, xbins, finalblock,
-                  nchannels, hist_index, wsIndex, local_workspace);
+        loadBlock(data, errors, fracarea, hasFracArea, xErrors, hasXErrors,
+                  xbins, finalblock, nchannels, hist_index, wsIndex,
+                  local_workspace);
       }
     }
   }
@@ -1530,7 +1553,7 @@ API::Workspace_sptr LoadNexusProcessed::loadEntry(NXRoot &root,
 
   // Setting a unit onto a TextAxis makes no sense.
   if (unit2 == "TextAxis") {
-    Mantid::API::TextAxis *newAxis = new Mantid::API::TextAxis(nspectra);
+    auto newAxis = new Mantid::API::TextAxis(nspectra);
     local_workspace->replaceAxis(1, newAxis);
   } else if (unit2 != "spectraNumber") {
     try {
@@ -1622,11 +1645,20 @@ void LoadNexusProcessed::readInstrumentGroup(
 
   // Now build the spectra list
   int index = 0;
+  bool haveSpectraAxis = local_workspace->getAxis(1)->isSpectra();
 
   for (int i = 1; i <= spectraInfo.nSpectra; ++i) {
     int spectrum(-1);
+    // prefer the spectra number from the instrument section
+    // over anything else. If not there then use a spectra axis
+    // number if we have one, else make one up as nothing was
+    // written to the file. We should always set it so that
+    // CompareWorkspaces gives the expected answer on a Save/Load
+    // round trip.
     if (spectraInfo.hasSpectra) {
       spectrum = spectraInfo.spectraNumbers[i - 1];
+    } else if (haveSpectraAxis && !m_axis1vals.empty()) {
+      spectrum = static_cast<specid_t>(m_axis1vals[i - 1]);
     } else {
       spectrum = i + 1;
     }
@@ -1636,11 +1668,7 @@ void LoadNexusProcessed::readInstrumentGroup(
          find(m_spec_list.begin(), m_spec_list.end(), i) !=
              m_spec_list.end())) {
       ISpectrum *spec = local_workspace->getSpectrum(index);
-      if (m_axis1vals.empty()) {
-        spec->setSpectrumNo(spectrum);
-      } else {
-        spec->setSpectrumNo(static_cast<specid_t>(m_axis1vals[i - 1]));
-      }
+      spec->setSpectrumNo(spectrum);
       ++index;
 
       int start = spectraInfo.detectorIndex[i - 1];
@@ -1674,7 +1702,7 @@ void LoadNexusProcessed::loadNonSpectraAxis(
   } else if (axis->isText()) {
     NXChar axisData = data.openNXChar("axis2");
     axisData.load();
-    std::string axisLabels = axisData();
+    std::string axisLabels(axisData(), axisData.dim0());
     // Use boost::tokenizer to split up the input
     boost::char_separator<char> sep("\n");
     boost::tokenizer<boost::char_separator<char>> tokenizer(axisLabels, sep);
@@ -1715,10 +1743,7 @@ bool UDlesserExecCount(NXClassInfo elem1, NXClassInfo elem2) {
   is1 >> execNum1;
   is2 >> execNum2;
 
-  if (execNum1 < execNum2)
-    return true;
-  else
-    return false;
+  return execNum1 < execNum2;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1812,6 +1837,8 @@ void LoadNexusProcessed::readBinMasking(
  * @param errors :: The NXDataSet object of error values
  * @param farea :: The NXDataSet object of fraction area values
  * @param hasFArea :: Flag to signal a RebinnedOutput workspace is in use
+ * @param xErrors :: The NXDataSet object of xError values
+ * @param hasXErrors :: Flag to signal the File contains x errors
  * @param blocksize :: The blocksize to use
  * @param nchannels :: The number of channels for the block
  * @param hist :: The workspace index to start reading into
@@ -1820,6 +1847,7 @@ void LoadNexusProcessed::readBinMasking(
 void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
                                    NXDataSetTyped<double> &errors,
                                    NXDataSetTyped<double> &farea, bool hasFArea,
+                                   NXDouble &xErrors, bool hasXErrors,
                                    int64_t blocksize, int64_t nchannels,
                                    int64_t &hist,
                                    API::MatrixWorkspace_sptr local_workspace) {
@@ -1829,8 +1857,11 @@ void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
   double *data_end = data_start + nchannels;
   double *err_start = errors();
   double *err_end = err_start + nchannels;
-  double *farea_start = NULL;
-  double *farea_end = NULL;
+  double *farea_start = nullptr;
+  double *farea_end = nullptr;
+  const int64_t nxbins(m_xbins->size());
+  double *xErrors_start = nullptr;
+  double *xErrors_end = nullptr;
   RebinnedOutput_sptr rb_workspace;
   if (hasFArea) {
     farea.load(static_cast<int>(blocksize), static_cast<int>(hist));
@@ -1838,6 +1869,12 @@ void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
     farea_end = farea_start + nchannels;
     rb_workspace = boost::dynamic_pointer_cast<RebinnedOutput>(local_workspace);
   }
+  if (hasXErrors) {
+    xErrors.load(static_cast<int>(blocksize), static_cast<int>(hist));
+    xErrors_start = xErrors();
+    xErrors_end = xErrors_start + nxbins;
+  }
+
   int64_t final(hist + blocksize);
   while (hist < final) {
     MantidVec &Y = local_workspace->dataY(hist);
@@ -1854,6 +1891,13 @@ void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
       farea_start += nchannels;
       farea_end += nchannels;
     }
+    if (hasXErrors) {
+      MantidVec &DX = local_workspace->dataDx(hist);
+      DX.assign(xErrors_start, xErrors_end);
+      xErrors_start += nxbins;
+      xErrors_end += nxbins;
+    }
+
     local_workspace->setX(hist, m_xbins);
     ++hist;
   }
@@ -1868,6 +1912,8 @@ void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
  * @param errors :: The NXDataSet object of error values
  * @param farea :: The NXDataSet object of fraction area values
  * @param hasFArea :: Flag to signal a RebinnedOutput workspace is in use
+ * @param xErrors :: The NXDataSet object of xError values
+ * @param hasXErrors :: Flag to signal the File contains x errors
  * @param blocksize :: The blocksize to use
  * @param nchannels :: The number of channels for the block
  * @param hist :: The workspace index to start reading into
@@ -1878,6 +1924,7 @@ void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
 void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
                                    NXDataSetTyped<double> &errors,
                                    NXDataSetTyped<double> &farea, bool hasFArea,
+                                   NXDouble &xErrors, bool hasXErrors,
                                    int64_t blocksize, int64_t nchannels,
                                    int64_t &hist, int64_t &wsIndex,
                                    API::MatrixWorkspace_sptr local_workspace) {
@@ -1887,8 +1934,11 @@ void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
   double *data_end = data_start + nchannels;
   double *err_start = errors();
   double *err_end = err_start + nchannels;
-  double *farea_start = NULL;
-  double *farea_end = NULL;
+  double *farea_start = nullptr;
+  double *farea_end = nullptr;
+  const int64_t nxbins(m_xbins->size());
+  double *xErrors_start = nullptr;
+  double *xErrors_end = nullptr;
   RebinnedOutput_sptr rb_workspace;
   if (hasFArea) {
     farea.load(static_cast<int>(blocksize), static_cast<int>(hist));
@@ -1896,6 +1946,12 @@ void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
     farea_end = farea_start + nchannels;
     rb_workspace = boost::dynamic_pointer_cast<RebinnedOutput>(local_workspace);
   }
+  if (hasXErrors) {
+    xErrors.load(static_cast<int>(blocksize), static_cast<int>(hist));
+    xErrors_start = xErrors();
+    xErrors_end = xErrors_start + nxbins;
+  }
+
   int64_t final(hist + blocksize);
   while (hist < final) {
     MantidVec &Y = local_workspace->dataY(wsIndex);
@@ -1912,6 +1968,12 @@ void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
       farea_start += nchannels;
       farea_end += nchannels;
     }
+    if (hasXErrors) {
+      MantidVec &DX = local_workspace->dataDx(wsIndex);
+      DX.assign(xErrors_start, xErrors_end);
+      xErrors_start += nxbins;
+      xErrors_end += nxbins;
+    }
     local_workspace->setX(wsIndex, m_xbins);
     ++hist;
     ++wsIndex;
@@ -1927,6 +1989,8 @@ void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
  * @param errors :: The NXDataSet object of error values
  * @param farea :: The NXDataSet object of fraction area values
  * @param hasFArea :: Flag to signal a RebinnedOutput workspace is in use
+ * @param xErrors :: The NXDataSet object of xError values
+ * @param hasXErrors :: Flag to signal the File contains x errors
  * @param xbins :: The xbin NXDataSet
  * @param blocksize :: The blocksize to use
  * @param nchannels :: The number of channels for the block
@@ -1937,6 +2001,7 @@ void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
 void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
                                    NXDataSetTyped<double> &errors,
                                    NXDataSetTyped<double> &farea, bool hasFArea,
+                                   NXDouble &xErrors, bool hasXErrors,
                                    NXDouble &xbins, int64_t blocksize,
                                    int64_t nchannels, int64_t &hist,
                                    int64_t &wsIndex,
@@ -1947,8 +2012,10 @@ void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
   errors.load(static_cast<int>(blocksize), static_cast<int>(hist));
   double *err_start = errors();
   double *err_end = err_start + nchannels;
-  double *farea_start = NULL;
-  double *farea_end = NULL;
+  double *farea_start = nullptr;
+  double *farea_end = nullptr;
+  double *xErrors_start = nullptr;
+  double *xErrors_end = nullptr;
   RebinnedOutput_sptr rb_workspace;
   if (hasFArea) {
     farea.load(static_cast<int>(blocksize), static_cast<int>(hist));
@@ -1961,6 +2028,13 @@ void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
   double *xbin_start = xbins();
   double *xbin_end = xbin_start + nxbins;
   int64_t final(hist + blocksize);
+
+  if (hasXErrors) {
+    xErrors.load(static_cast<int>(blocksize), static_cast<int>(hist));
+    xErrors_start = xErrors();
+    xErrors_end = xErrors_start + nxbins;
+  }
+
   while (hist < final) {
     MantidVec &Y = local_workspace->dataY(wsIndex);
     Y.assign(data_start, data_end);
@@ -1975,6 +2049,12 @@ void LoadNexusProcessed::loadBlock(NXDataSetTyped<double> &data,
       F.assign(farea_start, farea_end);
       farea_start += nchannels;
       farea_end += nchannels;
+    }
+    if (hasXErrors) {
+      MantidVec &DX = local_workspace->dataDx(wsIndex);
+      DX.assign(xErrors_start, xErrors_end);
+      xErrors_start += nxbins;
+      xErrors_end += nxbins;
     }
     MantidVec &X = local_workspace->dataX(wsIndex);
     X.assign(xbin_start, xbin_end);
@@ -2067,8 +2147,7 @@ LoadNexusProcessed::calculateWorkspaceSize(const std::size_t numberofspectra,
 
     if (m_list) {
       if (m_interval) {
-        for (std::vector<int64_t>::iterator it = m_spec_list.begin();
-             it != m_spec_list.end();)
+        for (auto it = m_spec_list.begin(); it != m_spec_list.end();)
           if (*it >= m_spec_min && *it < m_spec_max) {
             it = m_spec_list.erase(it);
           } else

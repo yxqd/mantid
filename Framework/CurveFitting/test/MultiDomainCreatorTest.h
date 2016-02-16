@@ -12,7 +12,7 @@
 #include "MantidAPI/ParamFunction.h"
 #include "MantidCurveFitting/MultiDomainCreator.h"
 #include "MantidCurveFitting/FitMW.h"
-#include "MantidCurveFitting/UserFunction.h"
+#include "MantidCurveFitting/Functions/UserFunction.h"
 #include "MantidKernel/PropertyManager.h"
 
 #include "MantidTestHelpers/FakeObjects.h"
@@ -20,11 +20,11 @@
 #include <cxxtest/TestSuite.h>
 #include <boost/make_shared.hpp>
 #include <algorithm>
-#include <iostream>
 
 using namespace Mantid;
 using namespace Mantid::API;
 using namespace Mantid::CurveFitting;
+using namespace Mantid::CurveFitting::Functions;
 
 class MultiDomainCreatorTest_Fun : public IFunction1D, public ParamFunction {
 public:
@@ -104,10 +104,7 @@ public:
     manager.declareProperty(
         new WorkspaceProperty<Workspace>("WS3", "", Direction::Input));
 
-    std::vector<std::string> propNames;
-    propNames.push_back("WS1");
-    propNames.push_back("WS2");
-    propNames.push_back("WS3");
+    std::vector<std::string> propNames{"WS1", "WS2", "WS3"};
     MultiDomainCreator multi(&manager, propNames);
 
     TS_ASSERT_EQUALS(multi.getNCreators(), 3);
@@ -176,10 +173,7 @@ public:
     manager.declareProperty(
         new WorkspaceProperty<Workspace>("WS3", "", Direction::Input));
 
-    std::vector<std::string> propNames;
-    propNames.push_back("WS1");
-    propNames.push_back("WS2");
-    propNames.push_back("WS3");
+    std::vector<std::string> propNames{"WS1", "WS2", "WS3"};
     MultiDomainCreator multi(&manager, propNames);
 
     manager.setProperty("WS1", ws1);
@@ -255,10 +249,8 @@ public:
     manager.declareProperty(
         new WorkspaceProperty<Workspace>("WS3", "", Direction::Input));
 
-    std::vector<std::string> propNames;
-    propNames.push_back("WS1");
-    propNames.push_back("WS2");
-    propNames.push_back("WS3");
+    std::vector<std::string> propNames{"WS1", "WS2", "WS3"};
+
     MultiDomainCreator multi(&manager, propNames);
 
     manager.setProperty("WS1", ws1);

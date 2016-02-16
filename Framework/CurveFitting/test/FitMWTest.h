@@ -5,13 +5,13 @@
 #include "MantidTestHelpers/FakeObjects.h"
 
 #include "MantidCurveFitting/FitMW.h"
-#include "MantidCurveFitting/Fit.h"
-#include "MantidCurveFitting/UserFunction.h"
-#include "MantidCurveFitting/ExpDecay.h"
+#include "MantidCurveFitting/Algorithms/Fit.h"
 #include "MantidCurveFitting/SeqDomain.h"
-#include "MantidCurveFitting/Convolution.h"
-#include "MantidCurveFitting/Gaussian.h"
-#include "MantidCurveFitting/Polynomial.h"
+#include "MantidCurveFitting/Functions/UserFunction.h"
+#include "MantidCurveFitting/Functions/ExpDecay.h"
+#include "MantidCurveFitting/Functions/Convolution.h"
+#include "MantidCurveFitting/Functions/Gaussian.h"
+#include "MantidCurveFitting/Functions/Polynomial.h"
 
 #include "MantidAPI/CompositeFunction.h"
 #include "MantidAPI/FrameworkManager.h"
@@ -20,6 +20,7 @@
 #include "MantidAPI/FunctionDomain1D.h"
 #include "MantidAPI/WorkspaceProperty.h"
 #include "MantidAPI/AnalysisDataService.h"
+#include "MantidAPI/WorkspaceOpOverloads.h"
 
 #include "MantidKernel/PropertyManager.h"
 #include "MantidGeometry/Instrument.h"
@@ -29,6 +30,8 @@
 
 using namespace Mantid;
 using namespace Mantid::CurveFitting;
+using namespace Mantid::CurveFitting::Algorithms;
+using namespace Mantid::CurveFitting::Functions;
 using namespace Mantid::API;
 
 class FitMWTest : public CxxTest::TestSuite {
@@ -51,7 +54,7 @@ public:
     fun->setParameter("Height", 1.);
     fun->setParameter("Lifetime", 1.0);
 
-    Fit fit;
+    Algorithms::Fit fit;
     fit.initialize();
 
     fit.setProperty("Function", fun);
@@ -159,7 +162,7 @@ public:
     fun->setParameter("Height", 1.);
     fun->setParameter("Lifetime", 1.);
 
-    Fit fit;
+    Algorithms::Fit fit;
     fit.initialize();
 
     fit.setProperty("Function", fun);
@@ -186,6 +189,39 @@ public:
 
     TS_ASSERT_DELTA(fun->getParameter("Height"), 11.5639, 1e-3);
     TS_ASSERT_DELTA(fun->getParameter("Lifetime"), 1.0, 1e-4);
+  }
+
+  void test_exec_distribution_data_produces_distribution_data() {
+    // Arrange
+    const bool histogram(true);
+    auto ws3 = createTestWorkspace(histogram);
+    API::WorkspaceHelpers::makeDistribution(ws3);
+
+    API::IFunction_sptr fun(new ExpDecay);
+    fun->setParameter("Height", 1.);
+    fun->setParameter("Lifetime", 1.);
+
+    // Act
+    Fit fit;
+    fit.initialize();
+
+    fit.setProperty("Function", fun);
+    fit.setProperty("InputWorkspace", ws3);
+    fit.setProperty("WorkspaceIndex", 0);
+    fit.setProperty("CreateOutput", true);
+    fit.setProperty("Output", "out");
+
+    fit.execute();
+
+    TS_ASSERT(fit.isExecuted());
+
+    // Assert
+    Mantid::API::MatrixWorkspace_sptr out_ws =
+        Mantid::API::AnalysisDataService::Instance()
+            .retrieveWS<Mantid::API::MatrixWorkspace>("out_Workspace");
+    TS_ASSERT(out_ws);
+    TSM_ASSERT("Output should be a distribution", out_ws->isDistribution());
+    API::AnalysisDataService::Instance().clear();
   }
 
   // test that errors of the calculated output are reasonable
@@ -422,8 +458,7 @@ public:
     const std::string inputWSName = "FitMWTest_CompositeTest";
     // AnalysisDataService::Instance().add(inputWSName, ws2);
 
-    auto composite =
-        boost::shared_ptr<API::CompositeFunction>(new API::CompositeFunction);
+    auto composite = boost::make_shared<API::CompositeFunction>();
     API::IFunction_sptr expDecay(new ExpDecay);
     expDecay->setParameter("Height", 1.5);
     expDecay->setError(0, 0.01);
@@ -617,7 +652,7 @@ public:
   }
 
   void do_test_convolve_members_option(bool withBackground) {
-    auto conv = boost::shared_ptr<Convolution>(new Convolution);
+    auto conv = boost::make_shared<Convolution>();
     auto resolution = IFunction_sptr(new Gaussian);
     resolution->initialize();
     resolution->setParameter("Height", 1.0);
@@ -639,7 +674,8 @@ public:
     conv->addFunction(gaussian2);
 
     // workspace with 100 points on interval -10 <= x <= 10
-    boost::shared_ptr<WorkspaceTester> data(new WorkspaceTester());
+    boost::shared_ptr<WorkspaceTester> data =
+        boost::make_shared<WorkspaceTester>();
     data->init(1, 100, 100);
     for (size_t i = 0; i < data->blocksize(); i++) {
       data->dataX(0)[i] = -10.0 + 0.2 * double(i);
@@ -660,8 +696,7 @@ public:
       API::IFunction_sptr bckgd(new ExpDecay);
       bckgd->setParameter("Height", 1.);
       bckgd->setParameter("Lifetime", 1.);
-      auto composite =
-          boost::shared_ptr<API::CompositeFunction>(new API::CompositeFunction);
+      auto composite = boost::make_shared<API::CompositeFunction>();
       composite->addFunction(bckgd);
       composite->addFunction(conv);
       fitfun = composite;

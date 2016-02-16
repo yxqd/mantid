@@ -47,7 +47,7 @@ int IntegratePeaksUsingClusters::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
 const std::string IntegratePeaksUsingClusters::category() const {
-  return "MDAlgorithms";
+  return "MDAlgorithms\\Peaks;Crystal\\Integration";
 }
 
 //----------------------------------------------------------------------------------------------
@@ -128,8 +128,9 @@ void IntegratePeaksUsingClusters::exec() {
         mdWS->getSpecialCoordinateSystem();
     if (mdCoordinates == None) {
       throw std::invalid_argument("The coordinate system of the input "
-                                  "MDWorkspace cannot be established. Run "
-                                  "SetSpecialCoordinates on InputWorkspace.");
+                                  "MDWorkspace cannot be established. Create "
+                                  "your workspace with an MDFrame which is "
+                                  "not a General Frame or Unknown Frame.");
     }
   }
 
@@ -190,7 +191,7 @@ void IntegratePeaksUsingClusters::exec() {
                           << " overlaps with another Peak: " << it->second
                           << " and shares label id: " << it->first << std::endl;
         }
-        labelsTakenByPeaks.insert(std::make_pair(labelIdAtPeak, i));
+        labelsTakenByPeaks.emplace(labelIdAtPeak, i);
       }
       progress.report();
     }

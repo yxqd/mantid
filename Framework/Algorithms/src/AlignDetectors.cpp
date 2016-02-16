@@ -2,14 +2,20 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/AlignDetectors.h"
+
+#include "MantidAPI/Axis.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/ITableWorkspace.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/RawCountValidator.h"
+#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/OffsetsWorkspace.h"
-#include "MantidKernel/V3D.h"
+#include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/PhysicalConstants.h"
 #include "MantidKernel/UnitFactory.h"
+#include "MantidKernel/V3D.h"
+
 #include <fstream>
 #include <sstream>
 
@@ -28,7 +34,7 @@ namespace { // anonymous namespace
 
 /// Applies the equation d=(TOF-tzero)/difc
 struct func_difc_only {
-  func_difc_only(const double difc) : factor(1. / difc) {}
+  explicit func_difc_only(const double difc) : factor(1. / difc) {}
 
   double operator()(const double tof) const { return factor * tof; }
 
@@ -75,7 +81,7 @@ struct func_difa {
 
 class ConversionFactors {
 public:
-  ConversionFactors(ITableWorkspace_const_sptr table) {
+  explicit ConversionFactors(ITableWorkspace_const_sptr table) {
     m_difcCol = table->getColumn("difc");
     m_difaCol = table->getColumn("difa");
     m_tzeroCol = table->getColumn("tzero");
@@ -89,10 +95,10 @@ public:
     double difc = 0.;
     double difa = 0.;
     double tzero = 0.;
-    for (auto row = rows.begin(); row != rows.end(); ++row) {
-      difc += m_difcCol->toDouble(*row);
-      difa += m_difaCol->toDouble(*row);
-      tzero += m_tzeroCol->toDouble(*row);
+    for (auto row : rows) {
+      difc += m_difcCol->toDouble(row);
+      difa += m_difaCol->toDouble(row);
+      tzero += m_tzeroCol->toDouble(row);
     }
     if (rows.size() > 1) {
       double norm = 1. / static_cast<double>(rows.size());
@@ -123,8 +129,8 @@ private:
 
   std::set<size_t> getRow(const std::set<detid_t> &detIds) {
     std::set<size_t> rows;
-    for (auto detId = detIds.begin(); detId != detIds.end(); ++detId) {
-      auto rowIter = m_detidToRow.find(*detId);
+    for (auto detId : detIds) {
+      auto rowIter = m_detidToRow.find(detId);
       if (rowIter != m_detidToRow.end()) { // skip if not found
         rows.insert(rowIter->second);
       }
@@ -143,7 +149,9 @@ const std::string AlignDetectors::name() const { return "AlignDetectors"; }
 
 int AlignDetectors::version() const { return 1; }
 
-const std::string AlignDetectors::category() const { return "Diffraction"; }
+const std::string AlignDetectors::category() const {
+  return "Diffraction\\Calibration";
+}
 
 const std::string AlignDetectors::summary() const {
   return "Performs a unit change from TOF to dSpacing, correcting the X "
@@ -151,7 +159,9 @@ const std::string AlignDetectors::summary() const {
 }
 
 /// (Empty) Constructor
-AlignDetectors::AlignDetectors() { this->tofToDmap = NULL; }
+AlignDetectors::AlignDetectors() : m_numberOfSpectra(0) {
+  this->tofToDmap = nullptr;
+}
 
 /// Destructor
 AlignDetectors::~AlignDetectors() { delete this->tofToDmap; }
@@ -171,13 +181,9 @@ void AlignDetectors::init() {
                       "OutputWorkspace", "", Direction::Output),
                   "The name to use for the output workspace");
 
-  std::vector<std::string> exts;
-  exts.push_back(".h5");
-  exts.push_back(".hd5");
-  exts.push_back(".hdf");
-  exts.push_back(".cal");
   declareProperty(
-      new FileProperty("CalibrationFile", "", FileProperty::OptionalLoad, exts),
+      new FileProperty("CalibrationFile", "", FileProperty::OptionalLoad,
+                       {".h5", ".hd5", ".hdf", ".cal"}),
       "Optional: The .cal file containing the position correction factors. "
       "Either this or OffsetsWorkspace needs to be specified.");
 
@@ -298,7 +304,7 @@ void AlignDetectors::exec() {
   // Check if its an event workspace
   EventWorkspace_const_sptr eventW =
       boost::dynamic_pointer_cast<const EventWorkspace>(inputWS);
-  if (eventW != NULL) {
+  if (eventW != nullptr) {
     this->execEvent();
     return;
   }

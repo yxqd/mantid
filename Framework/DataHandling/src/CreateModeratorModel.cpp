@@ -1,6 +1,7 @@
 #include "MantidDataHandling/CreateModeratorModel.h"
 
 #include "MantidAPI/IkedaCarpenterModerator.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/MandatoryValidator.h"
 
@@ -26,7 +27,7 @@ int CreateModeratorModel::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
 const std::string CreateModeratorModel::category() const {
-  return "DataHandling";
+  return "DataHandling\\Instrument";
 }
 
 //----------------------------------------------------------------------------------------------

@@ -12,6 +12,8 @@
 
 #include "MantidKernel/Timer.h"
 
+#include "boost/make_shared.hpp"
+
 using namespace Mantid::Kernel;
 using namespace Mantid::Geometry;
 
@@ -143,8 +145,8 @@ public:
     Track track(V3D(0, 0, 0), V3D(1, 0, 0));
 
     TS_ASSERT_EQUALS(ocyl.interceptSurface(track), 1);
-    Track::LType::const_iterator it = track.begin();
-    if (it == track.end())
+    Track::LType::const_iterator it = track.cbegin();
+    if (it == track.cend())
       return;
     TS_ASSERT_EQUALS(it->distFromStart, 10.5);
     TS_ASSERT_DELTA(it->distInsideObject, 1, 0.0001);
@@ -158,8 +160,8 @@ public:
     // Create a new test track going from the origin down the line y = -x
     Track track2(V3D(0, 0, 0), V3D(0, 1, -1));
     TS_ASSERT_EQUALS(ocyl.interceptSurface(track2), 1);
-    Track::LType::const_iterator it2 = track2.begin();
-    if (it2 == track2.end())
+    Track::LType::const_iterator it2 = track2.cbegin();
+    if (it2 == track2.cend())
       return;
     TS_ASSERT_DELTA(it2->distFromStart, sqrt(2 * 10.5 * 10.5), 0.0001);
     TS_ASSERT_DELTA(it2->distInsideObject, sqrt(2.0), 0.0001);
@@ -274,13 +276,8 @@ public:
     TS_ASSERT_DELTA(point.Y(), 10.0, 1e-6);
     TS_ASSERT_DELTA(point.Z(), -10.0, 1e-6);
     // Cuboid not on principle axes
-    std::vector<std::string> planes;
-    planes.push_back("px 0.5");
-    planes.push_back("px 1.5");
-    planes.push_back("py -22");
-    planes.push_back("py -21");
-    planes.push_back("pz -0.5");
-    planes.push_back("pz 0.5");
+    std::vector<std::string> planes{"px 0.5", "px 1.5",  "py -22",
+                                    "py -21", "pz -0.5", "pz 0.5"};
     ObjComponent D("ocube", createCuboid(planes));
     D.setPos(10, 0, 0);
     D.setRot(Quat(90.0, V3D(0, 0, 1)));
@@ -338,21 +335,21 @@ public:
 
     Track trackScale(V3D(-6.5, 0, 0), V3D(1.0, 0, 0));
     TS_ASSERT_EQUALS(ocyl->interceptSurface(trackScale), 1);
-    Track::LType::const_iterator itscale = trackScale.begin();
+    Track::LType::const_iterator itscale = trackScale.cbegin();
     TS_ASSERT_EQUALS(itscale->distFromStart, 8.9);
     TS_ASSERT_EQUALS(itscale->entryPoint, V3D(-6.4, 0.0, 0.0));
     TS_ASSERT_EQUALS(itscale->exitPoint, V3D(2.4, 0.0, 0.0));
 
     Track trackScaleY(V3D(0.0, -2, 0), V3D(0, 2.0, 0));
     TS_ASSERT_EQUALS(ocyl->interceptSurface(trackScaleY), 1);
-    Track::LType::const_iterator itscaleY = trackScaleY.begin();
+    Track::LType::const_iterator itscaleY = trackScaleY.cbegin();
     TS_ASSERT_EQUALS(itscaleY->distFromStart, 2.5);
     TS_ASSERT_EQUALS(itscaleY->entryPoint, V3D(0.0, -0.5, 0.0));
     TS_ASSERT_EQUALS(itscaleY->exitPoint, V3D(0.0, 0.5, 0.0));
 
     Track trackScaleW(V3D(0, 0, -5), V3D(0, 0, 5));
     TS_ASSERT_EQUALS(ocyl->interceptSurface(trackScaleW), 1);
-    Track::LType::const_iterator itscaleW = trackScaleW.begin();
+    Track::LType::const_iterator itscaleW = trackScaleW.cbegin();
     TS_ASSERT_DELTA(itscaleW->distFromStart, 6.5, 1e-6);
     TS_ASSERT_EQUALS(itscaleW->entryPoint, V3D(0, 0, -1.5));
     TS_ASSERT_EQUALS(itscaleW->exitPoint, V3D(0, 0, +1.5));
@@ -450,10 +447,10 @@ private:
     std::string C33 = "px -3.2";
 
     // First create some surfaces
-    std::map<int, Surface *> CylSurMap;
-    CylSurMap[31] = new Cylinder();
-    CylSurMap[32] = new Plane();
-    CylSurMap[33] = new Plane();
+    std::map<int, boost::shared_ptr<Surface>> CylSurMap;
+    CylSurMap[31] = boost::make_shared<Cylinder>();
+    CylSurMap[32] = boost::make_shared<Plane>();
+    CylSurMap[33] = boost::make_shared<Plane>();
 
     CylSurMap[31]->setSurface(C31);
     CylSurMap[32]->setSurface(C32);
@@ -466,7 +463,7 @@ private:
     // using surface ids: 31 (cylinder) 32 (plane (top) ) and 33 (plane (base))
     std::string ObjCapCylinder = "-31 -32 33";
 
-    boost::shared_ptr<Object> retVal = boost::shared_ptr<Object>(new Object);
+    auto retVal = boost::make_shared<Object>();
     retVal->setObject(21, ObjCapCylinder);
     retVal->populate(CylSurMap);
 
@@ -479,10 +476,10 @@ private:
     std::string C33 = "px -3.0";
 
     // First create some surfaces
-    std::map<int, Surface *> CylSurMap;
-    CylSurMap[31] = new Cylinder();
-    CylSurMap[32] = new Plane();
-    CylSurMap[33] = new Plane();
+    std::map<int, boost::shared_ptr<Surface>> CylSurMap;
+    CylSurMap[31] = boost::make_shared<Cylinder>();
+    CylSurMap[32] = boost::make_shared<Plane>();
+    CylSurMap[33] = boost::make_shared<Plane>();
 
     CylSurMap[31]->setSurface(C31);
     CylSurMap[32]->setSurface(C32);
@@ -495,7 +492,7 @@ private:
     // using surface ids: 31 (cylinder) 32 (plane (top) ) and 33 (plane (base))
     std::string ObjCapCylinder = "-31 -32 33";
 
-    boost::shared_ptr<Object> retVal = boost::shared_ptr<Object>(new Object);
+    boost::shared_ptr<Object> retVal = boost::make_shared<Object>();
     retVal->setObject(21, ObjCapCylinder);
     retVal->populate(CylSurMap);
 
@@ -511,13 +508,13 @@ private:
     std::string C6 = planes[5];
 
     // Create surfaces
-    std::map<int, Surface *> CubeSurMap;
-    CubeSurMap[1] = new Plane();
-    CubeSurMap[2] = new Plane();
-    CubeSurMap[3] = new Plane();
-    CubeSurMap[4] = new Plane();
-    CubeSurMap[5] = new Plane();
-    CubeSurMap[6] = new Plane();
+    std::map<int, boost::shared_ptr<Surface>> CubeSurMap;
+    CubeSurMap[1] = boost::make_shared<Plane>();
+    CubeSurMap[2] = boost::make_shared<Plane>();
+    CubeSurMap[3] = boost::make_shared<Plane>();
+    CubeSurMap[4] = boost::make_shared<Plane>();
+    CubeSurMap[5] = boost::make_shared<Plane>();
+    CubeSurMap[6] = boost::make_shared<Plane>();
 
     CubeSurMap[1]->setSurface(C1);
     CubeSurMap[2]->setSurface(C2);
@@ -536,7 +533,7 @@ private:
     // using surface ids:  1-6
     std::string ObjCube = "1 -2 3 -4 5 -6";
 
-    boost::shared_ptr<Object> retVal = boost::shared_ptr<Object>(new Object);
+    boost::shared_ptr<Object> retVal = boost::make_shared<Object>();
     retVal->setObject(68, ObjCube);
     retVal->populate(CubeSurMap);
 

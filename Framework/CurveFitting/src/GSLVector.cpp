@@ -138,8 +138,8 @@ double GSLVector::norm() const { return sqrt(norm2()); }
 /// Get vector's norm squared
 double GSLVector::norm2() const {
   double res = 0.0;
-  for (auto el = m_data.begin(); el != m_data.end(); ++el) {
-    res += (*el) * (*el);
+  for (double el : m_data) {
+    res += el * el;
   }
   return res;
 }
@@ -157,10 +157,12 @@ double GSLVector::dot(const GSLVector &v) const {
 
 /// The << operator.
 std::ostream &operator<<(std::ostream &ostr, const GSLVector &v) {
+  std::ios::fmtflags fflags(ostr.flags());
   ostr << std::scientific << std::setprecision(6);
   for (size_t j = 0; j < v.size(); ++j) {
     ostr << std::setw(13) << v[j] << ' ';
   }
+  ostr.flags(fflags);
   return ostr;
 }
 

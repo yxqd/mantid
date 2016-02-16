@@ -59,8 +59,8 @@ void GroupingWorkspace::makeDetectorIDToGroupMap(
     if (group == 0)
       group = -1;
     std::set<detid_t> detIDs = this->getDetectorIDs(wi);
-    for (auto detID = detIDs.begin(); detID != detIDs.end(); ++detID) {
-      detIDToGroup[*detID] = group;
+    for (auto detID : detIDs) {
+      detIDToGroup[detID] = group;
       if (group > ngroups)
         ngroups = group;
     }
@@ -85,13 +85,13 @@ void GroupingWorkspace::makeDetectorIDToGroupVector(
     if (group == 0)
       group = -1;
     std::set<detid_t> detIDs = this->getDetectorIDs(wi);
-    for (auto detID = detIDs.begin(); detID != detIDs.end(); ++detID) {
-      if ((*detID) <
+    for (auto detID : detIDs) {
+      if (detID <
           0) // if you need negative detector ids, use the other function
         continue;
-      if (detIDToGroup.size() < static_cast<size_t>((*detID) + 1))
-        detIDToGroup.resize((*detID) + 1);
-      detIDToGroup[*detID] = group;
+      if (detIDToGroup.size() < static_cast<size_t>(detID + 1))
+        detIDToGroup.resize(detID + 1);
+      detIDToGroup[detID] = group;
       if (group > ngroups)
         ngroups = group;
     }
@@ -117,8 +117,9 @@ IPropertyManager::getValue<Mantid::DataObjects::GroupingWorkspace_sptr>(
   if (prop) {
     return *prop;
   } else {
-    std::string message = "Attempt to assign property " + name +
-                          " to incorrect type. Expected GroupingWorkspace.";
+    std::string message =
+        "Attempt to assign property " + name +
+        " to incorrect type. Expected shared_ptr<GroupingWorkspace>.";
     throw std::runtime_error(message);
   }
 }
@@ -136,7 +137,7 @@ IPropertyManager::getValue<Mantid::DataObjects::GroupingWorkspace_const_sptr>(
   } else {
     std::string message =
         "Attempt to assign property " + name +
-        " to incorrect type. Expected const GroupingWorkspace.";
+        " to incorrect type. Expected const shared_ptr<GroupingWorkspace>.";
     throw std::runtime_error(message);
   }
 }

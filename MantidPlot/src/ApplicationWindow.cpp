@@ -166,6 +166,7 @@
 #include <QFontComboBox>
 #include <QSpinBox>
 #include <QMdiArea>
+#include <QMenuItem>
 #include <QMdiSubWindow>
 #include <QSignalMapper>
 #include <QDesktopWidget>
@@ -210,6 +211,7 @@
 #include "MantidAPI/AnalysisDataService.h"
 #include "MantidAPI/CatalogManager.h"
 #include "MantidAPI/ITableWorkspace.h"
+#include "MantidAPI/MultipleFileProperty.h"
 #include "MantidAPI/WorkspaceFactory.h"
 
 #include "MantidQtAPI/ScriptRepositoryView.h"
@@ -4529,8 +4531,7 @@ ApplicationWindow *ApplicationWindow::open(const QString &fn,
 }
 
 void ApplicationWindow::openRecentFile(int index) {
-  QString fn = recentFilesMenu->text(index);
-
+  QString fn = recentFilesMenu->findItem(index)->data().asString();
   // if "," found in the QString
   if (fn.find(",", 0)) {
     try {
@@ -4823,10 +4824,11 @@ void ApplicationWindow::openProjectFolder(std::string lines,
       TSVSerialiser iws(*it);
       if (iws.selectLine("WorkspaceName")) {
         std::string wsName = iws.asString(1);
-        InstrumentWindow *iw =
-            mantidUI->getInstrumentView(QString::fromStdString(wsName));
-        if (iw)
+        InstrumentWindow *iw = dynamic_cast<InstrumentWindow *>(
+            mantidUI->getInstrumentView(QString::fromStdString(wsName)));
+        if (iw) {
           iw->loadFromProject(*it, this, fileVersion);
+		}
       }
     }
   }
@@ -7314,7 +7316,7 @@ void ApplicationWindow::showAxisDialog() {
   QDialog *gd = showScaleDialog();
   if (gd && plot->isA("MultiLayer")) {
     MultiLayer *ml = dynamic_cast<MultiLayer *>(plot);
-    if (!ml || (ml && !ml->layers()))
+    if (!ml || !ml->layers())
       return;
 
     auto ad = dynamic_cast<AxesDialog *>(gd);
@@ -8715,6 +8717,21 @@ MdiSubWindow *ApplicationWindow::clone(MdiSubWindow *w) {
       return NULL;
     QString caption = generateUniqueName(tr("Table"));
     nw = newTable(caption, t->numRows(), t->numCols());
+
+    Table *nt = dynamic_cast<Table *>(nw);
+
+    nt->setHeader(t->colNames());
+
+    Q3TableItem *io;
+
+    for (auto i = 0; i < nt->numCols(); i++) {
+      for (auto j = 0; j < nt->numRows(); j++) {
+        io = t->table()->item(j, i);
+        nt->table()->setItem(j, i, io);
+        // nt->table()->item(j, i)->setText(t->table()->item(j, i)->text());
+      }
+    }
+
   } else if (w->isA("Graph3D")) {
     Graph3D *g = dynamic_cast<Graph3D *>(w);
     if (!g)
@@ -10153,6 +10170,7 @@ void ApplicationWindow::showGraphContextMenu() {
   QMenu axes(this);
   QMenu colour(this);
   QMenu normalization(this);
+  QMenu normMD(this);
   QMenu exports(this);
   QMenu copy(this);
   QMenu prints(this);
@@ -10218,6 +10236,28 @@ void ApplicationWindow::showGraphContextMenu() {
     noNorm->setChecked(!ag->isDistribution());
     binNorm->setChecked(ag->isDistribution());
     cm.insertItem(tr("&Normalization"), &normalization);
+  } else if (ag->normalizableMD()) {
+    QAction *noNormMD = new QAction(tr("N&one"), &normMD);
+    noNormMD->setCheckable(true);
+    connect(noNormMD, SIGNAL(activated()), ag, SLOT(noNormalizationMD()));
+    normMD.addAction(noNormMD);
+
+    QAction *volNormMD = new QAction(tr("&Volume"), &normMD);
+    volNormMD->setCheckable(true);
+    connect(volNormMD, SIGNAL(activated()), ag, SLOT(volumeNormalizationMD()));
+    normMD.addAction(volNormMD);
+
+    QAction *eventsNormMD = new QAction(tr("&Events"), &normMD);
+    eventsNormMD->setCheckable(true);
+    connect(eventsNormMD, SIGNAL(activated()), ag,
+            SLOT(numEventsNormalizationMD()));
+    normMD.addAction(eventsNormMD);
+
+    int normalization = ag->normalizationMD();
+    noNormMD->setChecked(0 == normalization);
+    volNormMD->setChecked(1 == normalization);
+    eventsNormMD->setChecked(2 == normalization);
+    cm.insertItem("MD &Normalization", &normMD);
   }
 
   QMenu plotType(this);
@@ -11521,7 +11561,7 @@ void ApplicationWindow::populateMantidTreeWidget(const QString &s) {
           // execute the algorithm
           alg->execute();
           // name picked because random and won't ever be used.
-          inputWsVec.push_back("boevsMoreBoevs");
+          inputWsVec.emplace_back("boevsMoreBoevs");
         }
 
         // Group the workspaces as they were when the project was saved
@@ -14019,9 +14059,39 @@ void ApplicationWindow::updateRecentFilesList(QString fname) {
     recentFiles.pop_back();
 
   recentFilesMenu->clear();
-  for (int i = 0; i < (int)recentFiles.size(); i++)
-    recentFilesMenu->insertItem("&" + QString::number(i + 1) + " " +
-                                recentFiles[i]);
+  int menuCount = 1;
+  for (int i = 0; i < (int)recentFiles.size(); i++) {
+    std::ostringstream ostr;
+    try {
+      Mantid::API::MultipleFileProperty mfp("tester");
+      mfp.setValue(recentFiles[i].toStdString());
+      const std::vector<std::string> files =
+          Mantid::API::MultipleFileProperty::flattenFileNames(mfp());
+      if (files.size() == 1) {
+        ostr << "&" << menuCount << " " << files[0];
+      } else if (files.size() > 1) {
+        ostr << "&" << menuCount << " " << files[0] << " && "
+             << files.size() - 1 << " more";
+      } else {
+        // mfp.setValue strips out any filenames that cannot be resolved.
+        // So if your recent file history contains a file that you have
+        // since deleted or renamed, files will be empty so do not
+        // register this entry and go on to the next one
+        continue;
+      }
+    } catch (Poco::PathSyntaxException &) {
+      // mfp could not find the file
+      continue;
+    } catch (std::exception &) {
+      // The file property could not parse the string, use as is
+      ostr << "&" << menuCount << " " << recentFiles[i].toStdString();
+    }
+    QMenuItem *mi = new QMenuItem;
+    mi->setText(QString::fromStdString(ostr.str()));
+    mi->setData(recentFiles[i]);
+    recentFilesMenu->insertItem(mi);
+    menuCount++;
+  }
 }
 
 void ApplicationWindow::translateCurveHor() {
@@ -15832,7 +15902,7 @@ void ApplicationWindow::executeScriptFile(
   runner->redirectStdOut(false);
   scriptingEnv()->redirectStdOut(false);
   if (execMode == Script::Asynchronous) {
-    QFuture<bool> job = runner->executeAsync(code);
+    QFuture<bool> job = runner->executeAsync(ScriptCode(code));
     while (job.isRunning()) {
       QCoreApplication::processEvents();
     }
@@ -15840,7 +15910,7 @@ void ApplicationWindow::executeScriptFile(
     QCoreApplication::processEvents();
     QCoreApplication::processEvents();
   } else {
-    runner->execute(code);
+    runner->execute(ScriptCode(code));
   }
   delete runner;
 }
@@ -15910,7 +15980,7 @@ bool ApplicationWindow::runPythonScript(const QString &code, bool async,
   }
   bool success(false);
   if (async) {
-    QFuture<bool> job = m_iface_script->executeAsync(code);
+    QFuture<bool> job = m_iface_script->executeAsync(ScriptCode(code));
     while (job.isRunning()) {
       QCoreApplication::instance()->processEvents();
     }
@@ -15918,7 +15988,7 @@ bool ApplicationWindow::runPythonScript(const QString &code, bool async,
     QCoreApplication::instance()->processEvents();
     success = job.result();
   } else {
-    success = m_iface_script->execute(code);
+    success = m_iface_script->execute(ScriptCode(code));
   }
   if (redirect) {
     m_iface_script->redirectStdOut(false);

@@ -60,9 +60,9 @@ void LoadRaw3::init() {
       "explicitly set.");
 
   std::vector<std::string> monitorOptions;
-  monitorOptions.push_back("Include");
-  monitorOptions.push_back("Exclude");
-  monitorOptions.push_back("Separate");
+  monitorOptions.emplace_back("Include");
+  monitorOptions.emplace_back("Exclude");
+  monitorOptions.emplace_back("Separate");
   std::map<std::string, std::string> monitorOptionsAliases;
   monitorOptionsAliases["1"] = "Separate";
   monitorOptionsAliases["0"] = "Exclude";
@@ -193,11 +193,16 @@ void LoadRaw3::exec() {
     }
   }
 
-  if (bseparateMonitors && normalwsSpecs == 0) {
-    // Ensure we fill the correct group as if we are only loading monitors then
-    // we essentially want normal behavior
-    // with no extra _monitors workspace
-    ws_grp = monitorws_grp;
+  if (bseparateMonitors) {
+    if (normalwsSpecs == 0) {
+      // Ensure we fill the correct group as if we are only
+      // loading monitors then
+      // we essentially want normal behavior
+      // with no extra _monitors workspace
+      ws_grp = monitorws_grp;
+    } else { // attach monitor workspace to main workspace
+      localWorkspace->setMonitorWorkspace(monitorWorkspace);
+    }
   }
 
   // Loop over the number of periods in the raw file, putting each period in a

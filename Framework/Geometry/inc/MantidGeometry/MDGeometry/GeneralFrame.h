@@ -4,6 +4,7 @@
 #include "MantidGeometry/MDGeometry/MDFrame.h"
 #include "MantidKernel/MDUnit.h"
 #include "MantidKernel/System.h"
+#include "MantidGeometry/DllConfig.h"
 #include "MantidKernel/UnitLabel.h"
 #include <memory>
 
@@ -33,17 +34,24 @@ namespace Geometry {
   File change history is stored at: <https://github.com/mantidproject/mantid>
   Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
-class DLLExport GeneralFrame : public MDFrame {
+class MANTID_GEOMETRY_DLL GeneralFrame : public MDFrame {
 public:
+  static const std::string GeneralFrameDistance;
+  static const std::string GeneralFrameTOF;
+  static const std::string GeneralFrameName;
   GeneralFrame(const std::string &frameName, const Kernel::UnitLabel &unit);
   GeneralFrame(const std::string &frameName,
                std::unique_ptr<Mantid::Kernel::MDUnit> unit);
-  virtual ~GeneralFrame();
-  Kernel::UnitLabel getUnitLabel() const;
-  const Kernel::MDUnit &getMDUnit() const;
-  bool canConvertTo(const Kernel::MDUnit &otherUnit) const;
-  std::string name() const;
-  virtual GeneralFrame *clone() const;
+  ~GeneralFrame() override;
+  Kernel::UnitLabel getUnitLabel() const override;
+  const Kernel::MDUnit &getMDUnit() const override;
+  bool canConvertTo(const Kernel::MDUnit &otherUnit) const override;
+  bool isQ() const override;
+  bool isSameType(const MDFrame &frame) const override;
+  std::string name() const override;
+  GeneralFrame *clone() const override;
+  Mantid::Kernel::SpecialCoordinateSystem
+  equivalientSpecialCoordinateSystem() const override;
 
 private:
   /// Label unit
@@ -51,6 +59,7 @@ private:
   /// Frame name
   const std::string m_frameName;
 };
+
 } // namespace Geometry
 } // namespace Mantid
 

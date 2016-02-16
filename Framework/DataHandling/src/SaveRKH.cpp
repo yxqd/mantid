@@ -2,12 +2,15 @@
 // Includes
 //---------------------------------------------------
 #include "MantidDataHandling/SaveRKH.h"
-#include "MantidKernel/UnitFactory.h"
+
+#include "MantidAPI/Axis.h"
 #include "MantidAPI/FileProperty.h"
+#include "MantidAPI/MatrixWorkspace.h"
+#include "MantidGeometry/Instrument.h"
+#include "MantidKernel/UnitFactory.h"
+
 #include <Poco/LocalDateTime.h>
 #include <Poco/DateTimeFormatter.h>
-
-#include <iomanip>
 
 namespace Mantid {
 namespace DataHandling {
@@ -33,13 +36,9 @@ void SaveRKH::init() {
   declareProperty(new API::WorkspaceProperty<>("InputWorkspace", "",
                                                Kernel::Direction::Input),
                   "The name of the workspace to save");
-  std::vector<std::string> exts;
-  exts.push_back(".txt");
-  exts.push_back(".Q");
-  exts.push_back(".dat");
-  declareProperty(
-      new API::FileProperty("Filename", "", API::FileProperty::Save, exts),
-      "The name to use when saving the file");
+  declareProperty(new API::FileProperty("Filename", "", API::FileProperty::Save,
+                                        {".txt", ".Q", ".dat"}),
+                  "The name to use when saving the file");
   declareProperty(
       "Append", true,
       "If true and Filename already exists, append, else overwrite");
@@ -52,10 +51,7 @@ void SaveRKH::exec() {
   // Retrieve the input workspace
   m_workspace = getProperty("InputWorkspace");
 
-  m_2d =
-      (m_workspace->getNumberHistograms() > 1 && m_workspace->blocksize() > 1)
-          ? true
-          : false;
+  m_2d = m_workspace->getNumberHistograms() > 1 && m_workspace->blocksize() > 1;
 
   // If a 2D workspace, check that it has two numeric axes - bail out if not
   if (m_2d && !(m_workspace->getAxis(1)->isNumeric())) {
@@ -140,7 +136,7 @@ void SaveRKH::writeHeader() {
 void SaveRKH::write1D() {
   const size_t noDataPoints = m_workspace->size();
   const size_t nhist = m_workspace->getNumberHistograms();
-  const bool horizontal = (nhist == 1) ? true : false;
+  const bool horizontal = nhist == 1;
   if (horizontal) {
     g_log.notice() << "Values in first column are the X values\n";
     if (m_workspace->getAxis(0)->unit())

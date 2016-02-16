@@ -61,8 +61,20 @@ void RotateInstrumentComponent::exec() {
   Instrument_sptr inst;
   if (inputW) {
     inst = boost::const_pointer_cast<Instrument>(inputW->getInstrument());
+    if (!inst)
+      throw std::runtime_error("Could not get a valid instrument from the "
+                               "MatrixWorkspace provided as input");
   } else if (inputP) {
     inst = boost::const_pointer_cast<Instrument>(inputP->getInstrument());
+    if (!inst)
+      throw std::runtime_error("Could not get a valid instrument from the "
+                               "PeaksWorkspace provided as input");
+  } else {
+    if (!inst)
+      throw std::runtime_error("Could not get a valid instrument from the "
+                               "workspace and it does not seem to be valid as "
+                               "input (must be either MatrixWorkspace or "
+                               "PeaksWorkspace");
   }
 
   const std::string ComponentName = getProperty("ComponentName");
@@ -81,7 +93,7 @@ void RotateInstrumentComponent::exec() {
   // Find the component to move
   if (DetID != -1) {
     comp = inst->getDetector(DetID);
-    if (comp == 0) {
+    if (comp == nullptr) {
       std::ostringstream mess;
       mess << "Detector with ID " << DetID << " was not found.";
       g_log.error(mess.str());
@@ -89,7 +101,7 @@ void RotateInstrumentComponent::exec() {
     }
   } else if (!ComponentName.empty()) {
     comp = inst->getComponentByName(ComponentName);
-    if (comp == 0) {
+    if (comp == nullptr) {
       std::ostringstream mess;
       mess << "Component with name " << ComponentName << " was not found.";
       g_log.error(mess.str());

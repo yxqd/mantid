@@ -69,10 +69,7 @@ bool LoadCalFile::instrumentIsSpecified(API::Algorithm *alg) {
     return true;
 
   std::string InstrumentFilename = alg->getPropertyValue("InstrumentFilename");
-  if (!InstrumentFilename.empty())
-    return true;
-
-  return false;
+  return !InstrumentFilename.empty();
 }
 
 //----------------------------------------------------------------------------------------------
@@ -115,7 +112,8 @@ LoadCalFile::getInstrument3Ways(Algorithm *alg) {
     childAlg->setProperty<MatrixWorkspace_sptr>("Workspace", tempWS);
     childAlg->setPropertyValue("Filename", InstrumentFilename);
     childAlg->setPropertyValue("InstrumentName", InstrumentName);
-    childAlg->setProperty("RewriteSpectraMap", false);
+    childAlg->setProperty("RewriteSpectraMap",
+                          Mantid::Kernel::OptionalBool(false));
     childAlg->executeAsChildAlg();
     inst = tempWS->getInstrument();
   }

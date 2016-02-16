@@ -3,6 +3,7 @@
 
 #include "cxxtest/TestSuite.h"
 #include "MantidDataHandling/SaveGSS.h"
+#include "MantidAPI/Axis.h"
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidTestHelpers/WorkspaceCreationHelper.h"
@@ -24,7 +25,6 @@ public:
     Mantid::DataHandling::SaveGSS saver;
     TS_ASSERT_THROWS_NOTHING(saver.initialize())
     TS_ASSERT_EQUALS(saver.name(), "SaveGSS")
-    TS_ASSERT_EQUALS(saver.category(), "Diffraction;DataHandling\\Text")
     TS_ASSERT_EQUALS(saver.version(), 1)
   }
 

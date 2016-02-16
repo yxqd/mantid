@@ -102,9 +102,9 @@ Mantid::coord_t getPrecisionCorrectedCoordinate(Mantid::coord_t position,
   const auto diffDown = fabs(down - position);
   const auto nearest = diffUp < diffDown ? up : down;
 
-  // Check if the relative deviation is larger than 1e-6
+  // Check if the relative deviation is larger than 1e-5
   const auto deviation = fabs((nearest - position) / binWidth);
-  const auto tolerance = 1e-6;
+  const auto tolerance = 1e-5;
   Mantid::coord_t coordinate(position);
   if (deviation < tolerance) {
     coordinate = nearest;
@@ -195,6 +195,7 @@ MDHistoWorkspace_sptr createShapedOutput(IMDHistoWorkspace const *const inWS,
               binning.back()) /*max*/); // Set custom min, max and nbins.
     } else if (i < pbins.size() && similarBinning(pbins[i])) {
       auto binning = pbins[i];
+
       Mantid::coord_t pMin = static_cast<Mantid::coord_t>(binning.front());
       Mantid::coord_t pMax = static_cast<Mantid::coord_t>(binning.back());
       size_t numberOfBins;
@@ -212,7 +213,7 @@ MDHistoWorkspace_sptr createShapedOutput(IMDHistoWorkspace const *const inWS,
 
 /**
  * Perform a weighted sum at the iterator position. This function does not
- * increment the iterator.
+ * increment the iterator. Masked bins do not contribute.
  * @param iterator : Iterator to use in sum
  * @param box : Box implicit function defining valid region.
  * @param sumSignal : Accumlation in/out ref.
@@ -222,11 +223,13 @@ MDHistoWorkspace_sptr createShapedOutput(IMDHistoWorkspace const *const inWS,
 void performWeightedSum(MDHistoWorkspaceIterator const *const iterator,
                         MDBoxImplicitFunction &box, double &sumSignal,
                         double &sumSQErrors, double &sumNEvents) {
-  const double weight = box.fraction(iterator->getBoxExtents());
-  sumSignal += weight * iterator->getSignal();
-  const double error = iterator->getError();
-  sumSQErrors += weight * (error * error);
-  sumNEvents += weight * double(iterator->getNumEventsFraction());
+  if (!iterator->getIsMasked()) {
+    const double weight = box.fraction(iterator->getBoxExtents());
+    sumSignal += weight * iterator->getSignal();
+    const double error = iterator->getError();
+    sumSQErrors += weight * (error * error);
+    sumNEvents += weight * double(iterator->getNumEventsFraction());
+  }
 }
 
 namespace Mantid {
@@ -260,7 +263,7 @@ int IntegrateMDHistoWorkspace::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
 const std::string IntegrateMDHistoWorkspace::category() const {
-  return "MDAlgorithms";
+  return "MDAlgorithms\\Slicing";
 }
 
 /// Algorithm's summary for use in the GUI and help. @see Algorithm::summary
@@ -351,11 +354,10 @@ void IntegrateMDHistoWorkspace::exec() {
     const int nThreads = Mantid::API::FrameworkManager::Instance()
                              .getNumOMPThreads(); // NThreads to Request
 
-    auto outIterators = outWS->createIterators(nThreads, NULL);
+    auto outIterators = outWS->createIterators(nThreads, nullptr);
 
     PARALLEL_FOR_NO_WSP_CHECK()
     for (int i = 0; i < int(outIterators.size()); ++i) {
-
       PARALLEL_START_INTERUPT_REGION
       boost::scoped_ptr<MDHistoWorkspaceIterator> outIterator(
           dynamic_cast<MDHistoWorkspaceIterator *>(outIterators[i]));
@@ -386,6 +388,10 @@ void IntegrateMDHistoWorkspace::exec() {
         // Create a thread-local input iterator.
         boost::scoped_ptr<MDHistoWorkspaceIterator> inIterator(
             dynamic_cast<MDHistoWorkspaceIterator *>(inWS->createIterator()));
+        if (!inIterator) {
+          throw std::runtime_error(
+              "Could not convert IMDIterator to a MDHistoWorkspaceIterator");
+        }
 
         /*
         We jump to the iterator position which is closest in the model
@@ -403,8 +409,8 @@ void IntegrateMDHistoWorkspace::exec() {
         // calculated what the width vector would need to be.
         auto neighbourIndexes =
             inIterator->findNeighbourIndexesByWidth(widthVector);
-        for (size_t i = 0; i < neighbourIndexes.size(); ++i) {
-          inIterator->jumpTo(neighbourIndexes[i]); // Go to that neighbour
+        for (auto neighbourIndex : neighbourIndexes) {
+          inIterator->jumpTo(neighbourIndex); // Go to that neighbour
           performWeightedSum(inIterator.get(), box, sumSignal, sumSQErrors,
                              sumNEvents);
         }
@@ -440,7 +446,7 @@ Mantid::MDAlgorithms::IntegrateMDHistoWorkspace::validateInputs() {
     std::vector<double> binning = this->getProperty(propertyName);
     std::string result = checkBinning(binning);
     if (!result.empty()) {
-      errors.insert(std::make_pair(propertyName, result));
+      errors.emplace(propertyName, result);
     }
   }
   return errors;

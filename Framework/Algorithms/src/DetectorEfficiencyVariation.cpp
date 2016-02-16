@@ -2,10 +2,10 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/DetectorEfficiencyVariation.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/HistogramValidator.h"
+#include "MantidKernel/BoundedValidator.h"
 
 #include <boost/math/special_functions/fpclassify.hpp>
-#include "MantidKernel/BoundedValidator.h"
 
 namespace Mantid {
 namespace Algorithms {
@@ -211,9 +211,9 @@ int DetectorEfficiencyVariation::doDetectorTests(
 
   bool checkForMask = false;
   Geometry::Instrument_const_sptr instrument = counts1->getInstrument();
-  if (instrument != NULL) {
-    checkForMask = ((instrument->getSource() != NULL) &&
-                    (instrument->getSample() != NULL));
+  if (instrument != nullptr) {
+    checkForMask = ((instrument->getSource() != nullptr) &&
+                    (instrument->getSample() != nullptr));
   }
 
   const double deadValue(1.0);

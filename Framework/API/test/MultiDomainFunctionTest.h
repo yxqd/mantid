@@ -12,13 +12,12 @@
 #include <cxxtest/TestSuite.h>
 #include <boost/make_shared.hpp>
 #include <algorithm>
-#include <iostream>
 
 using namespace Mantid;
 using namespace Mantid::API;
 
-class MultiDomainFunctionTest_Function : public virtual IFunction1D,
-                                         public virtual ParamFunction {
+class MultiDomainFunctionTest_Function : public IFunction1D,
+                                         public ParamFunction {
 public:
   MultiDomainFunctionTest_Function() : IFunction1D(), ParamFunction() {
     this->declareParameter("A", 0);

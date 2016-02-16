@@ -1,13 +1,16 @@
 #include "MantidDataHandling/LoadSINQFocus.h"
+
+#include "MantidAPI/Axis.h"
 #include "MantidAPI/FileProperty.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/Progress.h"
 #include "MantidAPI/RegisterFileLoader.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidKernel/UnitFactory.h"
 
 #include <limits>
 #include <algorithm>
-#include <iostream>
 #include <vector>
 #include <cmath>
 
@@ -27,7 +30,7 @@ LoadSINQFocus::LoadSINQFocus()
     : m_instrumentName(""), m_instrumentPath(), m_localWorkspace(),
       m_numberOfTubes(0), m_numberOfPixelsPerTube(0), m_numberOfChannels(0),
       m_numberOfHistograms(0), m_loader() {
-  m_supportedInstruments.push_back("FOCUS");
+  m_supportedInstruments.emplace_back("FOCUS");
   this->useAlgorithm("LoadSINQ");
   this->deprecatedDate("2013-10-28");
 }
@@ -45,7 +48,9 @@ const std::string LoadSINQFocus::name() const { return "LoadSINQFocus"; }
 int LoadSINQFocus::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
-const std::string LoadSINQFocus::category() const { return "DataHandling"; }
+const std::string LoadSINQFocus::category() const {
+  return "DataHandling\\Nexus";
+}
 
 //----------------------------------------------------------------------------------------------
 
@@ -69,11 +74,9 @@ int LoadSINQFocus::confidence(Kernel::NexusDescriptor &descriptor) const {
 /** Initialize the algorithm's properties.
  */
 void LoadSINQFocus::init() {
-  std::vector<std::string> exts;
-  exts.push_back(".nxs");
-  exts.push_back(".hdf");
-  declareProperty(new FileProperty("Filename", "", FileProperty::Load, exts),
-                  "The name of the Nexus file to load");
+  declareProperty(
+      new FileProperty("Filename", "", FileProperty::Load, {".nxs", ".hdf"}),
+      "The name of the Nexus file to load");
   declareProperty(
       new WorkspaceProperty<>("OutputWorkspace", "", Direction::Output),
       "The name to use for the output workspace");
@@ -244,6 +247,8 @@ void LoadSINQFocus::runLoadInstrument() {
     // different IDF
 
     loadInst->setPropertyValue("InstrumentName", m_instrumentName);
+    loadInst->setProperty("RewriteSpectraMap",
+                          Mantid::Kernel::OptionalBool(true));
     loadInst->setProperty<MatrixWorkspace_sptr>("Workspace", m_localWorkspace);
     loadInst->execute();
   } catch (...) {

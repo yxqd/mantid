@@ -32,6 +32,12 @@ class EnggFitPeaksTest(unittest.TestCase):
                           InputWorkspace=ws_name, BankPixelFoo=33,
                           WorkspaceIndex=0, ExpectedPeaks='0.51, 0.72')
 
+        # missing FittedPeaks output property
+        self.assertRaises(RuntimeError,
+                          EnggFitPeaks,
+                          InputWorkspace=ws_name,
+                          WorkspaceIndex=0, ExpectedPeaks='0.51, 0.72')
+
         # Wrong ExpectedPeaks value
         self.assertRaises(ValueError,
                           EnggFitPeaks,
@@ -109,7 +115,7 @@ class EnggFitPeaksTest(unittest.TestCase):
         EditInstrumentGeometry(Workspace=sws, L2=[1.0], Polar=[90], PrimaryFlightPath=50)
         self.assertRaises(RuntimeError,
                           EnggFitPeaks,
-                          sws, 0, [1, 3])
+                          sws, 0, [1.1, 3])
 
         # this should fail because of nan/infinity issues
         peak_def = "name=BackToBackExponential, I=12000, A=1, B=1.5, X0=10000, S=350"
@@ -119,7 +125,7 @@ class EnggFitPeaksTest(unittest.TestCase):
         EditInstrumentGeometry(Workspace=sws, L2=[1.0], Polar=[35], PrimaryFlightPath=35)
         self.assertRaises(RuntimeError,
                           EnggFitPeaks,
-                          sws, 0, [1, 2, 3])
+                          sws, 0, [1, 2.3, 3])
 
         # this should fail because FindPeaks doesn't initialize/converge well
         peak_def = "name=BackToBackExponential, I=90000, A=0.1, B=0.5, X0=5000, S=400"
@@ -164,9 +170,12 @@ class EnggFitPeaksTest(unittest.TestCase):
         ep1 = 0.4
         ep2 = 1.09
         paramsTblName = 'test_difc_zero_table'
-        difc, zero = EnggFitPeaks(sws, WorkspaceIndex=0, ExpectedPeaks=[ep1, ep2],
-                                    OutFittedPeaksTable=peaksTblName,
-                                    OutParametersTable=paramsTblName)
+        difc, zero, test_fit_peaks_table = EnggFitPeaks(sws, WorkspaceIndex=0, ExpectedPeaks=[ep1, ep2],
+                                                        OutFittedPeaksTable=peaksTblName,
+                                                        OutParametersTable=paramsTblName)
+
+        self.assertEquals(test_fit_peaks_table.rowCount(), 2)
+
         pTable = mtd[paramsTblName]
         self.assertEquals(pTable.rowCount(), 1)
         self.assertEquals(pTable.columnCount(), 2)
@@ -205,8 +214,10 @@ class EnggFitPeaksTest(unittest.TestCase):
         ep1 = 0.4
         ep2 = 0.83
         ep3 = 1.09
-        difc, zero = EnggFitPeaks(sws, WorkspaceIndex=0, ExpectedPeaks=[ep1, ep2, ep3],
-                                    OutFittedPeaksTable=peaksTblName)
+        difc, zero, test_fit_peaks_table = EnggFitPeaks(sws, WorkspaceIndex=0, ExpectedPeaks=[ep1, ep2, ep3],
+                                                        OutFittedPeaksTable=peaksTblName)
+
+        self.assertEquals(test_fit_peaks_table.rowCount(), 3)
 
         expected_difc = 17335.67250113934
         # assertLess would be nices, but only available in unittest >= 2.7

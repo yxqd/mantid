@@ -43,30 +43,29 @@ namespace Poldi {
     Code Documentation is available at: <http://doxygen.mantidproject.org>
   */
 class MANTID_SINQ_DLL PoldiSpectrumLinearBackground
-    : virtual public API::ParamFunction,
-      virtual public API::IFunction1DSpectrum,
+    : public API::ParamFunction,
+      public API::IFunction1DSpectrum,
       public IPoldiFunction1D {
 public:
   PoldiSpectrumLinearBackground();
-  virtual ~PoldiSpectrumLinearBackground() {}
+  ~PoldiSpectrumLinearBackground() override {}
 
-  virtual std::string name() const { return "PoldiSpectrumLinearBackground"; }
+  std::string name() const override { return "PoldiSpectrumLinearBackground"; }
 
-  virtual void setWorkspace(boost::shared_ptr<const API::Workspace> ws);
+  void setWorkspace(boost::shared_ptr<const API::Workspace> ws) override;
   size_t getTimeBinCount() const;
 
-  virtual void function1DSpectrum(const API::FunctionDomain1DSpectrum &domain,
-                                  API::FunctionValues &values) const;
-  virtual void
-  functionDeriv1DSpectrum(const API::FunctionDomain1DSpectrum &domain,
-                          API::Jacobian &jacobian);
+  void function1DSpectrum(const API::FunctionDomain1DSpectrum &domain,
+                          API::FunctionValues &values) const override;
+  void functionDeriv1DSpectrum(const API::FunctionDomain1DSpectrum &domain,
+                               API::Jacobian &jacobian) override;
 
-  virtual void poldiFunction1D(const std::vector<int> &indices,
-                               const API::FunctionDomain1D &domain,
-                               API::FunctionValues &values) const;
+  void poldiFunction1D(const std::vector<int> &indices,
+                       const API::FunctionDomain1D &domain,
+                       API::FunctionValues &values) const override;
 
 protected:
-  void init();
+  void init() override;
 
   size_t m_timeBinCount;
 };

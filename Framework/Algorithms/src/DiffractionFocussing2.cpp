@@ -2,21 +2,21 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/DiffractionFocussing2.h"
+#include "MantidAPI/Axis.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/MemoryManager.h"
+#include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/ISpectrum.h"
+#include "MantidAPI/RawCountValidator.h"
 #include "MantidAPI/SpectraAxis.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/GroupingWorkspace.h"
-#include "MantidDataObjects/Workspace2D.h"
-#include "MantidKernel/CPUTimer.h"
 #include "MantidKernel/VectorHelper.h"
-#include "MantidAPI/Axis.h"
+
 #include <cfloat>
-#include <fstream>
 #include <iterator>
 #include <numeric>
-#include "MantidAPI/ISpectrum.h"
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
@@ -43,9 +43,7 @@ DiffractionFocussing2::~DiffractionFocussing2() {}
  */
 void DiffractionFocussing2::init() {
 
-  auto wsValidator = boost::make_shared<CompositeValidator>();
-  // wsValidator->add<wsValidator->add>("dSpacing");
-  wsValidator->add<API::RawCountValidator>();
+  auto wsValidator = boost::make_shared<API::RawCountValidator>();
   declareProperty(new API::WorkspaceProperty<MatrixWorkspace>(
                       "InputWorkspace", "", Direction::Input, wsValidator),
                   "A 2D workspace with X values of d-spacing/Q-spacing");
@@ -149,7 +147,7 @@ void DiffractionFocussing2::exec() {
   double eventXMax = 0.;
 
   m_eventW = boost::dynamic_pointer_cast<const EventWorkspace>(m_matrixInputW);
-  if (m_eventW != NULL) {
+  if (m_eventW != nullptr) {
     if (getProperty("PreserveEvents")) {
       // Input workspace is an event workspace. Use the other exec method
       this->execEvent();
@@ -157,12 +155,21 @@ void DiffractionFocussing2::exec() {
       return;
     } else {
       // get the full d-spacing range
-      m_eventW->sortAll(DataObjects::TOF_SORT, NULL);
+      m_eventW->sortAll(DataObjects::TOF_SORT, nullptr);
       m_matrixInputW->getXMinMax(eventXMin, eventXMax);
     }
   }
 
-  // No problem! It is a normal Workspace2D
+  // Check valida detectors are found in the .Cal file
+  if (nGroups <= 0) {
+    throw std::runtime_error("No selected Detectors found in .cal file for "
+                             "input range. Please ensure spectra range has "
+                             "atleast one selected detector.");
+  }
+  // Check the number of points
+  if (nPoints <= 0) {
+    throw std::runtime_error("No points found in the data range.");
+  }
   API::MatrixWorkspace_sptr out = API::WorkspaceFactory::Instance().create(
       m_matrixInputW, nGroups, nPoints + 1, nPoints);
   // Caching containers that are either only read from or unused. Initialize
@@ -184,7 +191,7 @@ void DiffractionFocussing2::exec() {
     int group = m_validGroups[outWorkspaceIndex];
 
     // Get the group
-    group2vectormap::iterator it = group2xvector.find(group);
+    auto it = group2xvector.find(group);
     group2vectormap::difference_type dif =
         std::distance(group2xvector.begin(), it);
     const MantidVec &Xout = *((*it).second);
@@ -240,9 +247,8 @@ void DiffractionFocussing2::exec() {
             m_matrixInputW->maskedBins(i);
         // Now iterate over the list, adjusting the weights for the affected
         // bins
-        for (API::MatrixWorkspace::MaskList::const_iterator it = mask.begin();
-             it != mask.end(); ++it) {
-          const double currentX = Xin[(*it).first];
+        for (const auto &bin : mask) {
+          const double currentX = Xin[bin.first];
           // Add an intermediate bin with full weight if masked bins aren't
           // consecutive
           if (weight_bins.back() != currentX) {
@@ -251,8 +257,8 @@ void DiffractionFocussing2::exec() {
           }
           // The weight for this masked bin is 1 - the degree to which this bin
           // is masked
-          weights.push_back(1.0 - (*it).second);
-          weight_bins.push_back(Xin[(*it).first + 1]);
+          weights.push_back(1.0 - bin.second);
+          weight_bins.push_back(Xin[bin.first + 1]);
         }
         // Add on a final bin with full weight if masking doesn't go up to the
         // end
@@ -364,9 +370,8 @@ void DiffractionFocussing2::execEvent() {
     const vector<size_t> &indices = this->m_wsIndices[group];
 
     totalHistProcess += static_cast<int>(indices.size());
-    for (vector<size_t>::const_iterator index = indices.begin();
-         index != indices.end(); ++index) {
-      size_required[iGroup] += m_eventW->getEventList(*index).getNumberEvents();
+    for (auto index : indices) {
+      size_required[iGroup] += m_eventW->getEventList(index).getNumberEvents();
     }
     prog->report(1, "Pre-counting");
   }
@@ -451,9 +456,7 @@ void DiffractionFocussing2::execEvent() {
       PARALLEL_START_INTERUPT_REGION
       const int group = this->m_validGroups[iGroup];
       const std::vector<size_t> &indices = this->m_wsIndices[group];
-      for (size_t i = 0; i < indices.size(); i++) {
-        size_t wi = indices[i];
-
+      for (auto wi : indices) {
         // In workspace index iGroup, put what was in the OLD workspace index wi
         out->getOrAddEventList(iGroup) += m_eventW->getEventList(wi);
 
@@ -491,7 +494,7 @@ void DiffractionFocussing2::execEvent() {
 
     // Now you set the X axis to the X you saved before.
     if (group2xvector.size() > 0) {
-      group2vectormap::iterator git = group2xvector.find(group);
+      auto git = group2xvector.find(group);
       if (git != group2xvector.end())
         out->setX(workspaceIndex, (git->second));
       else
@@ -523,7 +526,7 @@ int DiffractionFocussing2::validateSpectrumInGroup(size_t wi) {
     return -1;
   }
 
-  std::set<detid_t>::const_iterator it = dets.begin();
+  auto it = dets.cbegin();
   if (*it < 0) // bad pixel id
     return -1;
 
@@ -572,9 +575,9 @@ void DiffractionFocussing2::determineRebinParameters() {
   // whether or not to bother checking for a mask
   bool checkForMask = false;
   Geometry::Instrument_const_sptr instrument = m_matrixInputW->getInstrument();
-  if (instrument != NULL) {
-    checkForMask = ((instrument->getSource() != NULL) &&
-                    (instrument->getSample() != NULL));
+  if (instrument != nullptr) {
+    checkForMask = ((instrument->getSource() != nullptr) &&
+                    (instrument->getSample() != nullptr));
   }
 
   groupAtWorkspaceIndex.resize(nHist);
@@ -588,7 +591,7 @@ void DiffractionFocussing2::determineRebinParameters() {
 
     // the spectrum is the real thing we want to work with
     const ISpectrum *spec = m_matrixInputW->getSpectrum(wi);
-    if (spec == NULL) {
+    if (spec == nullptr) {
       groupAtWorkspaceIndex[wi] = -1;
       continue;
     }
@@ -602,9 +605,8 @@ void DiffractionFocussing2::determineRebinParameters() {
 
     // Create the group range in the map if it isn't already there
     if (gpit == group2minmax.end()) {
-      gpit = group2minmax.insert(std::make_pair(
-                                     group, std::make_pair(
-                                                BIGGEST, -1. * BIGGEST))).first;
+      gpit = group2minmax.emplace(group, std::make_pair(BIGGEST, -1. * BIGGEST))
+                 .first;
     }
     const double min = (gpit->second).first;
     const double max = (gpit->second).second;
@@ -651,7 +653,7 @@ void DiffractionFocussing2::determineRebinParameters() {
 
     // Build up the X vector.
     boost::shared_ptr<MantidVec> xnew =
-        boost::shared_ptr<MantidVec>(new MantidVec(xPoints)); // New X vector
+        boost::make_shared<MantidVec>(xPoints); // New X vector
     (*xnew)[0] = Xmin;
     for (int64_t j = 1; j < xPoints; j++) {
       (*xnew)[j] = Xmin * (1.0 + step);

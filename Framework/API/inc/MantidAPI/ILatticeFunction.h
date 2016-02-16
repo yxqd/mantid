@@ -41,10 +41,11 @@ namespace API {
 class MANTID_API_DLL ILatticeFunction : public FunctionParameterDecorator {
 public:
   ILatticeFunction();
-  virtual ~ILatticeFunction() {}
+  ~ILatticeFunction() override {}
 
-  void function(const FunctionDomain &domain, FunctionValues &values) const;
-  void functionDeriv(const FunctionDomain &domain, Jacobian &jacobian);
+  void function(const FunctionDomain &domain,
+                FunctionValues &values) const override;
+  void functionDeriv(const FunctionDomain &domain, Jacobian &jacobian) override;
 
   /// Function that should calculate d-values for the HKLs provided in the
   /// domain.
@@ -55,7 +56,7 @@ public:
                                     Jacobian &jacobian);
 
   /// A string that names the crystal system.
-  virtual void setCrystalSystem(const std::string &crystalSystem) = 0;
+  virtual void setLatticeSystem(const std::string &crystalSystem) = 0;
 
   /// Set the function parameters according to the supplied unit cell.
   virtual void setUnitCell(const std::string &unitCellString) = 0;

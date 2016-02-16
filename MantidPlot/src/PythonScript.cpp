@@ -39,7 +39,6 @@
 #include <QVariant>
 #include <QMessageBox>
 
-#include <iostream>
 #include <stdexcept>
 
 
@@ -730,9 +729,8 @@ namespace
    */
   struct InstallTrace
   {
-    InstallTrace(PythonScript & scriptObject)
-      : m_sipWrappedScript(NULL)
-    {
+    explicit InstallTrace(PythonScript &scriptObject)
+        : m_sipWrappedScript(NULL) {
       if(scriptObject.reportProgress())
       {
         m_sipWrappedScript = scriptObject.createSipInstanceFromMe();

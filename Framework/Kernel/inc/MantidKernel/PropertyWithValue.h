@@ -8,6 +8,7 @@
 #include "MantidKernel/Exception.h"
 #include "MantidKernel/Logger.h"
 #include "MantidKernel/NullValidator.h"
+#include "MantidKernel/OptionalBool.h"
 
 #ifndef Q_MOC_RUN
 #include <boost/lexical_cast.hpp>
@@ -246,13 +247,33 @@ template <> inline void addingOperator(bool &, const bool &) {
       "PropertyWithValue.h: += operator not implemented for type bool");
 }
 
+template <> inline void addingOperator(OptionalBool &, const OptionalBool &) {
+  throw Exception::NotImplementedError(
+      "PropertyWithValue.h: += operator not implemented for type OptionalBool");
+}
+
 template <typename T>
-inline void addingOperator(boost::shared_ptr<T> &lhs,
-                           const boost::shared_ptr<T> &rhs) {
-  UNUSED_ARG(lhs);
-  UNUSED_ARG(rhs);
+inline void addingOperator(boost::shared_ptr<T> &,
+                           const boost::shared_ptr<T> &) {
   throw Exception::NotImplementedError(
       "PropertyWithValue.h: += operator not implemented for boost::shared_ptr");
+}
+
+template <typename T>
+inline std::vector<std::string>
+determineAllowedValues(const T &, const IValidator &validator) {
+  return validator.allowedValues();
+}
+
+template <>
+inline std::vector<std::string> determineAllowedValues(const OptionalBool &,
+                                                       const IValidator &) {
+  auto enumMap = OptionalBool::enumToStrMap();
+  std::vector<std::string> values;
+  for (auto it = enumMap.begin(); it != enumMap.end(); ++it) {
+    values.push_back(it->second);
+  }
+  return values;
 }
 }
 //------------------------------------------------------------------------------------------------
@@ -321,17 +342,17 @@ public:
                                               // value of the original object
         m_validator(right.m_validator->clone()) {}
   /// 'Virtual copy constructor'
-  PropertyWithValue<TYPE> *clone() const {
+  PropertyWithValue<TYPE> *clone() const override {
     return new PropertyWithValue<TYPE>(*this);
   }
 
   /// Virtual destructor
-  virtual ~PropertyWithValue() {}
+  ~PropertyWithValue() override {}
 
   /** Get the value of the property as a string
    *  @return The property's value
    */
-  virtual std::string value() const { return toString(m_value); }
+  std::string value() const override { return toString(m_value); }
 
   /**
    * Deep comparison.
@@ -355,12 +376,12 @@ public:
 
   /** Get the size of the property.
   */
-  virtual int size() const { return findSize(m_value); }
+  int size() const override { return findSize(m_value); }
 
   /** Get the value the property was initialised with -its default value
    *  @return The default value
    */
-  virtual std::string getDefault() const { return toString(m_initialValue); }
+  std::string getDefault() const override { return toString(m_initialValue); }
 
   /** Set the value of the property from a string representation.
    *  Note that "1" & "0" must be used for bool properties rather than
@@ -369,7 +390,7 @@ public:
    *  @return Returns "" if the assignment was successful or a user level
    * description of the problem
    */
-  virtual std::string setValue(const std::string &value) {
+  std::string setValue(const std::string &value) override {
     try {
       TYPE result = m_value;
       toValue(value, result);
@@ -395,7 +416,7 @@ public:
    * @return "" if the assignment was successful or a user level description of
    * the problem
    */
-  virtual std::string setDataItem(const boost::shared_ptr<DataItem> data) {
+  std::string setDataItem(const boost::shared_ptr<DataItem> data) override {
     // Pass of the helper function that is able to distinguish whether
     // the TYPE of the PropertyWithValue can be converted to a
     // shared_ptr<DataItem>
@@ -418,7 +439,7 @@ public:
   * @param right the property to add
   * @return the sum
   */
-  virtual PropertyWithValue &operator+=(Property const *right) {
+  PropertyWithValue &operator+=(Property const *right) override {
     PropertyWithValue const *rhs =
         dynamic_cast<PropertyWithValue const *>(right);
 
@@ -476,7 +497,7 @@ public:
    * to do more logging
    *  @returns "" if the value is valid or a discription of the problem
    */
-  virtual std::string isValid() const { return m_validator->isValid(m_value); }
+  std::string isValid() const override { return m_validator->isValid(m_value); }
 
   /** Indicates if the property's value is the same as it was when it was set
   *  N.B. Uses an unsafe comparison in the case of doubles, consider overriding
@@ -484,15 +505,15 @@ public:
   *  @return true if the value is the same as the initial value or false
   * otherwise
   */
-  virtual bool isDefault() const { return m_initialValue == m_value; }
+  bool isDefault() const override { return m_initialValue == m_value; }
 
   /** Returns the set of valid values for this property, if such a set exists.
    *  If not, it returns an empty vector.
    *  @return Returns the set of valid values for this property, or it returns
    * an empty vector.
    */
-  virtual std::vector<std::string> allowedValues() const {
-    return m_validator->allowedValues();
+  std::vector<std::string> allowedValues() const override {
+    return determineAllowedValues(m_value, *m_validator);
   }
 
   /**
@@ -518,7 +539,7 @@ private:
    * The value is only accepted if the other property has the same type as this
    * @param right :: A reference to a property.
    */
-  virtual std::string setValueFromProperty(const Property &right) {
+  std::string setValueFromProperty(const Property &right) override {
     auto prop = dynamic_cast<const PropertyWithValue<TYPE> *>(&right);
     if (!prop) {
       return "Could not set value: properties have different type.";

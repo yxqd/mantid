@@ -33,6 +33,8 @@ enum MDNormalization {
   NumEventsNormalization = 2
 };
 
+static const signal_t MDMaskValue = std::numeric_limits<double>::quiet_NaN();
+
 /** Basic MD Workspace Abstract Class.
  *
  *  This defines the interface that allows one to iterate through several types
@@ -70,7 +72,7 @@ enum MDNormalization {
 class MANTID_API_DLL IMDWorkspace : public Workspace, public API::MDGeometry {
 public:
   IMDWorkspace();
-  virtual ~IMDWorkspace();
+  ~IMDWorkspace() override;
 
   /// Returns a clone of the workspace
   std::unique_ptr<IMDWorkspace> clone() const {
@@ -101,6 +103,12 @@ public:
   getSignalAtCoord(const coord_t *coords,
                    const Mantid::API::MDNormalization &normalization) const = 0;
 
+  /// Returns the (normalized) signal at a given coordinates or 0 if the value
+  // is masked, used for plotting
+  virtual signal_t getSignalWithMaskAtCoord(
+      const coord_t *coords,
+      const Mantid::API::MDNormalization &normalization) const = 0;
+
   /// Method to generate a line plot through a MD-workspace
   virtual void getLinePlot(const Mantid::Kernel::VMD &start,
                            const Mantid::Kernel::VMD &end,
@@ -111,9 +119,18 @@ public:
   IMDIterator *
   createIterator(Mantid::Geometry::MDImplicitFunction *function = NULL) const;
 
+  std::string getConvention() const;
+  void setConvention(std::string m_convention);
+  std::string changeQConvention();
+
   signal_t getSignalAtVMD(const Mantid::Kernel::VMD &coords,
                           const Mantid::API::MDNormalization &normalization =
                               Mantid::API::VolumeNormalization) const;
+
+  signal_t
+  getSignalWithMaskAtVMD(const Mantid::Kernel::VMD &coords,
+                         const Mantid::API::MDNormalization &normalization =
+                             Mantid::API::VolumeNormalization) const;
 
   /// Setter for the masking region.
   virtual void
@@ -146,10 +163,11 @@ protected:
   /// Protected copy assignment operator. Assignment not implemented.
   IMDWorkspace &operator=(const IMDWorkspace &other);
 
-  virtual const std::string toString() const;
+  const std::string toString() const override;
 
 private:
-  virtual IMDWorkspace *doClone() const = 0;
+  std::string m_convention;
+  IMDWorkspace *doClone() const override = 0;
 };
 
 /// Shared pointer to the IMDWorkspace base class

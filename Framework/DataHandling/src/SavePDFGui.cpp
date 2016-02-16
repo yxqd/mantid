@@ -1,8 +1,11 @@
 #include "MantidDataHandling/SavePDFGui.h"
+
+#include "MantidAPI/Axis.h"
 #include "MantidAPI/FileProperty.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidKernel/MantidVersion.h"
+
 #include <fstream>
-#include <iomanip>
 
 namespace Mantid {
 namespace DataHandling {
@@ -32,7 +35,7 @@ const std::string SavePDFGui::name() const { return "SavePDFGui"; }
 int SavePDFGui::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
-const std::string SavePDFGui::category() const { return "DataHandling"; }
+const std::string SavePDFGui::category() const { return "DataHandling\\Text"; }
 
 /// Algorithm's summary for use in the GUI and help. @see Algorithm::summary
 const std::string SavePDFGui::summary() const {

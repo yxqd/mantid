@@ -2,17 +2,20 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/CalculateFlatBackground.h"
-#include "MantidAPI/WorkspaceValidators.h"
-#include "MantidAPI/WorkspaceOpOverloads.h"
 #include "MantidAPI/FunctionFactory.h"
+#include "MantidAPI/HistogramValidator.h"
 #include "MantidAPI/IFunction.h"
-#include "MantidKernel/ArrayProperty.h"
-#include "MantidKernel/VectorHelper.h"
+#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidAPI/WorkspaceOpOverloads.h"
+#include "MantidGeometry/IDetector.h"
 #include "MantidDataObjects/TableWorkspace.h"
-#include <algorithm>
-#include <climits>
+#include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/MandatoryValidator.h"
+#include "MantidKernel/VectorHelper.h"
+#include <algorithm>
+#include <climits>
+#include <numeric>
 #include <boost/lexical_cast.hpp>
 
 namespace Mantid {
@@ -45,9 +48,7 @@ void CalculateFlatBackground::init() {
       new ArrayProperty<int>("WorkspaceIndexList"),
       "Indices of the spectra that will have their background removed\n"
       "default: modify all spectra");
-  std::vector<std::string> modeOptions;
-  modeOptions.push_back("Linear Fit");
-  modeOptions.push_back("Mean");
+  std::vector<std::string> modeOptions{"Linear Fit", "Mean"};
   declareProperty("Mode", "Linear Fit",
                   boost::make_shared<StringListValidator>(modeOptions),
                   "The background count rate is estimated either by taking a "
@@ -55,9 +56,8 @@ void CalculateFlatBackground::init() {
                   "linear fit (default: Linear Fit)");
   // Property to determine whether we subtract the background or just return the
   // background.
-  std::vector<std::string> outputOptions;
-  outputOptions.push_back("Subtract Background");
-  outputOptions.push_back("Return Background");
+  std::vector<std::string> outputOptions{"Subtract Background",
+                                         "Return Background"};
   declareProperty("OutputMode", "Subtract Background",
                   boost::make_shared<StringListValidator>(outputOptions),
                   "Once the background has been determined it can either be "
@@ -69,6 +69,14 @@ void CalculateFlatBackground::init() {
                   "from monitors in the same way as from normal detectors\n"
                   "If this property is set to true, background is not "
                   "calculated/removed from monitors.",
+                  Direction::Input);
+  declareProperty("NullifyNegativeValues", true,
+                  "When background is subtracted, signals in some time "
+                  "channels may become negative.\n"
+                  "If this option is true, signal in such bins is nullified "
+                  "and the module of the removed signal"
+                  "is added to the error. If false, the signal and errors are "
+                  "left unchanged",
                   Direction::Input);
 }
 
@@ -84,6 +92,7 @@ void CalculateFlatBackground::exec() {
                              "not possible.");
 
   m_skipMonitors = getProperty("SkipMonitors");
+  m_nullifyNegative = getProperty("NullifyNegativeValues");
   // Get the required X range
   double startX, endX;
   this->checkRange(startX, endX);
@@ -187,7 +196,7 @@ void CalculateFlatBackground::exec() {
           Y[j] = background;
         }
         // remove negative values
-        if (Y[j] < 0.0) {
+        if (m_nullifyNegative && Y[j] < 0.0) {
           Y[j] = 0;
           // The error estimate must go up in this nonideal situation and the
           // value of background is a good estimate for it. However, don't

@@ -2,12 +2,15 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/CorrectKiKf.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidDataObjects/EventWorkspace.h"
-#include "MantidKernel/UnitFactory.h"
+#include "MantidGeometry/IDetector.h"
+#include "MantidGeometry/Instrument/ParameterMap.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/ListValidator.h"
+#include "MantidKernel/UnitFactory.h"
 
 namespace Mantid {
 namespace Algorithms {
@@ -29,8 +32,7 @@ CorrectKiKf::~CorrectKiKf() {}
 
 /// Initialisation method
 void CorrectKiKf::init() {
-  auto wsValidator = boost::make_shared<CompositeValidator>();
-  wsValidator->add<WorkspaceUnitValidator>("DeltaE");
+  auto wsValidator = boost::make_shared<WorkspaceUnitValidator>("DeltaE");
 
   this->declareProperty(
       new WorkspaceProperty<API::MatrixWorkspace>(
@@ -41,9 +43,7 @@ void CorrectKiKf::init() {
                                                   Direction::Output),
       "Name of the output workspace, can be the same as the input");
 
-  std::vector<std::string> propOptions;
-  propOptions.push_back("Direct");
-  propOptions.push_back("Indirect");
+  std::vector<std::string> propOptions{"Direct", "Indirect"};
   this->declareProperty("EMode", "Direct",
                         boost::make_shared<StringListValidator>(propOptions),
                         "The energy mode (default: Direct)");
@@ -68,7 +68,7 @@ void CorrectKiKf::exec() {
   // Check if it is an event workspace
   EventWorkspace_const_sptr eventW =
       boost::dynamic_pointer_cast<const EventWorkspace>(inputWS);
-  if (eventW != NULL) {
+  if (eventW != nullptr) {
     this->execEvent();
     return;
   }

@@ -1,8 +1,10 @@
 #include "MantidAlgorithms/SpecularReflectionCalculateTheta.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidKernel/PropertyWithValue.h"
 #include "MantidGeometry/IComponent.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidGeometry/Instrument/ReferenceFrame.h"
+
 #include <cmath>
 
 using namespace Mantid::Kernel;
@@ -85,7 +87,7 @@ void SpecularReflectionCalculateTheta::exec() {
   const double beamoffset =
       refFrame->vecPointingAlongBeam().scalar_prod(detSample);
 
-  const double twoTheta = std::atan(upoffset / beamoffset) * 180 / M_PI;
+  const double twoTheta = 2 * std::atan(upoffset / beamoffset) * 180 / M_PI;
 
   std::stringstream strstream;
   strstream << "Recalculated two theta as: " << twoTheta;

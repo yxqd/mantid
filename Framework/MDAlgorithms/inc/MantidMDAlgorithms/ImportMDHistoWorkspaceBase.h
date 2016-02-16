@@ -38,7 +38,8 @@ namespace MDAlgorithms {
 class DLLExport ImportMDHistoWorkspaceBase : public API::Algorithm {
 public:
   ImportMDHistoWorkspaceBase();
-  virtual ~ImportMDHistoWorkspaceBase();
+  ~ImportMDHistoWorkspaceBase() override;
+  std::map<std::string, std::string> validateInputs() override;
 
 protected:
   /// Vector containing the number of bins in each dimension.
@@ -54,6 +55,10 @@ protected:
 private:
   // Product of the bins across all dimensions.
   size_t m_bin_product;
+  Mantid::Geometry::MDFrame_uptr createMDFrame(std::string frame,
+                                               std::string unit);
+  bool checkIfFrameValid(const std::string &frame,
+                         const std::vector<std::string> &targetFrames);
 };
 
 } // namespace MDAlgorithms

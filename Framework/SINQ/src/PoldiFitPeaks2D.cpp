@@ -1,30 +1,30 @@
 #include "MantidSINQ/PoldiFitPeaks2D.h"
 
+#include "MantidAPI/Axis.h"
+#include "MantidAPI/FunctionDomain1D.h"
+#include "MantidAPI/FunctionFactory.h"
+#include "MantidAPI/ILatticeFunction.h"
+#include "MantidAPI/IPawleyFunction.h"
+#include "MantidAPI/IPeakFunction.h"
+#include "MantidAPI/MultiDomainFunction.h"
+#include "MantidAPI/TableRow.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidDataObjects/TableWorkspace.h"
+#include "MantidGeometry/Crystal/UnitCell.h"
 #include "MantidKernel/ListValidator.h"
-#include "MantidAPI/TableRow.h"
-#include "MantidAPI/FunctionFactory.h"
-#include "MantidAPI/MultiDomainFunction.h"
+
+#include "MantidSINQ/PoldiUtilities/IPoldiFunction1D.h"
+#include "MantidSINQ/PoldiUtilities/Poldi2DFunction.h"
+#include "MantidSINQ/PoldiUtilities/PoldiInstrumentAdapter.h"
+#include "MantidSINQ/PoldiUtilities/PoldiDeadWireDecorator.h"
+#include "MantidSINQ/PoldiUtilities/PoldiDGrid.h"
 #include "MantidSINQ/PoldiUtilities/PoldiSpectrumDomainFunction.h"
 #include "MantidSINQ/PoldiUtilities/PoldiSpectrumLinearBackground.h"
 #include "MantidSINQ/PoldiUtilities/PoldiSpectrumPawleyFunction.h"
-#include "MantidAPI/FunctionDomain1D.h"
-
-#include "MantidSINQ/PoldiUtilities/IPoldiFunction1D.h"
 #include "MantidSINQ/PoldiUtilities/PoldiPeakCollection.h"
-#include "MantidSINQ/PoldiUtilities/PoldiInstrumentAdapter.h"
-#include "MantidSINQ/PoldiUtilities/PoldiDeadWireDecorator.h"
-
-#include "MantidAPI/ILatticeFunction.h"
-#include "MantidAPI/IPeakFunction.h"
-#include "MantidAPI/IPawleyFunction.h"
-#include "MantidGeometry/Crystal/UnitCell.h"
-
-#include "MantidSINQ/PoldiUtilities/Poldi2DFunction.h"
 
 #include "boost/make_shared.hpp"
-#include "MantidSINQ/PoldiUtilities/PoldiDGrid.h"
 
 namespace Mantid {
 namespace Poldi {
@@ -160,10 +160,10 @@ PoldiFitPeaks2D::getNormalizedPeakCollections(
 
   std::vector<PoldiPeakCollection_sptr> normalizedPeakCollections;
 
-  for (auto pc = peakCollections.begin(); pc != peakCollections.end(); ++pc) {
+  for (const auto &peakCollection : peakCollections) {
     // First integrate peak collection, then normalize and append to vector
     PoldiPeakCollection_sptr integratedPeakCollection =
-        getIntegratedPeakCollection(*pc);
+        getIntegratedPeakCollection(peakCollection);
 
     normalizedPeakCollections.push_back(
         getNormalizedPeakCollection(integratedPeakCollection));
@@ -546,14 +546,13 @@ Poldi2DFunction_sptr PoldiFitPeaks2D::getFunctionPawley(
                                 "peaks do not have point group.");
   }
 
-  std::string crystalSystem =
-      getCrystalSystemAsString(pointGroup->crystalSystem());
-  pawleyFunction->setCrystalSystem(crystalSystem);
+  std::string latticeSystem = getLatticeSystemFromPointGroup(pointGroup);
+  pawleyFunction->setLatticeSystem(latticeSystem);
 
   UnitCell cell = peakCollection->unitCell();
   // Extract unit cell from peak collection
   pawleyFunction->setUnitCell(getRefinedStartingCell(
-      unitCellToStr(cell), crystalSystem, peakCollection));
+      unitCellToStr(cell), latticeSystem, peakCollection));
 
   IPeakFunction_sptr pFun = boost::dynamic_pointer_cast<IPeakFunction>(
       FunctionFactory::Instance().createFunction(profileFunctionName));
@@ -576,6 +575,24 @@ Poldi2DFunction_sptr PoldiFitPeaks2D::getFunctionPawley(
 }
 
 /**
+ * Returns the lattice system for the specified point group
+ *
+ * This function simply uses Geometry::getLatticeSystemAsString().
+ *
+ * @param pointGroup :: The point group for which to find the crystal system
+ * @return The crystal system for the point group
+ */
+std::string PoldiFitPeaks2D::getLatticeSystemFromPointGroup(
+    const PointGroup_sptr &pointGroup) const {
+  if (!pointGroup) {
+    throw std::invalid_argument(
+        "Cannot return lattice system for null PointGroup.");
+  }
+
+  return Geometry::getLatticeSystemAsString(pointGroup->latticeSystem());
+}
+
+/**
  * Tries to refine the initial cell using the supplied peaks
  *
  * This method tries to refine the initial unit cell using the indexed peaks
@@ -590,7 +607,7 @@ Poldi2DFunction_sptr PoldiFitPeaks2D::getFunctionPawley(
  * @return String for refined unit cell
  */
 std::string PoldiFitPeaks2D::getRefinedStartingCell(
-    const std::string &initialCell, const std::string &crystalSystem,
+    const std::string &initialCell, const std::string &latticeSystem,
     const PoldiPeakCollection_sptr &peakCollection) {
 
   Geometry::UnitCell cell = Geometry::strToUnitCell(initialCell);
@@ -599,7 +616,7 @@ std::string PoldiFitPeaks2D::getRefinedStartingCell(
       boost::dynamic_pointer_cast<ILatticeFunction>(
           FunctionFactory::Instance().createFunction("LatticeFunction"));
 
-  latticeFunction->setCrystalSystem(crystalSystem);
+  latticeFunction->setLatticeSystem(latticeSystem);
   latticeFunction->fix(latticeFunction->parameterIndex("ZeroShift"));
   latticeFunction->setUnitCell(cell);
 
@@ -654,21 +671,20 @@ PoldiFitPeaks2D::getUserSpecifiedTies(const IFunction_sptr &poldiFn) {
     std::vector<std::string> parameters = poldiFn->getParameterNames();
 
     std::vector<std::string> tieComponents;
-    for (auto it = tieParameters.begin(); it != tieParameters.end(); ++it) {
-      if (!(*it).empty()) {
+    for (auto &tieParameter : tieParameters) {
+      if (!tieParameter.empty()) {
         std::vector<std::string> matchedParameters;
 
-        for (auto parName = parameters.begin(); parName != parameters.end();
-             ++parName) {
-          if (boost::algorithm::ends_with(*parName, *it)) {
-            matchedParameters.push_back(*parName);
+        for (auto &parameter : parameters) {
+          if (boost::algorithm::ends_with(parameter, tieParameter)) {
+            matchedParameters.push_back(parameter);
           }
         }
 
         switch (matchedParameters.size()) {
         case 0:
-          g_log.warning("Function does not have a parameter called '" + *it +
-                        "', ignoring.");
+          g_log.warning("Function does not have a parameter called '" +
+                        tieParameter + "', ignoring.");
           break;
         case 1:
           g_log.warning("There is only one peak, no ties necessary.");
@@ -966,9 +982,9 @@ IAlgorithm_sptr PoldiFitPeaks2D::calculateSpectrum(
   Poldi2DFunction_sptr mdFunction(new Poldi2DFunction);
 
   // Add one Poldi2DFunction for each peak collection
-  for (auto pc = normalizedPeakCollections.begin();
-       pc != normalizedPeakCollections.end(); ++pc) {
-    mdFunction->addFunction(getFunctionFromPeakCollection(*pc));
+  for (auto &normalizedPeakCollection : normalizedPeakCollections) {
+    mdFunction->addFunction(
+        getFunctionFromPeakCollection(normalizedPeakCollection));
   }
 
   // And finally background terms
@@ -1250,8 +1266,8 @@ void PoldiFitPeaks2D::exec() {
   Property *profileFunctionProperty =
       getPointerToProperty("PeakProfileFunction");
   if (!profileFunctionProperty->isDefault()) {
-    for (auto pc = peakCollections.begin(); pc != peakCollections.end(); ++pc) {
-      (*pc)->setProfileFunctionName(profileFunctionProperty->value());
+    for (auto &peakCollection : peakCollections) {
+      peakCollection->setProfileFunctionName(profileFunctionProperty->value());
     }
   }
 
@@ -1282,8 +1298,8 @@ void PoldiFitPeaks2D::exec() {
   } else {
     WorkspaceGroup_sptr peaksGroup = boost::make_shared<WorkspaceGroup>();
 
-    for (auto pc = integralPeaks.begin(); pc != integralPeaks.end(); ++pc) {
-      peaksGroup->addWorkspace((*pc)->asTableWorkspace());
+    for (auto &integralPeak : integralPeaks) {
+      peaksGroup->addWorkspace(integralPeak->asTableWorkspace());
     }
 
     setProperty("RefinedPoldiPeakWorkspace", peaksGroup);
@@ -1316,8 +1332,8 @@ void PoldiFitPeaks2D::exec() {
       } else {
         WorkspaceGroup_sptr cellsGroup = boost::make_shared<WorkspaceGroup>();
 
-        for (auto it = cells.begin(); it != cells.end(); ++it) {
-          cellsGroup->addWorkspace(*it);
+        for (auto &cell : cells) {
+          cellsGroup->addWorkspace(cell);
         }
 
         setProperty("RefinedCellParameters", cellsGroup);

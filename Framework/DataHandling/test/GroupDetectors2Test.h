@@ -1,9 +1,14 @@
 #ifndef GROUPDETECTORS2TEST_H_
 #define GROUPDETECTORS2TEST_H_
 
+#include <cxxtest/TestSuite.h>
+#include "MantidDataHandling/GroupDetectors2.h"
+#include "MantidTestHelpers/WorkspaceCreationHelper.h"
+
+#include "MantidAPI/Axis.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/WorkspaceProperty.h"
 #include "MantidAPI/FrameworkManager.h"
-#include "MantidDataHandling/GroupDetectors2.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidGeometry/Instrument/Detector.h"
 #include "MantidGeometry/Instrument/DetectorGroup.h"
@@ -12,13 +17,12 @@
 #include "MantidKernel/Exception.h"
 #include "MantidKernel/UnitFactory.h"
 #include "MantidDataHandling/LoadMuonNexus1.h"
-#include "MantidTestHelpers/WorkspaceCreationHelper.h"
-#include <cxxtest/TestSuite.h>
-#include <fstream>
-#include <iostream>
-#include <numeric>
-#include <Poco/Path.h>
 #include "MantidDataHandling/MaskDetectors.h"
+
+#include <Poco/Path.h>
+
+#include <fstream>
+#include <numeric>
 
 using Mantid::DataHandling::GroupDetectors2;
 using namespace Mantid::Kernel;

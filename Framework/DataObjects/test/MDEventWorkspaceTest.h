@@ -6,6 +6,7 @@
 #include "MantidGeometry/MDGeometry/MDDimensionExtents.h"
 #include "MantidGeometry/MDGeometry/MDHistoDimension.h"
 #include "MantidGeometry/MDGeometry/MDBoxImplicitFunction.h"
+#include "MantidGeometry/MDGeometry/QSample.h"
 #include "MantidKernel/ProgressText.h"
 #include "MantidKernel/Timer.h"
 #include "MantidAPI/BoxController.h"
@@ -16,6 +17,7 @@
 #include "MantidDataObjects/MDGridBox.h"
 #include "MantidDataObjects/MDLeanEvent.h"
 #include "MantidTestHelpers/MDEventsTestHelper.h"
+#include "PropertyManagerHelper.h"
 #include <boost/random/linear_congruential.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int.hpp>
@@ -91,10 +93,10 @@ public:
 
   void test_copy_constructor() {
     MDEventWorkspace<MDLeanEvent<3>, 3> ew3;
-
+    Mantid::Geometry::GeneralFrame frame("m", "m");
     for (size_t i = 0; i < 3; i++) {
-      ew3.addDimension(
-          MDHistoDimension_sptr(new MDHistoDimension("x", "x", "m", -1, 1, 0)));
+      ew3.addDimension(MDHistoDimension_sptr(
+          new MDHistoDimension("x", "x", frame, -1, 1, 0)));
     }
     ew3.initialize();
     ew3.getBoxController()->setSplitThreshold(1);
@@ -153,20 +155,22 @@ public:
 
   void test_initialize_throws() {
     IMDEventWorkspace *ew = new MDEventWorkspace<MDLeanEvent<3>, 3>();
+    Mantid::Geometry::GeneralFrame frame("m", "m");
     TS_ASSERT_THROWS(ew->initialize(), std::runtime_error);
     for (size_t i = 0; i < 5; i++)
-      ew->addDimension(
-          MDHistoDimension_sptr(new MDHistoDimension("x", "x", "m", -1, 1, 0)));
+      ew->addDimension(MDHistoDimension_sptr(
+          new MDHistoDimension("x", "x", frame, -1, 1, 0)));
     TS_ASSERT_THROWS(ew->initialize(), std::runtime_error);
     delete ew;
   }
 
   void test_initialize() {
     IMDEventWorkspace *ew = new MDEventWorkspace<MDLeanEvent<3>, 3>();
+    Mantid::Geometry::GeneralFrame frame("m", "m");
     TS_ASSERT_THROWS(ew->initialize(), std::runtime_error);
     for (size_t i = 0; i < 3; i++)
-      ew->addDimension(
-          MDHistoDimension_sptr(new MDHistoDimension("x", "x", "m", -1, 1, 0)));
+      ew->addDimension(MDHistoDimension_sptr(
+          new MDHistoDimension("x", "x", frame, -1, 1, 0)));
     TS_ASSERT_THROWS_NOTHING(ew->initialize());
     delete ew;
   }
@@ -288,6 +292,38 @@ public:
     TSM_ASSERT("Out of bounds returns NAN",
                boost::math::isnan(ew->getSignalAtCoord(
                    coords4, Mantid::API::NoNormalization)));
+  }
+
+  //-------------------------------------------------------------------------------------
+  /** Get the signal at a given coord or 0 if masked */
+  void test_getSignalWithMaskAtCoord() {
+    MDEventWorkspace3Lean::sptr ew =
+        MDEventsTestHelper::makeMDEW<3>(4, 0.0, 4.0, 1);
+    coord_t coords1[3] = {0.5, 0.5, 0.5};
+    coord_t coords2[3] = {2.5, 2.5, 2.5};
+    ew->addEvent(MDLeanEvent<3>(2.0, 2.0, coords2));
+
+    std::vector<coord_t> min;
+    std::vector<coord_t> max;
+
+    min.push_back(0);
+    min.push_back(0);
+    min.push_back(0);
+    max.push_back(1.5);
+    max.push_back(1.5);
+    max.push_back(1.5);
+
+    // Create a function to mask some of the workspace.
+    MDImplicitFunction *function = new MDBoxImplicitFunction(min, max);
+    ew->setMDMasking(function);
+    ew->refreshCache();
+
+    TSM_ASSERT_DELTA(
+        "Value ignoring mask is 1.0",
+        ew->getSignalAtCoord(coords1, Mantid::API::NoNormalization), 1.0, 1e-5);
+    TSM_ASSERT("Masked returns NaN",
+               boost::math::isnan(ew->getSignalWithMaskAtCoord(
+                   coords1, Mantid::API::NoNormalization)));
   }
 
   //-------------------------------------------------------------------------------------
@@ -493,13 +529,17 @@ public:
                       Mantid::Kernel::None, ws->getSpecialCoordinateSystem());
   }
 
-  void test_setSpecialCoordinateSystem_default() {
-    MDEventWorkspace1Lean::sptr ws =
-        MDEventsTestHelper::makeMDEW<1>(10, 0.0, 10.0, 1 /*event per box*/);
-    TS_ASSERT_EQUALS(Mantid::Kernel::None, ws->getSpecialCoordinateSystem());
-
-    ws->setCoordinateSystem(Mantid::Kernel::QLab);
-    TS_ASSERT_EQUALS(Mantid::Kernel::QLab, ws->getSpecialCoordinateSystem());
+  void test_getSpecialCoordinateSystem_when_MDFrames_are_set() {
+    // Arrange
+    const Mantid::Geometry::QSample frame;
+    auto ws = MDEventsTestHelper::makeAnyMDEWWithFrames<MDLeanEvent<2>, 2>(
+        10, 0.0, 10.0, frame, 1);
+    // Act
+    auto specialCoordinateSystem = ws->getSpecialCoordinateSystem();
+    // Assert
+    TSM_ASSERT_EQUALS("Should detect QSample as the SpecialCoordinate",
+                      specialCoordinateSystem,
+                      Mantid::Kernel::SpecialCoordinateSystem::QSample);
   }
 
   void test_getLinePlot() {
@@ -514,6 +554,8 @@ public:
     std::vector<coord_t> x;
     std::vector<signal_t> y, e;
     ew->getLinePlot(start, end, NoNormalization, x, y, e);
+    TS_ASSERT_EQUALS(y.size(), 500);
+    TS_ASSERT_EQUALS(x.size(), 500);
     for (size_t i = 0; i < y.size(); i += 10) {
       TS_ASSERT_EQUALS(y[i], signal);
     }
@@ -525,6 +567,31 @@ public:
     for (size_t i = 0; i < y.size(); i += 10) {
       TS_ASSERT_EQUALS(y[i], 1.0);
     }
+  }
+
+  void test_getLinePlotWithMaskedData() {
+    MDEventWorkspace3Lean::sptr ew =
+        MDEventsTestHelper::makeMDEW<3>(4, 0.0, 7.0, 3);
+
+    // Mask some of the workspace
+    std::vector<coord_t> min{0, 0, 0};
+    std::vector<coord_t> max{0.5, 0.5, 0.5};
+
+    // Create an function to mask some of the workspace.
+    MDImplicitFunction *function = new MDBoxImplicitFunction(min, max);
+    ew->setMDMasking(function);
+    ew->refreshCache();
+
+    Mantid::Kernel::VMD start(0, 0, 0);
+    Mantid::Kernel::VMD end(5, 0, 0);
+    std::vector<coord_t> x;
+    std::vector<signal_t> y, e;
+    ew->getLinePlot(start, end, NoNormalization, x, y, e);
+    // Masked data is omitted from line
+    TS_ASSERT_EQUALS(y.size(), 325);
+    TS_ASSERT_EQUALS(x.size(), 325);
+    // Unmasked data
+    TS_ASSERT_EQUALS(y[300], 3.0);
   }
 
   void test_that_sets_default_normalization_flags_to_volume_normalization() {
@@ -571,6 +638,38 @@ public:
     TSM_ASSERT_EQUALS(
         "Should be set to number of events normalizationnormalization",
         ew->displayNormalizationHisto(), histoSetting);
+  }
+
+  /**
+  * Test declaring an input IMDEventWorkspace and retrieving as const_sptr or
+  * sptr
+  */
+  void testGetProperty_const_sptr() {
+    const std::string wsName = "InputWorkspace";
+    IMDEventWorkspace_sptr wsInput(new MDEventWorkspace<MDLeanEvent<3>, 3>());
+    PropertyManagerHelper manager;
+    manager.declareProperty(wsName, wsInput, Direction::Input);
+
+    // Check property can be obtained as const_sptr or sptr
+    IMDEventWorkspace_const_sptr wsConst;
+    IMDEventWorkspace_sptr wsNonConst;
+    TS_ASSERT_THROWS_NOTHING(
+        wsConst = manager.getValue<IMDEventWorkspace_const_sptr>(wsName));
+    TS_ASSERT(wsConst != NULL);
+    TS_ASSERT_THROWS_NOTHING(
+        wsNonConst = manager.getValue<IMDEventWorkspace_sptr>(wsName));
+    TS_ASSERT(wsNonConst != NULL);
+    TS_ASSERT_EQUALS(wsConst, wsNonConst);
+
+    // Check TypedValue can be cast to const_sptr or to sptr
+    PropertyManagerHelper::TypedValue val(manager, wsName);
+    IMDEventWorkspace_const_sptr wsCastConst;
+    IMDEventWorkspace_sptr wsCastNonConst;
+    TS_ASSERT_THROWS_NOTHING(wsCastConst = (IMDEventWorkspace_const_sptr)val);
+    TS_ASSERT(wsCastConst != NULL);
+    TS_ASSERT_THROWS_NOTHING(wsCastNonConst = (IMDEventWorkspace_sptr)val);
+    TS_ASSERT(wsCastNonConst != NULL);
+    TS_ASSERT_EQUALS(wsCastConst, wsCastNonConst);
   }
 };
 

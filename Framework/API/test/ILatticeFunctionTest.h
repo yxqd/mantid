@@ -71,12 +71,7 @@ public:
   }
 
 private:
-  std::vector<V3D> getTestHKLs() {
-    std::vector<V3D> hkls;
-    hkls.push_back(V3D(1, 1, 0));
-
-    return hkls;
-  }
+  std::vector<V3D> getTestHKLs() { return {{1, 1, 0}}; }
 
   // Mock function to check whether the correct methods are called
   class MockLatticeFunction : public ILatticeFunction {
@@ -90,7 +85,7 @@ private:
 
     MOCK_METHOD2(functionDerivLattice, void(const LatticeDomain &, Jacobian &));
 
-    MOCK_METHOD1(setCrystalSystem, void(const std::string &));
+    MOCK_METHOD1(setLatticeSystem, void(const std::string &));
     MOCK_METHOD1(setUnitCell, void(const std::string &));
     MOCK_METHOD1(setUnitCell, void(const Mantid::Geometry::UnitCell &));
     MOCK_CONST_METHOD0(getUnitCell, Mantid::Geometry::UnitCell());

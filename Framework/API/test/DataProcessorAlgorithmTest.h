@@ -4,8 +4,6 @@
 #include <cxxtest/TestSuite.h>
 #include "MantidKernel/Timer.h"
 #include "MantidKernel/System.h"
-#include <iostream>
-#include <iomanip>
 #include "MantidAPI/DataProcessorAlgorithm.h"
 #include "MantidTestHelpers/FakeObjects.h"
 
@@ -134,7 +132,8 @@ class DataProcessorAlgorithmTest : public CxxTest::TestSuite {
       alg->initialize();
       alg->execute();
 
-      boost::shared_ptr<MatrixWorkspace> output(new WorkspaceTester());
+      boost::shared_ptr<MatrixWorkspace> output =
+          boost::make_shared<WorkspaceTester>();
       setProperty("OutputWorkspace", output);
     }
   };
@@ -163,7 +162,8 @@ public:
   }
 
   void test_Nested_History() {
-    boost::shared_ptr<WorkspaceTester> input(new WorkspaceTester());
+    boost::shared_ptr<WorkspaceTester> input =
+        boost::make_shared<WorkspaceTester>();
     AnalysisDataService::Instance().addOrReplace("test_input_workspace", input);
 
     TopLevelAlgorithm alg;
@@ -206,7 +206,8 @@ public:
   }
 
   void test_Dont_Record_Nested_History() {
-    boost::shared_ptr<WorkspaceTester> input(new WorkspaceTester());
+    boost::shared_ptr<WorkspaceTester> input =
+        boost::make_shared<WorkspaceTester>();
     AnalysisDataService::Instance().addOrReplace("test_input_workspace", input);
 
     TopLevelAlgorithm alg;

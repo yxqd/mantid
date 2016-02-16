@@ -2,6 +2,8 @@ import unittest
 from mantid.api import *
 import mantid.simpleapi as sapi
 
+import sys
+
 class EnggCalibrateTest(unittest.TestCase):
 
     _data_ws = None
@@ -77,10 +79,10 @@ class EnggCalibrateTest(unittest.TestCase):
         Checks normal operation.
         """
 
-        difc, zero = sapi.EnggCalibrate(InputWorkspace=self.__class__._data_ws,
-                                        VanIntegrationWorkspace=self.__class__._van_integ_tbl,
-                                        VanCurvesWorkspace=self.__class__._van_curves_ws,
-                                        ExpectedPeaks=[1.6, 1.1, 1.8], Bank='2')
+        difc, zero, peaks = sapi.EnggCalibrate(InputWorkspace=self.__class__._data_ws,
+                                               VanIntegrationWorkspace=self.__class__._van_integ_tbl,
+                                               VanCurvesWorkspace=self.__class__._van_curves_ws,
+                                               ExpectedPeaks=[1.6, 1.1, 1.8], Bank='2')
 
         self.check_3peaks_values(difc, zero)
 
@@ -91,33 +93,32 @@ class EnggCalibrateTest(unittest.TestCase):
         """
         # This file has: 1.6, 1.1, 1.8 (as the test above)
         filename = 'EnginX_3_expected_peaks_unittest.csv'
-        difc, zero = sapi.EnggCalibrate(InputWorkspace=self.__class__._data_ws,
-                                        VanIntegrationWorkspace=self.__class__._van_integ_tbl,
-                                        VanCurvesWorkspace=self.__class__._van_curves_ws,
-                                        ExpectedPeaks=[-4, 40, 323], # nonsense, but FromFile should prevail
-                                        ExpectedPeaksFromFile=filename,
-                                        Bank='2')
+        difc, zero, peaks = sapi.EnggCalibrate(InputWorkspace=self.__class__._data_ws,
+                                               VanIntegrationWorkspace=self.__class__._van_integ_tbl,
+                                               VanCurvesWorkspace=self.__class__._van_curves_ws,
+                                               ExpectedPeaks=[-4, 40, 323], # nonsense, but FromFile should prevail
+                                               ExpectedPeaksFromFile=filename,
+                                               Bank='2')
 
         self.check_3peaks_values(difc, zero)
 
     def check_3peaks_values(self, difc, zero):
         # There are platform specific differences in final parameter values
         # For example in earlier versions, debian: 369367.57492582797; win7: 369242.28850305633
-        expected_difc = 18446.903615
-        # win7 results were ~0.21-0.831% different (18485.223143) from linux expected values,
-        difc_err_epsilon = 1e-2
-
         # osx were ~0.995% different (18920.539474 instead of 18485.223143) in the best case but can
         # be as big as ~7.6% different (17066.631460 instead of 18485.223143)
-        import sys
-        if "darwin" == sys.platform:
+        # win7 with MSVC 2015 results were ~4.1% different  from linux expected values,
+        if "darwin" == sys.platform or "win32" == sys.platform:
             return
+        else:
+            expected_difc = 18446.903615
+            expected_zero = 416.082164
+        difc_err_epsilon = 1e-2
 
         # assertLess would be nice, but only available in unittest >= 2.7
         self.assertTrue(abs((expected_difc-difc)/expected_difc) < difc_err_epsilon,
                         "Difc (%f) is too far from its expected value (%f)" %(difc, expected_difc))
 
-        expected_zero = 416.082164
         # especially this zero parameter is extremely platform dependent/sensitive
         # Examples:
         # ubuntu: -724.337354; win7: -995.879786, osx: -396.628396

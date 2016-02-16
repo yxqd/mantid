@@ -36,11 +36,9 @@ void SaveNexus::init() {
   declareProperty(
       new WorkspaceProperty<Workspace>("InputWorkspace", "", Direction::Input),
       "Name of the workspace to be saved");
-  std::vector<std::string> exts;
-  exts.push_back(".nxs");
-  exts.push_back(".nx5");
-  exts.push_back(".xml");
-  declareProperty(new FileProperty("Filename", "", FileProperty::Save, exts),
+
+  declareProperty(new FileProperty("Filename", "", FileProperty::Save,
+                                   {".nxs", ".nx5", ".xml"}),
                   "The name of the Nexus file to write, as a full or relative\n"
                   "path");
   //
@@ -147,7 +145,7 @@ void SaveNexus::runSaveNexusProcessed() {
   // If we're tracking history, add the entry before we save it to file
   if (trackingHistory()) {
     m_history->fillAlgorithmHistory(
-        this, Mantid::Kernel::DateAndTime::getCurrentTime(), -1,
+        this, Mantid::Kernel::DateAndTime::getCurrentTime(), 0,
         Algorithm::g_execCount);
     if (!isChild()) {
       m_inputWorkspace->history().addHistory(m_history);

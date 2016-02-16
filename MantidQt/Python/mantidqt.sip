@@ -66,12 +66,21 @@
 %End
 };
 
+namespace GraphOptions
+{
+%TypeHeaderCode
+#include "MantidQtAPI/GraphOptions.h"
+%End
+
+  enum ScaleType {Linear, Log10};
+
+  enum Axis{Left, Right, Bottom, Top};
+};
 
 namespace Mantid
 {
 namespace API
 {
-
 
 enum MDNormalization
 {
@@ -1139,6 +1148,16 @@ Mantid::API::MDNormalization SliceViewer::getNormalization()
         the current normalization
 %End
 
+  void setColorBarAutoScale(bool autoscale);
+%Docstring
+void SliceViewer::setColorBarAutoScale(bool autoscale)
+------------------------------------------------------
+    Set autoscaling for the color scale on or off
+	
+	Args:
+	    autoscale :: on/off status for autoscaling
+
+%End
 
   //*WIKI* ==== Dynamic Rebinning ====
   void setRebinThickness(int dim, double thickness)   throw (std::runtime_error);
@@ -1171,9 +1190,9 @@ void SliceViewer::setRebinNumBins(int xBins, int yBins)
 
 %End
 
-  void setRebinMode(bool mode, bool locked)   throw (std::runtime_error);
+  void setRebinMode(bool mode)   throw (std::runtime_error);
 %Docstring
-void SliceViewer::setRebinMode(bool mode, bool locked)
+void SliceViewer::setRebinMode(bool mode)
 ------------------------------------------------------
     Sets the SliceViewer in dynamic rebin mode.
     In this mode, the current view area (see setXYLimits()) is used as the
@@ -1183,8 +1202,6 @@ void SliceViewer::setRebinMode(bool mode, bool locked)
 
     Args:
         mode :: true for rebinning mode
-        locked :: if true, then the rebinned area is only refreshed manually
-           or when changing rebinning parameters.
 
 %End
 
@@ -1443,8 +1460,421 @@ SlitCalculator
 public:
   SlitCalculator(QWidget* parent);
   virtual ~SlitCalculator();
+  void setCurrentInstrumentName(char*);
+  void processInstrumentHasBeenChanged();
 
 };
 
 }; // end namespace MantidWidgets
 }; // end namespace MantidQt
+
+
+
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+
+namespace MantidQt
+{
+namespace API
+{
+
+class WidgetScrollbarDecorator
+{
+%TypeHeaderCode
+#include "MantidQtAPI/WidgetScrollbarDecorator.h"
+%End
+%Docstring
+
+WidgetScrollbarDecorator
+=================
+
+    Adds scrollbar functionality to a QWidget
+
+    Mainly intended to make QDialogs and QMainWindows scrollable since this
+    feature is missing in Qt. This allows particularly large dialogs to be
+    used on laptops and other devices with small screens.
+
+    Usage:
+        from mantidqtpython import MantidQt
+
+        # Usually in __init__ or other setup function
+        self._scrollbars = MantidQt.API.WidgetScrollbarDecorator(self)
+        self._scrollbars.setEnabled(True) # Must come after setupUi(self)!
+
+%End
+
+public:
+    explicit WidgetScrollbarDecorator(QWidget *target);
+%Docstring
+WidgetScrollbarDecorator::WidgetScrollbarDecorator(QWidget *target)
+------------------------------
+    Constructor. Decorates the target widget to add scrollbars to it.
+
+    Scrollbars are disabled by default and must be enabled using:
+    setEnabled(True)
+
+%End
+
+    virtual ~WidgetScrollbarDecorator();
+
+    bool enabled() const;
+    void setEnabled(bool enable);
+%Docstring
+WidgetScrollbarDecorator::setEnabled(bool enable)
+------------------------------
+    Enables or disables scrollbars on the target widget.
+
+    Note: setupUi() MUST be called before scrollbars are enabled.
+
+%End
+
+    void setThresholdWidth(int width);
+%Docstring
+setThresholdWidth(int width)
+------------------------------
+    Set the width, in pixels, at which scrollbars should appear
+
+%End
+
+    void setThresholdHeight(int height);
+%Docstring
+setThresholdHeight(int height)
+------------------------------
+    Set the height, in pixels, at which scrollbars should appear
+
+%End
+
+    void setThresholdSize(int width, int height);
+%Docstring
+setThresholdSize(int width, int height)
+------------------------------
+    Set the size, in pixels, at which scrollbars should appear
+
+%End
+
+};
+
+}; // end namespace API
+}; // end namespace MantidQt
+
+namespace MantidQt
+{
+namespace MantidWidgets
+{
+class InstrumentWidgetTab: QFrame
+{
+%TypeHeaderCode
+#include "MantidQtMantidWidgets/InstrumentView/InstrumentWidgetTab.h"
+%End
+public:
+	// This is a duplicate from the same enum in InstrumentWidget, just so you
+	// can do like InstrumentWidgetRenderTab.FULL3D
+	enum SurfaceType { FULL3D, CYLINDRICAL_X, CYLINDRICAL_Y, CYLINDRICAL_Z,
+                     SPHERICAL_X, SPHERICAL_Y, SPHERICAL_Z,
+                     RENDERMODE_SIZE };
+private:
+  InstrumentWidgetTab(const MantidQt::MantidWidgets::InstrumentWidgetTab &);
+};
+
+class InstrumentWidget: QWidget
+{
+%TypeHeaderCode
+#include "MantidQtMantidWidgets/InstrumentView/InstrumentWidget.h"
+%End
+
+%Docstring
+    The InstrumentWidget contains functionality for exploring
+    a 3D model of an instrument. It is a tabbed widget offering
+    rendering, picking, masking and grouping functions. There is
+    also a tree view of the instrument hierarchy.
+
+    For further help see the functions defined on each of the following
+        - InstrumentWidgetRenderTab
+        - InstrumentWidgetPickTab
+        - InstrumentWidgetMaskTab
+%End
+
+public:
+  // Note this enum is also defined in InstrumentWidgetTab
+  enum SurfaceType { FULL3D, CYLINDRICAL_X, CYLINDRICAL_Y, CYLINDRICAL_Z,
+                     SPHERICAL_X, SPHERICAL_Y, SPHERICAL_Z,
+                     RENDERMODE_SIZE };
+  enum Tab { RENDER, PICK, MASK, TREE };
+  
+  InstrumentWidget(const QString &wsName, QWidget *parent = nullptr,
+				bool resetGeometry = true, bool autoscaling = true,
+				double scaleMin = 0.0, double scaleMax = 0.0,
+				bool setDefaultView = true);
+
+  MantidQt::MantidWidgets::InstrumentWidgetTab * getTab(const QString & title) const;
+%Docstring
+    Returns a handler to the requested tab
+
+    Args:
+
+        title The full title of a tab in the window
+
+    Returns:
+        a pointer to the requested tab widget
+
+%End
+
+  MantidQt::MantidWidgets::InstrumentWidgetTab * getTab(const Tab tab) const;
+%Docstring
+    Returns a handler to the requested tab
+
+    Args:
+        tab One of the Tab enumeration types:
+	    InstrumentWidget.RENDER,InstrumentWidget.PICK,
+	    InstrumentWidget.MASK,InstrumentWidget.TREE
+
+    Returns:
+        a pointer to the requested tab widget
+
+%End
+
+  void setBinRange(double min_value, double max_value);
+%Docstring
+    Updates the integration range over which the colours
+    are calculated
+
+    Args:
+        min_value The minimum value over which the data is integrated
+        max_value The maximum value over which the data is integrated
+
+%End
+
+  bool overlay(const QString & wsName);
+%Docstring
+    Overlays a workspace onto an unwrapped surface on the instrument view.
+    Raises a dialog box if the current surface is not unwrapped.
+
+    Args:
+        wsName The name of the workspace
+
+    Returns:
+        A boolean indicating if the overlay was successful or not
+
+%End
+
+  // -- Deprecated in favour of specific tab functions --
+  // Deprecation is done in mantidplot.py module rather than using
+  // sip /Deprecated/annotation so that the message can be customised
+  void changeColormap();
+  void changeColormap(const QString & file);
+  void setColorMapMinValue(double);
+  void setColorMapMaxValue(double);
+  void setColorMapRange(double, double);
+  void selectComponent(const QString &);
+  void setScaleType(GraphOptions::ScaleType);
+  void setViewType(const QString &);
+
+private:
+InstrumentWidget(const MantidQt::MantidWidgets::InstrumentWidget &);
+};
+
+class InstrumentWidgetRenderTab: MantidQt::MantidWidgets::InstrumentWidgetTab
+{
+%TypeHeaderCode
+#include "MantidQtMantidWidgets/InstrumentView/InstrumentWidgetRenderTab.h"
+%End
+
+public:
+
+  GraphOptions::ScaleType getScaleType() const;
+%Docstring
+    Returns the current scale type. 0=Linear, 1=Log10
+%End
+
+  void setScaleType(GraphOptions::ScaleType type);
+%Docstring
+    Set the scale type for the colour bar.
+
+    Args:
+        type The new type Options are: GraphOptions.Linear, GraphOptions.Log10
+%End
+
+  void setAxis(const QString& axisName);
+%Docstring
+    Set the current viewing axis by name.
+
+    Args:
+       axisName The name of a view in a string: X+,X-,Y+,Y-,Z+,Z-
+%End
+
+  void setMinValue(double value, bool apply = true);
+%Docstring
+    Set the minimum value for the colour scale
+
+    Args:
+       value The new value for the minimum
+%End
+
+  void setMaxValue(double value, bool apply = true);
+%Docstring
+    Set the maximum value for the colour scale
+
+    Args:
+       value The new value for the maximum
+%End
+
+  void setRange(double minValue, double maxValue, bool apply = true);
+%Docstring
+    Set the range of the colour bar
+
+    Args:
+        minValue The new value for the minimum
+        maxValue The new value for the maximum
+%End
+
+  void showAxes(bool on);
+%Docstring
+    Set the axes on/off
+
+    Args:
+        on True/False indicating whether the axes are visible
+%End
+
+  void setColorMapAutoscaling(bool on);
+%Docstring
+    Set whether the colour scale should auto scale when the data is updated
+
+    Args:
+        on True/False indicating whether auto scaling is active
+%End
+
+  void displayDetectorsOnly(bool yes);
+%Docstring
+    Set whether only detectors should be shown.
+
+    Args:
+        yes True/False indicating whether only detectors are shown
+%End
+
+  void enableGL(bool on);
+%Docstring
+    Toggle the use of OpenGL. This can only be used for the unwrapped views.
+
+    Args:
+        on True/False indicating whether OpenGL should be used.
+%End
+
+  void changeColorMap(const QString & filename = "");
+%Docstring
+    Change the color map for the given one. If blank then a dialog is raised
+
+    Args:
+        filename A filename giving the full path to a color map file
+%End
+
+  void setSurfaceType(int type);
+%Docstring
+    Set the surface type of the current window.
+
+    Args:
+        type A known suface type: FULL3D, CYLINDRICAL_X, CYLINDRICAL_Y,
+                                  CYLINDRICAL_Z,SPHERICAL_X, SPHERICAL_Y,
+                                  SPHERICAL_Z
+%End
+
+  void flipUnwrappedView(bool on);
+%Docstring
+    Set whether an unwrapped view is flipped
+
+    Args:
+        on True/False indicatingif to flip the view
+%End
+
+  void saveImage(QString filename = "");
+%Docstring
+    Save the current display buffer to an image file. The format is chosen by the filename extension and must
+    be one of .bmp,.jpeg,.jpeg,.png,.ppm,.tiff,.xbm,.xpm
+
+    Args:
+        filename The filename for the saved image. An empty string raises a dialog box.
+%End
+
+private:
+  InstrumentWidgetRenderTab();
+  InstrumentWidgetRenderTab(const MantidQt::MantidWidgets::InstrumentWidgetRenderTab &);
+};
+
+class InstrumentWidgetPickTab: MantidQt::MantidWidgets::InstrumentWidgetTab
+{
+%TypeHeaderCode
+#include "MantidQtMantidWidgets/InstrumentView/InstrumentWidgetPickTab.h"
+%End
+
+public:
+  enum ToolType {Zoom, PixelSelect, TubeSelect, PeakSelect, PeakErase};
+
+  void selectTool(const ToolType tool);
+%Docstring
+    Select the active tool.
+
+    Args:
+        tool One of InstrumentWidgetPickTab.{Zoom, PixelSelect, TubeSelect, PeakSelect, PeakErase}
+%End
+
+private:
+  InstrumentWidgetPickTab();
+  InstrumentWidgetPickTab(const MantidQt::MantidWidgets::InstrumentWidgetPickTab &);
+};
+
+class InstrumentWidgetMaskTab: MantidQt::MantidWidgets::InstrumentWidgetTab
+{
+%TypeHeaderCode
+#include "MantidQtMantidWidgets/InstrumentView/InstrumentWidgetMaskTab.h"
+%End
+
+public:
+  enum Mode {Mask, Group};
+  enum Activity {Move,Select,DrawEllipse,DrawRectangle,DrawEllipticalRing,DrawRectangularRing};
+
+  void setMode(Mode mode);
+%Docstring
+  Set the mode to either group/mask
+
+  Args:
+      mode One of the Mode enumerations InstrumentWidgetMaskTab.{Mask, Group}
+%End
+
+  void selectTool(Activity tool);
+%Docstring
+  Set the mode to either group/mask
+
+  Args:
+      tool One of the Activity enumerations InstrumentWidgetMaskTab.{Move,Select,DrawEllipse,DrawRectangle,DrawEllipticalRing,DrawRectangularRing}
+%End
+
+private:
+  InstrumentWidgetMaskTab();
+  InstrumentWidgetMaskTab(const MantidQt::MantidWidgets::InstrumentWidgetMaskTab &);
+};
+
+class InstrumentWidgetTreeTab: MantidQt::MantidWidgets::InstrumentWidgetTab
+{
+%TypeHeaderCode
+#include "MantidQtMantidWidgets/InstrumentView/InstrumentWidgetTreeTab.h"
+%End
+
+public:
+  void selectComponentByName(const QString& name);
+%Docstring
+    Sets the tree tab to center the view on the named component
+
+    Args:
+        name The name of a component in the instrument
+%End
+
+private:
+  InstrumentWidgetTreeTab();
+  InstrumentWidgetTreeTab(const MantidQt::MantidWidgets::InstrumentWidgetTreeTab &);
+};
+
+};//end namespace MantidWidgets
+};//end namespace MantidQt
+
+
+

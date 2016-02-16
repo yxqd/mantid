@@ -7,7 +7,7 @@
 #include <gsl/gsl_blas.h>
 #include "MantidAPI/IFunction.h"
 #include "MantidAPI/ICostFunction.h"
-#include "MantidCurveFitting/CostFuncLeastSquares.h"
+#include "MantidCurveFitting/CostFunctions/CostFuncLeastSquares.h"
 
 namespace Mantid {
 namespace CurveFitting {
@@ -55,7 +55,7 @@ public:
   /// @param iActiveP :: the index of the parameter
   ///  @throw runtime_error Thrown if column of Jacobian to add number to does
   ///  not exist
-  void addNumberToColumn(const double &value, const size_t &iActiveP) {
+  void addNumberToColumn(const double &value, const size_t &iActiveP) override {
     if (iActiveP < m_J->size2) {
       // add penalty to first and last point and every 10th point in between
       m_J->data[iActiveP] += value;
@@ -68,13 +68,13 @@ public:
     }
   }
   /// overwrite base method
-  void set(size_t iY, size_t iP, double value) {
+  void set(size_t iY, size_t iP, double value) override {
     int j = m_index[iP];
     if (j >= 0)
       gsl_matrix_set(m_J, iY, j, value);
   }
   /// overwrite base method
-  double get(size_t iY, size_t iP) {
+  double get(size_t iY, size_t iP) override {
     int j = m_index[iP];
     if (j >= 0)
       return gsl_matrix_get(m_J, iY, j);
@@ -85,7 +85,7 @@ public:
 /// Structure to contain least squares data and used by GSL
 struct GSL_FitData {
   /// Constructor
-  GSL_FitData(boost::shared_ptr<CostFuncLeastSquares> cf);
+  GSL_FitData(boost::shared_ptr<CostFunctions::CostFuncLeastSquares> cf);
   /// Destructor
   ~GSL_FitData();
   /// number of points to be fitted (size of X, Y and sqrtWeightData arrays)
@@ -94,14 +94,14 @@ struct GSL_FitData {
   size_t p;
   /// Pointer to the function
   API::IFunction_sptr function;
-  boost::shared_ptr<CostFuncLeastSquares> costFunction;
+  boost::shared_ptr<CostFunctions::CostFuncLeastSquares> costFunction;
   /// Initial function parameters
   gsl_vector *initFuncParams;
   /// Jacobi matrix interface
   JacobianImpl1 J;
 
   // this is presently commented out in the implementation
-  // gsl_matrix *holdCalculatedJacobian; ///< cache of the claculated jacobian
+  // gsl_matrix *holdCalculatedJacobian; ///< cache of the calculated jacobian
 };
 
 int gsl_f(const gsl_vector *x, void *params, gsl_vector *f);

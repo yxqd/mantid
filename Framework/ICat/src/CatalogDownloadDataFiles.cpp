@@ -6,6 +6,9 @@
 #include "MantidKernel/PropertyWithValue.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/ConfigService.h"
+#include "MantidKernel/ICatalogInfo.h"
+#include "MantidKernel/CatalogInfo.h"
+#include "MantidKernel/UserCatalogInfo.h"
 #include "MantidKernel/ArrayProperty.h"
 
 #include <Poco/Net/AcceptCertificateHandler.h>
@@ -22,6 +25,7 @@
 
 #include <fstream>
 #include <iomanip>
+#include <memory>
 
 namespace Mantid {
 namespace ICat {
@@ -57,9 +61,10 @@ void CatalogDownloadDataFiles::exec() {
     throw std::runtime_error("The catalog that you are using does not support "
                              "external downloading.");
 
-  // Used in order to transform the archive path to the user's operating system.
-  CatalogInfo catalogInfo =
-      ConfigService::Instance().getFacility().catalogInfo();
+  std::unique_ptr<CatalogConfigService> catConfigService(
+      makeCatalogConfigServiceAdapter(ConfigService::Instance()));
+  UserCatalogInfo catalogInfo(
+      ConfigService::Instance().getFacility().catalogInfo(), *catConfigService);
 
   std::vector<int64_t> fileIDs = getProperty("FileIds");
   std::vector<std::string> fileNames = getProperty("FileNames");
@@ -86,7 +91,8 @@ void CatalogDownloadDataFiles::exec() {
 
     g_log.debug()
         << "CatalogDownloadDataFiles -> File location before transform is: "
-        << fileLocation << std::endl;
+        << fileLocation << " mac path is : " << catalogInfo.macPrefix()
+        << std::endl;
     // Transform the archive path to the path of the user's operating system.
     fileLocation = catalogInfo.transformArchivePath(fileLocation);
     g_log.debug()
@@ -141,13 +147,11 @@ std::string CatalogDownloadDataFiles::doDownloadandSavetoLocalDrive(
     const std::string &URL, const std::string &fileName) {
   std::string pathToDownloadedDatafile;
 
-  clock_t start;
-
   try {
     Poco::URI uri(URL);
 
     std::string path(uri.getPathAndQuery());
-    start = clock();
+    clock_t start = clock();
 
     Poco::SharedPtr<Poco::Net::InvalidCertificateHandler> certificateHandler =
         new Poco::Net::AcceptCertificateHandler(true);
@@ -158,8 +162,8 @@ std::string CatalogDownloadDataFiles::doDownloadandSavetoLocalDrive(
                                Poco::Net::Context::VERIFY_NONE);
     // Create a singleton for holding the default context. E.g. any future
     // requests to publish are made to this certificate and context.
-    Poco::Net::SSLManager::instance().initializeClient(NULL, certificateHandler,
-                                                       context);
+    Poco::Net::SSLManager::instance().initializeClient(
+        nullptr, certificateHandler, context);
 
     // Session takes ownership of socket
     Poco::Net::SecureStreamSocket *socket =

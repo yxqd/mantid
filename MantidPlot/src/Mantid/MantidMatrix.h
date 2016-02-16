@@ -1,6 +1,26 @@
 #ifndef MANTIDMATRIX_H
 #define MANTIDMATRIX_H
 
+#include <map>
+#include <math.h>
+#include <string>
+
+#include "MantidMatrixExtensionRequest.h"
+#include "MantidMatrixModel.h"
+#include "MantidMatrixTabExtension.h"
+
+#include "Mantid/IProjectSerialisable.h"
+#include "MantidAPI/AnalysisDataService.h"
+#include "MantidAPI/FrameworkManager.h"
+#include "MantidAPI/MatrixWorkspace_fwd.h"
+#include "MantidQtAPI/WorkspaceObserver.h"
+#include "../ContourLinesEditor.h"
+#include "../Graph.h"
+#include "../MdiSubWindow.h"
+#include "../UserFunction.h"
+
+#include <Poco/NObserver.h>
+
 #include <QHeaderView>
 #include <QTableView>
 #include <QPrinter>
@@ -11,31 +31,8 @@
 #include <QMap>
 #include <QPointer>
 
-#include <Poco/NObserver.h>
-
-#include "MantidAPI/MatrixWorkspace_fwd.h"
-#include "MantidAPI/AnalysisDataService.h"
-#include "../UserFunction.h"
-#include "../MdiSubWindow.h"
-#include "../Graph.h"
-#include "MantidQtAPI/WorkspaceObserver.h"
-#include "Mantid/IProjectSerialisable.h"
-
 #include <qwt_double_rect.h>
 #include <qwt_color_map.h>
-
-#include <math.h>
-#include <string>
-#include <iostream>
-#include <map>
-
-#include "MantidAPI/FrameworkManager.h"
-#include "../ContourLinesEditor.h"
-
-#include "MantidMatrixExtensionRequest.h"
-#include "MantidMatrixModel.h"
-#include "MantidMatrixTabExtension.h"
-
 
 class QLabel;
 class QStackedWidget;
@@ -148,8 +145,9 @@ public:
   int precision();
 
   // Loading and saving projects
-  void loadFromProject(const std::string& lines, ApplicationWindow* app, const int fileVersion);
-  std::string saveToProject(ApplicationWindow* app);
+  void loadFromProject(const std::string &lines, ApplicationWindow *app,
+                       const int fileVersion) override;
+  std::string saveToProject(ApplicationWindow *app) override;
 
   /// returns the workspace name
   const std::string & getWorkspaceName();
@@ -159,9 +157,13 @@ public:
   /// A better solution is needed
   void attachMultilayer(MultiLayer*);
 
-  void afterReplaceHandle(const std::string& wsName,const boost::shared_ptr<Mantid::API::Workspace> ws);
-  void preDeleteHandle(const std::string& wsName,const boost::shared_ptr<Mantid::API::Workspace> ws);
-  void clearADSHandle();
+  void afterReplaceHandle(
+      const std::string &wsName,
+      const boost::shared_ptr<Mantid::API::Workspace> ws) override;
+  void
+  preDeleteHandle(const std::string &wsName,
+                  const boost::shared_ptr<Mantid::API::Workspace> ws) override;
+  void clearADSHandle() override;
 
 signals:
   void needWorkspaceChange(Mantid::API::MatrixWorkspace_sptr ws);
@@ -232,7 +234,7 @@ signals:
     void repaintAll();
     void closeDependants();
     // for context menu filtering
-    bool eventFilter(QObject *object, QEvent *e);
+    bool eventFilter(QObject *object, QEvent *e) override;
     //to synchronize the views
     void viewChanged(int);
 

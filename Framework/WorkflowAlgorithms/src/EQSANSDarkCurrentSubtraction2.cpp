@@ -3,14 +3,16 @@
 //----------------------------------------------------------------------
 #include "MantidWorkflowAlgorithms/EQSANSDarkCurrentSubtraction2.h"
 #include "MantidDataObjects/EventWorkspace.h"
-#include "MantidAPI/WorkspaceValidators.h"
-#include "MantidKernel/TimeSeriesProperty.h"
+#include "MantidAPI/AlgorithmProperty.h"
 #include "MantidAPI/FileProperty.h"
+#include "MantidAPI/PropertyManagerDataService.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
+#include "MantidGeometry/IDetector.h"
+#include "MantidKernel/PropertyManager.h"
+#include "MantidKernel/TimeSeriesProperty.h"
+
 #include "Poco/Path.h"
 #include "Poco/String.h"
-#include "MantidAPI/AlgorithmProperty.h"
-#include "MantidAPI/PropertyManagerDataService.h"
-#include "MantidKernel/PropertyManager.h"
 
 namespace Mantid {
 namespace WorkflowAlgorithms {
@@ -24,8 +26,7 @@ using namespace Geometry;
 using namespace DataObjects;
 
 void EQSANSDarkCurrentSubtraction2::init() {
-  auto wsValidator = boost::make_shared<CompositeValidator>();
-  wsValidator->add<WorkspaceUnitValidator>("Wavelength");
+  auto wsValidator = boost::make_shared<WorkspaceUnitValidator>("Wavelength");
   declareProperty(new WorkspaceProperty<>("InputWorkspace", "",
                                           Direction::Input, wsValidator));
 

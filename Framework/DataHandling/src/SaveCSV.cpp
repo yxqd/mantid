@@ -27,7 +27,6 @@
 #include "MantidAPI/FileProperty.h"
 
 #include <fstream> // used to get ofstream
-#include <iomanip> // setw() used below
 
 /* @class SaveCSV
 
@@ -130,8 +129,8 @@ void SaveCSV::exec() {
 
       outCSV_File << "A";
 
-      for (int j = 0; j < (int)xValue.size(); j++) {
-        outCSV_File << std::setw(15) << xValue[j] << m_separator;
+      for (double j : xValue) {
+        outCSV_File << std::setw(15) << j << m_separator;
       }
 
       outCSV_File << m_lineSeparator;
@@ -148,8 +147,8 @@ void SaveCSV::exec() {
         if (xValue != xValuePrevious) {
           outCSV_File << "A";
 
-          for (int j = 0; j < (int)xValue.size(); j++) {
-            outCSV_File << std::setw(15) << xValue[j] << m_separator;
+          for (double j : xValue) {
+            outCSV_File << std::setw(15) << j << m_separator;
           }
 
           outCSV_File << m_lineSeparator;
@@ -162,8 +161,8 @@ void SaveCSV::exec() {
 
       outCSV_File << i;
 
-      for (int j = 0; j < (int)yValue.size(); j++) {
-        outCSV_File << std::setw(15) << yValue[j] << m_separator;
+      for (double j : yValue) {
+        outCSV_File << std::setw(15) << j << m_separator;
       }
 
       outCSV_File << m_lineSeparator;
@@ -178,8 +177,8 @@ void SaveCSV::exec() {
 
       outCSV_File << i;
 
-      for (int j = 0; j < (int)eValue.size(); j++) {
-        outCSV_File << std::setw(15) << eValue[j] << m_separator;
+      for (double j : eValue) {
+        outCSV_File << std::setw(15) << j << m_separator;
       }
       outCSV_File << m_lineSeparator;
       p.report();
@@ -214,8 +213,8 @@ void SaveCSV::saveXerrors(std::ofstream &stream,
 
     stream << i;
 
-    for (int j = 0; j < (int)dXvalue.size(); j++) {
-      stream << std::setw(15) << dXvalue[j] << m_separator;
+    for (double j : dXvalue) {
+      stream << std::setw(15) << j << m_separator;
     }
     stream << m_lineSeparator;
     p.report("Saving x errors...");

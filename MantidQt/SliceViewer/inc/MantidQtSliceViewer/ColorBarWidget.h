@@ -6,7 +6,6 @@
 #include <qwt_color_map.h>
 #include <qwt_scale_widget.h>
 #include "MantidQtAPI/MantidColorMap.h"
-#include <iostream>
 #include <QKeyEvent>
 #include <QtGui>
 #include "DllOption.h"
@@ -78,6 +77,11 @@ public:
 
   void setExponent(double);
   double getExponent();
+
+  void setAutoScale(bool autoscale);
+  bool getAutoScale() const;
+
+  bool getAutoColorScaleforCurrentSlice() const;
 
 
 public slots:

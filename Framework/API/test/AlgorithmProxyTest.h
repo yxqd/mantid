@@ -140,9 +140,7 @@ public:
     TS_ASSERT_EQUALS(alg->name(), "ToyAlgorithmProxyMultipleCategory");
     TS_ASSERT_EQUALS(alg->version(), 1);
     TS_ASSERT_EQUALS(alg->category(), "ProxyCat;ProxyLeopard");
-    std::vector<std::string> result;
-    result.push_back("ProxyCat");
-    result.push_back("ProxyLeopard");
+    std::vector<std::string> result{"ProxyCat", "ProxyLeopard"};
     TS_ASSERT_EQUALS(alg->categories(), result);
     TS_ASSERT_EQUALS(alg->alias(), "Dog");
     TS_ASSERT(alg->isInitialized());
@@ -211,6 +209,30 @@ public:
       TS_ASSERT_EQUALS("ITableWorkspace", types[1]);
     }
     TS_ASSERT_EQUALS("InputWorkspace", alg->workspaceMethodInputProperty());
+  }
+
+  void test_copyPropertiesFrom() {
+    IAlgorithm_sptr alg =
+        AlgorithmManager::Instance().create("ToyAlgorithmProxy");
+    alg->initialize();
+    alg->setPropertyValue("prop1", "string");
+    alg->setPropertyValue("prop2", "1");
+    IAlgorithm_sptr algCopy =
+        AlgorithmManager::Instance().create("ToyAlgorithmProxy");
+
+    auto algProxy = boost::dynamic_pointer_cast<AlgorithmProxy>(alg);
+    auto algCopyProxy = boost::dynamic_pointer_cast<AlgorithmProxy>(algCopy);
+    algCopyProxy->copyPropertiesFrom(*algProxy);
+
+    int val = boost::lexical_cast<int>(algCopy->getPropertyValue("prop2"));
+
+    TS_ASSERT_EQUALS(val, 1);
+
+    // set another value and check the other value is unaffected
+    algCopy->setPropertyValue("prop1", "A difference");
+    int val2 = boost::lexical_cast<int>(algCopy->getPropertyValue("prop2"));
+
+    TS_ASSERT_EQUALS(val, val2);
   }
 };
 

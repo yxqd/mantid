@@ -3,7 +3,6 @@
 //----------------------------------------------------------------------
 #include "MantidWorkflowAlgorithms/SANSSensitivityCorrection.h"
 #include "MantidDataObjects/EventWorkspace.h"
-#include "MantidAPI/WorkspaceValidators.h"
 #include "MantidAPI/AnalysisDataService.h"
 #include "MantidDataObjects/TableWorkspace.h"
 #include "MantidKernel/TimeSeriesProperty.h"
@@ -34,22 +33,15 @@ using namespace DataObjects;
 void SANSSensitivityCorrection::init() {
   declareProperty(new WorkspaceProperty<>(
       "InputWorkspace", "", Direction::Input, PropertyMode::Optional));
-
-  std::vector<std::string> exts;
-  exts.push_back("_event.nxs");
-  exts.push_back(".xml");
-  declareProperty(
-      new API::FileProperty("Filename", "", API::FileProperty::Load, exts),
-      "Flood field or sensitivity file.");
+  declareProperty(new API::FileProperty("Filename", "", API::FileProperty::Load,
+                                        {"_event.nxs", ".xml"}),
+                  "Flood field or sensitivity file.");
   declareProperty("UseSampleDC", true, "If true, the dark current subtracted "
                                        "from the sample data will also be "
                                        "subtracted from the flood field.");
-  std::vector<std::string> dc_exts;
-  dc_exts.push_back("_event.nxs");
-  dc_exts.push_back(".xml");
   declareProperty(new API::FileProperty("DarkCurrentFile", "",
                                         API::FileProperty::OptionalLoad,
-                                        dc_exts),
+                                        {"_event.nxs", ".xml"}),
                   "The name of the input file to load as dark current.");
 
   auto positiveDouble = boost::make_shared<BoundedValidator<double>>();
@@ -101,9 +93,7 @@ bool SANSSensitivityCorrection::fileCheck(const std::string &filePath) {
     return false;
   }
 
-  if (entryName[0] == "mantid_workspace_1")
-    return true;
-  return false;
+  return entryName[0] == "mantid_workspace_1";
 }
 
 void SANSSensitivityCorrection::exec() {

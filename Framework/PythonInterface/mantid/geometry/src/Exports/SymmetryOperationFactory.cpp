@@ -13,8 +13,8 @@ boost::python::list createSymOps(SymmetryOperationFactoryImpl &self,
   std::vector<SymmetryOperation> symOps = self.createSymOps(identifiers);
 
   boost::python::list pythonOperations;
-  for (auto it = symOps.begin(); it != symOps.end(); ++it) {
-    pythonOperations.append(*it);
+  for (auto &symOp : symOps) {
+    pythonOperations.append(symOp);
   }
 
   return pythonOperations;
@@ -25,14 +25,16 @@ void export_SymmetryOperationFactory() {
   class_<SymmetryOperationFactoryImpl, boost::noncopyable>(
       "SymmetryOperationFactoryImpl", no_init)
       .def("exists", &SymmetryOperationFactoryImpl::isSubscribed,
+           (arg("self"), arg("identifier")),
            "Returns true if the symmetry operation is supplied.")
       .def("createSymOp", &SymmetryOperationFactoryImpl::createSymOp,
+           (arg("self"), arg("identifier")),
            "Creates the symmetry operation from the supplied x,y,z-identifier.")
-      .def("createSymOps", &createSymOps,
+      .def("createSymOps", &createSymOps, (arg("self"), arg("identifier")),
            "Creates a vector of SymmetryOperation objects from a semi-colon "
            "separated list of x,y,z-identifiers.")
       .def("subscribedSymbols",
-           &SymmetryOperationFactoryImpl::subscribedSymbols,
+           &SymmetryOperationFactoryImpl::subscribedSymbols, arg("self"),
            "Return all subscribed symbols.")
       .def("Instance", &SymmetryOperationFactory::Instance,
            return_value_policy<reference_existing_object>(),

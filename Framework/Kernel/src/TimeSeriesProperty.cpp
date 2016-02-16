@@ -57,6 +57,54 @@ TimeSeriesProperty<TYPE>::cloneWithTimeShift(const double timeShift) const {
   return timeSeriesProperty;
 }
 
+/** Return time series property, containing time derivative of current property.
+* The property itself and the returned time derivative become sorted by time and
+* the derivative is calculated in seconds^-1.
+* (e.g. dValue/dT where dT=t2-t1 is time difference in seconds
+* for subsequent time readings and dValue=Val1-Val2 is difference in
+* subsequent values)
+*
+*/
+template <typename TYPE>
+std::unique_ptr<TimeSeriesProperty<double>>
+TimeSeriesProperty<TYPE>::getDerivative() const {
+
+  if (this->m_values.size() < 2) {
+    throw std::runtime_error("Derivative is not defined for a time-series "
+                             "property with less then two values");
+  }
+
+  this->sort();
+  auto it = this->m_values.begin();
+  int64_t t0 = it->time().totalNanoseconds();
+  TYPE v0 = it->value();
+
+  it++;
+  auto timeSeriesDeriv = std::unique_ptr<TimeSeriesProperty<double>>(
+      new TimeSeriesProperty<double>(this->name() + "_derivative"));
+  timeSeriesDeriv->reserve(this->m_values.size() - 1);
+  for (; it != m_values.end(); it++) {
+    TYPE v1 = it->value();
+    int64_t t1 = it->time().totalNanoseconds();
+    if (t1 != t0) {
+      double deriv = 1.e+9 * (double(v1 - v0) / double(t1 - t0));
+      int64_t tm = static_cast<int64_t>((t1 + t0) / 2);
+      timeSeriesDeriv->addValue(Kernel::DateAndTime(tm), deriv);
+    }
+    t0 = t1;
+    v0 = v1;
+  }
+  return timeSeriesDeriv;
+}
+/** time series derivative specialization for string type */
+template <>
+std::unique_ptr<TimeSeriesProperty<double>>
+TimeSeriesProperty<std::string>::getDerivative() const {
+  throw std::runtime_error(
+      "Time series property derivative is not defined for strings");
+  // return nullptr;
+}
+
 /**
  * Return the memory used by the property, in bytes
  * */
@@ -295,8 +343,7 @@ void TimeSeriesProperty<TYPE>::filterByTimes(
                 << "  Original MP Size = " << m_values.size() << "\n";
 
   // 4. Create new
-  for (size_t isp = 0; isp < splittervec.size(); ++isp) {
-    Kernel::SplittingInterval splitter = splittervec[isp];
+  for (auto splitter : splittervec) {
     Kernel::DateAndTime t_start = splitter.start();
     Kernel::DateAndTime t_stop = splitter.stop();
 
@@ -396,7 +443,7 @@ void TimeSeriesProperty<TYPE>::splitByTime(
         myOutput->m_size = 0;
       }
     } else {
-      outputs_tsp.push_back(NULL);
+      outputs_tsp.push_back(nullptr);
     }
   }
 
@@ -408,7 +455,7 @@ void TimeSeriesProperty<TYPE>::splitByTime(
   size_t i_property = 0;
 
   //    And at the same time, iterate through the splitter
-  Kernel::TimeSplitterType::iterator itspl = splitter.begin();
+  auto itspl = splitter.begin();
 
   size_t counter = 0;
   g_log.debug() << "[DB] Number of time series entries = " << m_values.size()
@@ -704,17 +751,16 @@ double TimeSeriesProperty<TYPE>::averageValueInFilter(
 
   double numerator(0.0), totalTime(0.0);
   // Loop through the filter ranges
-  for (TimeSplitterType::const_iterator it = filter.begin(); it != filter.end();
-       ++it) {
+  for (const auto &time : filter) {
     // Calculate the total time duration (in seconds) within by the filter
-    totalTime += it->duration();
+    totalTime += time.duration();
 
     // Get the log value and index at the start time of the filter
     int index;
-    double value = getSingleValue(it->start(), index);
-    DateAndTime startTime = it->start();
+    double value = getSingleValue(time.start(), index);
+    DateAndTime startTime = time.start();
 
-    while (index < realSize() - 1 && m_values[index + 1].time() < it->stop()) {
+    while (index < realSize() - 1 && m_values[index + 1].time() < time.stop()) {
       ++index;
       numerator +=
           DateAndTime::secondsFromDuration(m_values[index].time() - startTime) *
@@ -725,7 +771,7 @@ double TimeSeriesProperty<TYPE>::averageValueInFilter(
 
     // Now close off with the end of the current filter range
     numerator +=
-        DateAndTime::secondsFromDuration(it->stop() - startTime) * value;
+        DateAndTime::secondsFromDuration(time.stop() - startTime) * value;
   }
 
   // 'Normalise' by the total time
@@ -949,6 +995,19 @@ void TimeSeriesProperty<TYPE>::addValues(
     m_propSortedFlag = TimeSeriesSortStatus::TSUNKNOWN;
 
   return;
+}
+
+/** replace vectors of values to the map. First we clear the vectors
+ * and then we run addValues
+*  @param times :: The time as a boost::posix_time::ptime value
+*  @param values :: The associated value
+*/
+template <typename TYPE>
+void TimeSeriesProperty<TYPE>::replaceValues(
+    const std::vector<Kernel::DateAndTime> &times,
+    const std::vector<TYPE> &values) {
+  clear();
+  addValues(times, values);
 }
 
 /**
@@ -1568,11 +1627,11 @@ void TimeSeriesProperty<TYPE>::filterWith(
   for (auto fit = filtertimes.begin(); fit != fend; ++fit) {
     if (*vit && !lastIsTrue) {
       // Get a true in filter but last recorded value is for false
-      m_filter.push_back(std::make_pair(*fit, true));
+      m_filter.emplace_back(*fit, true);
       lastIsTrue = true;
     } else if (!(*vit) && lastIsTrue) {
       // Get a False in filter but last recorded value is for TRUE
-      m_filter.push_back(std::make_pair(*fit, false));
+      m_filter.emplace_back(*fit, false);
       lastIsTrue = false;
     }
     ++vit; // move to next value
@@ -1604,7 +1663,7 @@ void TimeSeriesProperty<TYPE>::filterWith(
     }
 
     time_duration dtime = lastTime - nextLastT;
-    m_filter.push_back(std::make_pair(lastTime + dtime, false));
+    m_filter.emplace_back(lastTime + dtime, false);
   }
 
   // 3. Reset flag and do filter
@@ -1934,8 +1993,8 @@ template <typename TYPE> void TimeSeriesProperty<TYPE>::applyFilter() const {
           throw std::logic_error(
               "return log index < 0 only occurs with the first log entry");
 
-        m_filterQuickRef.push_back(std::make_pair(ift, 0));
-        m_filterQuickRef.push_back(std::make_pair(0, 0));
+        m_filterQuickRef.emplace_back(ift, 0);
+        m_filterQuickRef.emplace_back(0, 0);
 
         icurlog = 0;
       } else if (icurlog >= static_cast<int>(m_values.size())) {
@@ -1944,8 +2003,8 @@ template <typename TYPE> void TimeSeriesProperty<TYPE>::applyFilter() const {
         size_t ip = 0;
         if (m_filterQuickRef.size() >= 4)
           ip = m_filterQuickRef.back().second;
-        m_filterQuickRef.push_back(std::make_pair(ift, ip));
-        m_filterQuickRef.push_back(std::make_pair(m_values.size() + 1, ip));
+        m_filterQuickRef.emplace_back(ift, ip);
+        m_filterQuickRef.emplace_back(m_values.size() + 1, ip);
       } else {
         // iii. The returned value is in the boundary.
         size_t numintervals = 0;
@@ -1959,9 +2018,9 @@ template <typename TYPE> void TimeSeriesProperty<TYPE>::applyFilter() const {
           }
           icurlog--;
         }
-        m_filterQuickRef.push_back(std::make_pair(ift, numintervals));
+        m_filterQuickRef.emplace_back(ift, numintervals);
         // Note: numintervals inherits from last filter
-        m_filterQuickRef.push_back(std::make_pair(icurlog, numintervals));
+        m_filterQuickRef.emplace_back(icurlog, numintervals);
       }
     } // Filter value is True
     else if (m_filterQuickRef.size() % 4 == 2) {
@@ -1994,15 +2053,14 @@ template <typename TYPE> void TimeSeriesProperty<TYPE>::applyFilter() const {
           size_t new_numintervals = m_filterQuickRef.back().second +
                                     static_cast<size_t>(delta_numintervals);
 
-          m_filterQuickRef.push_back(std::make_pair(icurlog, new_numintervals));
-          m_filterQuickRef.push_back(std::make_pair(ift, new_numintervals));
+          m_filterQuickRef.emplace_back(icurlog, new_numintervals);
+          m_filterQuickRef.emplace_back(ift, new_numintervals);
         }
       } else {
         // B2. Last TRUE filter's time is already out side of log.
         size_t new_numintervals = m_filterQuickRef.back().second + 1;
-        m_filterQuickRef.push_back(
-            std::make_pair(icurlog - 1, new_numintervals));
-        m_filterQuickRef.push_back(std::make_pair(ift, new_numintervals));
+        m_filterQuickRef.emplace_back(icurlog - 1, new_numintervals);
+        m_filterQuickRef.emplace_back(ift, new_numintervals);
       }
     } // Filter value is FALSE
 

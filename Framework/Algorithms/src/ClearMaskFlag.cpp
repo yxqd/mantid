@@ -1,5 +1,8 @@
 #include "MantidAlgorithms/ClearMaskFlag.h"
 
+#include "MantidAPI/MatrixWorkspace.h"
+#include "MantidGeometry/Instrument/ParameterMap.h"
+
 namespace Mantid {
 namespace Algorithms {
 
@@ -27,7 +30,9 @@ const std::string ClearMaskFlag::name() const { return "ClearMaskFlag"; }
 int ClearMaskFlag::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
-const std::string ClearMaskFlag::category() const { return "Utility"; }
+const std::string ClearMaskFlag::category() const {
+  return "Transforms\\Masking";
+}
 
 //----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.

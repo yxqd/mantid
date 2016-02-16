@@ -40,6 +40,13 @@ elseif ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
     set(GNUFLAGS "${GNUFLAGS} -Wno-sign-conversion")
 endif()
 
+# Check if we have a new enough version for these flags
+if ( CMAKE_COMPILER_IS_GNUCXX )
+  if (NOT (GCC_COMPILER_VERSION VERSION_LESS "5.1"))
+    set(GNUFLAGS "${GNUFLAGS} -Wsuggest-override -Wsuggest-final-types -Wsuggest-final-methods")
+  endif()
+endif()
+
 # Add some options for debug build to help the Zoom profiler
 set( CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fno-omit-frame-pointer" )
 set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer" )
@@ -70,7 +77,35 @@ endif()
 # Set the options for gcc and g++
 set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GNUFLAGS}" )
 # -Wno-overloaded-virtual is down here because it's not applicable to the C_FLAGS
-set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GNUFLAGS} -Woverloaded-virtual -fno-operator-names -std=c++0x" )
+set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GNUFLAGS} -Woverloaded-virtual -fno-operator-names" )
+
+if(${CMAKE_VERSION} VERSION_GREATER 3.1.0 OR ${CMAKE_VERSION} VERSION_EQUAL 3.1.0)
+  set(CMAKE_CXX_STANDARD 14)
+  set(CXX_STANDARD_REQUIRED 11)
+else()
+  include(CheckCXXCompilerFlag)
+  CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
+  CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+  CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
+  if(COMPILER_SUPPORTS_CXX14)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+  elseif(COMPILER_SUPPORTS_CXX11)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  elseif(COMPILER_SUPPORTS_CXX0X)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+  endif()
+endif()
+
+if( CMAKE_COMPILER_IS_GNUCXX )
+  # Define an option to statically link libstdc++
+  option( STATIC_LIBSTDCXX "If ON then statically link with the C++ standard library" OFF )
+  if( STATIC_LIBSTDCXX )
+    set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static-libgcc" )
+    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++" )
+    set( CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "${CMAKE_SHARED_LIBRARY_LINK_C_FLAGS} -static-libgcc" )
+    set( CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS} -static-libgcc -static-libstdc++" )
+  endif()
+endif()
 
 # Cleanup
 set ( GNUFLAGS )

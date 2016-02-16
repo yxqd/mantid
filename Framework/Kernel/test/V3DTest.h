@@ -333,8 +333,8 @@ public:
     TS_ASSERT_DELTA(b.Z(), 3.0 / sqrt(2.0), 0.0001);
     // Test getSpherical returns the original values
     TS_ASSERT_THROWS_NOTHING(b.getSpherical(r, theta, phi));
-    TS_ASSERT_EQUALS(r, 3.0);
-    TS_ASSERT_EQUALS(theta, 45.0);
+    TS_ASSERT_DELTA(r, 3.0, 1e-12);
+    TS_ASSERT_DELTA(theta, 45.0, 1e-12);
     TS_ASSERT_EQUALS(phi, 45.0);
   }
 
@@ -397,20 +397,17 @@ public:
   }
 
   void test_makeVectorsOrthogonal() {
-    std::vector<V3D> in, out;
     // Simple case
-    in.clear();
-    in.push_back(V3D(1, 0, 0));
-    in.push_back(V3D(0, 1, 0));
-    out = V3D::makeVectorsOrthogonal(in);
+    std::vector<V3D> in{{1, 0, 0}, {0, 1, 0}};
+    auto out = V3D::makeVectorsOrthogonal(in);
     TS_ASSERT(out[0] == V3D(1, 0, 0));
     TS_ASSERT(out[1] == V3D(0, 1, 0));
     TS_ASSERT(out[2] == V3D(0, 0, 1));
 
     // Non-unit vectors
     in.clear();
-    in.push_back(V3D(0.5, 0, 0));
-    in.push_back(V3D(0.5, 1.23, 0));
+    in.emplace_back(0.5, 0, 0);
+    in.emplace_back(0.5, 1.23, 0);
     out = V3D::makeVectorsOrthogonal(in);
     TS_ASSERT(out[0] == V3D(1, 0, 0));
     TS_ASSERT(out[1] == V3D(0, 1, 0));
@@ -418,8 +415,8 @@ public:
 
     // Flip it over
     in.clear();
-    in.push_back(V3D(0.5, 0, 0));
-    in.push_back(V3D(0.5, -1.23, 0));
+    in.emplace_back(0.5, 0, 0);
+    in.emplace_back(0.5, -1.23, 0);
     out = V3D::makeVectorsOrthogonal(in);
     TS_ASSERT(out[0] == V3D(1, 0, 0));
     TS_ASSERT(out[1] == V3D(0, -1, 0));

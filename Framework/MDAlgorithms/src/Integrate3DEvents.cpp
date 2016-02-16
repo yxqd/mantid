@@ -1,5 +1,4 @@
 #include <math.h>
-#include <iostream>
 #include <fstream>
 #include <boost/math/special_functions/round.hpp>
 #include <boost/make_shared.hpp>
@@ -36,14 +35,13 @@ using Mantid::Kernel::V3D;
 Integrate3DEvents::Integrate3DEvents(
     std::vector<std::pair<double, V3D>> const &peak_q_list,
     DblMatrix const &UBinv, double radius) {
-  this->UBinv = UBinv;
-  this->radius = radius;
+  m_UBinv = UBinv;
+  m_radius = radius;
 
-  int64_t hkl_key;
   for (size_t it = 0; it != peak_q_list.size(); ++it) {
-    hkl_key = getHklKey(peak_q_list[it].second);
+    int64_t hkl_key = getHklKey(peak_q_list[it].second);
     if (hkl_key != 0) // only save if hkl != (0,0,0)
-      peak_qs[hkl_key] = peak_q_list[it].second;
+      m_peak_qs[hkl_key] = peak_q_list[it].second;
   }
 }
 
@@ -71,8 +69,8 @@ Integrate3DEvents::~Integrate3DEvents() {}
  */
 void Integrate3DEvents::addEvents(
     std::vector<std::pair<double, V3D>> const &event_qs, bool hkl_integ) {
-  for (size_t i = 0; i < event_qs.size(); i++) {
-    addEvent(event_qs[i], hkl_integ);
+  for (const auto &event_q : event_qs) {
+    addEvent(event_q, hkl_integ);
   }
 }
 
@@ -125,7 +123,12 @@ Integrate3DEvents::ellipseIntegrateEvents(
     return boost::make_shared<NoShape>();
   }
 
-  std::vector<std::pair<double, V3D>> &some_events = event_lists[hkl_key];
+  auto pos = m_event_lists.find(hkl_key);
+  if (m_event_lists.end() == pos)
+    return boost::make_shared<NoShape>();
+  ;
+
+  std::vector<std::pair<double, V3D>> &some_events = pos->second;
 
   if (some_events.size() < 3) // if there are not enough events to
   {                           // find covariance matrix, return
@@ -133,14 +136,14 @@ Integrate3DEvents::ellipseIntegrateEvents(
   }
 
   DblMatrix cov_matrix(3, 3);
-  makeCovarianceMatrix(some_events, cov_matrix, radius);
+  makeCovarianceMatrix(some_events, cov_matrix, m_radius);
 
   std::vector<V3D> eigen_vectors;
   getEigenVectors(cov_matrix, eigen_vectors);
 
   std::vector<double> sigmas;
   for (int i = 0; i < 3; i++) {
-    sigmas.push_back(stdDev(some_events, eigen_vectors[i], radius));
+    sigmas.push_back(stdDev(some_events, eigen_vectors[i], m_radius));
   }
 
   bool invalid_peak = false;
@@ -180,14 +183,14 @@ double Integrate3DEvents::numInEllipsoid(
     std::vector<std::pair<double, V3D>> const &events,
     std::vector<V3D> const &directions, std::vector<double> const &sizes) {
   double count = 0;
-  for (size_t i = 0; i < events.size(); i++) {
+  for (const auto &event : events) {
     double sum = 0;
     for (size_t k = 0; k < 3; k++) {
-      double comp = events[i].second.scalar_prod(directions[k]) / sizes[k];
+      double comp = event.second.scalar_prod(directions[k]) / sizes[k];
       sum += comp * comp;
     }
     if (sum <= 1)
-      count += events[i].first;
+      count += event.first;
   }
 
   return count;
@@ -213,17 +216,17 @@ double Integrate3DEvents::numInEllipsoidBkg(
     std::vector<double> const &sizesIn) {
   double count = 0;
   std::vector<double> eventVec;
-  for (size_t i = 0; i < events.size(); i++) {
+  for (const auto &event : events) {
     double sum = 0;
     double sumIn = 0;
     for (size_t k = 0; k < 3; k++) {
-      double comp = events[i].second.scalar_prod(directions[k]) / sizes[k];
+      double comp = event.second.scalar_prod(directions[k]) / sizes[k];
       sum += comp * comp;
-      comp = events[i].second.scalar_prod(directions[k]) / sizesIn[k];
+      comp = event.second.scalar_prod(directions[k]) / sizesIn[k];
       sumIn += comp * comp;
     }
     if (sum <= 1 && sumIn >= 1)
-      eventVec.push_back(events[i].first);
+      eventVec.push_back(event.first);
   }
   std::sort(eventVec.begin(), eventVec.end());
   // Remove top 1% of background
@@ -269,14 +272,14 @@ void Integrate3DEvents::makeCovarianceMatrix(
   for (int row = 0; row < 3; row++) {
     for (int col = 0; col < 3; col++) {
       double sum = 0;
-      for (size_t i = 0; i < events.size(); i++) {
-        auto event = events[i].second;
+      for (const auto &value : events) {
+        const auto &event = value.second;
         if (event.norm() <= radius) {
           sum += event[row] * event[col];
         }
       }
       if (events.size() > 1)
-        matrix[row][col] = sum / (double)(events.size() - 1);
+        matrix[row][col] = sum / static_cast<double>(events.size() - 1);
       else
         matrix[row][col] = sum;
     }
@@ -309,9 +312,9 @@ void Integrate3DEvents::getEigenVectors(DblMatrix const &cov_matrix,
 
   // copy the resulting eigen vectors to output vector
   for (size_t col = 0; col < size; col++) {
-    eigen_vectors.push_back(V3D(gsl_matrix_get(eigen_vec, 0, col),
-                                gsl_matrix_get(eigen_vec, 1, col),
-                                gsl_matrix_get(eigen_vec, 2, col)));
+    eigen_vectors.emplace_back(gsl_matrix_get(eigen_vec, 0, col),
+                               gsl_matrix_get(eigen_vec, 1, col),
+                               gsl_matrix_get(eigen_vec, 2, col));
   }
 
   gsl_matrix_free(matrix);
@@ -339,8 +342,8 @@ Integrate3DEvents::stdDev(std::vector<std::pair<double, V3D>> const &events,
   double stdev = 0;
   int count = 0;
 
-  for (size_t i = 0; i < events.size(); i++) {
-    auto event = events[i].second;
+  for (const auto &value : events) {
+    const auto &event = value.second;
     if (event.norm() <= radius) {
       double dot_prod = event.scalar_prod(direction);
       sum += dot_prod;
@@ -351,7 +354,8 @@ Integrate3DEvents::stdDev(std::vector<std::pair<double, V3D>> const &events,
 
   if (count > 1) {
     double ave = sum / count;
-    stdev = sqrt((sum_sq / count - ave * ave) * (double)count / (count - 1.0));
+    stdev = sqrt((sum_sq / count - ave * ave) * static_cast<double>(count) /
+                 (count - 1.0));
   }
 
   return stdev;
@@ -393,7 +397,7 @@ int64_t Integrate3DEvents::getHklKey2(V3D const &hkl) {
  *  @param q_vector  The q_vector to be mapped to h,k,l
  */
 int64_t Integrate3DEvents::getHklKey(V3D const &q_vector) {
-  V3D hkl = UBinv * q_vector;
+  V3D hkl = m_UBinv * q_vector;
   int h = boost::math::iround<double>(hkl[0]);
   int k = boost::math::iround<double>(hkl[1]);
   int l = boost::math::iround<double>(hkl[2]);
@@ -425,15 +429,15 @@ void Integrate3DEvents::addEvent(std::pair<double, V3D> event_Q,
   if (hkl_key == 0) // don't keep events associated with 0,0,0
     return;
 
-  auto peak_it = peak_qs.find(hkl_key);
-  if (peak_it != peak_qs.end()) {
+  auto peak_it = m_peak_qs.find(hkl_key);
+  if (peak_it != m_peak_qs.end()) {
     if (!peak_it->second.nullVector()) {
       if (hkl_integ)
-        event_Q.second = event_Q.second - UBinv * peak_it->second;
+        event_Q.second = event_Q.second - m_UBinv * peak_it->second;
       else
         event_Q.second = event_Q.second - peak_it->second;
-      if (event_Q.second.norm() < radius) {
-        event_lists[hkl_key].push_back(event_Q);
+      if (event_Q.second.norm() < m_radius) {
+        m_event_lists[hkl_key].push_back(event_Q);
       }
     }
   }
@@ -512,8 +516,8 @@ PeakShapeEllipsoid_const_sptr Integrate3DEvents::ellipseIntegrateEvents(
     // if necessary restrict the background ellipsoid
     // to lie within the specified sphere, and adjust
     // the other sizes, proportionally
-    if (r3 * max_sigma > radius) {
-      r3 = radius / max_sigma;
+    if (r3 * max_sigma > m_radius) {
+      r3 = m_radius / max_sigma;
       r1 = r3 * 0.79370053f; // This value for r1 and r2 makes the background
       r2 = r1;               // shell volume equal to the peak region volume.
     }
@@ -585,10 +589,10 @@ double Integrate3DEvents::detectorQ(std::vector<Kernel::V3D> E1Vec,
                                     const Mantid::Kernel::V3D QLabFrame,
                                     std::vector<double> &r) {
   double quot = 1.0;
-  for (auto E1 = E1Vec.begin(); E1 != E1Vec.end(); ++E1) {
+  for (auto &E1 : E1Vec) {
     V3D distv = QLabFrame -
-                *E1 * (QLabFrame.scalar_prod(
-                          *E1)); // distance to the trajectory as a vector
+                E1 * (QLabFrame.scalar_prod(
+                         E1)); // distance to the trajectory as a vector
     double quot0 = distv.norm() / *(std::min_element(r.begin(), r.end()));
     if (quot0 < quot) {
       quot = quot0;

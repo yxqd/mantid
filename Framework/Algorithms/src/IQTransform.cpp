@@ -2,12 +2,19 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/IQTransform.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/Axis.h"
+#include "MantidAPI/IncreasingAxisValidator.h"
+#include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/RawCountValidator.h"
+#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidKernel/ArrayProperty.h"
+#include "MantidKernel/BoundedValidator.h"
+#include "MantidKernel/CompositeValidator.h"
+#include "MantidKernel/ListValidator.h"
+#include "MantidKernel/Unit.h"
 #include "MantidKernel/UnitFactory.h"
 #include "MantidKernel/VectorHelper.h"
-#include "MantidKernel/BoundedValidator.h"
-#include "MantidKernel/ListValidator.h"
 
 namespace Mantid {
 namespace Algorithms {

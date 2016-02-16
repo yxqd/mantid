@@ -1,6 +1,11 @@
 #include "MantidDataHandling/LoadILLSANS.h"
+#include "MantidAPI/Axis.h"
 #include "MantidAPI/FileProperty.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/RegisterFileLoader.h"
+#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidGeometry/Instrument.h"
+#include "MantidGeometry/IDetector.h"
 #include "MantidKernel/UnitFactory.h"
 
 #include <cmath>
@@ -20,7 +25,7 @@ DECLARE_NEXUS_FILELOADER_ALGORITHM(LoadILLSANS)
 /** Constructor
  */
 LoadILLSANS::LoadILLSANS() : m_defaultBinning(2) {
-  m_supportedInstruments.push_back("D33");
+  m_supportedInstruments.emplace_back("D33");
 }
 
 //----------------------------------------------------------------------------------------------
@@ -36,7 +41,9 @@ const std::string LoadILLSANS::name() const { return "LoadILLSANS"; }
 int LoadILLSANS::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
-const std::string LoadILLSANS::category() const { return "DataHandling"; }
+const std::string LoadILLSANS::category() const {
+  return "DataHandling\\Nexus";
+}
 
 //----------------------------------------------------------------------------------------------
 
@@ -408,6 +415,8 @@ void LoadILLSANS::runLoadInstrument() {
   try {
     loadInst->setPropertyValue("InstrumentName", m_instrumentName);
     loadInst->setProperty<MatrixWorkspace_sptr>("Workspace", m_localWorkspace);
+    loadInst->setProperty("RewriteSpectraMap",
+                          Mantid::Kernel::OptionalBool(true));
     loadInst->execute();
   } catch (...) {
     g_log.information("Cannot load the instrument definition.");

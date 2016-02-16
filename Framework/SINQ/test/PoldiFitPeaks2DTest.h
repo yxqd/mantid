@@ -377,7 +377,8 @@ public:
     TestablePoldiFitPeaks2D spectrumCalculator;
     spectrumCalculator.initialize();
 
-    boost::shared_ptr<Poldi2DFunction> funDefault(new Poldi2DFunction);
+    boost::shared_ptr<Poldi2DFunction> funDefault =
+        boost::make_shared<Poldi2DFunction>();
     TS_ASSERT_EQUALS(funDefault->nParams(), 0);
     TS_ASSERT_EQUALS(funDefault->nFunctions(), 0);
 
@@ -385,7 +386,8 @@ public:
     TS_ASSERT_EQUALS(funDefault->nParams(), 2);
     TS_ASSERT_EQUALS(funDefault->nFunctions(), 2);
 
-    boost::shared_ptr<Poldi2DFunction> funLinear(new Poldi2DFunction);
+    boost::shared_ptr<Poldi2DFunction> funLinear =
+        boost::make_shared<Poldi2DFunction>();
     spectrumCalculator.setProperty("FitConstantBackground", false);
     spectrumCalculator.addBackgroundTerms(funLinear);
 
@@ -394,7 +396,8 @@ public:
     TS_ASSERT_EQUALS(funLinear->parameterName(0), "f0.A1");
     TS_ASSERT_EQUALS(funLinear->nFunctions(), 1);
 
-    boost::shared_ptr<Poldi2DFunction> funConstant(new Poldi2DFunction);
+    boost::shared_ptr<Poldi2DFunction> funConstant =
+        boost::make_shared<Poldi2DFunction>();
     spectrumCalculator.setProperty("FitConstantBackground", true);
     spectrumCalculator.setProperty("FitLinearBackground", false);
     spectrumCalculator.addBackgroundTerms(funConstant);
@@ -431,6 +434,41 @@ public:
     TS_ASSERT_THROWS_NOTHING(refinedCell = alg.getRefinedStartingCell(
                                  "5 5 5 90 90 90", "Cubic", peaks));
     TS_ASSERT_EQUALS(refinedCell, "5 5 5 90 90 90");
+  }
+
+  void testGetCrystalSystemFromPointGroup() {
+    TestablePoldiFitPeaks2D alg;
+
+    auto pgCubic = PointGroupFactory::Instance().createPointGroup("m-3m");
+    TS_ASSERT_EQUALS(alg.getLatticeSystemFromPointGroup(pgCubic), "Cubic");
+
+    auto pgTetra = PointGroupFactory::Instance().createPointGroup("4/mmm");
+    TS_ASSERT_EQUALS(alg.getLatticeSystemFromPointGroup(pgTetra), "Tetragonal");
+
+    auto pgOrtho = PointGroupFactory::Instance().createPointGroup("mmm");
+    TS_ASSERT_EQUALS(alg.getLatticeSystemFromPointGroup(pgOrtho),
+                     "Orthorhombic");
+
+    auto pgMono = PointGroupFactory::Instance().createPointGroup("2/m");
+    TS_ASSERT_EQUALS(alg.getLatticeSystemFromPointGroup(pgMono), "Monoclinic");
+
+    auto pgTric = PointGroupFactory::Instance().createPointGroup("-1");
+    TS_ASSERT_EQUALS(alg.getLatticeSystemFromPointGroup(pgTric), "Triclinic");
+
+    auto pgHex = PointGroupFactory::Instance().createPointGroup("6/mmm");
+    TS_ASSERT_EQUALS(alg.getLatticeSystemFromPointGroup(pgHex), "Hexagonal");
+
+    auto pgTrigRh = PointGroupFactory::Instance().createPointGroup("-3m r");
+    TS_ASSERT_EQUALS(alg.getLatticeSystemFromPointGroup(pgTrigRh),
+                     "Rhombohedral");
+
+    auto pgTrigHex = PointGroupFactory::Instance().createPointGroup("-3m");
+    TS_ASSERT_EQUALS(alg.getLatticeSystemFromPointGroup(pgTrigHex),
+                     "Hexagonal");
+
+    PointGroup_sptr invalid;
+    TS_ASSERT_THROWS(alg.getLatticeSystemFromPointGroup(invalid),
+                     std::invalid_argument);
   }
 
 private:

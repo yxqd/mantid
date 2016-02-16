@@ -21,26 +21,28 @@ namespace Mantid
     @throw invalid_arument if view is null
     @throw logic_error if cannot use the reader-presenter for this filetype.
     */
-    SQWLoadingPresenter::SQWLoadingPresenter(MDLoadingView* view, const std::string filename) : MDEWLoadingPresenter(view), m_filename(filename), m_wsTypeName("")
-    {
-      if(this->m_filename.empty())
-      {
-        throw std::invalid_argument("File name is an empty string.");
-      }
-      if(NULL == this->m_view)
-      {
-        throw std::invalid_argument("View is NULL.");
-      }
+  SQWLoadingPresenter::SQWLoadingPresenter(std::unique_ptr<MDLoadingView> view,
+                                           const std::string filename)
+      : MDEWLoadingPresenter(std::move(view)), m_filename(filename),
+        m_wsTypeName("") {
+    if (this->m_filename.empty()) {
+      throw std::invalid_argument("File name is an empty string.");
     }
+    if (nullptr == this->m_view) {
+      throw std::invalid_argument("View is NULL.");
+    }
+  }
 
-     /*
-    Indicates whether this presenter is capable of handling the type of file that is attempted to be loaded.
-    @return false if the file cannot be read.
-    */
-    bool SQWLoadingPresenter::canReadFile() const
-    {
-      boost::regex expression(".*sqw$", boost::regex_constants::icase); //check that the file ends with sqw.
-      return boost::regex_match(this->m_filename, expression);
+  /*
+ Indicates whether this presenter is capable of handling the type of file that
+ is attempted to be loaded.
+ @return false if the file cannot be read.
+ */
+  bool SQWLoadingPresenter::canReadFile() const {
+    boost::regex expression(
+        ".*sqw$",
+        boost::regex_constants::icase); // check that the file ends with sqw.
+    return boost::regex_match(this->m_filename, expression);
     }
 
 
@@ -50,8 +52,10 @@ namespace Mantid
     @param loadingProgressUpdate : Handler for GUI updates while algorithm progresses.
     @param drawingProgressUpdate : Handler for GUI updates while vtkDataSetFactory::create occurs.
     */
-    vtkDataSet* SQWLoadingPresenter::execute(vtkDataSetFactory* factory, ProgressAction& loadingProgressUpdate, ProgressAction& drawingProgressUpdate)
-    {
+    vtkSmartPointer<vtkDataSet>
+    SQWLoadingPresenter::execute(vtkDataSetFactory *factory,
+                                 ProgressAction &loadingProgressUpdate,
+                                 ProgressAction &drawingProgressUpdate) {
       using namespace Mantid::API;
       using namespace Mantid::Geometry;
 
@@ -82,7 +86,7 @@ namespace Mantid
 
       factory->setRecursionDepth(this->m_view->getRecursionDepth());
       
-      vtkDataSet* visualDataSet = factory->oneStepCreate(eventWs, drawingProgressUpdate);
+      auto visualDataSet = factory->oneStepCreate(eventWs, drawingProgressUpdate);
 
       this->appendMetadata(visualDataSet, eventWs->getName());
       
@@ -110,7 +114,7 @@ namespace Mantid
         IMDDimension_const_sptr inDim = eventWs->getDimension(d);
         axisLabels.push_back(makeAxisTitle(inDim));
         //Copy the dimension, but set the ID and name to be the same. This is an assumption in bintohistoworkspace.
-        MDHistoDimension_sptr dim(new MDHistoDimension(inDim->getName(), inDim->getName(), inDim->getUnits(), inDim->getMinimum(), inDim->getMaximum(), size_t(10)));
+        MDHistoDimension_sptr dim(new MDHistoDimension(inDim->getName(), inDim->getName(), inDim->getMDFrame(), inDim->getMinimum(), inDim->getMaximum(), size_t(10)));
         dimensions.push_back(dim);
       }
 
@@ -162,10 +166,7 @@ namespace Mantid
     }
 
     ///Destructor
-    SQWLoadingPresenter::~SQWLoadingPresenter()
-    {
-      delete m_view;
-    }
+    SQWLoadingPresenter::~SQWLoadingPresenter() {}
 
     /*
     Getter for the workspace type name.

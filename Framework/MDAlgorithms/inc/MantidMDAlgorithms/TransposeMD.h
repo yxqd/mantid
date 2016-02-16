@@ -3,6 +3,7 @@
 
 #include "MantidMDAlgorithms/DllConfig.h"
 #include "MantidAPI/Algorithm.h"
+#include "MantidKernel/MDAxisValidator.h"
 namespace Mantid {
 namespace MDAlgorithms {
 
@@ -33,16 +34,18 @@ namespace MDAlgorithms {
 class MANTID_MDALGORITHMS_DLL TransposeMD : public API::Algorithm {
 public:
   TransposeMD();
-  virtual ~TransposeMD();
+  ~TransposeMD() override;
 
-  virtual const std::string name() const;
-  virtual int version() const;
-  virtual const std::string category() const;
-  virtual const std::string summary() const;
+  const std::string name() const override;
+  int version() const override;
+  const std::string category() const override;
+  const std::string summary() const override;
+
+  const std::string alias() const override { return "PermuteMD"; }
 
 private:
-  void init();
-  void exec();
+  void init() override;
+  void exec() override;
 };
 
 } // namespace MDAlgorithms

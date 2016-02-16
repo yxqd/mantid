@@ -1,10 +1,11 @@
 #include "MantidAlgorithms/StripVanadiumPeaks.h"
-#include "MantidKernel/PhysicalConstants.h"
-#include "MantidDataObjects/EventWorkspace.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/Axis.h"
 #include "MantidAPI/TableRow.h"
-#include "MantidKernel/VectorHelper.h"
+#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/EventWorkspace.h"
 #include "MantidKernel/BoundedValidator.h"
+#include "MantidKernel/PhysicalConstants.h"
+#include "MantidKernel/VectorHelper.h"
 
 namespace Mantid {
 namespace Algorithms {

@@ -4,8 +4,6 @@
 #include <cxxtest/TestSuite.h>
 #include "MantidKernel/Timer.h"
 #include "MantidKernel/System.h"
-#include <iostream>
-#include <iomanip>
 
 #include "MantidAPI/AlgorithmProperty.h"
 #include "MantidAPI/AlgorithmHasProperty.h"
@@ -98,7 +96,7 @@ public:
 
   void test_An_Invalid_String_Returns_An_Appropriate_Error() {
     AlgorithmProperty testProp("CalculateStep");
-    TS_ASSERT_EQUALS(testProp.setValue("ComplexSum()"),
+    TS_ASSERT_EQUALS(testProp.setValue("{\"name\":\"ComplexSum\"}"),
                      "Algorithm not registered ComplexSum");
   }
 

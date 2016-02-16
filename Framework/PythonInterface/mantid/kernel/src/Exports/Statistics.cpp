@@ -52,8 +52,10 @@ bool isFloatArray(PyObject *obj) {
  */
 bool typesEqual(PyObject *first, PyObject *second) {
 #if NPY_API_VERSION >= 0x00000007 // 1.7
-  const PyArrayObject *firstArray = (const PyArrayObject *)first;
-  const PyArrayObject *secondArray = (const PyArrayObject *)second;
+  const PyArrayObject *firstArray =
+      reinterpret_cast<const PyArrayObject *>(first);
+  const PyArrayObject *secondArray =
+      reinterpret_cast<const PyArrayObject *>(second);
 #else
   PyArrayObject *firstArray = (PyArrayObject *)first;
   PyArrayObject *secondArray = (PyArrayObject *)second;
@@ -93,10 +95,18 @@ Statistics getStatisticsNumpy(const numeric::array &data,
     throw UnknownDataType();
   }
 }
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
+#pragma clang diagnostic ignored "-Wunused-local-typedef"
+#endif
 // Define an overload to handle the default argument
 BOOST_PYTHON_FUNCTION_OVERLOADS(getStatisticsOverloads, getStatisticsNumpy, 1,
                                 2)
-
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 //============================ Z score
 //============================================
 
@@ -145,9 +155,17 @@ std::vector<double> getModifiedZscoreNumpy(const numeric::array &data,
   }
 }
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
+#pragma clang diagnostic ignored "-Wunused-local-typedef"
+#endif
 // Define an overload to handle the default argument
 BOOST_PYTHON_FUNCTION_OVERLOADS(getModifiedZscoreOverloads,
                                 getModifiedZscoreNumpy, 1, 2)
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 //============================ getMoments
 //============================================
@@ -198,10 +216,17 @@ std::vector<double> getMomentsAboutOriginNumpy(const numeric::array &indep,
   return getMomentsNumpyImpl(&getMomentsAboutOrigin, indep, depend, maxMoment);
 }
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
+#pragma clang diagnostic ignored "-Wunused-local-typedef"
+#endif
 // Define an overload to handle the default argument
 BOOST_PYTHON_FUNCTION_OVERLOADS(getMomentsAboutOriginOverloads,
                                 getMomentsAboutOriginNumpy, 2, 3)
-
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 /**
  * Proxy for @see Mantid::Kernel::getMomentsAboutMean so that it can accept
  * numpy arrays
@@ -213,9 +238,18 @@ std::vector<double> getMomentsAboutMeanNumpy(const numeric::array &indep,
   return getMomentsNumpyImpl(&getMomentsAboutMean, indep, depend, maxMoment);
 }
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
+#pragma clang diagnostic ignored "-Wunused-local-typedef"
+#endif
 // Define an overload to handle the default argument
 BOOST_PYTHON_FUNCTION_OVERLOADS(getMomentsAboutMeanOverloads,
                                 getMomentsAboutMeanNumpy, 2, 3)
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
 ///@endcond
 }
 
@@ -233,33 +267,34 @@ void export_Statistics() {
       class_<Stats>("Stats", no_init)
           .def("getStatistics", &getStatisticsNumpy,
                getStatisticsOverloads(
-                   args("data", "sorted"),
+                   (arg("data"), arg("sorted")),
                    "Determine the statistics for an array of data"))
           .staticmethod("getStatistics")
 
-          .def("getZscore", &getZscoreNumpy, args("data"),
+          .def("getZscore", &getZscoreNumpy, arg("data"),
                "Determine the Z score for an array of data")
-          .def("getZscore", &getZscoreNumpyDeprecated, args("data", "sorted"),
+          .def("getZscore", &getZscoreNumpyDeprecated,
+               (arg("data"), arg("sorted")),
                "Determine the Z score for an array of "
                "data (deprecated sorted argument)")
           .staticmethod("getZscore")
 
           .def("getModifiedZscore", &getModifiedZscoreNumpy,
                getModifiedZscoreOverloads(
-                   args("data", "sorted"),
+                   (arg("data"), arg("sorted")),
                    "Determine the modified Z score for an array of data"))
           .staticmethod("getModifiedZscore")
 
           .def("getMomentsAboutOrigin", &getMomentsAboutOriginNumpy,
                getMomentsAboutOriginOverloads(
-                   args("indep", "depend", "maxMoment"),
+                   (arg("indep"), arg("depend"), arg("maxMoment")),
                    "Calculate the first n-moments (inclusive) about the origin")
                    [ReturnNumpyArray()])
           .staticmethod("getMomentsAboutOrigin")
 
           .def("getMomentsAboutMean", &getMomentsAboutMeanNumpy,
                getMomentsAboutMeanOverloads(
-                   args("indep", "depend", "maxMoment"),
+                   (arg("indep"), arg("depend"), arg("maxMoment")),
                    "Calculate the first n-moments (inclusive) about the mean")
                    [ReturnNumpyArray()])
           .staticmethod("getMomentsAboutMean");

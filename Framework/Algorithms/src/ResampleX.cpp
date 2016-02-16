@@ -1,10 +1,14 @@
-#include <sstream>
 #include "MantidAlgorithms/ResampleX.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/Axis.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/VectorHelper.h"
+
+#include <boost/math/special_functions/fpclassify.hpp>
+
+#include <sstream>
 
 namespace Mantid {
 namespace Algorithms {
@@ -124,15 +128,35 @@ string determineXMinMax(MatrixWorkspace_sptr inputWS, vector<double> &xmins,
 
   stringstream msg;
 
+  // determine overall xmin/xmax
+  double xmin_wksp = inputWS->getXMin();
+  double xmax_wksp = inputWS->getXMax();
+  EventWorkspace_const_sptr inputEventWS =
+      boost::dynamic_pointer_cast<const EventWorkspace>(inputWS);
+  if (inputEventWS != nullptr) {
+    xmin_wksp = inputEventWS->getTofMin();
+    xmax_wksp = inputEventWS->getTofMax();
+  }
+
   size_t numSpectra = inputWS->getNumberHistograms();
   for (size_t i = 0; i < numSpectra; ++i) {
     // determine ranges if necessary
     if (updateXMins || updateXMaxs) {
       const MantidVec &xvalues = inputWS->getSpectrum(i)->dataX();
-      if (updateXMins)
-        xmins.push_back(xvalues.front());
-      if (updateXMaxs)
-        xmaxs.push_back(xvalues.back());
+      if (updateXMins) {
+        if (boost::math::isnan(xvalues.front())) {
+          xmins.push_back(xmin_wksp);
+        } else {
+          xmins.push_back(xvalues.front());
+        }
+      }
+      if (updateXMaxs) {
+        if (boost::math::isnan(xvalues.back())) {
+          xmaxs.push_back(xmax_wksp);
+        } else {
+          xmaxs.push_back(xvalues.back());
+        }
+      }
     }
 
     // error check the ranges
@@ -297,14 +321,14 @@ void ResampleX::exec() {
   // start doing actual work
   EventWorkspace_const_sptr inputEventWS =
       boost::dynamic_pointer_cast<const EventWorkspace>(inputWS);
-  if (inputEventWS != NULL) {
+  if (inputEventWS != nullptr) {
     if (m_preserveEvents) {
       EventWorkspace_sptr outputEventWS =
           boost::dynamic_pointer_cast<EventWorkspace>(outputWS);
       if (inPlace) {
         g_log.debug() << "Rebinning event workspace in place\n";
       } else {
-        g_log.debug() << "Rebinning event workspace in place\n";
+        g_log.debug() << "Rebinning event workspace out of place\n";
 
         // copy the event workspace to a new EventWorkspace
         outputEventWS = boost::dynamic_pointer_cast<EventWorkspace>(
@@ -336,7 +360,8 @@ void ResampleX::exec() {
           double delta = this->determineBinning(xValues, xmins[wkspIndex],
                                                 xmaxs[wkspIndex]);
           g_log.debug() << "delta[wkspindex=" << wkspIndex << "] = " << delta
-                        << "\n";
+                        << " xmin=" << xmins[wkspIndex]
+                        << " xmax=" << xmaxs[wkspIndex] << "\n";
           outputEventWS->getSpectrum(wkspIndex)->setX(xValues);
           prog.report(name()); // Report progress
           PARALLEL_END_INTERUPT_REGION

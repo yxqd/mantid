@@ -56,32 +56,32 @@ class DLLExport FilterEvents : public API::Algorithm {
 
 public:
   FilterEvents();
-  virtual ~FilterEvents();
+  ~FilterEvents() override;
 
   /// Algorithm's name for identification overriding a virtual method
-  virtual const std::string name() const { return "FilterEvents"; }
+  const std::string name() const override { return "FilterEvents"; }
   /// Summary of algorithms purpose
-  virtual const std::string summary() const {
+  const std::string summary() const override {
     return "Filter events from an EventWorkspace to one or multiple "
            "EventWorkspaces according to a series of splitters.";
   }
 
   /// Algorithm's version for identification overriding a virtual method
-  virtual int version() const { return 1; }
+  int version() const override { return 1; }
 
   /// Algorithm's category for identification overriding a virtual method
-  virtual const std::string category() const {
+  const std::string category() const override {
     return "Events\\EventFiltering";
   }
 
 private:
   // Implement abstract Algorithm methods
-  void init();
+  void init() override;
   // Implement abstract Algorithm methods
-  void exec();
+  void exec() override;
 
   /// Process user input properties
-  void processProperties();
+  void processAlgorithmProperties();
 
   void processSplittersWorkspace();
 
@@ -130,7 +130,7 @@ private:
   std::vector<std::string> m_wsNames;
 
   std::vector<double> m_detTofOffsets;
-  std::vector<double> m_detTofShifts;
+  std::vector<double> m_detTofFactors;
 
   bool m_FilterByPulseTime;
 
@@ -171,6 +171,11 @@ private:
   EVENTFILTERSKIP m_specSkipType;
   /// Vector for skip information
   std::vector<bool> m_vecSkip;
+
+  // Flag to have relative time in splitters workspace
+  bool m_isSplittersRelativeTime;
+  // Starting time for starting time of event filters
+  Kernel::DateAndTime m_filterStartTime;
 };
 
 } // namespace Algorithms

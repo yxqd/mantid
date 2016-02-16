@@ -87,6 +87,13 @@ namespace CustomInterfaces
     /// @return Selected integration time range, or nothing if limiting is disabled
     virtual boost::optional< std::pair<double,double> > timeRange() const = 0;
 
+    /// @return The string "Auto"
+    virtual std::string autoString() const = 0;
+
+    /// If Auto mode on, store name of currently loaded file
+    /// @param file :: [input] name of file loaded
+    virtual void setCurrentAutoFile(const std::string &file) = 0;
+
   public slots:
     /// Performs any necessary initialization
     virtual void initialize() = 0;
@@ -119,14 +126,17 @@ namespace CustomInterfaces
     /// @param tMax :: Maximum X value available
     virtual void setTimeRange(double tMin, double tMax) = 0;
 
-    /// Set waiting cursor for long operation
-    virtual void setWaitingCursor() = 0;
-
-    /// Restore the original cursor
-    virtual void restoreCursor() = 0;
-
     /// Opens the Mantid Wiki web page
     virtual void help() = 0;
+
+    /// Disables all the widgets
+    virtual void disableAll() = 0;
+
+    /// Enables all the widgets
+    virtual void enableAll() = 0;
+
+    /// Toggles "auto" mode for last file
+    virtual void checkBoxAutoChanged(int state) = 0;
 
   signals:
     /// Request to load data
@@ -135,6 +145,11 @@ namespace CustomInterfaces
     /// User has selected the first run
     void firstRunSelected();
 
+    /// New data have been loaded
+    void dataChanged();
+
+    /// "Auto" box has been checked/unchecked
+    void lastRunAutoCheckedChanged(int state);
   };
 
 } // namespace CustomInterfaces

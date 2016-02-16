@@ -1,10 +1,14 @@
 #include "MantidAlgorithms/CorelliCrossCorrelate.h"
+#include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidDataObjects/EventWorkspace.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidGeometry/Instrument.h"
 #include "MantidGeometry/IComponent.h"
+#include "MantidGeometry/muParser_Silent.h"
+#include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/MandatoryValidator.h"
 #include "MantidKernel/TimeSeriesProperty.h"
-#include "MantidGeometry/muParser_Silent.h"
 
 namespace Mantid {
 namespace Algorithms {
@@ -162,12 +166,17 @@ void CorelliCrossCorrelate::exec() {
 
   int offset_int = getProperty("TimingOffset");
   const int64_t offset = static_cast<int64_t>(offset_int);
-  for (unsigned long i = 0; i < tdc.size(); ++i)
-    tdc[i] += offset;
+  for (auto &timing : tdc)
+    timing += offset;
 
   // Determine period from chopper frequency.
   auto motorSpeed = dynamic_cast<TimeSeriesProperty<double> *>(
       inputWS->run().getProperty("BL9:Chop:Skf4:MotorSpeed"));
+  if (!motorSpeed) {
+    throw Exception::NotFoundError(
+        "Could not find a log value for the motor speed",
+        "BL9:Chop:Skf4:MotorSpeed");
+  }
   double period = 1e9 / static_cast<double>(motorSpeed->timeAverageValue());
   g_log.information() << "Frequency = " << 1e9 / period
                       << "Hz Period = " << period << "ns\n";

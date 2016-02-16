@@ -27,21 +27,21 @@ enum VULCAN_OFFSET_LEVEL {
 class DLLExport LoadVulcanCalFile : public API::Algorithm {
 public:
   LoadVulcanCalFile();
-  ~LoadVulcanCalFile();
+  ~LoadVulcanCalFile() override;
 
   /// Algorithm's name for identification
-  virtual const std::string name() const { return "LoadVulcanCalFile"; }
+  const std::string name() const override { return "LoadVulcanCalFile"; }
   /// Summary of algorithms purpose
-  virtual const std::string summary() const {
+  const std::string summary() const override {
     return "Loads set of VULCAN's offset files into up to 3 workspaces: a "
            "GroupingWorkspace, OffsetsWorkspace and/or MaskWorkspace.";
   }
 
   /// Algorithm's version for identification
-  virtual int version() const { return 1; }
+  int version() const override { return 1; }
   /// Algorithm's category for identification
-  virtual const std::string category() const {
-    return "DataHandling\\Text;Diffraction";
+  const std::string category() const override {
+    return "DataHandling\\Text;Diffraction\\DataHandling";
   }
 
   void getInstrument3WaysInit();
@@ -55,9 +55,9 @@ public:
 
 private:
   /// Initialise the properties
-  void init();
+  void init() override;
   /// Run the algorithm
-  void exec();
+  void exec() override;
 
   void processInOutProperites();
 

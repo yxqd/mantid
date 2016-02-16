@@ -1,12 +1,12 @@
 #include "MantidMDAlgorithms/ImportMDEventWorkspace.h"
 
-#include <iostream>
 #include <fstream>
 
 #include "MantidAPI/FileProperty.h"
 #include "MantidDataObjects/MDEventFactory.h"
 #include "MantidDataObjects/MDEventInserter.h"
 #include "MantidGeometry/MDGeometry/MDHistoDimension.h"
+#include "MantidKernel/MDUnit.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -93,7 +93,7 @@ int ImportMDEventWorkspace::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
 const std::string ImportMDEventWorkspace::category() const {
-  return "MDAlgorithms";
+  return "MDAlgorithms\\DataHandling";
 }
 
 //----------------------------------------------------------------------------------------------
@@ -122,7 +122,7 @@ void ImportMDEventWorkspace::addEventsData(
     typename MDEventWorkspace<MDE, nd>::sptr ws) {
   /// Creates a new instance of the MDEventInserter.
   MDEventInserter<typename MDEventWorkspace<MDE, nd>::sptr> inserter(ws);
-  DataCollectionType::iterator mdEventEntriesIterator = m_posMDEventStart;
+  auto mdEventEntriesIterator = m_posMDEventStart;
   std::vector<Mantid::coord_t> centers(nd);
   for (size_t i = 0; i < m_nDataObjects; ++i) {
     float signal = convert<float>(*(++mdEventEntriesIterator));
@@ -165,9 +165,9 @@ void ImportMDEventWorkspace::quickFileCheck() {
     throw std::invalid_argument(message);
   }
   // Are the mandatory block in the correct order.
-  DataCollectionType::iterator posDimStart =
+  auto posDimStart =
       std::find(m_file_data.begin(), m_file_data.end(), DimensionBlockFlag());
-  DataCollectionType::iterator posMDEventStart =
+  auto posMDEventStart =
       std::find(m_file_data.begin(), m_file_data.end(), MDEventBlockFlag());
   int posDiffDims =
       static_cast<int>(std::distance(posDimStart, posMDEventStart));
@@ -184,7 +184,7 @@ void ImportMDEventWorkspace::quickFileCheck() {
   }
   const size_t nDimensions = (posDiffDims - 1) / 4;
   // Are the dimension entries all of the correct type.
-  DataCollectionType::iterator dimEntriesIterator = posDimStart;
+  auto dimEntriesIterator = posDimStart;
   for (size_t i = 0; i < nDimensions; ++i) {
     convert<std::string>(*(++dimEntriesIterator));
     convert<std::string>(*(++dimEntriesIterator));
@@ -267,12 +267,18 @@ void ImportMDEventWorkspace::exec() {
       m_nDimensions + 4; // signal, error, run_no, detector_no
   m_IsFullDataObjects = (nActualColumns == columnsForFullEvents);
 
-  m_nDataObjects = posDiffMDEvent / nActualColumns;
+  if (0 == nActualColumns) {
+    m_nDataObjects = 0;
+    g_log.warning() << "The number of actual columns found in the file "
+                       "(exlcuding comments) is zero" << std::endl;
+  } else {
+    m_nDataObjects = posDiffMDEvent / nActualColumns;
+  }
 
   // Get the min and max extents in each dimension.
   std::vector<double> extentMins(m_nDimensions);
   std::vector<double> extentMaxs(m_nDimensions);
-  DataCollectionType::iterator mdEventEntriesIterator = m_posMDEventStart;
+  auto mdEventEntriesIterator = m_posMDEventStart;
   for (size_t i = 0; i < m_nDataObjects; ++i) {
     mdEventEntriesIterator += 2;
     if (m_IsFullDataObjects) {
@@ -290,15 +296,19 @@ void ImportMDEventWorkspace::exec() {
       m_nDimensions, m_IsFullDataObjects ? "MDEvent" : "MDLeanEvent");
 
   // Extract Dimensions and add to the output workspace.
-  DataCollectionType::iterator dimEntriesIterator = m_posDimStart;
+  auto dimEntriesIterator = m_posDimStart;
+  auto unitFactory = makeMDUnitFactoryChain();
   for (size_t i = 0; i < m_nDimensions; ++i) {
     std::string id = convert<std::string>(*(++dimEntriesIterator));
     std::string name = convert<std::string>(*(++dimEntriesIterator));
     std::string units = convert<std::string>(*(++dimEntriesIterator));
     int nbins = convert<int>(*(++dimEntriesIterator));
 
+    auto mdUnit = unitFactory->create(units);
+    Mantid::Geometry::GeneralFrame frame(
+        Mantid::Geometry::GeneralFrame::GeneralFrameName, std::move(mdUnit));
     outWs->addDimension(MDHistoDimension_sptr(new MDHistoDimension(
-        id, name, units, static_cast<coord_t>(extentMins[i]),
+        id, name, frame, static_cast<coord_t>(extentMins[i]),
         static_cast<coord_t>(extentMaxs[i]), nbins)));
   }
 

@@ -1,8 +1,6 @@
 #include "MantidQtSliceViewer/DimensionSliceWidget.h"
 #include "MantidKernel/UnitLabel.h"
 #include <iosfwd>
-#include <iostream>
-#include <iomanip>
 #include <qlayout.h>
 
 namespace MantidQt
@@ -114,7 +112,15 @@ void DimensionSliceWidget::setShownDim(int dim)
   ui.btnY->setChecked( m_shownDim == 1 );
   ui.btnX->blockSignals(false);
   ui.btnY->blockSignals(false);
-  bool slicing = m_shownDim == -1;
+  /// Slice if dimension is not X or Y AND is not integrated
+  bool slicing = (m_shownDim == -1 && !m_dim->getIsIntegrated());
+
+  // Use the minimum slice point for integrated dimensions
+  // otherwise high bin boundary can be selected and no data plotted
+  if (m_dim->getIsIntegrated()) {
+    this->setSlicePoint(m_dim->getMinimum());
+  }
+
   ui.horizontalSlider->setVisible( slicing );
   ui.doubleSpinBox->setVisible( slicing );
   ui.lblUnits->setVisible( slicing );

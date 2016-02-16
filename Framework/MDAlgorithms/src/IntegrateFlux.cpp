@@ -35,7 +35,9 @@ const std::string IntegrateFlux::name() const { return "IntegrateFlux"; }
 int IntegrateFlux::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
-const std::string IntegrateFlux::category() const { return "MDAlgorithms"; }
+const std::string IntegrateFlux::category() const {
+  return "MDAlgorithms\\Normalisation";
+}
 
 /// Algorithm's summary for use in the GUI and help. @see Algorithm::summary
 const std::string IntegrateFlux::summary() const {
@@ -168,7 +170,7 @@ template <class EventType>
 void IntegrateFlux::integrateSpectraEvents(
     const DataObjects::EventWorkspace &inputWS,
     API::MatrixWorkspace &integrWS) const {
-  inputWS.sortAll(DataObjects::TOF_SORT, NULL);
+  inputWS.sortAll(DataObjects::TOF_SORT, nullptr);
   size_t nSpec = inputWS.getNumberHistograms();
   assert(nSpec == integrWS.getNumberHistograms());
 

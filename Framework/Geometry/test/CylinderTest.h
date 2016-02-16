@@ -35,29 +35,12 @@ public:
     TS_ASSERT_EQUALS(extractString(A), "-1  c/x 0.5 0.5 1\n");
   }
 
-  void testCopyConstructor() {
-    Cylinder A;
-    A.setSurface("c/x 0.5 0.5 1.0");
-    TS_ASSERT_EQUALS(extractString(A), "-1  c/x 0.5 0.5 1\n");
-    Cylinder B(A);
-    TS_ASSERT_EQUALS(extractString(B), extractString(A));
-  }
-
   void testClone() {
     Cylinder A;
     A.setSurface("c/x 0.5 0.5 1.0");
     TS_ASSERT_EQUALS(extractString(A), "-1  c/x 0.5 0.5 1\n");
-    Cylinder *B = A.clone();
+    auto B = A.clone();
     TS_ASSERT_EQUALS(extractString(*B), extractString(A));
-    delete B;
-  }
-
-  void testAssignment() {
-    Cylinder A, B;
-    A.setSurface("c/x 0.5 0.5 1.0");
-    TS_ASSERT_DIFFERS(extractString(B), extractString(A));
-    B = A;
-    TS_ASSERT_EQUALS(extractString(B), extractString(A));
   }
 
   /// is a point inside outside or on the side!
@@ -175,9 +158,8 @@ public:
   Test the distance of a point from the cylinder
   */
   {
-    std::vector<std::string> CylStr;
-    CylStr.push_back("cx 1");            // Cylinder origin
-    CylStr.push_back("c/x 1.0 1.0 1.0"); // also cylinder at ?origin?
+    // Cylinder origin // also cylinder at ?origin?
+    std::vector<std::string> CylStr{"cx 1", "c/x 1.0 1.0 1.0"};
     Kernel::V3D P(0, -1.2, 0);
     double results[] = {1.2 - 1, 1.41661};
 

@@ -4,14 +4,13 @@
 #include <cxxtest/TestSuite.h>
 
 #include "MantidGeometry/Instrument/XMLInstrumentParameter.h"
-#include "MantidDataHandling/LoadRaw3.h"
-#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/AnalysisDataService.h"
 #include "MantidAPI/FrameworkManager.h"
+#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataHandling/LoadRaw3.h"
+#include "MantidGeometry/Instrument/ParameterMap.h"
 #include "MantidKernel/ConfigService.h"
 #include "MantidKernel/TimeSeriesProperty.h"
-
-#include <iostream>
 
 using namespace Mantid::API;
 using namespace Mantid::Kernel;
@@ -69,7 +68,8 @@ public:
   // checks that this is done ok
   void testParsing() {
     IComponent *comp(NULL);
-    boost::shared_ptr<Interpolation> interpolation(new Interpolation);
+    boost::shared_ptr<Interpolation> interpolation =
+        boost::make_shared<Interpolation>();
     std::vector<std::string> constraint;
     std::string penaltyFactor;
     std::string fitFunc;

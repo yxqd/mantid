@@ -2,11 +2,12 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/CalculateEfficiency.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/EventList.h"
-#include <vector>
+#include "MantidGeometry/IDetector.h"
 #include "MantidKernel/BoundedValidator.h"
+#include <vector>
 
 namespace Mantid {
 namespace Algorithms {
@@ -68,7 +69,8 @@ void CalculateEfficiency::exec() {
 
   outputWS = WorkspaceFactory::Instance().create(rebinnedWS);
   WorkspaceFactory::Instance().initializeFromParent(inputWS, outputWS, false);
-  for (int i = 0; i < (int)rebinnedWS->getNumberHistograms(); i++) {
+  for (int i = 0; i < static_cast<int>(rebinnedWS->getNumberHistograms());
+       i++) {
     outputWS->dataX(i) = rebinnedWS->readX(i);
   }
   setProperty("OutputWorkspace", outputWS);
@@ -174,7 +176,8 @@ void CalculateEfficiency::normalizeDetectors(MatrixWorkspace_sptr rebinnedWS,
 
   for (size_t i = 0; i < numberOfSpectra; i++) {
     const double currProgress =
-        0.4 + 0.2 * ((double)i / (double)numberOfSpectra);
+        0.4 +
+        0.2 * (static_cast<double>(i) / static_cast<double>(numberOfSpectra));
     progress(currProgress, "Computing sensitivity");
     // Get the detector object for this spectrum
     IDetector_const_sptr det = rebinnedWS->getDetector(i);

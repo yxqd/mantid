@@ -3,14 +3,18 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/CalculateTransmission.h"
-#include "MantidAPI/WorkspaceValidators.h"
-#include "MantidAPI/WorkspaceOpOverloads.h"
-#include "MantidKernel/ArrayProperty.h"
-#include "MantidKernel/VectorHelper.h"
-#include "MantidKernel/BoundedValidator.h"
-#include "MantidKernel/ListValidator.h"
+#include "MantidAPI/CommonBinsValidator.h"
 #include "MantidAPI/FunctionFactory.h"
+#include "MantidAPI/HistogramValidator.h"
 #include "MantidAPI/IFunction.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
+#include "MantidAPI/WorkspaceOpOverloads.h"
+#include "MantidGeometry/Instrument.h"
+#include "MantidKernel/ArrayProperty.h"
+#include "MantidKernel/BoundedValidator.h"
+#include "MantidKernel/CompositeValidator.h"
+#include "MantidKernel/ListValidator.h"
+#include "MantidKernel/VectorHelper.h"
 
 #include <algorithm>
 #include <cassert>

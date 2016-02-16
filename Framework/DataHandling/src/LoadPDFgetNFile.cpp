@@ -1,4 +1,5 @@
 #include "MantidDataHandling/LoadPDFgetNFile.h"
+#include "MantidAPI/Axis.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/RegisterFileLoader.h"
 #include "MantidAPI/WorkspaceProperty.h"
@@ -75,17 +76,10 @@ int LoadPDFgetNFile::confidence(Kernel::FileDescriptor &descriptor) const {
 /** Define input
   */
 void LoadPDFgetNFile::init() {
-  std::vector<std::string> exts;
-  exts.push_back(".sq");
-  exts.push_back(".sqa");
-  exts.push_back(".sqb");
-  exts.push_back(".gr");
-  exts.push_back(".ain");
-  exts.push_back(".braw");
-  exts.push_back(".bsmo");
-
-  auto fileproperty = new FileProperty("Filename", "", FileProperty::Load, exts,
-                                       Kernel::Direction::Input);
+  auto fileproperty =
+      new FileProperty("Filename", "", FileProperty::Load,
+                       {".sq", ".sqa", ".sqb", ".gr", ".ain", ".braw", ".bsmo"},
+                       Kernel::Direction::Input);
   this->declareProperty(fileproperty, "The input filename of the stored data");
 
   // auto wsproperty = new WorkspaceProperty<Workspace2D>("OutputWorkspace",

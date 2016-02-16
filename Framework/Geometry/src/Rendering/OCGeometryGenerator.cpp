@@ -9,8 +9,10 @@
 #include "MantidGeometry/Objects/Rules.h"
 #include "MantidKernel/Logger.h"
 #include "MantidKernel/Matrix.h"
+#include "MantidKernel/Quat.h"
 #include "MantidKernel/V3D.h"
 #include "MantidKernel/WarningSuppressions.h"
+
 #include <climits> // Needed for g++4.4 on Mac with OpenCASCADE 6.3.0
 #include <cmath>
 #include <vector>
@@ -50,12 +52,7 @@ GCC_DIAG_OFF(cast-qual)
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepAlgoAPI_Common.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
-#include <BRepPrimAPI_MakeHalfSpace.hxx>
-#include <BRepPrimAPI_MakeSphere.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
-#include <BRepPrimAPI_MakeCylinder.hxx>
-#include <BRepPrimAPI_MakeCone.hxx>
-#include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_Transform.hxx>
 #include <BRep_Tool.hxx>
 #include <Poly_Triangulation.hxx>
@@ -83,14 +80,14 @@ Kernel::Logger g_log("OCGeometryGenerator");
 * @param obj :: input object
 */
 OCGeometryGenerator::OCGeometryGenerator(const Object *obj) : Obj(obj) {
-  ObjSurface = NULL;
+  ObjSurface = nullptr;
 }
 
 /**
 * Generate geometry, it uses OpenCascade to generate surface triangles.
 */
 void OCGeometryGenerator::Generate() {
-  if (ObjSurface == NULL) {
+  if (ObjSurface == nullptr) {
     AnalyzeObject();
   }
 }
@@ -99,30 +96,25 @@ void OCGeometryGenerator::Generate() {
 * Destroy the surface generated for the object
 */
 OCGeometryGenerator::~OCGeometryGenerator() {
-  if (ObjSurface != NULL) {
+  if (ObjSurface != nullptr) {
     delete ObjSurface;
   }
 }
 
 /**
-* Returns the shape generated.
-*/
-TopoDS_Shape *OCGeometryGenerator::getObjectSurface() { return ObjSurface; }
-
-/**
 * Analyzes the rule tree in object and creates a Topology Shape
 */
 void OCGeometryGenerator::AnalyzeObject() {
-  if (Obj != NULL) // If object exists
+  if (Obj != nullptr) // If object exists
   {
     // Get the top rule tree in Obj
     const Rule *top = Obj->topRule();
-    if (top == NULL) {
+    if (top == nullptr) {
       ObjSurface = new TopoDS_Shape();
       return;
     }
     // Traverse through Rule
-    TopoDS_Shape Result = AnalyzeRule(const_cast<Rule *>(top));
+    TopoDS_Shape Result = const_cast<Rule *>(top)->analyze();
     try {
       ObjSurface = new TopoDS_Shape(Result);
       BRepMesh_IncrementalMesh(Result, 0.001);
@@ -131,164 +123,15 @@ void OCGeometryGenerator::AnalyzeObject() {
     }
   }
 }
-/**
-* Analyze intersection
-* @return the resulting TopoDS_Shape
-*/
-TopoDS_Shape OCGeometryGenerator::AnalyzeRule(Intersection *rule) {
-  TopoDS_Shape left = AnalyzeRule(rule->leaf(0));
-  TopoDS_Shape right = AnalyzeRule(rule->leaf(1));
-  // TopoDS_Shape Result=BRepAlgoAPI_Common(left,right);
-  BRepAlgoAPI_Common comm(left, right);
-  TopoDS_Shape Result = comm.Shape();
-  // std::cerr << "Intersection status " << comm.ErrorStatus() << std::endl;
-  return Result;
-}
-TopoDS_Shape OCGeometryGenerator::AnalyzeRule(Union *rule) {
-  TopoDS_Shape left = AnalyzeRule(rule->leaf(0));
-  TopoDS_Shape right = AnalyzeRule(rule->leaf(1));
-  // TopoDS_Shape Result=BRepAlgoAPI_Fuse(left,right);
-  BRepAlgoAPI_Fuse fuse(left, right);
-  TopoDS_Shape Result = fuse.Shape();
-  return Result;
-}
-TopoDS_Shape OCGeometryGenerator::AnalyzeRule(SurfPoint *rule) {
-  // Check for individual type of surfaces
-  Surface *surf = rule->getKey();
-  TopoDS_Shape Result = CreateShape(surf, rule->getSign());
-  if (rule->getSign() > 0 && surf->className() != "Plane")
-    Result.Complement();
-  return Result;
-}
-TopoDS_Shape OCGeometryGenerator::AnalyzeRule(CompGrp *rule) {
-  TopoDS_Shape Result = AnalyzeRule(rule->leaf(0));
-  Result.Complement();
-  return Result;
-}
-TopoDS_Shape OCGeometryGenerator::AnalyzeRule(CompObj *rule) {
-  Object *obj = rule->getObj();
-  TopoDS_Shape Result = AnalyzeRule(const_cast<Rule *>(obj->topRule()));
-  Result.Complement();
-  return Result;
-}
-TopoDS_Shape OCGeometryGenerator::AnalyzeRule(BoolValue *rule) {
-  (void)rule; // Avoid compiler warning
-  return TopoDS_Shape();
-}
-TopoDS_Shape OCGeometryGenerator::AnalyzeRule(Rule *rule) {
-  if (rule == NULL)
-    return TopoDS_Shape();
-  if (rule->className() == "Intersection") {
-    return AnalyzeRule((Intersection *)rule);
-  } else if (rule->className() == "Union") {
-    return AnalyzeRule((Union *)rule);
-  } else if (rule->className() == "SurfPoint") {
-    return AnalyzeRule((SurfPoint *)rule);
-  } else if (rule->className() == "CompGrp") {
-    return AnalyzeRule((CompGrp *)rule);
-  } else if (rule->className() == "CompObj") {
-    return AnalyzeRule((CompObj *)rule);
-  } else if (rule->className() == "BoolValue") {
-    return AnalyzeRule((BoolValue *)rule);
-  }
-  return TopoDS_Shape();
-}
 
-TopoDS_Shape OCGeometryGenerator::CreateShape(Surface *surf, int orientation) {
-  // Check for the type of the surface object
-  if (surf->className() == "Sphere") {
-    return CreateSphere((Sphere *)surf);
-  } else if (surf->className() == "Cone") {
-    return CreateCone((Cone *)surf);
-  } else if (surf->className() == "Cylinder") {
-    return CreateCylinder((Cylinder *)surf);
-  } else if (surf->className() == "Plane") {
-    return CreatePlane((Plane *)surf, orientation);
-  } else if (surf->className() == "Torus") {
-    return CreateTorus((Torus *)surf);
-  }
-  return TopoDS_Shape();
-}
-TopoDS_Shape OCGeometryGenerator::CreateSphere(Sphere *sphere) {
-  // Get the center to Sphere, Radius
-  V3D center = sphere->getCentre();
-  double radius = sphere->getRadius();
-  TopoDS_Shape shape = BRepPrimAPI_MakeSphere(radius).Shape();
-  gp_Trsf T;
-  gp_Vec v(center[0], center[1], center[2]);
-  T.SetTranslation(v);
-  BRepBuilderAPI_Transform move(T);
-  move.Perform(shape);
-  return move.Shape();
-}
-TopoDS_Shape OCGeometryGenerator::CreateCylinder(Cylinder *cylinder) {
-  // Get the Cylinder Centre,Normal,Radius
-  V3D center = cylinder->getCentre();
-  V3D axis = cylinder->getNormal();
-  double radius = cylinder->getRadius();
-  center[0] = center[0] - axis[0] * 500;
-  center[1] = center[1] - axis[1] * 500;
-  center[2] = center[2] - axis[2] * 500;
-  gp_Ax2 gpA(gp_Pnt(center[0], center[1], center[2]),
-             gp_Dir(axis[0], axis[1], axis[2]));
-  TopoDS_Shape shape =
-      BRepPrimAPI_MakeCylinder(gpA, radius, 1000, 2 * M_PI).Solid();
-  return shape;
-}
-TopoDS_Shape OCGeometryGenerator::CreateCone(Cone *cone) {
-  // Get the Cone Centre Normal Radius
-  V3D center = cone->getCentre();
-  V3D axis = cone->getNormal();
-  double angle = cone->getCosAngle();
-  gp_Ax2 gpA(gp_Pnt(center[0], center[1], center[2]),
-             gp_Dir(axis[0], axis[1], axis[2]));
-  TopoDS_Shape shape =
-      BRepPrimAPI_MakeCone(gpA, 0, 1000 / tan(acos(angle * M_PI / 180.0)), 1000,
-                           2 * M_PI).Shape();
-  return shape;
-}
-TopoDS_Shape OCGeometryGenerator::CreatePlane(Plane *plane, int orientation) {
-  // Get Plane normal and distance.
-  V3D normal = plane->getNormal();
-  double norm2 = normal.norm2();
-  if (norm2 == 0.0) {
-    throw std::runtime_error("Cannot create a plane with zero normal");
-  }
-  double distance = plane->getDistance();
-  // Find point closest to origin
-  double t = distance / norm2;
-  // Create Half Space
-  TopoDS_Shape Result;
-  if (orientation > 0) {
-    TopoDS_Face P =
-        BRepBuilderAPI_MakeFace(
-            gp_Pln(normal[0], normal[1], normal[2], -distance)).Face();
-    Result = BRepPrimAPI_MakeHalfSpace(P, gp_Pnt(normal[0] * (1 + t),
-                                                 normal[1] * (1 + t),
-                                                 normal[2] * (1 + t))).Solid();
-  } else {
-    TopoDS_Face P =
-        BRepBuilderAPI_MakeFace(
-            gp_Pln(normal[0], normal[1], normal[2], -distance)).Face();
-    P.Reverse();
-    Result = BRepPrimAPI_MakeHalfSpace(P, gp_Pnt(normal[0] * (1 + t),
-                                                 normal[1] * (1 + t),
-                                                 normal[2] * (1 + t))).Solid();
-  }
-  // create a box
-  gp_Pnt p(-1000.0, -1000.0, -1000.0);
-  TopoDS_Shape world = BRepPrimAPI_MakeBox(p, 2000.0, 2000.0, 2000.0).Shape();
-  Result = BRepAlgoAPI_Common(world, Result);
-  return Result;
-}
-TopoDS_Shape OCGeometryGenerator::CreateTorus(Torus *) {
-  // NOTE:: Not yet implemented
-  return TopoDS_Shape();
-}
+/**
+* Returns the shape generated.
+*/
+TopoDS_Shape *OCGeometryGenerator::getObjectSurface() { return ObjSurface; }
 
 int OCGeometryGenerator::getNumberOfTriangles() {
   int countFace = 0;
-  if (ObjSurface != NULL) {
+  if (ObjSurface != nullptr) {
     TopExp_Explorer Ex;
     for (Ex.Init(*ObjSurface, TopAbs_FACE); Ex.More(); Ex.Next()) {
       TopoDS_Face F = TopoDS::Face(Ex.Current());
@@ -302,7 +145,7 @@ int OCGeometryGenerator::getNumberOfTriangles() {
 
 int OCGeometryGenerator::getNumberOfPoints() {
   int countVert = 0;
-  if (ObjSurface != NULL) {
+  if (ObjSurface != nullptr) {
     TopExp_Explorer Ex;
     for (Ex.Init(*ObjSurface, TopAbs_FACE); Ex.More(); Ex.Next()) {
       TopoDS_Face F = TopoDS::Face(Ex.Current());
@@ -315,10 +158,10 @@ int OCGeometryGenerator::getNumberOfPoints() {
 }
 
 double *OCGeometryGenerator::getTriangleVertices() {
-  double *points = NULL;
+  double *points = nullptr;
   int nPts = this->getNumberOfPoints();
   if (nPts > 0) {
-    points = new double[nPts * 3];
+    points = new double[static_cast<std::size_t>(nPts) * 3];
     int index = 0;
     TopExp_Explorer Ex;
     for (Ex.Init(*ObjSurface, TopAbs_FACE); Ex.More(); Ex.Next()) {
@@ -340,10 +183,10 @@ double *OCGeometryGenerator::getTriangleVertices() {
 }
 
 int *OCGeometryGenerator::getTriangleFaces() {
-  int *faces = NULL;
+  int *faces = nullptr;
   int nFaces = this->getNumberOfTriangles(); // was Points
   if (nFaces > 0) {
-    faces = new int[nFaces * 3];
+    faces = new int[static_cast<std::size_t>(nFaces) * 3];
     TopExp_Explorer Ex;
     int maxindex = 0;
     int index = 0;

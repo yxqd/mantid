@@ -3,11 +3,14 @@
 //----------------------------------------------------------------------
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/InstrumentDataService.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/Progress.h"
 #include "MantidDataHandling/LoadInstrument.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/ConfigService.h"
+#include "MantidKernel/OptionalBool.h"
+#include "MantidKernel/MandatoryValidator.h"
 
 #include <Poco/DOM/DOMParser.h>
 #include <Poco/DOM/Document.h>
@@ -20,7 +23,6 @@
 #include <Poco/Exception.h>
 #include <sstream>
 #include <fstream>
-#include <iostream>
 #include "MantidGeometry/Instrument/InstrumentDefinitionParser.h"
 
 using Poco::XML::DOMParser;
@@ -69,7 +71,9 @@ void LoadInstrument::init() {
   declareProperty("InstrumentXML", "",
                   "The full XML instrument definition as a string.");
   declareProperty(
-      "RewriteSpectraMap", true,
+      new PropertyWithValue<OptionalBool>(
+          "RewriteSpectraMap", OptionalBool::Unset,
+          boost::make_shared<MandatoryValidator<OptionalBool>>()),
       "If true then a 1:1 map between the spectrum numbers and "
       "detector/monitor IDs is set up as follows: the detector/monitor IDs in "
       "the IDF are ordered from smallest to largest number and then assigned "
@@ -173,7 +177,7 @@ void LoadInstrument::exec() {
           InstrumentDataService::Instance().retrieve(instrumentNameMangled);
     } else {
       // Really create the instrument
-      Progress *prog = new Progress(this, 0, 1, 100);
+      auto prog = new Progress(this, 0, 1, 100);
       instrument = parser.parseXML(prog);
       delete prog;
       // Add to data service for later retrieval
@@ -196,8 +200,8 @@ void LoadInstrument::exec() {
   // Rebuild the spectra map for this workspace so that it matches the
   // instrument
   // if required
-  const bool rewriteSpectraMap = getProperty("RewriteSpectraMap");
-  if (rewriteSpectraMap)
+  const OptionalBool RewriteSpectraMap = getProperty("RewriteSpectraMap");
+  if (RewriteSpectraMap == OptionalBool::True)
     m_workspace->rebuildSpectraMapping();
 }
 
@@ -219,11 +223,9 @@ void LoadInstrument::runLoadParameterFile() {
     std::vector<std::string> directoryNames =
         configService.getInstrumentDirectories();
 
-    for (auto instDirs_itr = directoryNames.begin();
-         instDirs_itr != directoryNames.end(); ++instDirs_itr) {
+    for (auto directoryName : directoryNames) {
       // This will iterate around the directories from user ->etc ->install, and
       // find the first beat file
-      std::string directoryName = *instDirs_itr;
       fullPathParamIDF = getFullPathParamIDF(directoryName);
       // stop when you find the first one
       if (!fullPathParamIDF.empty())

@@ -1,9 +1,12 @@
 #include "MantidAlgorithms/DetectorEfficiencyCorUser.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/HistogramValidator.h"
+#include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidAPI/WorkspaceUnitValidator.h"
+#include "MantidGeometry/Instrument.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/CompositeValidator.h"
 #include "MantidGeometry/muParser_Silent.h"
-#include <ctime>
 
 namespace Mantid {
 namespace Algorithms {
@@ -37,7 +40,7 @@ int DetectorEfficiencyCorUser::version() const { return 1; }
 
 /// Algorithm's category for identification. @see Algorithm::category
 const std::string DetectorEfficiencyCorUser::category() const {
-  return "CorrectionFunctions\\EfficiencyCorrections;Inelastic";
+  return "CorrectionFunctions\\EfficiencyCorrections;Inelastic\\Corrections";
 }
 
 //----------------------------------------------------------------------------------------------
@@ -200,8 +203,8 @@ MantidVec DetectorEfficiencyCorUser::calculateEfficiency(
         std::min(std::abs(*std::min_element(xIn.begin(), xIn.end())), m_Ei) <
         m_Ei;
 
-    MantidVec::const_iterator xIn_it = xIn.begin(); // DeltaE
-    MantidVec::iterator effOut_it = effOut.begin();
+    auto xIn_it = xIn.cbegin(); // DeltaE
+    auto effOut_it = effOut.begin();
     for (; effOut_it != effOut.end(); ++xIn_it, ++effOut_it) {
       if (conditionForEnergy) {
         // cppcheck cannot see that this is used by reference by muparser

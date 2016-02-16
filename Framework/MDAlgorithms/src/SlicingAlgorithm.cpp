@@ -186,10 +186,6 @@ void SlicingAlgorithm::makeBasisVectorFromString(const std::string &str) {
                                 "input dimensions) in the dimensions string: " +
                                 str);
 
-  // Extract the arguments
-  std::string id = name;
-  std::string units = Strings::strip(strs[0]);
-
   // Get the number of bins from
   int numBins = m_numBins[dim];
   if (numBins < 1)
@@ -250,9 +246,16 @@ void SlicingAlgorithm::makeBasisVectorFromString(const std::string &str) {
   // BIN number
   double binningScaling = double(numBins) / (lengthInInput);
 
+  // Extract the arguments
+  std::string id = name;
+  std::string units = Strings::strip(strs[0]);
+
+  // Create the appropriate frame
+  auto frame = createMDFrameForNonAxisAligned(units, basis);
+
   // Create the output dimension
   MDHistoDimension_sptr out(
-      new MDHistoDimension(name, id, units, static_cast<coord_t>(min),
+      new MDHistoDimension(name, id, *frame, static_cast<coord_t>(min),
                            static_cast<coord_t>(max), numBins));
 
   // Put both in the algo for future use
@@ -272,9 +275,9 @@ void SlicingAlgorithm::processGeneralTransformProperties() {
   // Count the number of output dimensions
   m_outD = 0;
   std::string dimChars = this->getDimensionChars();
-  for (size_t i = 0; i < dimChars.size(); i++) {
+  for (char dimChar : dimChars) {
     std::string propName = "BasisVector0";
-    propName[11] = dimChars[i];
+    propName[11] = dimChar;
     if (!Strings::strip(this->getPropertyValue(propName)).empty())
       m_outD++;
   }
@@ -303,9 +306,9 @@ void SlicingAlgorithm::processGeneralTransformProperties() {
   m_transformScaling.clear();
 
   // Create the dimensions based on the strings from the user
-  for (size_t i = 0; i < dimChars.size(); i++) {
+  for (char dimChar : dimChars) {
     std::string propName = "BasisVector0";
-    propName[11] = dimChars[i];
+    propName[11] = dimChar;
     try {
       makeBasisVectorFromString(getPropertyValue(propName));
     } catch (std::exception &e) {
@@ -370,8 +373,8 @@ void SlicingAlgorithm::createGeneralTransform() {
     ortho.resize(m_bases.size(), VMD(3));
     m_bases = ortho;
     g_log.information() << "Basis vectors forced to be orthogonal: ";
-    for (size_t i = 0; i < m_bases.size(); i++)
-      g_log.information() << m_bases[i].toString(",") << "; ";
+    for (auto &base : m_bases)
+      g_log.information() << base.toString(",") << "; ";
     g_log.information() << std::endl;
   }
 
@@ -390,8 +393,7 @@ void SlicingAlgorithm::createGeneralTransform() {
   // std::cout << m_inputMinPoint << " m_inputMinPoint " << std::endl;
 
   // Create the CoordTransformAffine for BINNING with these basis vectors
-  DataObjects::CoordTransformAffine *ct =
-      new DataObjects::CoordTransformAffine(inD, m_outD);
+  auto ct = new DataObjects::CoordTransformAffine(inD, m_outD);
   // Note: the scaling makes the coordinate correspond to a bin index
   // ct->buildOrthogonal(m_inputMinPoint, this->m_bases,
   //                    VMD(this->m_binningScaling));
@@ -400,8 +402,7 @@ void SlicingAlgorithm::createGeneralTransform() {
   this->m_transform = ct;
 
   // Transformation original->binned
-  DataObjects::CoordTransformAffine *ctFrom =
-      new DataObjects::CoordTransformAffine(inD, m_outD);
+  auto ctFrom = new DataObjects::CoordTransformAffine(inD, m_outD);
   // ctFrom->buildOrthogonal(m_translation, this->m_bases,
   //                        VMD(m_transformScaling));
   ctFrom->buildNonOrthogonal(m_translation, this->m_bases,
@@ -421,11 +422,10 @@ void SlicingAlgorithm::createGeneralTransform() {
         "the OutDimX, etc. properties.");
 
   // Now the reverse transformation
-  m_transformToOriginal = NULL;
+  m_transformToOriginal = nullptr;
   if (m_outD == inD) {
     // Can't reverse transform if you lost dimensions.
-    DataObjects::CoordTransformAffine *ctTo =
-        new DataObjects::CoordTransformAffine(inD, m_outD);
+    auto ctTo = new DataObjects::CoordTransformAffine(inD, m_outD);
     Matrix<coord_t> fromMatrix = ctFrom->getMatrix();
     Matrix<coord_t> toMatrix = fromMatrix;
     // Invert the affine matrix to get the reverse transformation
@@ -510,9 +510,10 @@ void SlicingAlgorithm::makeAlignedDimensionFromString(const std::string &str) {
 
     // Copy the dimension name, ID and units
     IMDDimension_const_sptr inputDim = m_inWS->getDimension(dim_index);
+    const auto &frame = inputDim->getMDFrame();
     m_binDimensions.push_back(MDHistoDimension_sptr(
         new MDHistoDimension(inputDim->getName(), inputDim->getDimensionId(),
-                             inputDim->getUnits(), min, max, numBins)));
+                             frame, min, max, numBins)));
 
     // Add the index from which we're binning to the vector
     this->m_dimensionToBinFrom.push_back(dim_index);
@@ -528,9 +529,9 @@ void SlicingAlgorithm::createAlignedTransform() {
   // Validate inputs
   bool previousWasEmpty = false;
   size_t numDims = 0;
-  for (size_t i = 0; i < dimChars.size(); i++) {
+  for (char dimChar : dimChars) {
     std::string propName = "AlignedDim0";
-    propName[10] = dimChars[i];
+    propName[10] = dimChar;
     std::string prop = Strings::strip(getPropertyValue(propName));
     if (!prop.empty())
       numDims++;
@@ -592,13 +593,12 @@ void SlicingAlgorithm::createAlignedTransform() {
     // dimension index is that?
     Matrix<coord_t> mat = m_transformFromOriginal->makeAffineMatrix();
     mat.Invert();
-    DataObjects::CoordTransformAffine *tmp =
-        new DataObjects::CoordTransformAffine(inD, m_outD);
+    auto tmp = new DataObjects::CoordTransformAffine(inD, m_outD);
     tmp->setMatrix(mat);
     m_transformToOriginal = tmp;
   } else {
     // Changed # of dimensions - can't reverse the transform
-    m_transformToOriginal = NULL;
+    m_transformToOriginal = nullptr;
     g_log.warning("SlicingAlgorithm: Your slice will cause the output "
                   "workspace to have less dimensions than the input. This will "
                   "affect your ability to create subsequent slices.");
@@ -684,7 +684,7 @@ void SlicingAlgorithm::createTransform() {
   }
 
   // Create the coordinate transformation
-  m_transform = NULL;
+  m_transform = nullptr;
   if (m_axisAligned)
     this->createAlignedTransform();
   else
@@ -805,7 +805,7 @@ SlicingAlgorithm::getGeneralImplicitFunction(const size_t *const chunkMin,
   size_t nd = m_inWS->getNumDims();
 
   // General implicit function
-  MDImplicitFunction *func = new MDImplicitFunction;
+  auto func = new MDImplicitFunction;
 
   // First origin = min of each basis vector
   VMD o1 = m_translation;
@@ -819,9 +819,9 @@ SlicingAlgorithm::getGeneralImplicitFunction(const size_t *const chunkMin,
     double xMin = m_binDimensions[d]->getMinimum();
     double xMax = m_binDimensions[d]->getMaximum();
     // Move the position if you're using a chunk
-    if (chunkMin != NULL)
+    if (chunkMin != nullptr)
       xMin = m_binDimensions[d]->getX(chunkMin[d]);
-    if (chunkMax != NULL)
+    if (chunkMax != nullptr)
       xMax = m_binDimensions[d]->getX(chunkMax[d]);
     // Offset the origin by the position along the basis vector
     o1 += (m_bases[d] * xMin);
@@ -947,11 +947,11 @@ SlicingAlgorithm::getGeneralImplicitFunction(const size_t *const chunkMin,
     // Last-resort, totally general case
     // 2*N planes defined by N basis vectors, in any dimensionality workspace.
     // Assumes orthogonality!
-    for (size_t i = 0; i < bases.size(); i++) {
+    for (auto &base : bases) {
       // For each basis vector, make two planes, perpendicular to it and facing
       // inwards
-      func->addPlane(MDPlane(bases[i], o1));
-      func->addPlane(MDPlane(bases[i] * -1.0, o2));
+      func->addPlane(MDPlane(base, o1));
+      func->addPlane(MDPlane(base * -1.0, o2));
     }
   }
 
@@ -993,13 +993,103 @@ SlicingAlgorithm::getImplicitFunctionForChunk(const size_t *const chunkMin,
         function_max[d] =
             m_binDimensions[bd]->getX(m_binDimensions[bd]->getNBins());
     }
-    MDBoxImplicitFunction *function =
-        new MDBoxImplicitFunction(function_min, function_max);
+    auto function = new MDBoxImplicitFunction(function_min, function_max);
     return function;
   } else {
     // General implicit function
     return getGeneralImplicitFunction(chunkMin, chunkMax);
   }
+}
+
+/**
+ * Create an MDFrame for the Non-Axis-Aligned case. Make sure that
+ * MDFrames onto which the basis vector projects are not mixed, e.g. no mixing
+ * of HKL and GenerFrame
+ * @param units: the units
+ * @param basisVector: the basis vector
+ * @returns the unique pointer
+ */
+Mantid::Geometry::MDFrame_uptr SlicingAlgorithm::createMDFrameForNonAxisAligned(
+    std::string units, Mantid::Kernel::VMD basisVector) const {
+  // Get set of basis vectors
+  auto oldBasis = getOldBasis(m_inWS->getNumDims());
+
+  // Get indices onto which the vector projects
+  auto indicesWithProjection = getIndicesWithProjection(basisVector, oldBasis);
+
+  // Extract MDFrame
+  return extractMDFrameForNonAxisAligned(indicesWithProjection, units);
+}
+
+std::vector<Mantid::Kernel::VMD>
+SlicingAlgorithm::getOldBasis(size_t dimension) const {
+  std::vector<Mantid::Kernel::VMD> oldBasis;
+  for (size_t i = 0; i < dimension; ++i) {
+    Mantid::Kernel::VMD basisVector(dimension);
+    basisVector[i] = 1.0;
+    oldBasis.push_back(basisVector);
+  }
+  return oldBasis;
+}
+
+/**
+ * Check if the two vectors are orthogonal or not
+ * @param oldVector: the old vector
+ * @param basisVector: the vector under investigation
+ * @returns true if there is a projection  else false
+ */
+bool SlicingAlgorithm::isProjectingOnFrame(
+    const Mantid::Kernel::VMD &oldVector,
+    const Mantid::Kernel::VMD &basisVector) const {
+  return std::fabs(oldVector.scalar_prod(basisVector)) > 0.0;
+}
+
+/**
+ * Get indices which have a projection contribution
+ * @param basisVector: the vector under investigation
+ * @param oldBasis: the old basis vectors
+ * @returns the indices of vectors onto which the basisVector projects
+ */
+std::vector<size_t> SlicingAlgorithm::getIndicesWithProjection(
+    const Mantid::Kernel::VMD &basisVector,
+    const std::vector<Mantid::Kernel::VMD> &oldBasis) const {
+  std::vector<size_t> indexWithProjection;
+  for (size_t index = 0; index < oldBasis.size(); ++index) {
+    if (isProjectingOnFrame(oldBasis[index], basisVector)) {
+      indexWithProjection.push_back(index);
+    }
+  }
+  return indexWithProjection;
+}
+
+/**
+ * Extract the MDFrame. Make sure that all MDFrames are compatible -- if not
+ * throw
+ * @param indicesWithProjection: list of indices of dimensions which have a
+ * projection
+ * @param units: the units
+ */
+Mantid::Geometry::MDFrame_uptr
+SlicingAlgorithm::extractMDFrameForNonAxisAligned(
+    std::vector<size_t> indicesWithProjection, std::string) const {
+  if (indicesWithProjection.empty()) {
+    g_log.warning() << "Slicing Algorithm: Chosen vector does not "
+                       "project on any vector of the old basis.";
+  }
+  // Get a reference frame to perform pairwise comparison
+  const auto &referenceMDFrame =
+      m_inWS->getDimension(indicesWithProjection[0])->getMDFrame();
+
+  for (auto &index : indicesWithProjection) {
+    const auto &toCheckMDFrame = m_inWS->getDimension(index)->getMDFrame();
+    if (!referenceMDFrame.isSameType(toCheckMDFrame)) {
+      g_log.warning() << "Slicing Algorithm: New basis vector tries to "
+                         "mix un-mixable MDFrame types.";
+    }
+  }
+
+  Mantid::Geometry::MDFrame_uptr mdFrame(referenceMDFrame.clone());
+  return mdFrame;
 }
 
 } // namespace Mantid

@@ -5,6 +5,7 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidKernel/DllConfig.h"
+#include "MantidKernel/ICatalogInfo.h"
 #include <string>
 
 //----------------------------------------------------------------------
@@ -43,39 +44,37 @@ namespace Kernel {
     Code Documentation is available at: <http://doxygen.mantidproject.org>
  */
 
-class MANTID_KERNEL_DLL CatalogInfo {
+class MANTID_KERNEL_DLL CatalogInfo : public ICatalogInfo {
 public:
   /// Constructor
   CatalogInfo(const Poco::XML::Element *element);
+  /// Copy constructor
+  CatalogInfo(const CatalogInfo &other);
   /// Obtain catalog name from the facility file.
-  const std::string catalogName() const;
+  const std::string catalogName() const override;
   /// Obtain soap end point from the facility file.
-  const std::string soapEndPoint() const;
+  const std::string soapEndPoint() const override;
   /// Obtain the external download URL.
-  const std::string externalDownloadURL() const;
+  const std::string externalDownloadURL() const override;
   /// Obtain the regex prefix from the  facility file.
-  const std::string catalogPrefix() const;
+  const std::string catalogPrefix() const override;
   /// Obtain Windows prefix from the facility file.
-  const std::string windowsPrefix() const;
+  const std::string windowsPrefix() const override;
   /// Obtain Macintosh prefix from facility file.
-  const std::string macPrefix() const;
+  const std::string macPrefix() const override;
   /// Obtain Linux prefix from facility file.
-  const std::string linuxPrefix() const;
-  /// Transform's the archive path based on operating system used.
-  std::string transformArchivePath(std::string &path);
+  const std::string linuxPrefix() const override;
+  /// Clone
+  CatalogInfo *clone() const override;
 
 private:
-  /// Replace the content of a string using regex.
-  std::string replacePrefix(std::string &path, const std::string &regex,
-                            const std::string &prefix);
-  /// Replace all occurrences of the search string in the input with the format
-  /// string.
-  std::string replaceAllOccurences(std::string &path, const std::string &search,
-                                   const std::string &format);
   /// Obtain the attribute from a given element tag and attribute name.
   std::string getAttribute(const Poco::XML::Element *element,
                            const std::string &tagName,
                            const std::string &attributeName);
+
+  // Disabled assignment operator.
+  CatalogInfo &operator=(const CatalogInfo &other);
 
   std::string m_catalogName;
   std::string m_soapEndPoint;

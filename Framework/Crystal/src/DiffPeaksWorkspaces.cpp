@@ -29,7 +29,9 @@ const std::string DiffPeaksWorkspaces::name() const {
 /// Algorithm's version for identification. @see Algorithm::version
 int DiffPeaksWorkspaces::version() const { return 1; }
 /// Algorithm's category for identification. @see Algorithm::category
-const std::string DiffPeaksWorkspaces::category() const { return "Crystal"; }
+const std::string DiffPeaksWorkspaces::category() const {
+  return "Crystal\\Peaks";
+}
 
 /** Initialises the algorithm's properties.
  */
@@ -82,8 +84,7 @@ void DiffPeaksWorkspaces::exec() {
 
   // Loop over the peaks in the second workspace, searching for a match in the
   // first
-  for (size_t i = 0; i < rhsPeaks.size(); ++i) {
-    const Peak &currentPeak = rhsPeaks[i];
+  for (const auto &currentPeak : rhsPeaks) {
     // Now have to go through the first workspace checking for matches
     // Not doing anything clever as peaks workspace are typically not large -
     // just a linear search

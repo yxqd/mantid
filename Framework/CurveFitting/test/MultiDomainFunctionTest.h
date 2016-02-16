@@ -9,23 +9,24 @@
 #include "MantidAPI/ParamFunction.h"
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/FrameworkManager.h"
-#include "MantidCurveFitting/CostFuncLeastSquares.h"
-#include "MantidCurveFitting/LevenbergMarquardtMDMinimizer.h"
-#include "MantidCurveFitting/Fit.h"
+#include "MantidCurveFitting/CostFunctions/CostFuncLeastSquares.h"
+#include "MantidCurveFitting/FuncMinimizers/LevenbergMarquardtMDMinimizer.h"
+#include "MantidCurveFitting/Algorithms/Fit.h"
 
 #include "MantidTestHelpers/FakeObjects.h"
 
 #include <cxxtest/TestSuite.h>
 #include <boost/make_shared.hpp>
 #include <algorithm>
-#include <iostream>
 
 using namespace Mantid;
 using namespace Mantid::API;
 using namespace Mantid::CurveFitting;
+using namespace Mantid::CurveFitting::CostFunctions;
+using namespace Mantid::CurveFitting::Algorithms;
 
-class MultiDomainFunctionTest_Function : public virtual IFunction1D,
-                                         public virtual ParamFunction {
+class MultiDomainFunctionTest_Function : public IFunction1D,
+                                         public ParamFunction {
 public:
   MultiDomainFunctionTest_Function() : IFunction1D(), ParamFunction() {
     this->declareParameter("A", 0);
@@ -158,11 +159,12 @@ public:
     ii[1] = 2;
     multi->setDomainIndices(2, ii);
 
-    boost::shared_ptr<CostFuncLeastSquares> costFun(new CostFuncLeastSquares);
+    boost::shared_ptr<CostFuncLeastSquares> costFun =
+        boost::make_shared<CostFuncLeastSquares>();
     costFun->setFittingFunction(multi, domain, values);
     TS_ASSERT_EQUALS(costFun->nParams(), 6);
 
-    LevenbergMarquardtMDMinimizer s;
+    FuncMinimisers::LevenbergMarquardtMDMinimizer s;
     s.initialize(costFun);
     TS_ASSERT(s.minimize());
 
@@ -186,7 +188,7 @@ public:
     multi->getFunction(2)->setParameter("A", 0);
     multi->getFunction(2)->setParameter("B", 0);
 
-    Fit fit;
+    Algorithms::Fit fit;
     fit.initialize();
     fit.setProperty("Function", boost::dynamic_pointer_cast<IFunction>(multi));
     fit.setProperty("InputWorkspace", ws1);
@@ -231,8 +233,7 @@ public:
     // middle part has
     // constant value A1
 
-    MatrixWorkspace_sptr ws =
-        boost::shared_ptr<MatrixWorkspace>(new WorkspaceTester);
+    MatrixWorkspace_sptr ws = boost::make_shared<WorkspaceTester>();
     ws->initialize(1, 30, 30);
     {
       const double dx = 1.0;

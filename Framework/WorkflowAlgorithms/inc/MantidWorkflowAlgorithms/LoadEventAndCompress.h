@@ -34,24 +34,24 @@ namespace WorkflowAlgorithms {
 class DLLExport LoadEventAndCompress : public API::DataProcessorAlgorithm {
 public:
   LoadEventAndCompress();
-  virtual ~LoadEventAndCompress();
+  ~LoadEventAndCompress() override;
 
-  virtual const std::string name() const;
-  virtual int version() const;
-  virtual const std::string category() const;
-  virtual const std::string summary() const;
+  const std::string name() const override;
+  int version() const override;
+  const std::string category() const override;
+  const std::string summary() const override;
 
 protected:
-  API::ITableWorkspace_sptr determineChunk(const std::string &filename);
-  API::MatrixWorkspace_sptr loadChunk(const size_t rowIndex);
-  API::MatrixWorkspace_sptr processChunk(API::MatrixWorkspace_sptr wksp);
+  API::ITableWorkspace_sptr
+  determineChunk(const std::string &filename) override;
+  API::MatrixWorkspace_sptr loadChunk(const size_t rowIndex) override;
+  API::MatrixWorkspace_sptr processChunk(API::MatrixWorkspace_sptr &wksp,
+                                         double filterBadPulses);
 
 private:
-  void init();
-  void exec();
+  void init() override;
+  void exec() override;
 
-  std::string m_filename;
-  double m_filterBadPulses;
   API::ITableWorkspace_sptr m_chunkingTable;
 };
 

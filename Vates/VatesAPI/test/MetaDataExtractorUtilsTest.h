@@ -1,6 +1,13 @@
 #ifndef METADATAEXTRACTORUTILS_TEST_H
 #define METADATAEXTRACTORUTILS_TEST_H
 
+#ifdef _MSC_VER
+// Disabling Json warnings regarding non-export of Json::Reader and Json::Writer
+#pragma warning(disable : 4275)
+#pragma warning(disable : 4251)
+#endif
+
+
 #include "MantidVatesAPI/MetaDataExtractorUtils.h"
 
 #include <cxxtest/TestSuite.h>
@@ -12,6 +19,7 @@
 #include "MantidTestHelpers/MDEventsTestHelper.h"
 #include "MantidAPI/FileFinder.h"
 #include "MantidAPI/ITableWorkspace.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "boost/pointer_cast.hpp"
 
 using namespace Mantid::VATES;

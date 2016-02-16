@@ -1,5 +1,6 @@
 #include "MantidQtCustomInterfaces/Indirect/ISISEnergyTransfer.h"
 
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidGeometry/IDTypes.h"
 #include "MantidQtCustomInterfaces/UserInputValidator.h"
 
@@ -41,16 +42,6 @@ ISISEnergyTransfer::ISISEnergyTransfer(IndirectDataReduction *idrUI,
   connect(m_uiForm.dsRunFiles, SIGNAL(fileFindingFinished()), this,
           SLOT(pbRunFinished()));
 
-  // Re-validate when certain inputs are changed
-  connect(m_uiForm.spRebinLow, SIGNAL(valueChanged(double)), this,
-          SLOT(validate()));
-  connect(m_uiForm.spRebinWidth, SIGNAL(valueChanged(double)), this,
-          SLOT(validate()));
-  connect(m_uiForm.spRebinHigh, SIGNAL(valueChanged(double)), this,
-          SLOT(validate()));
-  connect(m_uiForm.leRebinString, SIGNAL(textChanged(const QString &)), this,
-          SLOT(validate()));
-
   // Update UI widgets to show default values
   mappingOptionSelected(m_uiForm.cbGroupingOptions->currentText());
 
@@ -69,27 +60,40 @@ bool ISISEnergyTransfer::validate() {
   UserInputValidator uiv;
 
   // Run files input
-  if (!m_uiForm.dsRunFiles->isValid()){
+  if (!m_uiForm.dsRunFiles->isValid()) {
     uiv.addErrorMessage("Run file range is invalid.");
   }
 
   // Calibration file input
   if (m_uiForm.ckUseCalib->isChecked() &&
-      !m_uiForm.dsCalibrationFile->isValid()){
+      !m_uiForm.dsCalibrationFile->isValid()) {
     uiv.addErrorMessage("Calibration file/workspace is invalid.");
   }
 
   // Mapping file
   if ((m_uiForm.cbGroupingOptions->currentText() == "File") &&
-      (!m_uiForm.dsMapFile->isValid())){
+      (!m_uiForm.dsMapFile->isValid())) {
     uiv.addErrorMessage("Mapping file is invalid.");
   }
 
   // Rebinning
   if (!m_uiForm.ckDoNotRebin->isChecked()) {
     if (m_uiForm.cbRebinType->currentText() == "Single") {
-      bool rebinValid = !uiv.checkBins(m_uiForm.spRebinLow->value(),
-                                       m_uiForm.spRebinWidth->value(),
+      double rebinWidth = m_uiForm.spRebinWidth->value();
+      if (rebinWidth < 0) {
+        // Ensure negative bin width is intentionally logarithmic
+        QString text = "The Binning width is currently negative, this suggests "
+                       "you wish to use logarithmic binning.\n"
+                       " Do you want to use Logarithmic Binning?";
+        int result = QMessageBox::question(
+            NULL, tr("Logarithmic Binning"), tr(text), QMessageBox::Yes,
+            QMessageBox::No, QMessageBox::NoButton);
+        if (result == QMessageBox::Yes) {
+          // Treat rebin width as a positive for validation
+          rebinWidth = std::abs(rebinWidth);
+        }
+      }
+      bool rebinValid = !uiv.checkBins(m_uiForm.spRebinLow->value(), rebinWidth,
                                        m_uiForm.spRebinHigh->value());
       m_uiForm.valRebinLow->setVisible(rebinValid);
       m_uiForm.valRebinWidth->setVisible(rebinValid);
@@ -115,17 +119,63 @@ bool ISISEnergyTransfer::validate() {
   // Spectra Number check
   const int specMin = m_uiForm.spSpectraMin->value();
   const int specMax = m_uiForm.spSpectraMax->value();
-  if(specMin > specMax){
-	uiv.addErrorMessage("Spectra Min must be less than Spectra Max");
+  if (specMin > specMax) {
+    uiv.addErrorMessage("Spectra Min must be less than Spectra Max");
   }
 
   // Background Removal (TOF)
-  if(m_uiForm.ckBackgroundRemoval->isChecked()){
-	  const int start = m_uiForm.spBackgroundStart->value();
-	  const int end = m_uiForm.spBackgroundEnd->value();
-	  if(start > end){
-		  uiv.addErrorMessage("Background Start must be less than Background End");
-	  }
+  if (m_uiForm.ckBackgroundRemoval->isChecked()) {
+    const int start = m_uiForm.spBackgroundStart->value();
+    const int end = m_uiForm.spBackgroundEnd->value();
+    if (start > end) {
+      uiv.addErrorMessage("Background Start must be less than Background End");
+    }
+  }
+
+  if (m_uiForm.dsRunFiles->isValid()) {
+    int detectorMin = m_uiForm.spPlotTimeSpecMin->value();
+    int detectorMax = m_uiForm.spPlotTimeSpecMax->value();
+
+    QString rawFile = m_uiForm.dsRunFiles->getFirstFilename();
+    auto pos = rawFile.lastIndexOf(".");
+    auto extension = rawFile.right(rawFile.length() - pos);
+    QFileInfo rawFileInfo(rawFile);
+    std::string name = rawFileInfo.baseName().toStdString();
+
+    IAlgorithm_sptr loadAlg = AlgorithmManager::Instance().create("Load");
+    loadAlg->initialize();
+    loadAlg->setProperty("Filename", rawFile.toStdString());
+    loadAlg->setProperty("OutputWorkspace", name);
+    if (extension.compare(".nxs") == 0) {
+      int64_t detectorMin =
+          static_cast<int64_t>(m_uiForm.spPlotTimeSpecMin->value());
+      int64_t detectorMax =
+          static_cast<int64_t>(m_uiForm.spPlotTimeSpecMax->value());
+      loadAlg->setProperty("SpectrumMin", detectorMin);
+      loadAlg->setProperty("SpectrumMax", detectorMax);
+    } else {
+      loadAlg->setProperty("SpectrumMin", detectorMin);
+      loadAlg->setProperty("SpectrumMax", detectorMax);
+    }
+
+    loadAlg->execute();
+
+    if (m_uiForm.ckBackgroundRemoval->isChecked()) {
+      MatrixWorkspace_sptr tempWs =
+          AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(name);
+      const double minBack = tempWs->readX(0)[0];
+      const double maxBack = tempWs->readX(0)[tempWs->blocksize()];
+
+      if (m_uiForm.spBackgroundStart->value() < minBack) {
+        uiv.addErrorMessage("The Start of Background Removal is less than the "
+                            "minimum of the data range");
+      }
+
+      if (m_uiForm.spBackgroundEnd->value() > maxBack) {
+        uiv.addErrorMessage("The End of Background Removal is more than the "
+                            "maximum of the data range");
+      }
+    }
   }
 
   QString error = uiv.generateErrorMessage();
@@ -279,9 +329,10 @@ void ISISEnergyTransfer::setInstrumentDefault() {
     return;
   }
 
-  int specMin = instDetails["spectra-min"].toInt();
-  int specMax = instDetails["spectra-max"].toInt();
-
+  // Set spectra min/max for spinners in UI
+  const int specMin = instDetails["spectra-min"].toInt();
+  const int specMax = instDetails["spectra-max"].toInt();
+  // Spectra spinners
   m_uiForm.spSpectraMin->setMinimum(specMin);
   m_uiForm.spSpectraMin->setMaximum(specMax);
   m_uiForm.spSpectraMin->setValue(specMin);
@@ -289,6 +340,15 @@ void ISISEnergyTransfer::setInstrumentDefault() {
   m_uiForm.spSpectraMax->setMinimum(specMin);
   m_uiForm.spSpectraMax->setMaximum(specMax);
   m_uiForm.spSpectraMax->setValue(specMax);
+
+  // Plot time spectra spinners
+  m_uiForm.spPlotTimeSpecMin->setMinimum(1);		// 1 to allow for monitors
+  m_uiForm.spPlotTimeSpecMin->setMaximum(specMax);
+  m_uiForm.spPlotTimeSpecMin->setValue(1);
+
+  m_uiForm.spPlotTimeSpecMax->setMinimum(1);
+  m_uiForm.spPlotTimeSpecMax->setMaximum(specMax);
+  m_uiForm.spPlotTimeSpecMax->setValue(1);
 
   if (!instDetails["Efixed"].isEmpty())
     m_uiForm.spEfixed->setValue(instDetails["Efixed"].toDouble());
@@ -410,17 +470,17 @@ std::vector<std::string> ISISEnergyTransfer::getSaveFormats() {
   std::vector<std::string> fileFormats;
 
   if (m_uiForm.ckSaveNexus->isChecked())
-    fileFormats.push_back("nxs");
+    fileFormats.emplace_back("nxs");
   if (m_uiForm.ckSaveSPE->isChecked())
-    fileFormats.push_back("spe");
+    fileFormats.emplace_back("spe");
   if (m_uiForm.ckSaveNXSPE->isChecked())
-    fileFormats.push_back("nxspe");
+    fileFormats.emplace_back("nxspe");
   if (m_uiForm.ckSaveASCII->isChecked())
-    fileFormats.push_back("ascii");
+    fileFormats.emplace_back("ascii");
   if (m_uiForm.ckSaveAclimax->isChecked())
-    fileFormats.push_back("aclimax");
+    fileFormats.emplace_back("aclimax");
   if (m_uiForm.ckSaveDaveGrp->isChecked())
-    fileFormats.push_back("davegrp");
+    fileFormats.emplace_back("davegrp");
 
   return fileFormats;
 }
@@ -446,6 +506,15 @@ void ISISEnergyTransfer::plotRaw() {
         "Minimum spectra must be less than or equal to maximum spectra.");
     return;
   }
+  const int startBack = m_uiForm.spBackgroundStart->value();
+  const int endBack = m_uiForm.spBackgroundEnd->value();
+
+  if (m_uiForm.ckBackgroundRemoval->isChecked() == true) {
+    if (startBack > endBack) {
+      emit showMessageBox("Background Start must be less than Background End");
+      return;
+    }
+  }
 
   QString rawFile = m_uiForm.dsRunFiles->getFirstFilename();
   auto pos = rawFile.lastIndexOf(".");
@@ -453,10 +522,11 @@ void ISISEnergyTransfer::plotRaw() {
   QFileInfo rawFileInfo(rawFile);
   std::string name = rawFileInfo.baseName().toStdString();
 
-   IAlgorithm_sptr loadAlg = AlgorithmManager::Instance().create("Load");
+  IAlgorithm_sptr loadAlg = AlgorithmManager::Instance().create("Load");
   loadAlg->initialize();
   loadAlg->setProperty("Filename", rawFile.toStdString());
   loadAlg->setProperty("OutputWorkspace", name);
+  loadAlg->setProperty("LoadLogFiles", false);
   if (extension.compare(".nxs") == 0) {
     int64_t detectorMin =
         static_cast<int64_t>(m_uiForm.spPlotTimeSpecMin->value());
@@ -468,7 +538,27 @@ void ISISEnergyTransfer::plotRaw() {
     loadAlg->setProperty("SpectrumMin", detectorMin);
     loadAlg->setProperty("SpectrumMax", detectorMax);
   }
-  m_batchAlgoRunner->addAlgorithm(loadAlg);
+
+  loadAlg->execute();
+
+  if (m_uiForm.ckBackgroundRemoval->isChecked()) {
+    MatrixWorkspace_sptr tempWs =
+        AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(name);
+    const double minBack = tempWs->readX(0)[0];
+    const double maxBack = tempWs->readX(0)[tempWs->blocksize()];
+
+    if (startBack < minBack) {
+      emit showMessageBox("The Start of Background Removal is less than the "
+                          "minimum of the data range");
+      return;
+    }
+
+    if (endBack > maxBack) {
+      emit showMessageBox("The End of Background Removal is more than the "
+                          "maximum of the data range");
+      return;
+    }
+  }
 
   // Rebin the workspace to its self to ensure constant binning
   BatchAlgorithmRunner::AlgorithmRuntimeProps inputToRebin;

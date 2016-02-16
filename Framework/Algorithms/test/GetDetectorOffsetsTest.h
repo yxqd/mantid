@@ -3,6 +3,7 @@
 
 #include "MantidAlgorithms/GetDetectorOffsets.h"
 #include "MantidAPI/AnalysisDataService.h"
+#include "MantidAPI/Axis.h"
 #include "MantidKernel/UnitFactory.h"
 #include "MantidTestHelpers/WorkspaceCreationHelper.h"
 #include <cxxtest/TestSuite.h>
@@ -29,7 +30,6 @@ public:
   void testTheBasics() {
     TS_ASSERT_EQUALS(offsets.name(), "GetDetectorOffsets");
     TS_ASSERT_EQUALS(offsets.version(), 1);
-    TS_ASSERT_EQUALS(offsets.category(), "Diffraction");
   }
 
   void testInit() {

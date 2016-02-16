@@ -2,19 +2,20 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidWorkflowAlgorithms/RefReduction.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/FileFinder.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidDataObjects/EventWorkspace.h"
-#include "MantidKernel/UnitFactory.h"
-#include <MantidAPI/FileFinder.h>
+#include "MantidGeometry/Instrument.h"
 #include "MantidKernel/ArrayProperty.h"
-#include "MantidKernel/TimeSeriesProperty.h"
-#include "MantidKernel/VisibleWhenProperty.h"
 #include "MantidKernel/EmptyValues.h"
 #include "MantidKernel/ListValidator.h"
+#include "MantidKernel/TimeSeriesProperty.h"
+#include "MantidKernel/UnitFactory.h"
+#include "MantidKernel/VisibleWhenProperty.h"
+
 #include "Poco/File.h"
-#include "Poco/String.h"
 #include "Poco/NumberFormatter.h"
+#include "Poco/String.h"
 
 namespace Mantid {
 namespace WorkflowAlgorithms {
@@ -108,9 +109,7 @@ void RefReduction::init() {
   setPropertySettings("AngleOffset", new VisibleWhenProperty(
                                          "Instrument", IS_EQUAL_TO, "REF_L"));
 
-  std::vector<std::string> instrOptions;
-  instrOptions.push_back("REF_L");
-  instrOptions.push_back("REF_M");
+  std::vector<std::string> instrOptions{"REF_L", "REF_M"};
   declareProperty("Instrument", "REF_M",
                   boost::make_shared<StringListValidator>(instrOptions),
                   "Instrument to reduce for");
@@ -554,7 +553,7 @@ IEventWorkspace_sptr RefReduction::loadData(const std::string dataRun,
   if (!isEmpty(nBins))
     tofStep = (tofMax - tofMin) / nBins;
   else
-    nBins = (int)floor((tofMax - tofMin) / tofStep);
+    nBins = static_cast<int>(floor((tofMax - tofMin) / tofStep));
 
   std::vector<double> params;
   params.push_back(tofMin);
@@ -613,22 +612,43 @@ double RefReduction::calculateAngleREFM(MatrixWorkspace_sptr workspace) {
   double dangle = getProperty("DetectorAngle");
   if (isEmpty(dangle)) {
     Mantid::Kernel::Property *prop = workspace->run().getProperty("DANGLE");
+    if (!prop) {
+      throw std::runtime_error("DetectorAngle property not given as input, and "
+                               "could not find the log entry DANGLE either");
+    }
     Mantid::Kernel::TimeSeriesProperty<double> *dp =
         dynamic_cast<Mantid::Kernel::TimeSeriesProperty<double> *>(prop);
+    if (!dp) {
+      throw std::runtime_error(
+          "The log entry DANGLE could not"
+          "be interpreted as a property of type time series of double");
+    }
     dangle = dp->getStatistics().mean;
   }
 
   double dangle0 = getProperty("DetectorAngle0");
   if (isEmpty(dangle0)) {
     Mantid::Kernel::Property *prop = workspace->run().getProperty("DANGLE0");
+    if (!prop) {
+      throw std::runtime_error("DetectorAngle0 property not given aas input, "
+                               "and could not find the log entry DANGLE0 "
+                               "either");
+    }
     Mantid::Kernel::TimeSeriesProperty<double> *dp =
         dynamic_cast<Mantid::Kernel::TimeSeriesProperty<double> *>(prop);
+    if (!dp) {
+      throw std::runtime_error(
+          "The log entry DANGLE0 could not "
+          "be interpreted as a property of type time series of double values");
+    }
     dangle0 = dp->getStatistics().mean;
   }
 
   Mantid::Kernel::Property *prop = workspace->run().getProperty("SampleDetDis");
   Mantid::Kernel::TimeSeriesProperty<double> *dp =
       dynamic_cast<Mantid::Kernel::TimeSeriesProperty<double> *>(prop);
+  if (!dp)
+    throw std::runtime_error("SampleDetDis was not a TimeSeriesProperty");
   const double det_distance = dp->getStatistics().mean / 1000.0;
 
   double direct_beam_pix = getProperty("DirectPixel");

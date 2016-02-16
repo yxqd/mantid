@@ -49,7 +49,7 @@ namespace MDAlgorithms {
 class DLLExport SlicingAlgorithm : public API::Algorithm {
 public:
   SlicingAlgorithm();
-  ~SlicingAlgorithm();
+  ~SlicingAlgorithm() override;
 
   ///@return a string with the character that identifies each dimension in order
   ///(01234)
@@ -150,6 +150,20 @@ protected:
 
   /// The NormalizeBasisVectors option
   bool m_NormalizeBasisVectors;
+
+private:
+  Mantid::Geometry::MDFrame_uptr
+  createMDFrameForNonAxisAligned(std::string units,
+                                 Mantid::Kernel::VMD basisVector) const;
+  std::vector<Mantid::Kernel::VMD> getOldBasis(size_t dimension) const;
+  bool isProjectingOnFrame(const Mantid::Kernel::VMD &oldVector,
+                           const Mantid::Kernel::VMD &basisVector) const;
+  std::vector<size_t> getIndicesWithProjection(
+      const Mantid::Kernel::VMD &basisVector,
+      const std::vector<Mantid::Kernel::VMD> &oldBasis) const;
+  Mantid::Geometry::MDFrame_uptr
+  extractMDFrameForNonAxisAligned(std::vector<size_t> indicesWithProjection,
+                                  std::string units) const;
 };
 
 } // namespace DataObjects

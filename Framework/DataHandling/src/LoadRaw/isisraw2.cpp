@@ -15,7 +15,7 @@ Mantid::Kernel::Logger g_log("ISISRAW2");
 
 /// No arg Constructor
 ISISRAW2::ISISRAW2()
-    : ISISRAW(NULL, false), ndes(0), outbuff(0), m_bufferSize(0) {
+    : ISISRAW(nullptr, false), ndes(0), outbuff(nullptr), m_bufferSize(0) {
   // Determine the size of the output buffer to create from the config service.
   g_log.debug() << "Determining ioRaw buffer size\n";
   if (Mantid::Kernel::ConfigService::Instance().getValue(
@@ -95,7 +95,17 @@ int ISISRAW2::ioRAW(FILE *file, bool from_file, bool read_data) {
   //		ISISRAW::ioRAW(file, &u_len, 1, from_file);
   if (from_file) {
     u_len = add.ad_data - add.ad_user - 2;
+
+    if (u_len < 0 || (add.ad_data < add.ad_user + 2)) {
+      // this will/would be used for memory allocation
+      g_log.error() << "Error in u_len value read from file, it would be "
+                    << u_len << "; where it is calculated as "
+                                "u_len = ad_data - ad_user - 2, where ad_data: "
+                    << add.ad_data << ", ad_user: " << add.ad_user << "\n";
+      throw std::runtime_error("Inconsistent value for the field u_len found");
+    }
   }
+
   ISISRAW::ioRAW(file, &u_dat, u_len, from_file);
   ISISRAW::ioRAW(file, &ver8, 1, from_file);
   fgetpos(file, &dhdr_pos);
@@ -115,8 +125,13 @@ int ISISRAW2::ioRAW(FILE *file, bool from_file, bool read_data) {
 /// @param file :: The file pointer
 /// @param i :: The amount of data to skip
 void ISISRAW2::skipData(FILE *file, int i) {
-  if (i < ndes)
-    fseek(file, 4 * ddes[i].nwords, SEEK_CUR);
+  if (i < ndes) {
+    int zero = fseek(file, 4 * ddes[i].nwords, SEEK_CUR);
+    if (0 != zero) {
+      g_log.warning() << "Failed to skip data from file, with value: " << i
+                      << "\n";
+    }
+  }
 }
 
 /// Read data
@@ -137,7 +152,7 @@ bool ISISRAW2::readData(FILE *file, int i) {
   int res = ISISRAW::ioRAW(file, outbuff, nwords, true);
   if (res != 0)
     return false;
-  byte_rel_expn(outbuff, nwords, 0, (int *)dat1, t_ntc1 + 1);
+  byte_rel_expn(outbuff, nwords, 0, reinterpret_cast<int *>(dat1), t_ntc1 + 1);
   return true;
 }
 

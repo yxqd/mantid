@@ -4,6 +4,7 @@
 #include <cxxtest/TestSuite.h>
 
 #include "MantidAlgorithms/DiffractionFocussing.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidDataHandling/LoadNexus.h"
 
 using namespace Mantid::API;
@@ -15,8 +16,6 @@ public:
   void testName() { TS_ASSERT_EQUALS(focus.name(), "DiffractionFocussing"); }
 
   void testVersion() { TS_ASSERT_EQUALS(focus.version(), 1); }
-
-  void testCategory() { TS_ASSERT_EQUALS(focus.category(), "Diffraction"); }
 
   void testInit() {
     focus.initialize();

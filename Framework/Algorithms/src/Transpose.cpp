@@ -3,8 +3,9 @@
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/Transpose.h"
 #include "MantidAPI/BinEdgeAxis.h"
+#include "MantidAPI/CommonBinsValidator.h"
 #include "MantidAPI/NumericAxis.h"
-#include "MantidAPI/WorkspaceValidators.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/RebinnedOutput.h"
 
 namespace Mantid {
@@ -104,7 +105,7 @@ API::MatrixWorkspace_sptr Transpose::createOutputWorkspace(
 
   // Create a new numeric axis for Y the same length as the old X array
   // Values come from input X
-  API::NumericAxis *newYAxis(NULL);
+  API::NumericAxis *newYAxis(nullptr);
   if (inputWorkspace->isHistogramData()) {
     newYAxis = new API::BinEdgeAxis(inX);
   } else {

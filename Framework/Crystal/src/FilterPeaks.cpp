@@ -1,4 +1,5 @@
 #include "MantidCrystal/FilterPeaks.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/MandatoryValidator.h"
 #include "MantidDataObjects/PeaksWorkspace.h"
@@ -10,6 +11,10 @@ double HKLSum(const Mantid::Geometry::IPeak &p) {
 
 double HKL2(const Mantid::Geometry::IPeak &p) {
   return p.getH() * p.getH() + p.getK() * p.getK() + p.getL() * p.getL();
+}
+
+double QMOD(const Mantid::Geometry::IPeak &p) {
+  return p.getQSampleFrame().norm();
 }
 
 double intensity(const Mantid::Geometry::IPeak &p) { return p.getIntensity(); }
@@ -44,7 +49,7 @@ const std::string FilterPeaks::name() const { return "FilterPeaks"; }
 /// Algorithm's version for identification. @see Algorithm::version
 int FilterPeaks::version() const { return 1; }
 /// Algorithm's category for identification. @see Algorithm::category
-const std::string FilterPeaks::category() const { return "Crystal"; }
+const std::string FilterPeaks::category() const { return "Crystal\\Peaks"; }
 
 /** Initialize the algorithm's properties.
  */
@@ -56,11 +61,8 @@ void FilterPeaks::init() {
                                                          Direction::Output),
                   "The filtered workspace");
 
-  std::vector<std::string> filters;
-  filters.push_back("h+k+l");
-  filters.push_back("h^2+k^2+l^2");
-  filters.push_back("Intensity");
-  filters.push_back("Signal/Noise");
+  std::vector<std::string> filters{"h+k+l", "h^2+k^2+l^2", "Intensity",
+                                   "Signal/Noise", "QMod"};
   declareProperty("FilterVariable", "",
                   boost::make_shared<StringListValidator>(filters),
                   "The variable on which to filter the peaks");
@@ -69,12 +71,7 @@ void FilterPeaks::init() {
                   boost::make_shared<MandatoryValidator<double>>(),
                   "The value of the FilterVariable to compare each peak to");
 
-  std::vector<std::string> operation;
-  operation.push_back("<");
-  operation.push_back(">");
-  operation.push_back("=");
-  operation.push_back("<=");
-  operation.push_back(">=");
+  std::vector<std::string> operation{"<", ">", "=", "<=", ">="};
   declareProperty("Operator", "<",
                   boost::make_shared<StringListValidator>(operation), "");
 }
@@ -89,7 +86,7 @@ void FilterPeaks::exec() {
   filteredWS->copyExperimentInfoFrom(inputWS.get());
 
   const std::string FilterVariable = getProperty("FilterVariable");
-  double (*filterFunction)(const Mantid::Geometry::IPeak &) = 0;
+  double (*filterFunction)(const Mantid::Geometry::IPeak &) = nullptr;
   if (FilterVariable == "h+k+l")
     filterFunction = &HKLSum;
   else if (FilterVariable == "h^2+k^2+l^2")
@@ -98,6 +95,10 @@ void FilterPeaks::exec() {
     filterFunction = &intensity;
   else if (FilterVariable == "Signal/Noise")
     filterFunction = &SN;
+  else if (FilterVariable == "QMod")
+    filterFunction = &QMOD;
+  else
+    throw std::invalid_argument("Unknown FilterVariable: " + FilterVariable);
 
   const double FilterValue = getProperty("FilterValue");
   const std::string Operator = getProperty("Operator");
