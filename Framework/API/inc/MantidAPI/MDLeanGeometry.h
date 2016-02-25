@@ -42,7 +42,11 @@ public:
   virtual ~MDLeanGeometry();
 
   void initGeometry(
+<<<<<<< HEAD
       const std::vector<Mantid::Geometry::IMDDimension_sptr> &dimensions) final;
+=======
+      std::vector<Mantid::Geometry::IMDDimension_sptr> &dimensions) final;
+>>>>>>> 5329d0b... add MDLeanGeometry with basic stuff from MDGeometry, re #14165
 
   virtual size_t getNumDims() const override;
 
@@ -57,7 +61,11 @@ public:
   size_t getDimensionIndexById(const std::string &id) const final;
 
   Mantid::Geometry::VecIMDDimension_const_sptr
+<<<<<<< HEAD
   getNonIntegratedDimensions() const override;
+=======
+  getNonIntegratedDimensions() const final;
+>>>>>>> 5329d0b... add MDLeanGeometry with basic stuff from MDGeometry, re #14165
 
   virtual std::vector<coord_t> estimateResolution() const override;
 

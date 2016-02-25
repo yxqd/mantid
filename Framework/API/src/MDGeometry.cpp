@@ -17,29 +17,19 @@ namespace API {
 /** Constructor
  */
 MDGeometry::MDGeometry()
-    : m_dimensions(), m_originalWorkspaces(), m_origin(),
-      m_transforms_FromOriginal(), m_transforms_ToOriginal(),
+    : m_originalWorkspaces(), m_origin(), m_transforms_FromOriginal(),
+      m_transforms_ToOriginal(),
       m_delete_observer(*this, &MDGeometry::deleteNotificationReceived),
-      m_observingDelete(false), m_Wtransf(3, 3, true), m_basisVectors() {}
+      m_observingDelete(false), m_Wtransf(3, 3, true) {}
 
 //----------------------------------------------------------------------------------------------
 /** Copy Constructor
  */
 MDGeometry::MDGeometry(const MDGeometry &other)
-    : m_dimensions(), m_originalWorkspaces(), m_origin(other.m_origin),
+    : MDLeanGeometry(other), m_originalWorkspaces(), m_origin(other.m_origin),
       m_transforms_FromOriginal(), m_transforms_ToOriginal(),
       m_delete_observer(*this, &MDGeometry::deleteNotificationReceived),
-      m_observingDelete(false), m_Wtransf(other.m_Wtransf),
-      m_basisVectors(other.m_basisVectors) {
-  // Perform a deep copy of the dimensions
-  std::vector<Mantid::Geometry::IMDDimension_sptr> dimensions;
-  for (size_t d = 0; d < other.getNumDims(); d++) {
-    // Copy the dimension
-    auto dim =
-        boost::make_shared<MDHistoDimension>(other.getDimension(d).get());
-    dimensions.push_back(dim);
-  }
-  this->initGeometry(dimensions);
+      m_observingDelete(false), m_Wtransf(other.m_Wtransf) {
 
   // Perform a deep copy of the coordinate transformations
   std::vector<CoordTransform_const_sptr>::const_iterator it;
@@ -91,6 +81,7 @@ MDGeometry::~MDGeometry() {
     API::AnalysisDataService::Instance().notificationCenter.removeObserver(
         m_delete_observer);
   }
+<<<<<<< HEAD
   m_dimensions.clear();
 }
 
@@ -214,6 +205,8 @@ void MDGeometry::addDimension(
 void MDGeometry::addDimension(Mantid::Geometry::IMDDimension *dim) {
   m_dimensions.push_back(
       boost::shared_ptr<Mantid::Geometry::IMDDimension>(dim));
+=======
+>>>>>>> 5329d0b... add MDLeanGeometry with basic stuff from MDGeometry, re #14165
 }
 
 // --------------------------------------------------------------------------------------------
@@ -247,51 +240,6 @@ MDGeometry::getTDimension() const {
   if (this->getNumDims() < 4)
     throw std::runtime_error("Workspace does not have a T dimension.");
   return this->getDimension(3);
-}
-
-// --------------------------------------------------------------------------------------------
-/** Get the basis vector (in the original workspace) for a dimension of this
- * workspace.
- * @param index :: which dimension
- * @return a vector, in the dimensions of the original workspace
- */
-Mantid::Kernel::VMD &MDGeometry::getBasisVector(size_t index) {
-  if (index >= m_basisVectors.size())
-    throw std::invalid_argument("getBasisVector(): invalid index");
-  return m_basisVectors[index];
-}
-
-/** Get the basis vector (in the original workspace) for a dimension of this
- * workspace.
- * @param index :: which dimension
- * @return a vector, in the dimensions of the original workspace
- */
-const Mantid::Kernel::VMD &MDGeometry::getBasisVector(size_t index) const {
-  if (index >= m_basisVectors.size())
-    throw std::invalid_argument("getBasisVector(): invalid index");
-  return m_basisVectors[index];
-}
-
-/** Set the basis vector (in the original workspace) for a dimension of this
- * workspace.
- * @param index :: which dimension
- * @param vec :: a vector, in the dimensions of the original workspace
- */
-void MDGeometry::setBasisVector(size_t index, const Mantid::Kernel::VMD &vec) {
-  if (index >= m_basisVectors.size())
-    throw std::invalid_argument("getBasisVector(): invalid index");
-  m_basisVectors[index] = vec;
-}
-
-/**
- * @return True ONLY if ALL the basis vectors have been normalized.
- */
-bool MDGeometry::allBasisNormalized() const {
-  auto normalized = std::find_if(m_basisVectors.begin(), m_basisVectors.end(),
-                                 [](const Mantid::Kernel::VMD &basisVector) {
-                                   return basisVector.length() != 1.0;
-                                 });
-  return normalized == m_basisVectors.end();
 }
 
 //---------------------------------------------------------------------------------------------------

@@ -89,6 +89,11 @@ set ( SRC_FILES
 	src/LogManager.cpp
 	src/LogarithmScale.cpp
 	src/MDGeometry.cpp
+<<<<<<< HEAD
+=======
+	src/MDLeanGeometry.cpp
+	src/MatrixWSIndexCalculator.cpp
+>>>>>>> 5329d0b... add MDLeanGeometry with basic stuff from MDGeometry, re #14165
 	src/MatrixWorkspace.cpp
 	src/MatrixWorkspaceMDIterator.cpp
 	src/ModeratorModel.cpp
@@ -270,6 +275,11 @@ set ( INC_FILES
 	inc/MantidAPI/LogManager.h
 	inc/MantidAPI/LogarithmScale.h
 	inc/MantidAPI/MDGeometry.h
+<<<<<<< HEAD
+=======
+	inc/MantidAPI/MDLeanGeometry.h
+	inc/MantidAPI/MatrixWSIndexCalculator.h
+>>>>>>> 5329d0b... add MDLeanGeometry with basic stuff from MDGeometry, re #14165
 	inc/MantidAPI/MatrixWorkspace.h
 	inc/MantidAPI/MatrixWorkspaceMDIterator.h
 	inc/MantidAPI/MatrixWorkspaceValidator.h
@@ -385,6 +395,7 @@ set ( TEST_FILES
 	LiveListenerFactoryTest.h
 	LogManagerTest.h
 	MDGeometryTest.h
+	MDLeanGeometryTest.h
 	MatrixWorkspaceMDIteratorTest.h
 	ModeratorModelTest.h
 	MuParserUtilsTest.h
