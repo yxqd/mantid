@@ -13,6 +13,7 @@ import math
 import os
 import re
 import types
+import datetime
 import numpy as np
 
 sanslog = Logger("SANS")
@@ -1596,6 +1597,37 @@ def extract_fit_parameters(rAnds):
     else:
         fit_mode = "None"
     return scale_factor, shift_factor, fit_mode
+
+
+class TimeRecorder(object):
+    last_time = None
+
+    def __init__(self):
+        super(TimeRecorder, self).__init__()
+        self.file_name = "/home/anton/benchmarking.txt"
+
+    def __call__(self, message):
+        if TimeRecorder.last_time is None:
+            with open(self.file_name, "w") as file_to_record:
+                to_write = "Starting to write"
+                file_to_record.write(to_write)
+
+        time = self._evaluate_time()
+        with open(self.file_name, "a") as file_to_record:
+            to_write = "{}; deltaT was {} ms".format(message, time)
+            file_to_record.write(to_write)
+
+    @classmethod
+    def _evaluate_time(cls):
+        if TimeRecorder.last_time is None:
+            cls.last_time = datetime.datetime.now()
+            return 0.0
+        time_now = datetime.datetime.now()
+        difference = time_now - TimeRecorder.last_time
+        TimeRecorder.last_time = time_now
+        return difference.microseconds()
+
+
 ###############################################################################
 ######################### Start of Deprecated Code ############################
 ###############################################################################

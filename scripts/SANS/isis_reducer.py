@@ -394,8 +394,11 @@ class ISISReducer(Reducer):
             @param steps: the list of ReductionSteps to execute, defaults to _reduction_steps if not set
             @return: name of the output workspace
         """
+        recorder = su.TimeRecorder()
+
         if init:
             self.pre_process()
+        recorder("Preprocessing")
 
         if not steps:
             steps = self._reduction_steps
@@ -407,10 +410,12 @@ class ISISReducer(Reducer):
         for item in steps:
             if item:
                 item.execute(self, self.output_wksp)
+                recorder(str(item))
 
         # any clean up, possibly removing workspaces
         if post:
             self.post_process()
+            recorder("Postprocessing")
 
         return self.output_wksp
 

@@ -397,6 +397,8 @@ def WavRangeReduction(wav_start=None, wav_end=None, full_trans_wav=None, name_su
     reduce_rear_flag = False
     reduce_front_flag = False
     merge_flag = False
+    recorder = su.TimeRecorder()
+    recorder("Starting WavRangeReduction")
 
     retWSname_rear, retWSname_front, retWSname_merged = ["", "", ""]
 
