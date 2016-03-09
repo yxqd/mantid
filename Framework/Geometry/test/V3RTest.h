@@ -440,7 +440,7 @@ public:
 
 namespace Eigen {
 template <> struct NumTraits<RationalNumber> : NumTraits<int> {
-  typedef typename RationalNumber::int_type Real;
+  typedef int Real;
   typedef double NonInteger;
   typedef RationalNumber Nested;
 
@@ -454,6 +454,18 @@ template <> struct NumTraits<RationalNumber> : NumTraits<int> {
     RequireInitialization = 0
   };
 };
+
+namespace internal {
+template <typename T> struct scalar_product_traits<boost::rational<T>, T> {
+  enum { Defined = 1 };
+  typedef boost::rational<T> ReturnType;
+};
+
+template <typename T> struct scalar_product_traits<T, boost::rational<T>> {
+  enum { Defined = 1 };
+  typedef boost::rational<T> ReturnType;
+};
+}
 }
 
 typedef Eigen::Matrix<RationalNumber, 3, 3> Matrix3r;
@@ -472,8 +484,6 @@ public:
   V3RTestPerformance() {
     setupDataMantid();
     setupDataEigen();
-
-    std::cout << "P:P::::" << std::endl;
   }
 
   void test_mult_mantid() {
@@ -487,34 +497,20 @@ public:
 
       TS_ASSERT_EQUALS(results.size(), matrices_mantid.size());
     }
-
-    std::cout << "P:P::::" << std::endl;
   }
 
   void test_mult_eigen() {
     std::vector<Vector3r> results(num_matrices);
 
-    std::cout << "P:P::::" << std::endl;
-
-    std::vector<Matrix3r> matrices_rational;
-    std::transform(matrices_eigen.cbegin(), matrices_eigen.cend(),
-                   std::back_inserter(matrices_rational),
-                   [](const Eigen::Matrix3i &matrix) {
-                     return matrix.cast<RationalNumber>();
-                   });
-
-    std::cout << "P:P::::" << std::endl;
-
     for (size_t i = 0; i < num_iterations; ++i) {
-      std::transform(
-          matrices_rational.cbegin(), matrices_rational.cend(),
-          vectors_eigen.cbegin(), results.begin(),
-          [](const Matrix3r &lhs, const Vector3r &rhs) { return lhs * rhs; });
+      std::transform(matrices_eigen.cbegin(), matrices_eigen.cend(),
+                     vectors_eigen.cbegin(), results.begin(),
+                     [](const Eigen::Matrix3i &lhs, const Vector3r &rhs) {
+                       return lhs * rhs;
+                     });
 
       TS_ASSERT_EQUALS(results.size(), matrices_eigen.size());
     }
-
-    std::cout << "P:P::::" << std::endl;
   }
 
 private:
