@@ -12,6 +12,9 @@
 #include "MantidKernel/V3D.h"
 
 #include <boost/lexical_cast.hpp>
+#include "MantidKernel/MersenneTwister.h"
+
+#include <Eigen/Core>
 
 using Mantid::Kernel::Matrix;
 using Mantid::Kernel::DblMatrix;
@@ -21,6 +24,9 @@ using Mantid::Kernel::IntMatrix;
 class MatrixTest : public CxxTest::TestSuite {
 
 public:
+  static MatrixTest *createSuite() { return new MatrixTest(); }
+  static void destroySuite(MatrixTest *suite) { delete suite; }
+
   void makeMatrix(Matrix<double> &A) const {
     A.setMem(3, 3);
     A[0][0] = 1.0;
@@ -837,6 +843,190 @@ private:
       }
     }
   }
+};
+
+class MatrixTestPerformance : public CxxTest::TestSuite {
+public:
+  // This pair of boilerplate methods prevent the suite being created statically
+  // This means the constructor isn't called when running other tests
+  static MatrixTestPerformance *createSuite() {
+    return new MatrixTestPerformance();
+  }
+  static void destroySuite(MatrixTestPerformance *suite) { delete suite; }
+
+  MatrixTestPerformance() {
+    setupDataMantid();
+    setupDataEigen();
+  }
+
+  void test_mult_vect_mantid() {
+    std::vector<V3D> results(num_matrices);
+
+    for (size_t i = 0; i < num_iterations; ++i) {
+      std::transform(vectors_mantid.cbegin(), vectors_mantid.cend(),
+                     matrices_mantid_double.cbegin(), results.begin(),
+                     [](const V3D &vector, const DblMatrix &matrix) {
+                       return matrix * vector;
+                     });
+
+      TS_ASSERT_EQUALS(results.size(), vectors_mantid.size());
+    }
+  }
+
+  void test_mult_vect_eigen() {
+    std::vector<Eigen::Vector3d> results(num_matrices);
+
+    for (size_t i = 0; i < num_iterations; ++i) {
+
+      std::transform(
+          vectors_eigen.cbegin(), vectors_eigen.cend(),
+          matrices_eigen_double.cbegin(), results.begin(),
+          [](const Eigen::Vector3d &vector, const Eigen::Matrix3d &matrix) {
+            return matrix * vector;
+          });
+
+      TS_ASSERT_EQUALS(results.size(), vectors_eigen.size());
+    }
+  }
+
+  void test_mult_int_vect_mantid() {
+    std::vector<std::vector<int>> results(num_matrices);
+
+    for (size_t i = 0; i < num_iterations; ++i) {
+      std::transform(vectors_mantid_int.cbegin(), vectors_mantid_int.cend(),
+                     matrices_mantid_int.cbegin(), results.begin(),
+                     [](const std::vector<int> &vector,
+                        const IntMatrix &matrix) { return matrix * vector; });
+
+      TS_ASSERT_EQUALS(results.size(), vectors_mantid.size());
+    }
+  }
+
+  void test_mult_int_vect_eigen() {
+    std::vector<Eigen::Vector3i> results(num_matrices);
+
+    for (size_t i = 0; i < num_iterations; ++i) {
+      std::transform(
+          vectors_eigen_int.cbegin(), vectors_eigen_int.cend(),
+          matrices_eigen_int.cbegin(), results.begin(),
+          [](const Eigen::Vector3i &vector, const Eigen::Matrix3i &matrix) {
+            return matrix * vector;
+          });
+
+      TS_ASSERT_EQUALS(results.size(), vectors_eigen_int.size());
+    }
+  }
+
+  void test_mult_mat_int_mantid() {
+    std::vector<IntMatrix> results(num_matrices);
+
+    for (size_t i = 0; i < num_iterations; ++i) {
+      std::transform(
+          matrices_mantid_int.cbegin(), matrices_mantid_int.cend(),
+          matrices_mantid_int.cbegin(), results.begin(),
+          [](const IntMatrix &lhs, const IntMatrix &rhs) { return lhs * rhs; });
+
+      TS_ASSERT_EQUALS(results.size(), matrices_mantid_int.size());
+    }
+  }
+
+  void test_mult_mat_int_eigen() {
+    std::vector<Eigen::Matrix3i> results(num_matrices);
+
+    for (size_t i = 0; i < num_iterations; ++i) {
+      std::transform(matrices_eigen_int.cbegin(), matrices_eigen_int.cend(),
+                     matrices_eigen_int.cbegin(), results.begin(),
+                     [](const Eigen::Matrix3i &lhs,
+                        const Eigen::Matrix3i &rhs) { return lhs * rhs; });
+
+      TS_ASSERT_EQUALS(results.size(), matrices_eigen_int.size());
+    }
+  }
+
+  void test_mult_mat_double_mantid() {
+    std::vector<DblMatrix> results(num_matrices);
+
+    for (size_t i = 0; i < num_iterations; ++i) {
+      std::transform(
+          matrices_mantid_double.cbegin(), matrices_mantid_double.cend(),
+          matrices_mantid_double.cbegin(), results.begin(),
+          [](const DblMatrix &lhs, const DblMatrix &rhs) { return lhs * rhs; });
+
+      TS_ASSERT_EQUALS(results.size(), matrices_mantid_double.size());
+    }
+  }
+
+  void test_mult_mat_double_eigen() {
+    std::vector<Eigen::Matrix3d> results(num_matrices);
+
+    for (size_t i = 0; i < num_iterations; ++i) {
+      std::transform(matrices_eigen_double.cbegin(),
+                     matrices_eigen_double.cend(),
+                     matrices_eigen_double.cbegin(), results.begin(),
+                     [](const Eigen::Matrix3d &lhs,
+                        const Eigen::Matrix3d &rhs) { return lhs * rhs; });
+
+      TS_ASSERT_EQUALS(results.size(), matrices_eigen_double.size());
+    }
+  }
+
+private:
+  void setupDataMantid() {
+    using Mantid::Kernel::MersenneTwister;
+    MersenneTwister rng(4000, -1.0, 1.0);
+
+    std::generate_n(
+        std::back_inserter(matrices_mantid_double), num_matrices, [&rng]() {
+          std::vector<double> init;
+          std::generate_n(std::back_inserter(init), 9,
+                          std::bind(&MersenneTwister::nextValue, &rng));
+          return init;
+        });
+
+    std::fill_n(std::back_inserter(vectors_mantid),
+                matrices_mantid_double.size(), V3D(3.0, 1.1, -5.2));
+
+    std::generate_n(std::back_inserter(matrices_mantid_int), num_matrices,
+                    [&rng]() {
+                      std::vector<int> init;
+                      std::generate_n(std::back_inserter(init), 9, [&]() {
+                        return static_cast<int>(rng.nextValue() * 100.0);
+                      });
+                      return init;
+                    });
+
+    std::fill_n(std::back_inserter(vectors_mantid_int), num_matrices,
+                std::vector<int>{3, 1, 5});
+  }
+
+  void setupDataEigen() {
+    std::generate_n(std::back_inserter(matrices_eigen_double), num_matrices,
+                    []() { return Eigen::Matrix3d::Random(); });
+    std::generate_n(std::back_inserter(vectors_eigen),
+                    matrices_eigen_double.size(),
+                    []() { return Eigen::Vector3d::Random(); });
+
+    std::generate_n(std::back_inserter(matrices_eigen_int), num_matrices,
+                    []() { return Eigen::Matrix3i::Random(); });
+    std::generate_n(std::back_inserter(vectors_eigen_int),
+                    matrices_eigen_int.size(),
+                    []() { return Eigen::Vector3i::Random(); });
+  }
+
+  std::vector<DblMatrix> matrices_mantid_double;
+  std::vector<V3D> vectors_mantid;
+
+  std::vector<IntMatrix> matrices_mantid_int;
+  std::vector<std::vector<int>> vectors_mantid_int;
+
+  std::vector<Eigen::Matrix3d> matrices_eigen_double;
+  std::vector<Eigen::Vector3d> vectors_eigen;
+
+  std::vector<Eigen::Matrix3i> matrices_eigen_int;
+  std::vector<Eigen::Vector3i> vectors_eigen_int;
+
+  size_t num_matrices{1000000};
+  size_t num_iterations{10};
 };
 
 #endif

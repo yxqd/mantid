@@ -10,6 +10,9 @@ using namespace Mantid::Geometry;
 using Mantid::Kernel::V3D;
 using Mantid::Kernel::IntMatrix;
 
+#include "Eigen/Core"
+#include "MantidKernel/MersenneTwister.h"
+
 class V3RTest : public CxxTest::TestSuite {
 public:
   // This pair of boilerplate methods prevent the suite being created statically
@@ -433,6 +436,130 @@ public:
     TS_ASSERT_EQUALS(approximations[1], 0.5);
     TS_ASSERT_EQUALS(approximations[2], 0.75);
   }
+};
+
+namespace Eigen {
+template <> struct NumTraits<RationalNumber> : NumTraits<int> {
+  typedef typename RationalNumber::int_type Real;
+  typedef double NonInteger;
+  typedef RationalNumber Nested;
+
+  enum {
+    IsComplex = 0,
+    IsInteger = 0,
+    ReadCost = 2,
+    AddCost = 200,
+    MulCost = 200,
+    IsSigned = 1,
+    RequireInitialization = 0
+  };
+};
+}
+
+typedef Eigen::Matrix<RationalNumber, 3, 3> Matrix3r;
+typedef Eigen::Matrix<RationalNumber, 3, 1> Vector3r;
+
+using namespace Mantid::Geometry;
+using namespace Mantid::Kernel;
+
+class V3RTestPerformance : public CxxTest::TestSuite {
+public:
+  // This pair of boilerplate methods prevent the suite being created statically
+  // This means the constructor isn't called when running other tests
+  static V3RTestPerformance *createSuite() { return new V3RTestPerformance(); }
+  static void destroySuite(V3RTestPerformance *suite) { delete suite; }
+
+  V3RTestPerformance() {
+    setupDataMantid();
+    setupDataEigen();
+
+    std::cout << "P:P::::" << std::endl;
+  }
+
+  void test_mult_mantid() {
+    std::vector<V3R> results(num_matrices);
+
+    for (size_t i = 0; i < num_iterations; ++i) {
+      std::transform(
+          matrices_mantid.cbegin(), matrices_mantid.cend(),
+          vectors_mantid.cbegin(), results.begin(),
+          [](const IntMatrix &lhs, const V3R &rhs) { return lhs * rhs; });
+
+      TS_ASSERT_EQUALS(results.size(), matrices_mantid.size());
+    }
+
+    std::cout << "P:P::::" << std::endl;
+  }
+
+  void test_mult_eigen() {
+    std::vector<Vector3r> results(num_matrices);
+
+    std::cout << "P:P::::" << std::endl;
+
+    std::vector<Matrix3r> matrices_rational;
+    std::transform(matrices_eigen.cbegin(), matrices_eigen.cend(),
+                   std::back_inserter(matrices_rational),
+                   [](const Eigen::Matrix3i &matrix) {
+                     return matrix.cast<RationalNumber>();
+                   });
+
+    std::cout << "P:P::::" << std::endl;
+
+    for (size_t i = 0; i < num_iterations; ++i) {
+      std::transform(
+          matrices_rational.cbegin(), matrices_rational.cend(),
+          vectors_eigen.cbegin(), results.begin(),
+          [](const Matrix3r &lhs, const Vector3r &rhs) { return lhs * rhs; });
+
+      TS_ASSERT_EQUALS(results.size(), matrices_eigen.size());
+    }
+
+    std::cout << "P:P::::" << std::endl;
+  }
+
+private:
+  void setupDataMantid() {
+    using Mantid::Kernel::MersenneTwister;
+    MersenneTwister rng(4000, -1.0, 1.0);
+
+    std::fill_n(
+        std::back_inserter(vectors_mantid), num_matrices,
+        V3R(RationalNumber(2, 3), RationalNumber(1, 3), RationalNumber(1, 4)));
+
+    std::generate_n(std::back_inserter(matrices_mantid), num_matrices,
+                    [&rng]() {
+                      std::vector<int> init;
+                      std::generate_n(std::back_inserter(init), 9, [&]() {
+                        return static_cast<int>(rng.nextValue() * 100.0);
+                      });
+                      return init;
+                    });
+  }
+
+  void setupDataEigen() {
+    std::transform(matrices_mantid.cbegin(), matrices_mantid.cend(),
+                   std::back_inserter(matrices_eigen),
+                   [](const IntMatrix &matrix) {
+                     Eigen::Matrix3i m;
+                     for (const auto &val : matrix.getVector()) {
+                       m << val;
+                     }
+
+                     return m;
+                   });
+    std::fill_n(std::back_inserter(vectors_eigen), matrices_eigen.size(),
+                Vector3r(RationalNumber(2, 3), RationalNumber(1, 3),
+                         RationalNumber(1, 4)));
+  }
+
+  std::vector<IntMatrix> matrices_mantid;
+  std::vector<V3R> vectors_mantid;
+
+  std::vector<Eigen::Matrix3i> matrices_eigen;
+  std::vector<Vector3r> vectors_eigen;
+
+  size_t num_matrices{100};
+  size_t num_iterations{10000};
 };
 
 #endif /* MANTID_GEOMETRY_V3RTEST_H_ */
