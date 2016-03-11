@@ -7,7 +7,10 @@
 #include <vector>
 #include "MantidKernel/DllConfig.h"
 #include "MantidKernel/Matrix.h"
+#include "MantidKernel/Tolerance.h"
 #include <nexus/NeXusFile.hpp>
+
+#include <Eigen/Core>
 
 namespace Mantid {
 namespace Kernel {
@@ -43,38 +46,71 @@ class MANTID_KERNEL_DLL V3D {
 public:
   V3D();
   V3D(const double, const double, const double);
-
-  // Arithemetic operators overloaded
-  V3D operator+(const V3D &v) const;
-  V3D &operator+=(const V3D &v);
+  explicit V3D(const Eigen::Vector3d &vector);
 
   /// Convenience method for sorting list of V3D objects based on magnitude
   static bool CompareMagnitude(const Kernel::V3D &v1, const Kernel::V3D &v2);
 
   // explicit conversion into vector
   operator std::vector<double>() const {
-    std::vector<double> tmp(3);
-    tmp[0] = x;
-    tmp[1] = y;
-    tmp[2] = z;
-    return tmp;
+    return std::vector<double>{m_vector.data(),
+                               m_vector.data() + m_vector.size()};
   }
 
-  V3D operator-(const V3D &v) const;
-  V3D &operator-=(const V3D &v);
-  // Inner product
-  V3D operator*(const V3D &v) const;
-  V3D &operator*=(const V3D &v);
-  // Inner division
-  V3D operator/(const V3D &v) const;
-  V3D &operator/=(const V3D &v);
+  // Arithemetic operators overloaded
+  inline V3D operator+(const V3D &v) const {
+    V3D out(*this);
+    out += v;
+    return out;
+  }
+
+  inline V3D &operator+=(const V3D &v) {
+    m_vector += v.m_vector;
+    return *this;
+  }
+
+  inline V3D operator-(const V3D &v) const {
+    V3D out(*this);
+    out -= v;
+    return out;
+  }
+
+  inline V3D &operator-=(const V3D &v) {
+    m_vector -= v.m_vector;
+    return *this;
+  }
+
+  inline V3D operator*(const V3D &v) const {
+    V3D out(*this);
+    out *= v;
+    return out;
+  }
+
+  inline V3D operator/(const V3D &v) const {
+    V3D out(*this);
+    out /= v;
+    return out;
+  }
+
+  inline V3D &operator*=(const V3D &v) {
+    m_vector = m_vector.cwiseProduct(v.m_vector);
+    return *this;
+  }
+
+  inline V3D &operator/=(const V3D &v) {
+    m_vector = m_vector.cwiseQuotient(v.m_vector);
+    return *this;
+  }
+
   // Scale
   V3D operator*(const double D) const;
   V3D &operator*=(const double D);
   V3D operator/(const double D) const;
   V3D &operator/=(const double D);
   // Simple Comparison
-  bool operator==(const V3D &) const;
+  inline bool operator==(const V3D &v) const {
+    return (m_vector - v.m_vector).isZero(Kernel::Tolerance);
+  }
   bool operator!=(const V3D &) const;
   bool operator<(const V3D &) const;
   bool operator>(const V3D &rhs) const;
@@ -91,9 +127,9 @@ public:
   void setY(const double yy);
   void setZ(const double zz);
 
-  const double &X() const { return x; } ///< Get x
-  const double &Y() const { return y; } ///< Get y
-  const double &Z() const { return z; } ///< Get z
+  const double &X() const { return m_vector(0); } ///< Get x
+  const double &Y() const { return m_vector(1); } ///< Get y
+  const double &Z() const { return m_vector(2); } ///< Get z
 
   const double &operator[](const size_t Index) const;
   double &operator[](const size_t Index);
@@ -113,11 +149,17 @@ public:
   /// crystallogaphical coodinate system
   double toMillerIndexes(double eps = 1.e-3);
   /// Scalar product
-  double scalar_prod(const V3D &) const;
+  inline double scalar_prod(const V3D &v) const {
+    return m_vector.dot(v.m_vector);
+  }
   /// Cross product
-  V3D cross_prod(const V3D &) const;
+  inline V3D cross_prod(const V3D &v) const {
+    return V3D(m_vector(1) * v.m_vector(2) - m_vector(2) * v.m_vector(1),
+               m_vector(2) * v.m_vector(0) - m_vector(0) * v.m_vector(2),
+               m_vector(0) * v.m_vector(1) - m_vector(1) * v.m_vector(0));
+  }
   /// Distance (R) between two points defined as vectors
-  double distance(const V3D &) const;
+  double distance(const V3D &v) const;
   /// Zenith (theta) angle between this and another vector
   double zenith(const V3D &) const;
   /// Angle between this and another vector
@@ -137,7 +179,7 @@ public:
   void fromString(const std::string &str);
 
   double volume() const {
-    return fabs(x * y * z);
+    return fabs(m_vector(0) * m_vector(1) * m_vector(2));
   } ///< Calculate the volume of a cube X*Y*Z
 
   int reBase(const V3D &, const V3D &,
@@ -152,9 +194,7 @@ public:
   void loadNexus(::NeXus::File *file, const std::string &name);
 
 private:
-  double x; ///< X value [unitless]
-  double y; ///< Y value [unitless]
-  double z; ///< Z value [unitless]
+  Eigen::Vector3d m_vector;
 };
 
 // Overload operator <<

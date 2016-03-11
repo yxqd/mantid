@@ -563,6 +563,9 @@ public:
     m_rotx[1][2] = -sin(theta);
     m_rotx[2][2] = cos(theta);
     m_rotx[2][1] = sin(theta);
+
+    first = std::vector<V3D>{100, V3D(3.2, -2.1, -0.01)};
+    second = std::vector<V3D>{first.size(), V3D(3.3, 2.1, -0.51)};
   }
 
   void testRotate() {
@@ -575,8 +578,128 @@ public:
     TS_ASSERT_DELTA(direction.Y(), 0.0, 1e-08);
   }
 
+  void test_addition() {
+    std::vector<V3D> result(first.size());
+
+    for (size_t i = 0; i < 100000; ++i) {
+      std::transform(first.cbegin(), first.cend(), second.cbegin(),
+                     result.begin(),
+                     [](const V3D &lhs, const V3D &rhs) { return lhs + rhs; });
+      TS_ASSERT_EQUALS(result.size(), first.size());
+    }
+  }
+
+  void test_multiplication() {
+    std::vector<V3D> result(first.size());
+
+    for (size_t i = 0; i < 100000; ++i) {
+      std::transform(first.cbegin(), first.cend(), second.cbegin(),
+                     result.begin(),
+                     [](const V3D &lhs, const V3D &rhs) { return lhs * rhs; });
+      TS_ASSERT_EQUALS(result.size(), first.size());
+    }
+  }
+
+  void test_division() {
+    std::vector<V3D> result(first.size());
+
+    for (size_t i = 0; i < 100000; ++i) {
+      std::transform(first.cbegin(), first.cend(), second.cbegin(),
+                     result.begin(),
+                     [](const V3D &lhs, const V3D &rhs) { return lhs / rhs; });
+      TS_ASSERT_EQUALS(result.size(), first.size());
+    }
+  }
+
+  void test_dot() {
+    std::vector<double> result(first.size());
+
+    for (size_t i = 0; i < 1000000; ++i) {
+      std::transform(
+          first.cbegin(), first.cend(), second.cbegin(), result.begin(),
+          [](const V3D &lhs, const V3D &rhs) { return lhs.scalar_prod(rhs); });
+      TS_ASSERT_EQUALS(result.size(), first.size());
+    }
+  }
+
+  void test_cross() {
+    std::vector<V3D> result(first.size());
+
+    for (size_t i = 0; i < 1000000; ++i) {
+      std::transform(
+          first.cbegin(), first.cend(), second.cbegin(), result.begin(),
+          [](const V3D &lhs, const V3D &rhs) { return lhs.cross_prod(rhs); });
+      TS_ASSERT_EQUALS(result.size(), first.size());
+    }
+  }
+
+  void test_norm() {
+    std::vector<double> result(first.size());
+
+    for (size_t i = 0; i < 1000000; ++i) {
+      std::transform(first.cbegin(), first.cend(), result.begin(),
+                     [](const V3D &lhs) { return lhs.norm(); });
+      TS_ASSERT_EQUALS(result.size(), first.size());
+    }
+  }
+
+  void test_norm2() {
+    std::vector<double> result(first.size());
+
+    for (size_t i = 0; i < 1000000; ++i) {
+      std::transform(first.cbegin(), first.cend(), result.begin(),
+                     [](const V3D &lhs) { return lhs.norm2(); });
+      TS_ASSERT_EQUALS(result.size(), first.size());
+    }
+  }
+
+  void test_operator() {
+    std::vector<double> result(first.size());
+
+    for (size_t i = 0; i < 1000000; ++i) {
+      std::transform(first.cbegin(), first.cend(), result.begin(),
+                     [](const V3D &lhs) { return lhs[2]; });
+      TS_ASSERT_EQUALS(result.size(), first.size());
+    }
+  }
+
+  void test_distance() {
+    std::vector<double> result(first.size());
+
+    for (size_t i = 0; i < 1000000; ++i) {
+      std::transform(
+          first.cbegin(), first.cend(), second.cbegin(), result.begin(),
+          [](const V3D &lhs, const V3D &rhs) { return lhs.distance(rhs); });
+      TS_ASSERT_EQUALS(result.size(), first.size());
+    }
+  }
+
+  void test_equals() {
+    std::vector<bool> result(first.size());
+
+    for (size_t i = 0; i < 1000000; ++i) {
+      std::transform(first.cbegin(), first.cend(), second.cbegin(),
+                     result.begin(),
+                     [](const V3D &lhs, const V3D &rhs) { return lhs == rhs; });
+      TS_ASSERT_EQUALS(result.size(), first.size());
+    }
+  }
+
+  void test_nullVector() {
+    std::vector<bool> result(first.size());
+
+    for (size_t i = 0; i < 1000000; ++i) {
+      std::transform(first.cbegin(), first.cend(), result.begin(),
+                     [](const V3D &lhs) { return lhs.nullVector(); });
+      TS_ASSERT_EQUALS(result.size(), first.size());
+    }
+  }
+
 private:
   Mantid::Kernel::Matrix<double> m_rotx;
+
+  std::vector<V3D> first;
+  std::vector<V3D> second;
 };
 
 #endif
