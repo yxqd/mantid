@@ -12,6 +12,7 @@
 #include <nexus/NeXusFile.hpp>
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 
 namespace Mantid {
 namespace Kernel {
@@ -191,9 +192,9 @@ public:
   }
   /// Cross product
   inline V3D cross_prod(const V3D &v) const {
-    return V3D(m_vector(1) * v.m_vector(2) - m_vector(2) * v.m_vector(1),
-               m_vector(2) * v.m_vector(0) - m_vector(0) * v.m_vector(2),
-               m_vector(0) * v.m_vector(1) - m_vector(1) * v.m_vector(0));
+    V3D out(*this);
+    out.m_vector = m_vector.cross(v.m_vector);
+    return out;
   }
   /// Distance (R) between two points defined as vectors
   double distance(const V3D &v) const;
@@ -215,8 +216,8 @@ public:
   std::string toString() const;
   void fromString(const std::string &str);
 
-  double volume() const {
-    return fabs(m_vector(0) * m_vector(1) * m_vector(2));
+  inline double volume() const {
+    return fabs(m_vector.prod());
   } ///< Calculate the volume of a cube X*Y*Z
 
   int reBase(const V3D &, const V3D &,
