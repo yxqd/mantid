@@ -13,6 +13,7 @@
 #include "MantidTestHelpers/MDEventsTestHelper.h"
 #include <cxxtest/TestSuite.h>
 #include <gmock/gmock.h>
+#include <boost/math/special_functions/fpclassify.hpp>
 
 using namespace Mantid::DataObjects;
 using namespace Mantid::API;
@@ -49,7 +50,7 @@ public:
   gbox_t *C21;
   ibox_t *D210, *D211, *D212, *D213;
   MDBoxIterator<MDLeanEvent<1>, 1> *it;
-  void setUp() {
+  void setUp() override {
     // Top level grid box
     A = MDEventsTestHelper::makeMDGridBox<1>(4, 1, 0.0, 64.0);
     A->splitContents(0); // Split B0 into C00 to C03
@@ -75,7 +76,7 @@ public:
     D213 = dynamic_cast<ibox_t *>(C21->getChild(3));
   }
 
-  void tearDown() {
+  void tearDown() override {
     delete A->getBoxController();
     delete A;
   }
@@ -518,7 +519,7 @@ public:
 
       {}
       MOCK_CONST_METHOD0(getIsMasked, bool());
-      ~MockMDBox() { delete pBC; }
+      ~MockMDBox() override { delete pBC; }
     };
 
     MockMDBox mockBox;
@@ -598,7 +599,7 @@ public:
     public:
       MOCK_CONST_METHOD0(keepGoing, bool());
       MOCK_METHOD0(Die, void());
-      ~MockSkippingPolicy() { Die(); }
+      ~MockSkippingPolicy() override { Die(); }
     };
 
     MockSkippingPolicy *mockPolicy = new MockSkippingPolicy;
@@ -622,26 +623,22 @@ public:
                testing::Mock::VerifyAndClearExpectations(mockPolicy));
   }
 
-  void test_getNormalizedSignalWithMask_returns_zero_for_masked() {
+  void test_getNormalizedSignal_with_mask() {
     // Make a MDBox with 10 events
     ibox_t *A = MDEventsTestHelper::makeMDBox1();
     MDEventsTestHelper::feedMDBox<1>(A, 1, 10, 0.5, 1.0);
     MDBoxIterator<MDLeanEvent<1>, 1> *it =
         new MDBoxIterator<MDLeanEvent<1>, 1>(A, 20, true);
 
-    // Mask box 0, unmask box 1 and mask box 2.
-    // For masked boxes, getNormalizedSignalWithMask() should return 0.
-    it->getBox()->mask();
-    TS_ASSERT_DELTA(it->getNormalizedSignalWithMask(), 0.0, 1e-5);
+    // Initially the box is unmasked
     TS_ASSERT_DELTA(it->getNormalizedSignal(), 1.0, 1e-5);
+
     it->next();
-    it->getBox()->unmask();
-    TS_ASSERT_DELTA(it->getNormalizedSignalWithMask(), 1.0, 1e-5);
-    TS_ASSERT_DELTA(it->getNormalizedSignal(), 1.0, 1e-5);
-    it->next();
+
+    // Now mask the box
     it->getBox()->mask();
-    TS_ASSERT_DELTA(it->getNormalizedSignalWithMask(), 0.0, 1e-5);
-    TS_ASSERT_DELTA(it->getNormalizedSignal(), 1.0, 1e-5);
+    // For masked boxes, getNormalizedSignal() should return NaN.
+    TS_ASSERT(boost::math::isnan(it->getNormalizedSignal()));
 
     delete it;
   }

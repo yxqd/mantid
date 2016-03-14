@@ -34,6 +34,7 @@ set ( SRC_FILES
 	src/ICatalogInfo.cpp
 	src/IPropertyManager.cpp
 	src/ISaveable.cpp
+	src/IndexSet.cpp
 	src/InstrumentInfo.cpp
 	src/InternetHelper.cpp
 	src/Interpolation.cpp
@@ -90,6 +91,7 @@ set ( SRC_FILES
 	src/StdoutChannel.cpp
 	src/StringContainsValidator.cpp
 	src/Strings.cpp
+	src/StringTokenizer.cpp
 	src/TestChannel.cpp
 	src/ThreadPool.cpp
 	src/ThreadPoolRunnable.cpp
@@ -99,9 +101,9 @@ set ( SRC_FILES
 	src/Timer.cpp
 	src/Unit.cpp
 	src/UnitConversion.cpp
-	src/UnitFactory.cpp
 	src/UnitLabel.cpp
 	src/UnitLabelTypes.cpp
+	src/UsageService.cpp
 	src/UserCatalogInfo.cpp
 	src/UserStringParser.cpp
 	src/Utils.cpp
@@ -141,6 +143,7 @@ set ( INC_FILES
 	inc/MantidKernel/Chainable.h
 	inc/MantidKernel/ChainableFactory.h
 	inc/MantidKernel/ChecksumHelper.h
+        inc/MantidKernel/ClassMacros.h
 	inc/MantidKernel/CompositeValidator.h
 	inc/MantidKernel/ComputeResourceInfo.h
 	inc/MantidKernel/ConfigService.h
@@ -176,6 +179,7 @@ set ( INC_FILES
 	inc/MantidKernel/ISaveable.h
 	inc/MantidKernel/ITimeSeriesProperty.h
 	inc/MantidKernel/IValidator.h
+	inc/MantidKernel/IndexSet.h
 	inc/MantidKernel/Instantiator.h
 	inc/MantidKernel/InstrumentInfo.h
 	inc/MantidKernel/InternetHelper.h
@@ -192,7 +196,6 @@ set ( INC_FILES
 	inc/MantidKernel/MRUList.h
 	inc/MantidKernel/MagneticFormFactorTable.h
 	inc/MantidKernel/MagneticIon.h
-	inc/MantidKernel/make_unique.h
 	inc/MantidKernel/MandatoryValidator.h
 	inc/MantidKernel/MantidVersion.h
 	inc/MantidKernel/MaskedProperty.h
@@ -244,6 +247,7 @@ set ( INC_FILES
 	inc/MantidKernel/StdoutChannel.h
 	inc/MantidKernel/StringContainsValidator.h
 	inc/MantidKernel/Strings.h
+	inc/MantidKernel/StringTokenizer.h
 	inc/MantidKernel/System.h
 	inc/MantidKernel/Task.h
 	inc/MantidKernel/TestChannel.h
@@ -262,6 +266,7 @@ set ( INC_FILES
 	inc/MantidKernel/UnitFactory.h
 	inc/MantidKernel/UnitLabel.h
 	inc/MantidKernel/UnitLabelTypes.h
+	inc/MantidKernel/UsageService.h
 	inc/MantidKernel/UserCatalogInfo.h
 	inc/MantidKernel/UserStringParser.h
 	inc/MantidKernel/Utils.h
@@ -274,6 +279,7 @@ set ( INC_FILES
 	inc/MantidKernel/WriteLock.h
 	inc/MantidKernel/XMLInstantiator.h
 	inc/MantidKernel/cow_ptr.h
+	inc/MantidKernel/make_unique.h
 )
 
 set ( TEST_FILES
@@ -319,6 +325,7 @@ set ( TEST_FILES
 	IPropertySettingsTest.h
 	ISaveableTest.h
 	IValidatorTest.h
+	IndexSetTest.h
 	InstrumentInfoTest.h
 	InternetHelperTest.h
 	InterpolationTest.h
@@ -369,6 +376,7 @@ set ( TEST_FILES
 	StdoutChannelTest.h
 	StringContainsValidatorTest.h
 	StringsTest.h
+        StringTokenizerTest.h
 	TaskTest.h
 	ThreadPoolRunnableTest.h
 	ThreadPoolTest.h
@@ -382,6 +390,7 @@ set ( TEST_FILES
 	UnitFactoryTest.h
 	UnitLabelTest.h
 	UnitTest.h
+	UsageServiceTest.h
 	UserCatalogInfoTest.h
 	UserStringParserTest.h
 	UtilsTest.h
@@ -583,7 +592,6 @@ set (ENABLE_WEB_UPDATES 0)
 if (${VERSION_PATCH_LENGTH} LESS 8)
   set (ENABLE_WEB_UPDATES 1)
 endif()
-message( STATUS "For Mantid.properties.install: ENABLE_WEB_UPDATES=${ENABLE_WEB_UPDATES}")
 
 set ( PLUGINS ${MANTID_ROOT}/plugins )
 set ( PYTHONPLUGIN_DIRS "${PLUGINS}/python" )

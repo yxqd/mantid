@@ -1,6 +1,7 @@
 #ifndef _vtkSplatterPlot_h
 #define _vtkSplatterPlot_h
 
+#include "MantidKernel/make_unique.h"
 #include "vtkUnstructuredGridAlgorithm.h"
 #include <string>
 
@@ -19,7 +20,7 @@ public:
   static vtkSplatterPlot *New();
   vtkTypeMacro(vtkSplatterPlot, vtkUnstructuredGridAlgorithm)
   double getTime() const;
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream &os, vtkIndent indent) override;
   void SetNumberOfPoints(int nPoints);
   void SetTopPercentile(double topPercentile);
   void updateAlgorithmProgress(double progress, const std::string& message);
@@ -31,9 +32,11 @@ public:
   const char* GetInstrument();
 protected:
   vtkSplatterPlot();
-  ~vtkSplatterPlot();
-  int RequestInformation(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-  int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  ~vtkSplatterPlot() override;
+  int RequestInformation(vtkInformation *, vtkInformationVector **,
+                         vtkInformationVector *) override;
+  int RequestData(vtkInformation *, vtkInformationVector **,
+                  vtkInformationVector *) override;
 
 private:
   /// Number of total points to plot
@@ -41,7 +44,7 @@ private:
   /// Percent of densest boxes to keep
   double m_topPercentile;
   /// MVP presenter
-  Mantid::VATES::vtkSplatterPlotFactory *m_presenter;
+  std::unique_ptr<Mantid::VATES::vtkSplatterPlotFactory> m_presenter;
   /// Holder for the workspace name
   std::string m_wsName;
   /// Time.

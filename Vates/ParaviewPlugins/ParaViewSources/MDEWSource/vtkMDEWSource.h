@@ -2,6 +2,7 @@
 #define _vtkMDEWSource_h
 
 #include "vtkUnstructuredGridAlgorithm.h"
+#include "MantidKernel/make_unique.h"
 #include "MantidVatesAPI/Normalization.h"
 #include "MantidVatesAPI/vtkDataSetFactory.h"
 #include <string>
@@ -47,9 +48,9 @@ class VTK_EXPORT vtkMDEWSource : public vtkUnstructuredGridAlgorithm
 {
 public:
   static vtkMDEWSource *New();
-  vtkTypeMacro(vtkMDEWSource, vtkUnstructuredGridAlgorithm)
-  void PrintSelf(ostream& os, vtkIndent indent);
-  
+  vtkTypeMacro(vtkMDEWSource, vtkUnstructuredGridAlgorithm) void PrintSelf(
+      ostream &os, vtkIndent indent) override;
+
   void SetWsName(std::string wsName);
   void SetDepth(int depth);
   void SetNormalization(int option);
@@ -79,9 +80,11 @@ public:
 
 protected:
   vtkMDEWSource();
-  ~vtkMDEWSource();
-  int RequestInformation(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-  int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  ~vtkMDEWSource() override;
+  int RequestInformation(vtkInformation *, vtkInformationVector **,
+                         vtkInformationVector *) override;
+  int RequestData(vtkInformation *, vtkInformationVector **,
+                  vtkInformationVector *) override;
 
 private:
   
@@ -95,7 +98,7 @@ private:
   double m_time;
 
   /// MVP presenter.
-  Mantid::VATES::MDLoadingPresenter* m_presenter;
+  std::unique_ptr<Mantid::VATES::MDLoadingPresenter> m_presenter;
 
   /// Cached typename.
   std::string typeName;

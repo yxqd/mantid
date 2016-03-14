@@ -1,6 +1,7 @@
 #ifndef _vtkMDHWSource_h 
 #define _vtkMDHWSource_h
 
+#include "MantidKernel/make_unique.h"
 #include "MantidVatesAPI/Normalization.h"
 #include "vtkStructuredGridAlgorithm.h"
 
@@ -46,9 +47,9 @@ class VTK_EXPORT vtkMDHWSource : public vtkStructuredGridAlgorithm
 {
 public:
   static vtkMDHWSource *New();
-  vtkTypeMacro(vtkMDHWSource, vtkStructuredGridAlgorithm)
-  void PrintSelf(ostream& os, vtkIndent indent);
-  
+  vtkTypeMacro(vtkMDHWSource, vtkStructuredGridAlgorithm) void PrintSelf(
+      ostream &os, vtkIndent indent) override;
+
   void SetWsName(std::string wsName);
 
   //------- MDLoadingView methods ----------------
@@ -78,9 +79,11 @@ public:
 
 protected:
   vtkMDHWSource();
-  ~vtkMDHWSource();
-  int RequestInformation(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-  int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  ~vtkMDHWSource() override;
+  int RequestInformation(vtkInformation *, vtkInformationVector **,
+                         vtkInformationVector *) override;
+  int RequestData(vtkInformation *, vtkInformationVector **,
+                  vtkInformationVector *) override;
 
 private:
   
@@ -91,7 +94,7 @@ private:
   double m_time;
 
   /// MVP presenter.
-  Mantid::VATES::MDLoadingPresenter* m_presenter;
+  std::unique_ptr<Mantid::VATES::MDLoadingPresenter> m_presenter;
 
   /// Cached typename.
   std::string typeName;

@@ -1,23 +1,31 @@
 #ifndef MANTIDQTCUSTOMINTERFACES_TOMOGRAPHY_TOMOGRAPHYIFACEVIEWQTGUI_H_
 #define MANTIDQTCUSTOMINTERFACES_TOMOGRAPHY_TOMOGRAPHYIFACEVIEWQTGUI_H_
 
+#include "MantidAPI/IRemoteJobManager.h"
 #include "MantidAPI/ITableWorkspace_fwd.h"
 #include "MantidAPI/MatrixWorkspace_fwd.h"
 #include "MantidAPI/TableRow.h"
 #include "MantidQtAPI/UserSubWindow.h"
 #include "MantidQtCustomInterfaces/DllConfig.h"
+#include "MantidQtCustomInterfaces/Tomography/ImageROIViewQtWidget.h"
 #include "MantidQtCustomInterfaces/Tomography/ITomographyIfacePresenter.h"
 #include "MantidQtCustomInterfaces/Tomography/ITomographyIfaceView.h"
 #include "MantidQtCustomInterfaces/Tomography/TomoToolConfigDialog.h"
 
 #include "ui_ImageSelectCoRAndRegions.h"
+#include "ui_ImgFormatsConversion.h"
 #include "ui_TomographyIfaceQtGUI.h"
+#include "ui_TomographyIfaceQtTabEnergy.h"
 #include "ui_TomographyIfaceQtTabFiltersSettings.h"
-#include "ui_TomographyIfaceQtTabSetup.h"
 #include "ui_TomographyIfaceQtTabRun.h"
+#include "ui_TomographyIfaceQtTabSetup.h"
+#include "ui_TomographyIfaceQtTabVisualize.h"
 
 #include <boost/scoped_ptr.hpp>
 #include <json/json.h>
+
+// widgets used in this interface
+class ImageROIViewQtWidget;
 
 // Qt classes forward declarations
 class QMutex;
@@ -63,68 +71,90 @@ public:
   /// Default Constructor
   TomographyIfaceViewQtGUI(QWidget *parent = 0);
   /// Destructor
-  virtual ~TomographyIfaceViewQtGUI();
+  ~TomographyIfaceViewQtGUI() override;
 
   /// Interface name
   static std::string name() { return "Tomographic Reconstruction"; }
   /// This interface's categories.
   static QString categoryInfo() { return "Diffraction"; }
 
-  void userWarning(const std::string &warn, const std::string &description);
+  void userWarning(const std::string &warn,
+                   const std::string &description) override;
 
-  void userError(const std::string &err, const std::string &description);
+  void userError(const std::string &err,
+                 const std::string &description) override;
 
-  std::vector<std::string> logMsgs() const { return m_logMsgs; }
+  std::vector<std::string> logMsgs() const override { return m_logMsgs; }
 
   void setComputeResources(const std::vector<std::string> &resources,
-                           const std::vector<bool> &enabled);
+                           const std::vector<bool> &enabled) override;
 
   void setReconstructionTools(const std::vector<std::string> &tools,
-                              const std::vector<bool> &enabled);
+                              const std::vector<bool> &enabled) override;
 
-  std::string getUsername() const;
+  std::string getUsername() const override;
 
-  std::string getPassword() const;
+  std::string getPassword() const override;
 
-  void updateLoginControls(bool loggedIn);
+  std::string externalInterpreterPath() const override {
+    return m_localExternalPythonPath;
+  }
 
-  void enableLoggedActions(bool enable);
+  std::string pathLocalReconScripts() const override {
+    return m_setupPathReconScripts;
+  };
+
+  std::string astraMethod() const override { return m_astraMethod; }
+
+  std::string tomopyMethod() const override { return m_tomopyMethod; }
+
+  void updateLoginControls(bool loggedIn) override;
+
+  void enableLoggedActions(bool enable) override;
 
   /// possible for the user to define the configuration of a tool
-  void enableConfigTool(bool on);
+  void enableConfigTool(bool on) override;
 
   /// possible for the user to run / submit a job
-  void enableRunReconstruct(bool on);
+  void enableRunReconstruct(bool on) override;
 
   void updateCompResourceStatus(bool online);
 
   void updateJobsInfoDisplay(
-      const std::vector<Mantid::API::IRemoteJobManager::RemoteJobInfo> &status);
+      const std::vector<Mantid::API::IRemoteJobManager::RemoteJobInfo> &status,
+      const std::vector<Mantid::API::IRemoteJobManager::RemoteJobInfo>
+          &localStatus) override;
 
-  std::vector<std::string> processingJobsIDs() const {
+  std::vector<std::string> processingJobsIDs() const override {
     return m_processingJobsIDs;
   }
 
-  /// Get the current reconstruction tooll settings set by the user
-  TomoReconToolsUserSettings reconToolsSettings() const {
+  /// Get the current reconstruction tools settings set by the user
+  TomoReconToolsUserSettings reconToolsSettings() const override {
     return m_toolsSettings;
   }
 
-  TomoReconFiltersSettings prePostProcSettings() const;
+  TomoReconFiltersSettings prePostProcSettings() const override;
 
-  std::string currentComputeResource() const { return m_currentComputeRes; }
-  std::string currentReconTool() const { return m_currentReconTool; }
+  std::string currentComputeResource() const override {
+    return m_currentComputeRes;
+  }
+  std::string currentReconTool() const override { return m_currentReconTool; }
 
   /// get the path to the image that the user has requested to visualize
   std::string visImagePath() const;
 
-  std::string showImagePath() const { return m_imgPath; }
-  void showImage(const Mantid::API::MatrixWorkspace_sptr &wsg);
-  void showImage(const std::string &path);
+  std::string showImagePath() const override { return m_imgPath; }
+  void showImage(const Mantid::API::MatrixWorkspace_sptr &wsg) override;
+  void showImage(const std::string &path) override;
 
-  int keepAlivePeriod() { return m_settings.useKeepAlive; }
+  int keepAlivePeriod() override { return m_settings.useKeepAlive; }
 
-  TomoPathsConfig currentPathsConfig() const { return m_pathsConfig; }
+  TomoPathsConfig currentPathsConfig() const override { return m_pathsConfig; }
+
+  ImageStackPreParams currentROIEtcParams() const override {
+    return m_tabROIW->userSelection();
+  }
 
 private slots:
   /// for buttons, run tab, and similar
@@ -133,6 +163,7 @@ private slots:
   void runVisualizeClicked();
   void jobCancelClicked();
   void jobTableRefreshClicked();
+  void updatedRBNumber();
 
   void compResourceIndexChanged(int);
   void runToolIndexChanged(int);
@@ -141,6 +172,12 @@ private slots:
 
   void browseImageClicked();
 
+  void updatedCycleName();
+
+  void browseLocalInOutDirClicked();
+  void browseLocalReconScriptsDirClicked();
+
+  void resetRemoteSetup();
   void fitsPathBrowseClicked();
   void flatPathBrowseClicked();
   void darkPathBrowseClicked();
@@ -151,6 +188,24 @@ private slots:
   /// open the MantidQT help window for this interface
   void openHelpWin();
 
+  // visualization tools / short-cuts
+  void browseFilesToVisualizeClicked();
+  void sendToParaviewClicked();
+  void sendToOctopusVisClicked();
+  void defaultDirLocalVisualizeClicked();
+  void defaultDirRemoteVisualizeClicked();
+  void browseVisToolParaviewClicke();
+  void browseVisToolOctopusClicked();
+
+  // convert formats section/tab
+  void browseImgInputConvertClicked();
+  void browseImgOutputConvertClicked();
+
+  // processing of energy bands
+  void browseEnergyInputClicked();
+  void browseEnergyOutputClicked();
+
+  // for the savu functionality - waiting for Savu
   void menuSaveClicked();
   void menuSaveAsClicked();
   void availablePluginSelected();
@@ -164,30 +219,52 @@ private slots:
   void expandedItem(QTreeWidgetItem *);
 
 private:
+  void processLocalRunRecon();
+
+  void makeRunnableWithOptions(const std::string &comp, std::string &run,
+                               std::string &opt);
+
+  void splitCmdLine(const std::string &cmd, std::string &run,
+                    std::string &opts);
+
+private:
   /// Setup the interface (tab UI)
-  virtual void initLayout();
+  void initLayout() override;
 
   void doSetupSectionSetup();
   void doSetupSectionRun();
   void doSetupSectionFilters();
   void doSetupGeneralWidgets();
 
+  void doSetupSectionVisualize();
+  void doSetupSectionConvert();
+  void doSetupSectionEnergy();
+
   void doSetupSavu();
 
   /// Load default interface settings for each tab, normally on startup
   void readSettings();
   /// save settings (before closing)
-  void saveSettings() const;
+  void saveSettings() const override;
 
-  void showToolConfig(const std::string &name);
+  void showToolConfig(const std::string &name) override;
 
-  virtual void closeEvent(QCloseEvent *ev);
+  void closeEvent(QCloseEvent *ev) override;
 
   void processPathBrowseClick(QLineEdit *le, std::string &data);
 
   TomoReconFiltersSettings grabPrePostProcSettings() const;
 
   void setPrePostProcSettings(TomoReconFiltersSettings &opts) const;
+
+  std::string
+  checkUserBrowsePath(QLineEdit *le,
+                      const std::string &userMsg = "Open directory/folder");
+
+  void sendToVisTool(const std::string &toolName, const std::string &pathString,
+                     const std::string &appendBin);
+
+  void sendLog(const std::string &msg);
 
   // Begin of Savu related functionality. This will grow and will need
   // separation. They should find a better place to live.
@@ -222,15 +299,23 @@ private:
 
   // end of Savu related methods
 
+  static const std::string g_styleSheetOffline;
+  static const std::string g_styleSheetOnline;
+
   /// Interface definition with widgets for the main interface window
   Ui::TomographyIfaceQtGUI m_ui;
   // And its sections/tabs. Note that for compactness they're called simply
   // 'tabs'
   // but they could be separate dialogs, widgets, etc.
-  Ui::TomographyIfaceQtTabFiltersSettings m_uiTabFilters;
-  Ui::TomographyIfaceQtTabSetup m_uiTabSetup;
   Ui::TomographyIfaceQtTabRun m_uiTabRun;
+  Ui::TomographyIfaceQtTabSetup m_uiTabSetup;
+  Ui::TomographyIfaceQtTabFiltersSettings m_uiTabFilters;
   Ui::ImageSelectCoRAndRegions m_uiTabCoR;
+  Ui::TomographyIfaceQtTabVisualize m_uiTabVisualize;
+  Ui::ImgFormatsConversion m_uiTabConvertFormats;
+  Ui::TomographyIfaceQtTabEnergy m_uiTabEnergy;
+
+  ImageROIViewQtWidget *m_tabROIW;
 
   /// Tool specific setup dialogs
   Ui::TomoToolConfigAstra m_uiAstra;
@@ -245,9 +330,19 @@ private:
 
   std::string m_imgPath;
 
+  std::vector<Mantid::API::IRemoteJobManager::RemoteJobInfo> m_localJobsStatus;
+
+  // Settings for external tools. where to find the system Python
+  static std::string g_defLocalExternalPythonPath;
+  static std::vector<std::string> g_defAddPathPython;
+
+  std::string m_localExternalPythonPath;
+  std::vector<std::string> m_defAddPathPython;
+
   static const std::string g_SCARFName;
   // a general (all tools in principle) default output path
-  static const std::string g_defOutPath;
+  static const std::string g_defOutPathLocal;
+  static const std::string g_defOutPathRemote;
 
   static const std::string g_TomoPyTool;
   static const std::string g_AstraTool;
@@ -257,11 +352,40 @@ private:
 
   TomoPathsConfig m_pathsConfig;
 
+  static const std::string g_defRemotePathScripts;
+
+  // several paths or path components related to where the files are found
+  // (raw files, reconstructions, pre-post processed files, etc.)
+  // These are the defaults
+  static const std::string g_defPathComponentPhase;
+  static const std::string g_defRBNumber;
+  // reconstruction scripts (external, but shipped with Mantid)
+  static const std::string g_defPathReconScripts;
+  // base dir for the reconstruction outputs
+  static const std::string g_defPathReconOut;
+  static const std::string g_defParaviewPath;
+  static const std::string g_defParaviewAppendPath;
+  static const std::string g_defOctopusVisPath;
+  static const std::string g_defOctopusAppendPath;
+  static const std::string g_defProcessedSubpath;
+  // And these are the paths set up
+  std::string m_setupPathComponentPhase;
+  std::string m_setupRBNumber;
+  std::string m_setupPathReconScripts;
+  std::string m_setupPathReconOut;
+  std::string m_setupParaviewPath;
+  std::string m_setupOctopusVisPath;
+  std::string m_setupProcessedSubpath;
+
   // here the view puts messages before notifying the presenter to show them
   std::vector<std::string> m_logMsgs;
 
   /// Settings for the third party (tomographic reconstruction) tools
   TomoReconToolsUserSettings m_toolsSettings;
+  static const std::vector<std::pair<std::string, std::string>>
+      g_tomopy_methods;
+  std::string m_astraMethod;
+  std::string m_tomopyMethod;
 
   // Basic representation of user settings, read/written on startup/close.
   // TODO: this could be done more sophisticated, with a class using

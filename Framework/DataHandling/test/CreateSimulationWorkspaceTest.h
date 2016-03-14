@@ -4,6 +4,8 @@
 #include <cxxtest/TestSuite.h>
 
 #include "MantidDataHandling/CreateSimulationWorkspace.h"
+#include "MantidAPI/Axis.h"
+#include "MantidAPI/MatrixWorkspace.h"
 
 using Mantid::DataHandling::CreateSimulationWorkspace;
 
@@ -25,7 +27,7 @@ public:
     TS_ASSERT_THROWS_NOTHING(alg = createAlgorithm());
   }
 
-  void tearDown() {
+  void tearDown() override {
     using Mantid::API::AnalysisDataService;
     if (AnalysisDataService::Instance().doesExist(m_wsName)) {
       AnalysisDataService::Instance().remove(m_wsName);

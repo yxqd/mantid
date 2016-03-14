@@ -125,10 +125,6 @@ public:
 
     vtkNew<vtkIdList> idList1, idList2;
 
-    signal->LookupValue(0.0, idList1.GetPointer());
-    TSM_ASSERT_EQUALS("IDs for the 3 masked points should have been found",
-                      idList1->GetNumberOfIds(), 3);
-
     signal->LookupTypedValue(1.0, idList2.GetPointer());
     TSM_ASSERT_EQUALS("IDs for the 61 unmasked points should have been found",
                       idList2->GetNumberOfIds(), 61);
@@ -217,7 +213,7 @@ public:
   vtkNew<vtkMDHWSignalArray<double>> m_signal;
   int imageSize;
 
-  void setUp() {
+  void setUp() override {
     ws_sptr = MDEventsTestHelper::makeFakeMDHistoWorkspace(1.0, 3, 200, 10.0,
                                                            1.0, "", 4.0);
     std::size_t offset = 0;
@@ -233,7 +229,7 @@ public:
     m_signal->InitializeArray(std::move(iterator), offset, imageSize);
   }
 
-  void tearDown() {}
+  void tearDown() override {}
 
   void testGetTupleValuePerformance() {
     for (auto index = 0; index < imageSize; ++index) {
