@@ -1,6 +1,7 @@
 set ( SRC_FILES
 	${SRC_FILES} ${OPENCASCADE_SRC}
 	src/ComponentParser.cpp
+	src/Crystal/BaseHKL.cpp
 	src/Crystal/BasicHKLFilters.cpp
 	src/Crystal/BraggScatterer.cpp
 	src/Crystal/BraggScattererFactory.cpp
@@ -137,6 +138,7 @@ set ( SRC_UNITY_IGNORE_FILES src/Instrument/CompAssembly.cpp
 
 set ( INC_FILES
 	inc/MantidGeometry/ComponentParser.h
+	inc/MantidGeometry/Crystal/BaseHKL.h
 	inc/MantidGeometry/Crystal/BasicHKLFilters.h
 	inc/MantidGeometry/Crystal/BraggScatterer.h
 	inc/MantidGeometry/Crystal/BraggScattererFactory.h
@@ -191,7 +193,6 @@ set ( INC_FILES
 	inc/MantidGeometry/IDetector_fwd.h
 	inc/MantidGeometry/IObjComponent.h
 	inc/MantidGeometry/Instrument.h
-	inc/MantidGeometry/Instrument_fwd.h
 	inc/MantidGeometry/Instrument/CompAssembly.h
 	inc/MantidGeometry/Instrument/Component.h
 	inc/MantidGeometry/Instrument/ComponentHelper.h
@@ -215,6 +216,7 @@ set ( INC_FILES
 	inc/MantidGeometry/Instrument/RectangularDetectorPixel.h
 	inc/MantidGeometry/Instrument/ReferenceFrame.h
 	inc/MantidGeometry/Instrument/XMLInstrumentParameter.h
+	inc/MantidGeometry/Instrument_fwd.h
 	inc/MantidGeometry/MDGeometry/CompositeImplicitFunction.h
 	inc/MantidGeometry/MDGeometry/GeneralFrame.h
 	inc/MantidGeometry/MDGeometry/HKL.h
@@ -286,6 +288,7 @@ set ( INC_FILES
 set ( TEST_FILES
 	AcompTest.h
 	AlgebraTest.h
+	BaseHKLTest.h
 	BasicHKLFiltersTest.h
 	BnIdTest.h
 	BoundingBoxTest.h
