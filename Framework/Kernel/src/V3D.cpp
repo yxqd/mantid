@@ -97,52 +97,6 @@ void V3D::azimuth_polar_SNS(const double &R, const double &azimuth,
     m_vector(2) = 0.0;
 }
 
-
-/**
-  Scalar product
-  @param D :: value to scale
-  @return this * D
- */
-V3D V3D::operator*(const double D) const { return V3D(m_vector * D); }
-
-/**
-  Scalar divsion
-  @param D :: value to scale
-  @return this / D
-*/
-V3D V3D::operator/(const double D) const { return V3D(m_vector / D); }
-
-/**
-  Scalar product
-  @param D :: value to scale
-  @return this *= D
-*/
-V3D &V3D::operator*=(const double D) {
-  m_vector *= D;
-  return *this;
-}
-
-/**
-  Scalar division
-  @param D :: value to scale
-  @return this /= D
-  \todo ADD TOLERANCE
-*/
-V3D &V3D::operator/=(const double D) {
-  if (D != 0.0) {
-    m_vector /= D;
-  }
-  return *this;
-}
-
-/** Not equals operator with tolerance factor.
- *  @param other :: The V3D to compare against
- *  @returns True if the vectors are different
- */
-bool V3D::operator!=(const V3D &other) const {
-  return !(this->operator==(other));
-}
-
 /**
   compare
   @return true if V is greater
@@ -157,60 +111,6 @@ bool V3D::operator<(const V3D &V) const {
 
 /// Comparison operator greater than.
 bool V3D::operator>(const V3D &rhs) const { return rhs < *this; }
-
-/**
-  Sets the vector position from a triplet of doubles x,y,z
-  @param xx :: The X coordinate
-  @param yy :: The Y coordinate
-  @param zz :: The Z coordinate
-*/
-void V3D::operator()(const double xx, const double yy, const double zz) {
-  m_vector = Eigen::Vector3d(xx, yy, zz);
-}
-
-/**
-  Set is x position
-  @param xx :: The X coordinate
-*/
-void V3D::setX(const double xx) { m_vector(0) = xx; }
-
-/**
-  Set is y position
-  @param yy :: The Y coordinate
-*/
-void V3D::setY(const double yy) { m_vector(1) = yy; }
-
-/**
-  Set is z position
-  @param zz :: The Z coordinate
-*/
-void V3D::setZ(const double zz) { m_vector(2) = zz; }
-
-/**
-  Returns the axis value based in the index provided
-  @param Index :: 0=x, 1=y, 2=z
-  @return a double value of the requested axis
-*/
-const double &V3D::operator[](const size_t Index) const {
-  if (Index > 2) {
-    throw Kernel::Exception::IndexError(Index, 2,
-                                        "V3D::operator[] range error");
-  }
-  return m_vector(Index);
-}
-
-/**
-  Returns the axis value based in the index provided
-  @param Index :: 0=x, 1=y, 2=z
-  @return a double value of the requested axis
-*/
-double &V3D::operator[](const size_t Index) {
-  if (Index > 2) {
-    throw Kernel::Exception::IndexError(Index, 2,
-                                        "V3D::operator[] range error");
-  }
-  return m_vector(Index);
-}
 
 /** Return the vector's position in spherical coordinates
  *  @param R ::     Returns the radial distance
@@ -256,18 +156,6 @@ void V3D::round() {
   m_vector(1) = double(long(m_vector(1) + (m_vector(1) < 0 ? -0.5 : +0.5)));
   m_vector(2) = double(long(m_vector(2) + (m_vector(2) < 0 ? -0.5 : +0.5)));
 }
-
-/**
-  Calculates the scalar product
-  @param V :: The second vector to include in the calculation
-  @return The scalar product of the two vectors
-*/
-
-/**
-  Calculates the cross product. Returns (this * v).
-  @param v :: The second vector to include in the calculation
-  @return The cross product of the two vectors (this * v)
-*/
 
 /**
   Calculates the distance between two vectors
@@ -355,18 +243,6 @@ bool V3D::coLinear(const V3D &Bv, const V3D &Cv) const {
   const V3D &Av = *this;
   const V3D Tmp((Bv - Av).cross_prod(Cv - Av));
   return Tmp.norm() <= Tolerance;
-}
-
-bool V3D::nullVector(const double Tol) const
-/**
-  Checks the size of the vector
-  @param Tol :: size of the biggest zero vector allowed.
-  @retval 1 : the vector squared components
-  magnitude are less than Tol
-  @retval 0 :: Vector bigger than Tol
-*/
-{
-  return m_vector.isZero(Tol);
 }
 
 int V3D::masterDir(const double Tol) const

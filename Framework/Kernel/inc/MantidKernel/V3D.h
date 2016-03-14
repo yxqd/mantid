@@ -8,6 +8,7 @@
 #include "MantidKernel/DllConfig.h"
 #include "MantidKernel/Matrix.h"
 #include "MantidKernel/Tolerance.h"
+#include "MantidKernel/Exception.h"
 #include <nexus/NeXusFile.hpp>
 
 #include <Eigen/Core>
@@ -103,36 +104,72 @@ public:
   }
 
   // Scale
-  V3D operator*(const double D) const;
-  V3D &operator*=(const double D);
-  V3D operator/(const double D) const;
-  V3D &operator/=(const double D);
+  inline V3D operator*(const double D) const { return V3D(m_vector * D); }
+
+  inline V3D &operator*=(const double D) {
+    m_vector *= D;
+    return *this;
+  }
+
+  inline V3D operator/(const double D) const {
+    V3D out(*this);
+    out /= D;
+    return out;
+  }
+
+  inline V3D &operator/=(const double D) {
+    if (D != 0.0) {
+      m_vector /= D;
+    }
+    return *this;
+  }
+
   // Simple Comparison
   inline bool operator==(const V3D &v) const {
     return (m_vector - v.m_vector).isZero(Kernel::Tolerance);
   }
-  bool operator!=(const V3D &) const;
+
+  inline bool operator!=(const V3D &other) const {
+    return !(this->operator==(other));
+  }
+
   bool operator<(const V3D &) const;
   bool operator>(const V3D &rhs) const;
 
   // Access
   // Setting x, y and z values
-  void operator()(const double xx, const double yy, const double zz);
+  inline void operator()(const double xx, const double yy, const double zz) {
+    m_vector = Eigen::Vector3d(xx, yy, zz);
+  }
+
   void spherical(const double &R, const double &theta, const double &phi);
   void spherical_rad(const double &R, const double &polar,
                      const double &azimuth);
   void azimuth_polar_SNS(const double &R, const double &azimuth,
                          const double &polar);
-  void setX(const double xx);
-  void setY(const double yy);
-  void setZ(const double zz);
+  inline void setX(const double xx) { m_vector(0) = xx; }
+  inline void setY(const double yy) { m_vector(1) = yy; }
+  inline void setZ(const double zz) { m_vector(2) = zz; }
 
   const double &X() const { return m_vector(0); } ///< Get x
   const double &Y() const { return m_vector(1); } ///< Get y
   const double &Z() const { return m_vector(2); } ///< Get z
 
-  const double &operator[](const size_t Index) const;
-  double &operator[](const size_t Index);
+  inline const double &operator[](const size_t Index) const {
+    if (Index > 2) {
+      throw Kernel::Exception::IndexError(Index, 2,
+                                          "V3D::operator[] range error");
+    }
+    return m_vector(Index);
+  }
+
+  inline double &operator[](const size_t Index) {
+    if (Index > 2) {
+      throw Kernel::Exception::IndexError(Index, 2,
+                                          "V3D::operator[] range error");
+    }
+    return m_vector(Index);
+  }
 
   void getSpherical(double &R, double &theta, double &phi) const;
 
@@ -186,8 +223,9 @@ public:
              const V3D &); ///<rebase to new basis vector
   int masterDir(const double Tol =
                     1e-3) const; ///< Determine if there is a master direction
-  bool
-  nullVector(const double Tol = 1e-3) const; ///< Determine if the point is null
+  inline bool nullVector(const double Tol = 1e-3) const {
+    return m_vector.isZero(Tol);
+  } ///< Determine if the point is null
   bool coLinear(const V3D &, const V3D &) const;
 
   void saveNexus(::NeXus::File *file, const std::string &name) const;
