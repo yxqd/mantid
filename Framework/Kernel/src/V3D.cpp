@@ -11,15 +11,6 @@
 namespace Mantid {
 namespace Kernel {
 
-/// Constructor [Null]
-V3D::V3D() : m_vector(0, 0, 0) {}
-
-/// Value constructor
-V3D::V3D(const double xx, const double yy, const double zz)
-    : m_vector(xx, yy, zz) {}
-
-V3D::V3D(const Eigen::Vector3d &vector) : m_vector(vector) {}
-
 /**
   Sets the vector position based on spherical coordinates
 
@@ -127,45 +118,6 @@ void V3D::getSpherical(double &R, double &theta, double &phi) const {
   return;
 }
 
-/**
-  Vector length
-  @return vec.length()
-*/
-double V3D::norm() const { return m_vector.norm(); }
-
-/**
-  Vector length without the sqrt
-  @return vec.length()
-*/
-double V3D::norm2() const { return m_vector.squaredNorm(); }
-
-/**
-  Normalises the vector and
-  then returns the scalar value of the vector
-  @return Norm
-*/
-double V3D::normalize() {
-  const double ND(norm());
-  this->operator/=(ND);
-  return ND;
-}
-
-/** Round each component to the nearest integer */
-void V3D::round() {
-  m_vector(0) = double(long(m_vector(0) + (m_vector(0) < 0 ? -0.5 : +0.5)));
-  m_vector(1) = double(long(m_vector(1) + (m_vector(1) < 0 ? -0.5 : +0.5)));
-  m_vector(2) = double(long(m_vector(2) + (m_vector(2) < 0 ? -0.5 : +0.5)));
-}
-
-/**
-  Calculates the distance between two vectors
-  @param v :: The second vector to include in the calculation
-  @return The distance between the two vectors
-*/
-double V3D::distance(const V3D &v) const {
-  return (m_vector - v.m_vector).norm();
-}
-
 /** Calculates the zenith angle (theta) of this vector with respect to another
  *  @param v :: The other vector
  *  @return The azimuthal angle in radians (0 < theta < pi)
@@ -221,17 +173,7 @@ int V3D::reBase(const V3D &A, const V3D &B, const V3D &C)
   return 0;
 }
 
-void V3D::rotate(const Kernel::Matrix<double> &A)
-/**
-  Rotate a point by a matrix
-  @param A :: Rotation matrix (needs to be >3x3)
-*/
-{
-  double xold(m_vector(0)), yold(m_vector(1)), zold(m_vector(2));
-  m_vector(0) = A[0][0] * xold + A[0][1] * yold + A[0][2] * zold;
-  m_vector(1) = A[1][0] * xold + A[1][1] * yold + A[1][2] * zold;
-  m_vector(2) = A[2][0] * xold + A[2][1] * yold + A[2][2] * zold;
-}
+
 
 /**
   Determines if this,B,C are collinear

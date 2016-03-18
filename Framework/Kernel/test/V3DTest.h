@@ -570,7 +570,7 @@ public:
 
   void testRotate() {
     V3D direction(1.0, 1.0, 1.0);
-    for (size_t i = 0; i < 100000; ++i) {
+    for (size_t i = 0; i < 10000000; ++i) {
       direction = V3D(1.0, 1.0, 1.0);
       direction.rotate(m_rotx);
     }
@@ -691,6 +691,26 @@ public:
     for (size_t i = 0; i < 1000000; ++i) {
       std::transform(first.cbegin(), first.cend(), result.begin(),
                      [](const V3D &lhs) { return lhs.nullVector(); });
+      TS_ASSERT_EQUALS(result.size(), first.size());
+    }
+  }
+
+  void test_volume() {
+    std::vector<double> result(first.size());
+
+    for (size_t i = 0; i < 1000000; ++i) {
+      std::transform(first.cbegin(), first.cend(), result.begin(),
+                     [](const V3D &lhs) { return lhs.volume(); });
+      TS_ASSERT_EQUALS(result.size(), first.size());
+    }
+  }
+
+  void test_round() {
+    std::vector<V3D> result = first;
+
+    for (size_t i = 0; i < 1000000; ++i) {
+      std::for_each(result.begin(), result.end(),
+                    [](V3D &lhs) { return lhs.round(); });
       TS_ASSERT_EQUALS(result.size(), first.size());
     }
   }

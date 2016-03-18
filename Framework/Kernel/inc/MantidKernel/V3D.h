@@ -46,9 +46,9 @@ Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
 class MANTID_KERNEL_DLL V3D {
 public:
-  V3D();
-  V3D(const double, const double, const double);
-  explicit V3D(const Eigen::Vector3d &vector);
+  V3D() : m_vector(0, 0, 0) {}
+  V3D(const double x, const double y, const double z) : m_vector(x, y, z) {}
+  explicit V3D(const Eigen::Vector3d &vector) : m_vector(vector) {}
 
   /// Convenience method for sorting list of V3D objects based on magnitude
   static bool CompareMagnitude(const Kernel::V3D &v1, const Kernel::V3D &v2);
@@ -60,65 +60,55 @@ public:
   }
 
   // Arithemetic operators overloaded
-  inline V3D operator+(const V3D &v) const {
-    V3D out(*this);
-    out += v;
-    return out;
-  }
+  V3D operator+(const V3D &v) const { return V3D(m_vector + v.m_vector); }
 
-  inline V3D &operator+=(const V3D &v) {
+  V3D &operator+=(const V3D &v) {
     m_vector += v.m_vector;
     return *this;
   }
 
-  inline V3D operator-(const V3D &v) const {
-    V3D out(*this);
-    out -= v;
-    return out;
-  }
+  V3D operator-(const V3D &v) const { return V3D(m_vector - v.m_vector); }
 
-  inline V3D &operator-=(const V3D &v) {
+  V3D &operator-=(const V3D &v) {
     m_vector -= v.m_vector;
     return *this;
   }
 
-  inline V3D operator*(const V3D &v) const {
-    V3D out(*this);
-    out *= v;
-    return out;
+  V3D operator*(const V3D &v) const {
+    return V3D(m_vector.cwiseProduct(v.m_vector));
   }
 
-  inline V3D operator/(const V3D &v) const {
-    V3D out(*this);
-    out /= v;
-    return out;
+  V3D operator/(const V3D &v) const {
+    return V3D(m_vector.cwiseQuotient(v.m_vector));
   }
 
-  inline V3D &operator*=(const V3D &v) {
+  V3D &operator*=(const V3D &v) {
     m_vector = m_vector.cwiseProduct(v.m_vector);
     return *this;
   }
 
-  inline V3D &operator/=(const V3D &v) {
-    m_vector = m_vector.cwiseQuotient(v.m_vector);
+  V3D &operator/=(const V3D &v) {
+    if (!v.m_vector.isZero()) {
+      m_vector = m_vector.cwiseQuotient(v.m_vector);
+    }
     return *this;
   }
 
   // Scale
-  inline V3D operator*(const double D) const { return V3D(m_vector * D); }
+  V3D operator*(const double D) const { return V3D(m_vector * D); }
 
-  inline V3D &operator*=(const double D) {
+  V3D &operator*=(const double D) {
     m_vector *= D;
     return *this;
   }
 
-  inline V3D operator/(const double D) const {
+  V3D operator/(const double D) const {
     V3D out(*this);
     out /= D;
     return out;
   }
 
-  inline V3D &operator/=(const double D) {
+  V3D &operator/=(const double D) {
     if (D != 0.0) {
       m_vector /= D;
     }
@@ -126,21 +116,19 @@ public:
   }
 
   // Simple Comparison
-  inline bool operator==(const V3D &v) const {
+  bool operator==(const V3D &v) const {
     return (m_vector - v.m_vector).isZero(Kernel::Tolerance);
   }
 
-  inline bool operator!=(const V3D &other) const {
-    return !(this->operator==(other));
-  }
+  bool operator!=(const V3D &other) const { return !(this->operator==(other)); }
 
   bool operator<(const V3D &) const;
   bool operator>(const V3D &rhs) const;
 
   // Access
   // Setting x, y and z values
-  inline void operator()(const double xx, const double yy, const double zz) {
-    m_vector = Eigen::Vector3d(xx, yy, zz);
+  void operator()(const double x, const double y, const double z) {
+    m_vector = Eigen::Vector3d(x, y, z);
   }
 
   void spherical(const double &R, const double &theta, const double &phi);
@@ -148,15 +136,15 @@ public:
                      const double &azimuth);
   void azimuth_polar_SNS(const double &R, const double &azimuth,
                          const double &polar);
-  inline void setX(const double xx) { m_vector(0) = xx; }
-  inline void setY(const double yy) { m_vector(1) = yy; }
-  inline void setZ(const double zz) { m_vector(2) = zz; }
+  void setX(const double x) { m_vector(0) = x; }
+  void setY(const double y) { m_vector(1) = y; }
+  void setZ(const double z) { m_vector(2) = z; }
 
   const double &X() const { return m_vector(0); } ///< Get x
   const double &Y() const { return m_vector(1); } ///< Get y
   const double &Z() const { return m_vector(2); } ///< Get z
 
-  inline const double &operator[](const size_t Index) const {
+  const double &operator[](const size_t Index) const {
     if (Index > 2) {
       throw Kernel::Exception::IndexError(Index, 2,
                                           "V3D::operator[] range error");
@@ -164,7 +152,7 @@ public:
     return m_vector(Index);
   }
 
-  inline double &operator[](const size_t Index) {
+  double &operator[](const size_t Index) {
     if (Index > 2) {
       throw Kernel::Exception::IndexError(Index, 2,
                                           "V3D::operator[] range error");
@@ -175,29 +163,44 @@ public:
   void getSpherical(double &R, double &theta, double &phi) const;
 
   //      void rotate(const V3D&,const V3D&,const double);
-  void rotate(const Matrix<double> &);
+  void rotate(const Matrix<double> &A)
+  /**
+  Rotate a point by a matrix
+  @param A :: Rotation matrix (needs to be >3x3)
+*/
+  {
+    double xold(m_vector(0)), yold(m_vector(1)), zold(m_vector(2));
+    m_vector(0) = A[0][0] * xold + A[0][1] * yold + A[0][2] * zold;
+    m_vector(1) = A[1][0] * xold + A[1][1] * yold + A[1][2] * zold;
+    m_vector(2) = A[2][0] * xold + A[2][1] * yold + A[2][2] * zold;
+  }
 
-  void round();
+  void round() {
+    m_vector = m_vector.unaryExpr(
+        [](const double &element) { return std::round(element); });
+  }
 
   /// Make a normalized vector (return norm value)
-  double normalize(); // Vec3D::makeUnit
-  double norm() const;
-  double norm2() const;
+  double normalize() {
+    const double ND(norm());
+    this->operator/=(ND);
+    return ND;
+  } // Vec3D::makeUnit
+  double norm() const { return m_vector.norm(); }
+  double norm2() const { return m_vector.squaredNorm(); }
   /// transform vector into form, used to describe directions in
   /// crystallogaphical coodinate system
   double toMillerIndexes(double eps = 1.e-3);
   /// Scalar product
-  inline double scalar_prod(const V3D &v) const {
-    return m_vector.dot(v.m_vector);
-  }
+  double scalar_prod(const V3D &v) const { return m_vector.dot(v.m_vector); }
   /// Cross product
-  inline V3D cross_prod(const V3D &v) const {
+  V3D cross_prod(const V3D &v) const {
     V3D out(*this);
     out.m_vector = m_vector.cross(v.m_vector);
     return out;
   }
   /// Distance (R) between two points defined as vectors
-  double distance(const V3D &v) const;
+  double distance(const V3D &v) const { return (m_vector - v.m_vector).norm(); }
   /// Zenith (theta) angle between this and another vector
   double zenith(const V3D &) const;
   /// Angle between this and another vector
@@ -216,7 +219,7 @@ public:
   std::string toString() const;
   void fromString(const std::string &str);
 
-  inline double volume() const {
+  double volume() const {
     return fabs(m_vector.prod());
   } ///< Calculate the volume of a cube X*Y*Z
 
@@ -224,7 +227,7 @@ public:
              const V3D &); ///<rebase to new basis vector
   int masterDir(const double Tol =
                     1e-3) const; ///< Determine if there is a master direction
-  inline bool nullVector(const double Tol = 1e-3) const {
+  bool nullVector(const double Tol = 1e-3) const {
     return m_vector.isZero(Tol);
   } ///< Determine if the point is null
   bool coLinear(const V3D &, const V3D &) const;
