@@ -6,6 +6,8 @@
 #include <cfloat>
 #include <ostream>
 
+#include <Eigen/Core>
+
 namespace Mantid {
 
 namespace Kernel {
@@ -45,11 +47,15 @@ public:
   typedef T value_type;
 
 private:
-  size_t nx; ///< Number of rows    (x coordinate)
-  size_t ny; ///< Number of columns (y coordinate)
+  typedef Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+      InternalMatrixType;
+  typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+      InternalDoubleMatrixType;
+  typedef Eigen::Matrix<T, Eigen::Dynamic, 1> InternalColVectorType;
+  typedef Eigen::Matrix<T, 1, Eigen::Dynamic> InternalRowVectorType;
 
-  T **V;                     ///< Raw data
-  void deleteMem();          ///< Helper function to delete memory
+  InternalMatrixType m_matrix;
+
   void lubcmp(int *, int &); ///< starts inversion process
   void lubksb(int const *, double *);
   void rotate(double const, double const, int const, int const, int const,
@@ -64,16 +70,19 @@ public:
   /// Build square matrix from a linear vector. Throw if the vector.size() !=
   /// nx*nx;
   Matrix(const std::vector<T> &);
-  Matrix(const Matrix<T> &, const size_t nrow, const size_t ncol);
 
-  Matrix(const Matrix<T> &);
-  Matrix<T> &operator=(const Matrix<T> &);
-  ~Matrix();
+  Matrix(const InternalMatrixType &matrix) : m_matrix(matrix) {}
+
+  Matrix(const Matrix<T> &) = default;
+  Matrix<T> &operator=(const Matrix<T> &) = default;
+  ~Matrix() {}
+
+  const InternalMatrixType &getMatrix() const { return m_matrix; }
 
   /// const Array accessor
-  const T *operator[](const size_t A) const { return V[A]; }
+  const T *operator[](const size_t A) const { return m_matrix.row(A).data(); }
   /// Array accessor. Use, e.g. Matrix[row][col]
-  T *operator[](const size_t A) { return V[A]; }
+  T *operator[](const size_t A) { return m_matrix.row(A).data(); }
 
   Matrix<T> &operator+=(const Matrix<T> &);     ///< Basic addition operator
   Matrix<T> operator+(const Matrix<T> &) const; ///< Basic addition operator
@@ -96,7 +105,7 @@ public:
   bool operator==(const Matrix<T> &) const;
   bool equals(const Matrix<T> &A, const double Tolerance = FLT_EPSILON) const;
   T item(const int a, const int b) const {
-    return V[a][b];
+    return m_matrix(a, b);
   } ///< disallows access
 
   void print() const;
@@ -106,10 +115,7 @@ public:
   // returns this matrix in 1D vector representation
   std::vector<T> getVector() const;
   // explicit conversion into the vector
-  operator std::vector<T>() const {
-    std::vector<T> tmp = this->getVector();
-    return tmp;
-  }
+  operator std::vector<T>() const { return getVector(); }
   //
   void setColumn(const size_t nCol, const std::vector<T> &newCol);
   void setRow(const size_t nRow, const std::vector<T> &newRow);
@@ -126,21 +132,21 @@ public:
   Matrix<T> postMultiplyByDiagonal(
       const std::vector<T> &) const; ///< post-multiply this*D
 
-  void setMem(const size_t, const size_t);
+  void setMem(const size_t newRows, const size_t newCols);
 
   /// Access matrix sizes
   std::pair<size_t, size_t> size() const {
-    return std::pair<size_t, size_t>(nx, ny);
+    return std::make_pair(m_matrix.rows(), m_matrix.cols());
   }
 
   /// Return the number of rows in the matrix
-  size_t numRows() const { return nx; }
+  size_t numRows() const { return m_matrix.rows(); }
 
   /// Return the number of columns in the matrix
-  size_t numCols() const { return ny; }
+  size_t numCols() const { return m_matrix.cols(); }
 
   /// Return the smallest matrix size
-  size_t Ssize() const { return (nx > ny) ? ny : nx; }
+  size_t Ssize() const { return std::min(m_matrix.rows(), m_matrix.cols()); }
 
   void swapRows(const size_t, const size_t); ///< Swap rows (first V index)
   void swapCols(const size_t, const size_t); ///< Swap cols (second V index)

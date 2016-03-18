@@ -59,6 +59,8 @@ public:
                                m_vector.data() + m_vector.size()};
   }
 
+  const Eigen::Vector3d &getVector() const { return m_vector; }
+
   // Arithemetic operators overloaded
   V3D operator+(const V3D &v) const { return V3D(m_vector + v.m_vector); }
 
