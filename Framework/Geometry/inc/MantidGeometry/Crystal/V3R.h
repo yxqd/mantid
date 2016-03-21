@@ -148,6 +148,17 @@ V3R operator*(const Kernel::Matrix<T> &lhs, const V3R &rhs) {
 
   return result;
 }
+
+template <typename T>
+V3R operator*(const Eigen::Matrix<T, 3, 3> &matrix, const V3R &vector) {
+  return V3R(matrix(0, 0) * vector.x() + matrix(0, 1) * vector.y() +
+                 matrix(0, 2) * vector.z(),
+             matrix(1, 0) * vector.x() + matrix(1, 1) * vector.y() +
+                 matrix(1, 2) * vector.z(),
+             matrix(2, 0) * vector.x() + matrix(2, 1) * vector.y() +
+                 matrix(2, 2) * vector.z());
+}
+
 } // namespace Geometry
 } // namespace Mantid
 

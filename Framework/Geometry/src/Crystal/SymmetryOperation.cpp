@@ -9,7 +9,7 @@ namespace Geometry {
 
 /// Default constructor, results in identity.
 SymmetryOperation::SymmetryOperation()
-    : m_order(1), m_transposedInverseMatrix(Kernel::IntMatrix(3, 3, true)),
+    : m_order(1), m_transposedInverseMatrix(Eigen::Matrix3i::Identity()),
       m_reducedVector(), m_identifier(), m_matrixVectorPair() {
   m_identifier = SymmetryOperationSymbolParser::getNormalizedIdentifier(
       m_matrixVectorPair);
@@ -32,15 +32,15 @@ SymmetryOperation::SymmetryOperation(const std::string &identifier) {
 
 /// Constructs a symmetry operation from a matrix component and a vector,
 /// derives order and identifier from matrix and vector.
-SymmetryOperation::SymmetryOperation(const Kernel::IntMatrix &matrix,
+SymmetryOperation::SymmetryOperation(const Eigen::Matrix3i &matrix,
                                      const V3R &vector) {
   init(MatrixVectorPair<int, V3R>(matrix, vector));
 }
 
 /// Convenience constructor for double-matrices.
-SymmetryOperation::SymmetryOperation(const Mantid::Kernel::DblMatrix &matrix,
+SymmetryOperation::SymmetryOperation(const Eigen::Matrix3d &matrix,
                                      const Mantid::Geometry::V3R &vector) {
-  init(MatrixVectorPair<int, V3R>(convertMatrix<int>(matrix), vector));
+  init(MatrixVectorPair<int, V3R>(matrix.cast<int>(), vector));
 }
 
 /// Initialize from matrix and vector.
@@ -49,9 +49,11 @@ void SymmetryOperation::init(
   m_matrixVectorPair = matrixVectorPair;
 
   // Inverse matrix for HKL operations.
-  m_transposedInverseMatrix = m_matrixVectorPair.getMatrix();
-  m_transposedInverseMatrix.Invert();
-  m_transposedInverseMatrix = m_transposedInverseMatrix.Transpose();
+  m_transposedInverseMatrix = m_matrixVectorPair.getMatrix()
+                                  .cast<double>()
+                                  .inverse()
+                                  .cast<int>()
+                                  .transpose();
 
   m_order = getOrderFromMatrix(m_matrixVectorPair.getMatrix());
   m_identifier = SymmetryOperationSymbolParser::getNormalizedIdentifier(
@@ -62,7 +64,7 @@ void SymmetryOperation::init(
 }
 
 /// Returns a const reference to the internally stored matrix
-const Kernel::IntMatrix &SymmetryOperation::matrix() const {
+const Eigen::Matrix3i &SymmetryOperation::matrix() const {
   return m_matrixVectorPair.getMatrix();
 }
 
@@ -114,7 +116,7 @@ std::string SymmetryOperation::identifier() const { return m_identifier; }
 /// Returns true if this is the identity operation.
 bool SymmetryOperation::isIdentity() const {
   return !hasTranslation() &&
-         m_matrixVectorPair.getMatrix() == Kernel::IntMatrix(3, 3, true);
+         m_matrixVectorPair.getMatrix() == Eigen::Matrix3i::Identity();
 }
 
 /// Returns true if the operation has a translational component.
@@ -210,8 +212,8 @@ bool SymmetryOperation::operator!=(const SymmetryOperation &other) const {
 /// "Introduction to Crystal Growth and Characterization, Benz and Neumann,
 /// Wiley, 2014, p. 51."
 size_t
-SymmetryOperation::getOrderFromMatrix(const Kernel::IntMatrix &matrix) const {
-  int trace = matrix.Trace();
+SymmetryOperation::getOrderFromMatrix(const Eigen::Matrix3i &matrix) const {
+  int trace = matrix.trace();
   int determinant = matrix.determinant();
 
   if (determinant == 1) {
@@ -249,12 +251,12 @@ SymmetryOperation::getOrderFromMatrix(const Kernel::IntMatrix &matrix) const {
   throw std::runtime_error("There is something wrong with supplied matrix.");
 }
 
-V3R SymmetryOperation::getReducedVector(const Kernel::IntMatrix &matrix,
+V3R SymmetryOperation::getReducedVector(const Eigen::Matrix3i &matrix,
                                         const V3R &vector) const {
-  Kernel::IntMatrix translationMatrix(3, 3, false);
+  Eigen::Matrix3i translationMatrix(Eigen::Matrix3i::Zero());
 
   for (size_t i = 0; i < order(); ++i) {
-    Kernel::IntMatrix tempMatrix(3, 3, true);
+    Eigen::Matrix3i tempMatrix = Eigen::Matrix3i::Identity();
 
     for (size_t j = 0; j < i; ++j) {
       tempMatrix *= matrix;

@@ -8,6 +8,8 @@
 
 #include <boost/shared_ptr.hpp>
 
+#include <Eigen/Core>
+
 namespace Mantid {
 namespace Geometry {
 
@@ -122,10 +124,10 @@ class MANTID_GEOMETRY_DLL SymmetryOperation {
 public:
   SymmetryOperation();
   SymmetryOperation(const std::string &identifier);
-  SymmetryOperation(const Kernel::IntMatrix &matrix, const V3R &vector);
-  SymmetryOperation(const Kernel::DblMatrix &matrix, const V3R &vector);
+  SymmetryOperation(const Eigen::Matrix3i &matrix, const V3R &vector);
+  SymmetryOperation(const Eigen::Matrix3d &matrix, const V3R &vector);
 
-  const Kernel::IntMatrix &matrix() const;
+  const Eigen::Matrix3i &matrix() const;
   const V3R &vector() const;
   const V3R &reducedVector() const;
 
@@ -154,12 +156,11 @@ public:
 protected:
   void init(const MatrixVectorPair<int, V3R> &matrixVectorPair);
 
-  size_t getOrderFromMatrix(const Kernel::IntMatrix &matrix) const;
-  V3R getReducedVector(const Kernel::IntMatrix &matrix,
-                       const V3R &vector) const;
+  size_t getOrderFromMatrix(const Eigen::Matrix3i &matrix) const;
+  V3R getReducedVector(const Eigen::Matrix3i &matrix, const V3R &vector) const;
 
   size_t m_order;
-  Kernel::IntMatrix m_transposedInverseMatrix;
+  Eigen::Matrix3i m_transposedInverseMatrix;
   V3R m_reducedVector;
   std::string m_identifier;
 

@@ -121,7 +121,7 @@ public:
     // Reflections hkl: -h + k + l = 3n
     V3D goodHKL(1, 4, 3); // -1 + 4 + 3 = 6 = 3 * 2
     V3D badHKL(2, 4, 3);  // -2 + 4 + 3 = 5
-    TS_ASSERT(spaceGroup.isAllowedReflection(goodHKL));
+    TS_ASSERT(spaceGroup.isAllowedReflection(goodHKL));    
     TS_ASSERT(!spaceGroup.isAllowedReflection(badHKL));
 
     // Reflections hk0: -h + k = 3n

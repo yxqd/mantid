@@ -57,11 +57,11 @@ std::vector<std::string> operator*(const SymmetryOperation &symOp,
                                 "std::vector<std::string>.");
   }
 
-  std::vector<int> transformedIndices =
-      symOp.matrix() * std::vector<int>{0, 1, 2};
+  Eigen::Vector3i transformedIndices =
+      symOp.matrix() * Eigen::Vector3i(0, 1, 2);
 
   std::vector<std::string> transformedStrings;
-  std::transform(transformedIndices.cbegin(), transformedIndices.cend(),
+  std::transform(transformedIndices.data(), transformedIndices.data() + 3,
                  std::back_inserter(transformedStrings),
                  [=](int index) { return strings[abs(index)]; });
 

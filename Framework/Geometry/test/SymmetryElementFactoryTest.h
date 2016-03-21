@@ -109,16 +109,16 @@ public:
   }
 
   void testGetGSLMatrix() {
-    IntMatrix mantidMatrix(3, 3, true);
+    Eigen::Matrix3i mantidMatrix = Eigen::Matrix3i::Identity();
     gsl_matrix *matrix = getGSLMatrix(mantidMatrix);
 
     TS_ASSERT(matrix);
-    TS_ASSERT_EQUALS(matrix->size1, mantidMatrix.numRows());
-    TS_ASSERT_EQUALS(matrix->size2, mantidMatrix.numCols());
+    TS_ASSERT_EQUALS(matrix->size1, mantidMatrix.rows());
+    TS_ASSERT_EQUALS(matrix->size2, mantidMatrix.cols());
 
-    for (size_t r = 0; r < mantidMatrix.numRows(); ++r) {
-      for (size_t c = 0; c < mantidMatrix.numCols(); ++c) {
-        TS_ASSERT_EQUALS(gsl_matrix_get(matrix, r, c), mantidMatrix[r][c]);
+    for (size_t r = 0; r < mantidMatrix.rows(); ++r) {
+      for (size_t c = 0; c < mantidMatrix.cols(); ++c) {
+        TS_ASSERT_EQUALS(gsl_matrix_get(matrix, r, c), mantidMatrix(r, c));
       }
     }
 

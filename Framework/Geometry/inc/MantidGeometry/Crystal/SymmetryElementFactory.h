@@ -82,7 +82,7 @@ public:
   bool canProcess(const SymmetryOperation &operation) const override;
 };
 
-MANTID_GEOMETRY_DLL gsl_matrix *getGSLMatrix(const Kernel::IntMatrix &matrix);
+MANTID_GEOMETRY_DLL gsl_matrix *getGSLMatrix(const Eigen::Matrix3i &matrix);
 MANTID_GEOMETRY_DLL gsl_matrix *getGSLIdentityMatrix(size_t rows, size_t cols);
 
 /** @class SymmetryElementWithAxisGenerator
@@ -104,7 +104,7 @@ class MANTID_GEOMETRY_DLL SymmetryElementWithAxisGenerator
 public:
 protected:
   V3R determineTranslation(const SymmetryOperation &operation) const;
-  V3R determineAxis(const Kernel::IntMatrix &matrix) const;
+  V3R determineAxis(const Eigen::Matrix3i &matrix) const;
 
   virtual std::string
   determineSymbol(const SymmetryOperation &operation) const = 0;

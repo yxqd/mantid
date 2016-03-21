@@ -12,12 +12,14 @@ namespace Geometry {
 /// Verify that the matrix does not contain elements with abs(element) > 1 and
 /// has an acceptable number of non-zero elements.
 void SymmetryOperationSymbolParser::verifyMatrix(
-    const Kernel::IntMatrix &matrix) {
-  for (size_t i = 0; i < matrix.numRows(); ++i) {
-    if (!isValidMatrixRow(matrix[i], matrix.numCols())) {
+    const Eigen::Matrix3i &matrix) {
+  for (size_t i = 0; i < matrix.rows(); ++i) {
+    if (!isValidMatrixRow(Eigen::Vector3i(matrix.row(i)).data(),
+                          matrix.cols())) {
       std::ostringstream error;
-      error << "Matrix row " << i << " is invalid. Elements: [" << matrix[i][0]
-            << ", " << matrix[i][1] << ", " << matrix[i][2] << "]";
+      error << "Matrix row " << i << " is invalid. Elements: [" << matrix(i, 0)
+            << ", " << matrix(i, 1) << ", " << matrix(i, 2) << "]";
+
       throw Kernel::Exception::ParseError(error.str(), "", 0);
     }
   }
@@ -82,8 +84,8 @@ std::string SymmetryOperationSymbolParser::getNormalizedIdentifier(
  * @return
  */
 std::string SymmetryOperationSymbolParser::getNormalizedIdentifier(
-    const Kernel::IntMatrix &matrix, const V3R &vector) {
-  if (matrix.numCols() != 3 || matrix.numRows() != 3) {
+    const Eigen::Matrix3i &matrix, const V3R &vector) {
+  if (matrix.cols() != 3 || matrix.rows() != 3) {
     throw std::runtime_error("Matrix is not a 3x3 matrix.");
   }
 
@@ -94,8 +96,8 @@ std::string SymmetryOperationSymbolParser::getNormalizedIdentifier(
     std::ostringstream currentComponent;
 
     for (size_t c = 0; c < 3; ++c) {
-      if (matrix[r][c] != 0) {
-        if (matrix[r][c] < 0) {
+      if (matrix(r, c) != 0) {
+        if (matrix(r, c) < 0) {
           currentComponent << "-";
         } else {
           if (currentComponent.str().size() > 0) {

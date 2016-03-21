@@ -70,13 +70,13 @@ public:
   parseIdentifier(const std::string &identifier);
   static std::string
   getNormalizedIdentifier(const MatrixVectorPair<int, V3R> &data);
-  static std::string getNormalizedIdentifier(const Kernel::IntMatrix &matrix,
+  static std::string getNormalizedIdentifier(const Eigen::Matrix3i &matrix,
                                              const V3R &vector);
 
 protected:
   SymmetryOperationSymbolParser() = default;
 
-  static void verifyMatrix(const Kernel::IntMatrix &matrix);
+  static void verifyMatrix(const Eigen::Matrix3i &matrix);
   static bool isValidMatrixRow(const int *element, size_t columnNumber);
 };
 

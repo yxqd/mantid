@@ -4,6 +4,8 @@
 #include "MantidGeometry/DllConfig.h"
 #include "MantidKernel/Matrix.h"
 
+#include <Eigen/Core>
+
 namespace Mantid {
 namespace Geometry {
 
@@ -50,20 +52,18 @@ namespace Geometry {
 template <typename MatrixNumericType, typename VectorType>
 class MatrixVectorPair {
 public:
+  typedef Eigen::Matrix<MatrixNumericType, 3, 3> MatrixType;
+
   /// Default constructor, unit matrix and 0-vector.
-  MatrixVectorPair() : m_matrix(3, 3, true), m_vector() {}
+  MatrixVectorPair() : m_matrix(MatrixType::Identity()), m_vector() {}
 
   /// Constructor from matrix and vector.
-  MatrixVectorPair(const Kernel::Matrix<MatrixNumericType> &matrix,
-                   const VectorType &vector)
+  MatrixVectorPair(const MatrixType &matrix, const VectorType &vector)
       : m_matrix(matrix), m_vector(vector) {}
 
   virtual ~MatrixVectorPair() = default;
 
-  /// Returns a const reference to the internally stored matrix.
-  const Kernel::Matrix<MatrixNumericType> &getMatrix() const {
-    return m_matrix;
-  }
+  const MatrixType &getMatrix() const { return m_matrix; }
 
   /// Returns a const reference to the stored vector.
   const VectorType &getVector() const { return m_vector; }
@@ -82,17 +82,19 @@ public:
 
   /// Returns the inverse MatrixVectorPair.
   MatrixVectorPair<MatrixNumericType, VectorType> getInverse() const {
-    Kernel::Matrix<MatrixNumericType> matrix(m_matrix);
-    matrix.Invert();
+    MatrixType inverseMatrix = (m_matrix.template cast<double>()
+                                    .inverse()
+                                    .template cast<MatrixNumericType>());
 
     return MatrixVectorPair<MatrixNumericType, VectorType>(
-        matrix, -(matrix * m_vector));
+        inverseMatrix, -(inverseMatrix * m_vector));
   }
 
   /// Comparison operator, compares the matrix & vector stored internally.
   bool operator==(
       const MatrixVectorPair<MatrixNumericType, VectorType> &other) const {
-    return m_matrix == other.m_matrix && m_vector == other.m_vector;
+    return m_vector == other.m_vector &&
+           (m_matrix - other.m_matrix).isZero(1e-6);
   }
 
   /// Inequality operator.
@@ -102,7 +104,7 @@ public:
   }
 
 private:
-  Kernel::Matrix<MatrixNumericType> m_matrix;
+  Eigen::Matrix<MatrixNumericType, 3, 3> m_matrix;
   VectorType m_vector;
 };
 

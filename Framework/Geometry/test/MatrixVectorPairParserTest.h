@@ -50,18 +50,18 @@ public:
 
     MatrixVectorPair<double, V3R> pair = parseMatrixVectorPair<double>(allowed);
 
-    DblMatrix matrix = pair.getMatrix();
-    TS_ASSERT_EQUALS(matrix[0][0], 7.0 / 6.0);
-    TS_ASSERT_EQUALS(matrix[0][1], 1.0);
-    TS_ASSERT_EQUALS(matrix[0][2], 1.0 / 3.0);
+    Eigen::Matrix3d matrix = pair.getMatrix();
+    TS_ASSERT_EQUALS(matrix(0, 0), 7.0 / 6.0);
+    TS_ASSERT_EQUALS(matrix(0, 1), 1.0);
+    TS_ASSERT_EQUALS(matrix(0, 2), 1.0 / 3.0);
 
-    TS_ASSERT_EQUALS(matrix[1][0], 4.0);
-    TS_ASSERT_EQUALS(matrix[1][1], -1.0 / 8.0);
-    TS_ASSERT_EQUALS(matrix[1][2], 33.0);
+    TS_ASSERT_EQUALS(matrix(1, 0), 4.0);
+    TS_ASSERT_EQUALS(matrix(1, 1), -1.0 / 8.0);
+    TS_ASSERT_EQUALS(matrix(1, 2), 33.0);
 
-    TS_ASSERT_EQUALS(matrix[2][0], 1.0);
-    TS_ASSERT_EQUALS(matrix[2][1], 0.0);
-    TS_ASSERT_EQUALS(matrix[2][2], -1.0);
+    TS_ASSERT_EQUALS(matrix(2, 0), 1.0);
+    TS_ASSERT_EQUALS(matrix(2, 1), 0.0);
+    TS_ASSERT_EQUALS(matrix(2, 2), -1.0);
 
     TS_ASSERT_EQUALS(pair.getVector(), V3R(0, -5, -1));
   }
@@ -70,18 +70,18 @@ public:
     std::string allowed("1/2x,-4y,-2-z");
     MatrixVectorPair<double, V3R> pair = parseMatrixVectorPair<double>(allowed);
 
-    DblMatrix matrix = pair.getMatrix();
-    TS_ASSERT_EQUALS(matrix[0][0], 0.5);
-    TS_ASSERT_EQUALS(matrix[0][1], 0.0);
-    TS_ASSERT_EQUALS(matrix[0][2], 0.0);
+    Eigen::Matrix3d matrix = pair.getMatrix();
+    TS_ASSERT_EQUALS(matrix(0, 0), 0.5);
+    TS_ASSERT_EQUALS(matrix(0, 1), 0.0);
+    TS_ASSERT_EQUALS(matrix(0, 2), 0.0);
 
-    TS_ASSERT_EQUALS(matrix[1][0], 0.0);
-    TS_ASSERT_EQUALS(matrix[1][1], -4.0);
-    TS_ASSERT_EQUALS(matrix[1][2], 0.0);
+    TS_ASSERT_EQUALS(matrix(1, 0), 0.0);
+    TS_ASSERT_EQUALS(matrix(1, 1), -4.0);
+    TS_ASSERT_EQUALS(matrix(1, 2), 0.0);
 
-    TS_ASSERT_EQUALS(matrix[2][0], 0.0);
-    TS_ASSERT_EQUALS(matrix[2][1], 0.0);
-    TS_ASSERT_EQUALS(matrix[2][2], -1.0);
+    TS_ASSERT_EQUALS(matrix(2, 0), 0.0);
+    TS_ASSERT_EQUALS(matrix(2, 1), 0.0);
+    TS_ASSERT_EQUALS(matrix(2, 2), -1.0);
 
     TS_ASSERT_EQUALS(pair.getVector(), V3R(0, 0, -2));
   }
@@ -90,18 +90,18 @@ public:
     std::string allowed("0x,0-0y,0z+0");
     MatrixVectorPair<double, V3R> pair = parseMatrixVectorPair<double>(allowed);
 
-    DblMatrix matrix = pair.getMatrix();
-    TS_ASSERT_EQUALS(matrix[0][0], 0.0);
-    TS_ASSERT_EQUALS(matrix[0][1], 0.0);
-    TS_ASSERT_EQUALS(matrix[0][2], 0.0);
+    Eigen::Matrix3d matrix = pair.getMatrix();
+    TS_ASSERT_EQUALS(matrix(0, 0), 0.0);
+    TS_ASSERT_EQUALS(matrix(0, 1), 0.0);
+    TS_ASSERT_EQUALS(matrix(0, 2), 0.0);
 
-    TS_ASSERT_EQUALS(matrix[1][0], 0.0);
-    TS_ASSERT_EQUALS(matrix[1][1], 0.0);
-    TS_ASSERT_EQUALS(matrix[1][2], 0.0);
+    TS_ASSERT_EQUALS(matrix(1, 0), 0.0);
+    TS_ASSERT_EQUALS(matrix(1, 1), 0.0);
+    TS_ASSERT_EQUALS(matrix(1, 2), 0.0);
 
-    TS_ASSERT_EQUALS(matrix[2][0], 0.0);
-    TS_ASSERT_EQUALS(matrix[2][1], 0.0);
-    TS_ASSERT_EQUALS(matrix[2][2], 0.0);
+    TS_ASSERT_EQUALS(matrix(2, 0), 0.0);
+    TS_ASSERT_EQUALS(matrix(2, 1), 0.0);
+    TS_ASSERT_EQUALS(matrix(2, 2), 0.0);
 
     TS_ASSERT_EQUALS(pair.getVector(), V3R(0, 0, 0));
   }

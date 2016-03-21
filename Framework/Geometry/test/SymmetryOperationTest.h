@@ -24,6 +24,17 @@ public:
   TestableSymmetryOperation() : SymmetryOperation() {}
 };
 
+namespace {
+std::vector<int> getRandomIntegers(int minMax) {
+  std::mt19937 gen(minMax);
+  std::uniform_int_distribution<> dis(-minMax, minMax);
+
+  std::vector<int> rnd;
+  std::generate_n(std::back_inserter(rnd), 9, [&]() { return dis(gen); });
+  return rnd;
+}
+}
+
 class SymmetryOperationTest : public CxxTest::TestSuite {
 public:
   // This pair of boilerplate methods prevent the suite being created statically
@@ -257,10 +268,10 @@ public:
     TS_ASSERT_EQUALS(symOp.getOrderFromMatrix(param4.getMatrix()), 4);
 
     // check that random matrices don't work
-    Mantid::Kernel::IntMatrix randMatrix(3, 3, false);
-
     for (int i = 1; i < 10; ++i) {
-      randMatrix.setRandom(-0, -i, i);
+      std::vector<int> randomInts = getRandomIntegers(i);
+
+      Eigen::Map<Eigen::Matrix3i> randMatrix(randomInts.data());
       TS_ASSERT_THROWS(symOp.getOrderFromMatrix(randMatrix),
                        std::runtime_error);
     }

@@ -40,7 +40,9 @@ public:
       typedMatrixElements.push_back(boost::rational_cast<T>((rb).y()));
       typedMatrixElements.push_back(boost::rational_cast<T>((rb).z()));
     }
-    Kernel::Matrix<T> mat(typedMatrixElements);
+
+    Eigen::Map<Eigen::Matrix<T, 3, 3, Eigen::RowMajor>> mat(
+        typedMatrixElements.data());
 
     return MatrixVectorPair<T, V3R>(mat, m_vector);
   }

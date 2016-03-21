@@ -59,7 +59,7 @@ SymmetryOperation GroupTransformation::transformOperation(
     const SymmetryOperation &operation) const {
   MatrixVectorPair<double, V3R> op =
       m_inversePair *
-      MatrixVectorPair<double, V3R>(convertMatrix<double>(operation.matrix()),
+      MatrixVectorPair<double, V3R>(operation.matrix().cast<double>(),
                                     operation.vector()) *
       m_matrixVectorPair;
 

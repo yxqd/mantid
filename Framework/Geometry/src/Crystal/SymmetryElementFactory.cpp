@@ -49,10 +49,7 @@ SymmetryElement_sptr SymmetryElementInversionGenerator::generateElement(
 /// Checks that the matrix is identity matrix multiplied with -1.
 bool SymmetryElementInversionGenerator::canProcess(
     const SymmetryOperation &operation) const {
-  Kernel::IntMatrix inversionMatrix(3, 3, true);
-  inversionMatrix *= -1;
-
-  return operation.matrix() == inversionMatrix;
+  return operation.matrix() == (Eigen::Matrix3i::Identity() * -1);
 }
 
 /// Returns the reduced vector of the operation.
@@ -71,12 +68,12 @@ V3R SymmetryElementWithAxisGenerator::determineTranslation(
  * @param matrix :: Kernel::IntMatrix.
  * @return GSL-matrix containing the same data as the input matrix.
  */
-gsl_matrix *getGSLMatrix(const Kernel::IntMatrix &matrix) {
-  gsl_matrix *gslMatrix = gsl_matrix_alloc(matrix.numRows(), matrix.numCols());
+gsl_matrix *getGSLMatrix(const Eigen::Matrix3i &matrix) {
+  gsl_matrix *gslMatrix = gsl_matrix_alloc(matrix.rows(), matrix.cols());
 
-  for (size_t r = 0; r < matrix.numRows(); ++r) {
-    for (size_t c = 0; c < matrix.numCols(); ++c) {
-      gsl_matrix_set(gslMatrix, r, c, static_cast<double>(matrix[r][c]));
+  for (size_t r = 0; r < matrix.rows(); ++r) {
+    for (size_t c = 0; c < matrix.cols(); ++c) {
+      gsl_matrix_set(gslMatrix, r, c, static_cast<double>(matrix(r, c)));
     }
   }
 
@@ -114,12 +111,12 @@ gsl_matrix *getGSLIdentityMatrix(size_t rows, size_t cols) {
  * @return Axis of symmetry element.
  */
 V3R SymmetryElementWithAxisGenerator::determineAxis(
-    const Kernel::IntMatrix &matrix) const {
+    const Eigen::Matrix3i &matrix) const {
   gsl_matrix *eigenMatrix = getGSLMatrix(matrix);
   gsl_matrix *identityMatrix =
-      getGSLIdentityMatrix(matrix.numRows(), matrix.numCols());
+      getGSLIdentityMatrix(matrix.rows(), matrix.cols());
 
-  gsl_eigen_genv_workspace *eigenWs = gsl_eigen_genv_alloc(matrix.numRows());
+  gsl_eigen_genv_workspace *eigenWs = gsl_eigen_genv_alloc(matrix.rows());
 
   gsl_vector_complex *alpha = gsl_vector_complex_alloc(3);
   gsl_vector *beta = gsl_vector_alloc(3);
@@ -129,16 +126,16 @@ V3R SymmetryElementWithAxisGenerator::determineAxis(
                  eigenWs);
   gsl_eigen_genv_sort(alpha, beta, eigenVectors, GSL_EIGEN_SORT_ABS_DESC);
 
-  double determinant = matrix.determinant();
+  double determinant = matrix.cast<double>().determinant();
 
   Kernel::V3D eigenVector;
 
-  for (size_t i = 0; i < matrix.numCols(); ++i) {
+  for (size_t i = 0; i < matrix.cols(); ++i) {
     double eigenValue = GSL_REAL(gsl_complex_div_real(
         gsl_vector_complex_get(alpha, i), gsl_vector_get(beta, i)));
 
     if (fabs(eigenValue - determinant) < 1e-9) {
-      for (size_t j = 0; j < matrix.numRows(); ++j) {
+      for (size_t j = 0; j < matrix.rows(); ++j) {
         double element = GSL_REAL(gsl_matrix_complex_get(eigenVectors, j, i));
 
         eigenVector[j] = element;
@@ -182,7 +179,7 @@ V3R SymmetryElementWithAxisGenerator::determineAxis(
 /// symbol, axis, translation vector and rotation sense.
 SymmetryElement_sptr SymmetryElementRotationGenerator::generateElement(
     const SymmetryOperation &operation) const {
-  const Kernel::IntMatrix &matrix = operation.matrix();
+  const Eigen::Matrix3i &matrix = operation.matrix();
 
   V3R axis = determineAxis(matrix);
   V3R translation = determineTranslation(operation);
@@ -198,9 +195,9 @@ SymmetryElement_sptr SymmetryElementRotationGenerator::generateElement(
 /// belongs to a rotation.
 bool SymmetryElementRotationGenerator::canProcess(
     const SymmetryOperation &operation) const {
-  const Kernel::IntMatrix &matrix = operation.matrix();
+  const Eigen::Matrix3i &matrix = operation.matrix();
   int determinant = matrix.determinant();
-  int trace = matrix.Trace();
+  int trace = matrix.trace();
 
   return (abs(trace) != 3) && !(trace == 1 && determinant == -1);
 }
@@ -232,9 +229,9 @@ SymmetryElementRotationGenerator::determineRotationSense(
 /// screw-axis.
 std::string SymmetryElementRotationGenerator::determineSymbol(
     const SymmetryOperation &operation) const {
-  const Kernel::IntMatrix &matrix = operation.matrix();
+  const Eigen::Matrix3i &matrix = operation.matrix();
 
-  int trace = matrix.Trace();
+  int trace = matrix.trace();
   int determinant = matrix.determinant();
 
   if (trace == 0 && determinant == -1) {
@@ -278,7 +275,7 @@ std::map<V3R, std::string> SymmetryElementMirrorGenerator::g_glideSymbolMap = {
 /// symbol, axis and translation vector.
 SymmetryElement_sptr SymmetryElementMirrorGenerator::generateElement(
     const SymmetryOperation &operation) const {
-  const Kernel::IntMatrix &matrix = operation.matrix();
+  const Eigen::Matrix3i &matrix = operation.matrix();
 
   V3R axis = determineAxis(matrix);
   V3R translation = determineTranslation(operation);
@@ -290,9 +287,9 @@ SymmetryElement_sptr SymmetryElementMirrorGenerator::generateElement(
 /// Checks that the trace of the matrix is 1 and the determinant is -1.
 bool SymmetryElementMirrorGenerator::canProcess(
     const SymmetryOperation &operation) const {
-  const Kernel::IntMatrix &matrix = operation.matrix();
+  const Eigen::Matrix3i &matrix = operation.matrix();
 
-  return matrix.Trace() == 1 && matrix.determinant() == -1;
+  return matrix.trace() == 1 && matrix.determinant() == -1;
 }
 
 /// Determines the symbol from the translation vector using a map.

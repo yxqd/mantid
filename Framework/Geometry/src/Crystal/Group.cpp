@@ -147,8 +147,7 @@ void Group::setSymmetryOperations(
 Group::CoordinateSystem Group::getCoordinateSystemFromOperations(
     const std::vector<SymmetryOperation> &symmetryOperations) const {
   for (const auto &symmetryOperation : symmetryOperations) {
-    std::vector<int> matrix = symmetryOperation.matrix();
-    if (std::count(matrix.begin(), matrix.end(), 0) == 5) {
+    if ((symmetryOperation.matrix().array() == 0).count() == 5) {
       return Group::Hexagonal;
     }
   }

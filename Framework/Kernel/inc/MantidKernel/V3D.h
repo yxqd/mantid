@@ -235,6 +235,9 @@ public:
   void saveNexus(::NeXus::File *file, const std::string &name) const;
   void loadNexus(::NeXus::File *file, const std::string &name);
 
+  template <typename T>
+  friend V3D operator*(const Eigen::Matrix<T, 3, 3> &matrix, const V3D &vector);
+
 private:
   Eigen::Vector3d m_vector;
 };
@@ -242,6 +245,11 @@ private:
 // Overload operator <<
 MANTID_KERNEL_DLL std::ostream &operator<<(std::ostream &, const V3D &);
 MANTID_KERNEL_DLL std::istream &operator>>(std::istream &, V3D &);
+
+template <typename T>
+V3D operator*(const Eigen::Matrix<T, 3, 3> &matrix, const V3D &vector) {
+  return V3D(matrix.template cast<double>() * vector.m_vector);
+}
 
 } // Namespace Kernel
 } // Namespace Mantid
