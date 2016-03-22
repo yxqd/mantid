@@ -50,6 +50,8 @@ public:
   V3D(const double x, const double y, const double z) : m_vector(x, y, z) {}
   explicit V3D(const Eigen::Vector3d &vector) : m_vector(vector) {}
 
+  const Eigen::Vector3d &getVector() const { return m_vector; }
+
   /// Convenience method for sorting list of V3D objects based on magnitude
   static bool CompareMagnitude(const Kernel::V3D &v1, const Kernel::V3D &v2);
 

@@ -4,6 +4,7 @@
 #include "MantidKernel/V3D.h"
 
 #include <boost/algorithm/string.hpp>
+#include <iostream>
 
 namespace Mantid {
 namespace Kernel {
@@ -11,13 +12,8 @@ namespace {
 Logger g_log("Quat");
 }
 
-/** Null Constructor
- * Initialize the quaternion with the identity q=1.0+0i+0j+0k;
- */
-Quat::Quat() : w(1), a(0), b(0), c(0) {}
-
 /**
- * Construct a Quat between two vectors;
+ * Construct m_quat.x() Quat between two vectors;
  * The angle between them is defined differently from usual if vectors are not
  *unit or the same length vectors, so quat would be not consistent
  *
@@ -26,7 +22,7 @@ Quat::Quat() : w(1), a(0), b(0), c(0) {}
  * (a,b,c)=(v x des)
  * @param src :: the source position
  * @param des :: the destination position
- */
+ *
 Quat::Quat(const V3D &src, const V3D &des) {
 
   V3D v = (src + des);
@@ -35,43 +31,44 @@ Quat::Quat(const V3D &src, const V3D &des) {
   V3D cross = v.cross_prod(des);
 
   if (cross.nullVector()) {
-    w = 1.;
-    a = b = c = 0.;
+    m_quat.w() = 1.;
+    m_quat.x() = m_quat.y() = m_quat.z() = 0.;
   } else {
-    w = v.scalar_prod(des);
+    m_quat.w() = v.scalar_prod(des);
 
-    a = cross[0];
-    b = cross[1];
-    c = cross[2];
+    m_quat.x() = cross[0];
+    m_quat.y() = cross[1];
+    m_quat.z() = cross[2];
 
-    double norm = a * a + b * b + c * c + w * w;
+    double norm = m_quat.x() * m_quat.x() + m_quat.y() * m_quat.y() + m_quat.z()
+* m_quat.z() + m_quat.w() * m_quat.w();
     if (fabs(norm - 1) > FLT_EPSILON) {
       norm = sqrt(norm);
-      w /= norm;
-      a /= norm;
-      b /= norm;
-      c /= norm;
+      m_quat.w() /= norm;
+      m_quat.x() /= norm;
+      m_quat.y() /= norm;
+      m_quat.z() /= norm;
     }
   }
 }
+*/
 Quat::Quat(const Kernel::DblMatrix &RotMat) { this->setQuat(RotMat); }
 
 //! Constructor with values
-Quat::Quat(const double _w, const double _a, const double _b, const double _c)
-    : w(_w), a(_a), b(_b), c(_c) {}
 
 /** Constructor from an angle and axis.
- * This construct a  quaternion to represent a rotation
- * of an angle _deg around the _axis. The _axis does not need to be a unit
+ * This construct m_quat.x()  quaternion to represent m_quat.x() rotation
+ * of an angle _deg around the _axis. The _axis does not need to be m_quat.x()
+ *unit
  *vector
  *
  * @param _deg :: angle of rotation
  * @param _axis :: axis to rotate about
  * */
-Quat::Quat(const double _deg, const V3D &_axis) { setAngleAxis(_deg, _axis); }
 
 /**
- * Construct a Quaternion that performs a reference frame rotation.
+ * Construct m_quat.x() Quaternion that performs m_quat.x() reference frame
+ *rotation.
  *  Specify the X,Y,Z vectors of the rotated reference frame, assuming that
  *  the initial X,Y,Z vectors are aligned as expected: X=(1,0,0), Y=(0,1,0),
  *Z=(0,0,1).
@@ -94,10 +91,7 @@ Quat::Quat(const V3D &rX, const V3D &rY, const V3D &rZ) {
  */
 void Quat::set(const double ww, const double aa, const double bb,
                const double cc) {
-  w = ww;
-  a = aa;
-  b = bb;
-  c = cc;
+  m_quat = Eigen::Quaterniond(ww, aa, bb, cc);
   return;
 }
 
@@ -105,25 +99,19 @@ void Quat::set(const double ww, const double aa, const double bb,
  * @param _deg :: angle of rotation
  * @param _axis :: axis to rotate about
  *
- * This construct a  quaternion to represent a rotation
- * of an angle _deg around the _axis. The _axis does not need to be a unit
+ * This construct m_quat.x()  quaternion to represent m_quat.x() rotation
+ * of an angle _deg around the _axis. The _axis does not need to be m_quat.x()
+ *unit
  *vector
  * */
 void Quat::setAngleAxis(const double _deg, const V3D &_axis) {
-  double deg2rad = M_PI / 180.0;
-  w = cos(0.5 * _deg * deg2rad);
-  double s = sin(0.5 * _deg * deg2rad);
-  V3D temp(_axis);
-  temp.normalize();
-  a = s * temp[0];
-  b = s * temp[1];
-  c = s * temp[2];
-  return;
+  m_quat = Eigen::Quaterniond(
+      Eigen::AngleAxisd(_deg * M_PI / 180.0, _axis.getVector().normalized()));
 }
 
 bool Quat::isNull(const double tolerance) const {
   using namespace std;
-  double pw = fabs(w) - 1;
+  double pw = fabs(m_quat.w()) - 1;
   return (fabs(pw) < tolerance);
 }
 
@@ -134,7 +122,8 @@ bool Quat::isNull(const double tolerance) const {
 /// @param _ax2 :: The third component of the axis
 void Quat::getAngleAxis(double &_deg, double &_ax0, double &_ax1,
                         double &_ax2) const {
-  // If it represents a rotation of 0(2\pi), get an angle of 0 and axis (0,0,1)
+  // If it represents m_quat.x() rotation of 0(2\pi), get an angle of 0 and axis
+  // (0,0,1)
   if (isNull(1e-5)) {
     _deg = 0;
     _ax0 = 0;
@@ -143,14 +132,14 @@ void Quat::getAngleAxis(double &_deg, double &_ax0, double &_ax1,
     return;
   }
   // Semi-angle in radians
-  _deg = acos(w);
+  _deg = acos(m_quat.w());
   // Prefactor for the axis part
   double s = sin(_deg);
   // Angle in degrees
   _deg *= 360.0 / M_PI;
-  _ax0 = a / s;
-  _ax1 = b / s;
-  _ax2 = c / s;
+  _ax0 = m_quat.x() / s;
+  _ax1 = m_quat.y() / s;
+  _ax2 = m_quat.z() / s;
   return;
 }
 
@@ -174,7 +163,7 @@ void Quat::operator()(const double ww, const double aa, const double bb,
   this->set(ww, aa, bb, cc);
 }
 
-/** Sets the quat values from an angle and a vector
+/** Sets the quat values from an angle and m_quat.x() vector
  * @param angle :: the numbers of degrees
  * @param axis :: the axis of rotation
  */
@@ -185,16 +174,10 @@ void Quat::operator()(const double angle, const V3D &axis) {
 /** Sets the quat values from another Quat
  * @param q :: the quat to copy
  */
-void Quat::operator()(const Quat &q) {
-  w = q.w;
-  a = q.a;
-  b = q.b;
-  c = q.c;
-  return;
-}
+void Quat::operator()(const Quat &q) { m_quat = q.m_quat; }
 
 /**
- * Set a Quaternion that performs a reference frame rotation.
+ * Set m_quat.x() Quaternion that performs m_quat.x() reference frame rotation.
  *  Specify the X,Y,Z vectors of the rotated reference frame, assuming that
  *  the initial X,Y,Z vectors are aligned as expected: X=(1,0,0), Y=(0,1,0),
  *Z=(0,0,1).
@@ -208,26 +191,12 @@ void Quat::operator()(const V3D &rX, const V3D &rY, const V3D &rZ) {
   // The quaternion will combine two quaternions.
   (void)rZ; // Avoid compiler warning
 
-  // These are the original axes
-  V3D oX = V3D(1., 0., 0.);
-  V3D oY = V3D(0., 1., 0.);
-
-  // Axis that rotates X
-  V3D ax1 = oX.cross_prod(rX);
-  // Rotation angle from oX to rX
-  double angle1 = oX.angle(rX);
-
-  // Create the first quaternion
-  Quat Q1(angle1 * 180.0 / M_PI, ax1);
-
+  Quat Q1(V3D(1., 0., 0.), rX);
   // Now we rotate the original Y using Q1
-  V3D roY = oY;
+  V3D roY(0., 1., 0.);
   Q1.rotate(roY);
-  // Find the axis that rotates oYr onto rY
-  V3D ax2 = roY.cross_prod(rY);
-  double angle2 = roY.angle(rY);
-  Quat Q2(angle2 * 180.0 / M_PI, ax2);
 
+  Quat Q2(roY, rY);
   // Final = those two rotations in succession; Q1 is done first.
   Quat final = Q2 * Q1;
 
@@ -235,11 +204,10 @@ void Quat::operator()(const V3D &rX, const V3D &rY, const V3D &rZ) {
   this->operator()(final);
 }
 
-/** Re-initialise a quaternion to identity.
+/** Re-initialise m_quat.x() quaternion to identity.
  */
 void Quat::init() {
-  w = 1.0;
-  a = b = c = 0.0;
+  m_quat.setIdentity();
   return;
 }
 
@@ -248,7 +216,10 @@ void Quat::init() {
  * @return *this+_q
  */
 Quat Quat::operator+(const Quat &_q) const {
-  return Quat(w + _q.w, a + _q.a, b + _q.b, c + _q.c);
+  Quat out(*this);
+  out += _q;
+
+  return out;
 }
 
 /** Quaternion self-addition operator
@@ -256,10 +227,10 @@ Quat Quat::operator+(const Quat &_q) const {
  * @return *this+=_q
  */
 Quat &Quat::operator+=(const Quat &_q) {
-  w += _q.w;
-  a += _q.a;
-  b += _q.b;
-  c += _q.c;
+  m_quat.w() += _q.m_quat.w();
+  m_quat.x() += _q.m_quat.x();
+  m_quat.y() += _q.m_quat.y();
+  m_quat.z() += _q.m_quat.z();
   return *this;
 }
 
@@ -268,7 +239,10 @@ Quat &Quat::operator+=(const Quat &_q) {
  * @return *this-_q
  */
 Quat Quat::operator-(const Quat &_q) const {
-  return Quat(w - _q.w, a - _q.a, b - _q.b, c - _q.c);
+  Quat out(*this);
+  out -= _q;
+
+  return out;
 }
 
 /** Quaternion self-substraction operator
@@ -276,10 +250,10 @@ Quat Quat::operator-(const Quat &_q) const {
  * @return *this-=_q
  */
 Quat &Quat::operator-=(const Quat &_q) {
-  w -= _q.w;
-  a -= _q.a;
-  b -= _q.b;
-  c -= _q.c;
+  m_quat.w() -= _q.m_quat.w();
+  m_quat.x() -= _q.m_quat.x();
+  m_quat.y() -= _q.m_quat.y();
+  m_quat.z() -= _q.m_quat.z();
   return *this;
 }
 
@@ -292,12 +266,9 @@ Quat &Quat::operator-=(const Quat &_q) {
  *  isn't.
  */
 Quat Quat::operator*(const Quat &_q) const {
-  double w1, a1, b1, c1;
-  w1 = w * _q.w - a * _q.a - b * _q.b - c * _q.c;
-  a1 = w * _q.a + _q.w * a + b * _q.c - _q.b * c;
-  b1 = w * _q.b + _q.w * b - a * _q.c + c * _q.a;
-  c1 = w * _q.c + _q.w * c + a * _q.b - _q.a * b;
-  return Quat(w1, a1, b1, c1);
+  Quat out(*this);
+  out *= _q;
+  return out;
 }
 
 /** Quaternion self-multiplication operator
@@ -305,15 +276,7 @@ Quat Quat::operator*(const Quat &_q) const {
  * @return *this*=_q
  */
 Quat &Quat::operator*=(const Quat &_q) {
-  double w1, a1, b1, c1;
-  w1 = w * _q.w - a * _q.a - b * _q.b - c * _q.c;
-  a1 = w * _q.a + _q.w * a + b * _q.c - _q.b * c;
-  b1 = w * _q.b + _q.w * b - a * _q.c + c * _q.a;
-  c1 = w * _q.c + _q.w * c + a * _q.b - _q.a * b;
-  w = w1;
-  a = a1;
-  b = b1;
-  c = c1;
+  m_quat *= _q.m_quat;
   return (*this);
 }
 
@@ -326,11 +289,14 @@ Quat &Quat::operator*=(const Quat &_q) {
  */
 bool Quat::operator==(const Quat &q) const {
   using namespace std;
-  return !(fabs(w - q.w) > Tolerance || fabs(a - q.a) > Tolerance ||
-           fabs(b - q.b) > Tolerance || fabs(c - q.c) > Tolerance);
+  return !(fabs(m_quat.w() - q.m_quat.w()) > Tolerance ||
+           fabs(m_quat.x() - q.m_quat.x()) > Tolerance ||
+           fabs(m_quat.y() - q.m_quat.y()) > Tolerance ||
+           fabs(m_quat.z() - q.m_quat.z()) > Tolerance);
 
-  // return (quat_tol(w,q.w) && quat_tol(a,q.a) && quat_tol(b,q.b) &&
-  // quat_tol(c,q.c));
+  // return (quat_tol(w,q.m_quat.w()) && quat_tol(a,q.m_quat.x()) &&
+  // quat_tol(b,q.m_quat.y()) &&
+  // quat_tol(c,q.m_quat.z()));
 }
 
 /** Quaternion non-equal operator
@@ -346,74 +312,40 @@ bool Quat::operator!=(const Quat &_q) const { return (!operator==(_q)); }
  *
  * Divide all elements by the quaternion norm
  */
-void Quat::normalize() {
-  double overnorm;
-  if (len2() == 0)
-    overnorm = 1.0;
-  else
-    overnorm = 1.0 / len();
-  w *= overnorm;
-  a *= overnorm;
-  b *= overnorm;
-  c *= overnorm;
-  return;
-}
+void Quat::normalize() { m_quat.normalize(); }
 
 /** Quaternion complex conjugate
  *
  *  Reverse the sign of the 3 imaginary components of the
  *  quaternion
  */
-void Quat::conjugate() {
-  a *= -1.0;
-  b *= -1.0;
-  c *= -1.0;
-  return;
-}
+void Quat::conjugate() { m_quat = m_quat.conjugate(); }
 
 /** Quaternion length
  * @return the length
  */
-double Quat::len() const { return sqrt(len2()); }
+double Quat::len() const { return m_quat.norm(); }
 
 /** Quaternion norm (length squared)
  * @return the length squared
  */
-double Quat::len2() const { return (w * w + a * a + b * b + c * c); }
+double Quat::len2() const { return m_quat.squaredNorm(); }
 
-/** Inverse a quaternion
+/** Inverse m_quat.x() quaternion
  *
  */
-void Quat::inverse() {
-  conjugate();
-  double overnorm = len2();
-  if (overnorm == 0)
-    overnorm = 1.0;
-  else
-    overnorm = 1.0 / overnorm;
-  w *= overnorm;
-  a *= overnorm;
-  b *= overnorm;
-  c *= overnorm;
-}
+void Quat::inverse() { m_quat = m_quat.inverse(); }
 
-/** 	Rotate a vector.
+/** 	Rotate m_quat.x() vector.
  *  @param v :: the vector to be rotated
  *
  *   The quaternion needs to be normalized beforehand to
- *   represent a rotation. If q is thequaternion, the rotation
+ *   represent m_quat.x() rotation. If q is thequaternion, the rotation
  *   is represented by q.v.q-1 where q-1 is the inverse of
  *   v.
  */
 void Quat::rotate(V3D &v) const {
-  Quat qinvert(*this);
-  qinvert.inverse();
-  Quat pos(0.0, v[0], v[1], v[2]);
-  pos *= qinvert;
-  pos = (*this) * pos;
-  v[0] = pos[1];
-  v[1] = pos[2];
-  v[2] = pos[3];
+  v = V3D(m_quat._transformVector(v.getVector()));
 }
 
 /** Convert quaternion rotation to an OpenGL matrix [4x4] matrix
@@ -422,15 +354,15 @@ void Quat::rotate(V3D &v) const {
  * @param mat :: The output matrix
  */
 void Quat::GLMatrix(double *mat) const {
-  double aa = a * a;
-  double ab = a * b;
-  double ac = a * c;
-  double aw = a * w;
-  double bb = b * b;
-  double bc = b * c;
-  double bw = b * w;
-  double cc = c * c;
-  double cw = c * w;
+  double aa = m_quat.x() * m_quat.x();
+  double ab = m_quat.x() * m_quat.y();
+  double ac = m_quat.x() * m_quat.z();
+  double aw = m_quat.x() * m_quat.w();
+  double bb = m_quat.y() * m_quat.y();
+  double bc = m_quat.y() * m_quat.z();
+  double bw = m_quat.y() * m_quat.w();
+  double cc = m_quat.z() * m_quat.z();
+  double cw = m_quat.z() * m_quat.w();
   *mat = 1.0 - 2.0 * (bb + cc);
   ++mat;
   *mat = 2.0 * (ab + cw);
@@ -464,27 +396,29 @@ void Quat::GLMatrix(double *mat) const {
 /// http://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
 std::vector<double> Quat::getRotation(bool check_normalisation,
                                       bool throw_on_errors) const {
-  double aa = a * a;
-  double ab = a * b;
-  double ac = a * c;
-  double aw = a * w;
-  double bb = b * b;
-  double bc = b * c;
-  double bw = b * w;
-  double cc = c * c;
-  double cw = c * w;
+  double aa = m_quat.x() * m_quat.x();
+  double ab = m_quat.x() * m_quat.y();
+  double ac = m_quat.x() * m_quat.z();
+  double aw = m_quat.x() * m_quat.w();
+  double bb = m_quat.y() * m_quat.y();
+  double bc = m_quat.y() * m_quat.z();
+  double bw = m_quat.y() * m_quat.w();
+  double cc = m_quat.z() * m_quat.z();
+  double cw = m_quat.z() * m_quat.w();
   if (check_normalisation) {
-    double normSq = aa + bb + cc + w * w;
+    double normSq = aa + bb + cc + m_quat.w() * m_quat.w();
     if (fabs(normSq - 1) > FLT_EPSILON) {
       if (throw_on_errors) {
-        g_log.error() << " A non-unit quaternion used to obtain a rotation "
-                         "matrix; need to notmalize it first\n";
+        g_log.error()
+            << " A non-unit quaternion used to obtain m_quat.x() rotation "
+               "matrix; need to notmalize it first\n";
         throw(std::invalid_argument("Attempt to use non-normalized quaternion "
                                     "to define rotation matrix; need to "
                                     "notmalize it first"));
       } else {
-        g_log.information() << " Warning; a non-unit quaternion used to obtain "
-                               "the rotation matrix; using normalized quat\n";
+        g_log.information()
+            << " Warning; m_quat.x() non-unit quaternion used to obtain "
+               "the rotation matrix; using normalized quat\n";
         aa /= normSq;
         ab /= normSq;
         ac /= normSq;
@@ -522,11 +456,11 @@ void Quat::setQuat(double mat[16]) {
   tr = mat[0] + mat[5] + mat[10];
   if (tr > 0.0) {
     s = sqrt(tr + 1.0);
-    w = s / 2.0;
+    m_quat.w() = s / 2.0;
     s = 0.5 / s;
-    a = (mat[6] - mat[9]) * s;
-    b = (mat[8] - mat[2]) * s;
-    c = (mat[1] - mat[4]) * s;
+    m_quat.x() = (mat[6] - mat[9]) * s;
+    m_quat.y() = (mat[8] - mat[2]) * s;
+    m_quat.z() = (mat[1] - mat[4]) * s;
   } else {
     int i = 0;
     if (mat[5] > mat[0])
@@ -542,10 +476,10 @@ void Quat::setQuat(double mat[16]) {
     q[3] = (mat[j * 4 + k] - mat[k * 4 + j]) * s;
     q[j] = (mat[i * 4 + j] + mat[j * 4 + i]) * s;
     q[k] = (mat[i * 4 + k] + mat[k * 4 + i]) * s;
-    a = q[0];
-    b = q[1];
-    c = q[2];
-    w = q[3];
+    m_quat.x() = q[0];
+    m_quat.y() = q[1];
+    m_quat.z() = q[2];
+    m_quat.w() = q[3];
   }
 }
 /// Using the convention at
@@ -560,37 +494,32 @@ void Quat::setQuat(const Kernel::DblMatrix &rMat) {
   k = (j + 1) % 3;
   double r = sqrt(1. + rMat[i][i] - rMat[j][j] - rMat[k][k]);
   if (r == 0) {
-    a = 0.;
-    b = 0.;
-    c = 0.;
-    w = 1.;
+    m_quat.setIdentity();
   } else {
     double q[4], f = 0.5 / r;
     q[i] = 0.5 * r;
     q[j] = f * (rMat[i][j] + rMat[j][i]);
     q[k] = f * (rMat[k][i] + rMat[i][k]);
     q[3] = f * (rMat[k][j] - rMat[j][k]);
-    a = q[0];
-    b = q[1];
-    c = q[2];
-    w = q[3];
+
+    m_quat = Eigen::Quaterniond(q[3], q[0], q[1], q[2]);
   }
 }
 /** Bracket operator overload
  * returns the internal representation values based on an index
  * @param Index :: the index of the value required 0=w, 1=a, 2=b, 3=c
- * @returns a double of the value requested
+ * @returns m_quat.x() double of the value requested
  */
 const double &Quat::operator[](const int Index) const {
   switch (Index) {
   case 0:
-    return w;
+    return m_quat.w();
   case 1:
-    return a;
+    return m_quat.x();
   case 2:
-    return b;
+    return m_quat.y();
   case 3:
-    return c;
+    return m_quat.z();
   default:
     throw std::runtime_error("Quat::operator[] range error");
   }
@@ -599,32 +528,34 @@ const double &Quat::operator[](const int Index) const {
 /** Bracket operator overload
  * returns the internal representation values based on an index
  * @param Index :: the index of the value required 0=w, 1=a, 2=b, 3=c
- * @returns a double of the value requested
+ * @returns m_quat.x() double of the value requested
  */
 double &Quat::operator[](const int Index) {
   switch (Index) {
   case 0:
-    return w;
+    return m_quat.w();
   case 1:
-    return a;
+    return m_quat.x();
   case 2:
-    return b;
+    return m_quat.y();
   case 3:
-    return c;
+    return m_quat.z();
   default:
     throw std::runtime_error("Quat::operator[] range error");
   }
 }
 
-/** Prints a string representation of itself
+/** Prints m_quat.x() string representation of itself
  * @param os :: the stream to output to
  */
 void Quat::printSelf(std::ostream &os) const {
-  os << "[" << w << "," << a << "," << b << "," << c << "]";
+  os << "[" << m_quat.w() << "," << m_quat.x() << "," << m_quat.y() << ","
+     << m_quat.z() << "]";
   return;
 }
 
-/**  Read data from a stream in the format returned by printSelf ("[w,a,b,c]").
+/**  Read data from m_quat.x() stream in the format returned by printSelf
+ * ("[w,a,b,c]").
  *   @param IX :: Input Stream
  *   @throw std::runtime_error if the input is of wrong format
 */
@@ -645,15 +576,15 @@ void Quat::readPrinted(std::istream &IX) {
       c3 == std::string::npos)
     throw std::runtime_error("Wrong format for Quat input: [" + in + "]");
 
-  w = atof(in.substr(i + 1, c1 - i - 1).c_str());
-  a = atof(in.substr(c1 + 1, c2 - c1 - 1).c_str());
-  b = atof(in.substr(c2 + 1, c3 - c2 - 1).c_str());
-  c = atof(in.substr(c3 + 1, j - c3 - 1).c_str());
+  m_quat.w() = atof(in.substr(i + 1, c1 - i - 1).c_str());
+  m_quat.x() = atof(in.substr(c1 + 1, c2 - c1 - 1).c_str());
+  m_quat.y() = atof(in.substr(c2 + 1, c3 - c2 - 1).c_str());
+  m_quat.z() = atof(in.substr(c3 + 1, j - c3 - 1).c_str());
 
   return;
 }
 
-/** Prints a string representation
+/** Prints m_quat.x() string representation
  * @param os :: the stream to output to
  * @param q :: the quat to output
  * @returns the stream
@@ -663,7 +594,7 @@ std::ostream &operator<<(std::ostream &os, const Quat &q) {
   return os;
 }
 
-/**  Reads in a quat from an input stream
+/**  Reads in m_quat.x() quat from an input stream
  *   @param ins :: The input stream
  *   @param q :: The quat
  */
@@ -672,15 +603,15 @@ std::istream &operator>>(std::istream &ins, Quat &q) {
   return ins;
 }
 
-/** @return the quat as a string "[w,a,b,c]" */
+/** @return the quat as m_quat.x() string "[w,a,b,c]" */
 std::string Quat::toString() const {
   std::ostringstream mess;
   this->printSelf(mess);
   return mess.str();
 }
 
-/** Sets the Quat using a string
- * @param str :: the Quat as a string "[w,a,b,c]" */
+/** Sets the Quat using m_quat.x() string
+ * @param str :: the Quat as m_quat.x() string "[w,a,b,c]" */
 void Quat::fromString(const std::string &str) {
   std::istringstream mess(str);
   this->readPrinted(mess);
@@ -709,8 +640,9 @@ void Quat::rotateBB(double &xmin, double &ymin, double &zmin, double &xmax,
   int index;
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      index = j + i * 4; // The OpenGL matrix is linear and represent a 4x4
-                         // matrix but only the 3x3 upper-left inner part
+      index =
+          j + i * 4; // The OpenGL matrix is linear and represent m_quat.x() 4x4
+                     // matrix but only the 3x3 upper-left inner part
       // contains the rotation
       minV[j] += (rotMatr[index] > 0) ? rotMatr[index] * minT[i]
                                       : rotMatr[index] * maxT[i];
@@ -737,7 +669,8 @@ void Quat::rotateBB(double &xmin, double &ymin, double &zmin, double &xmax,
  *
  * You can specify which axis the rotations should be applied around and the
  *order in which they
- * are to be applied with the convention parameter. For instance, for a rotation
+ * are to be applied with the convention parameter. For instance, for m_quat.x()
+ *rotation
  *of Y and then
  * the new Z axis, and then the new Y axis: pass "YZY" as the convention. Or for
  *a rotation

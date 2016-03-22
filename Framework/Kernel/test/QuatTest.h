@@ -432,6 +432,7 @@ public:
     V3D rX(a, 0, a);
     V3D rY(0, 1, 0);
     V3D rZ(-a, 0, a);
+
     q(rX, rY, rZ);
     p(-45.0, V3D(0, 1, 0));
     TS_ASSERT(p == q);
@@ -445,6 +446,8 @@ public:
     TS_ASSERT(oX == rX);
     TS_ASSERT(oY == rY);
     TS_ASSERT(oZ == rZ);
+
+    std::cout << oX << rX << std::endl;
   }
 
   void testSetFromDirectionCosineMatrix3() {

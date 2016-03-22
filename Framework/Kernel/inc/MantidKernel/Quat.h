@@ -3,11 +3,13 @@
 
 #include "MantidKernel/DllConfig.h"
 #include "MantidKernel/Matrix.h"
+#include "MantidKernel/V3D.h"
+
+#include <Eigen/Geometry>
 
 namespace Mantid {
 namespace Kernel {
 // Forward declarations
-class V3D;
 
 /** @class Quat Quat.h Geometry/Quat.h
 @brief Class for quaternions
@@ -52,16 +54,28 @@ File change history is stored at: <https://github.com/mantidproject/mantid>
 class MANTID_KERNEL_DLL Quat {
 
 public:
-  Quat();
+  Quat() : m_quat(Eigen::Quaterniond::Identity()) {}
   // direct quat definition
-  Quat(const double _w, const double _a, const double _b, const double _c);
+  Quat(const double _w, const double _a, const double _b, const double _c)
+      : m_quat(Eigen::Quaterniond(_w, _a, _b, _c)) {}
+
   // * Construct a Quat between two vectors;
   // * The angle between them is defined differently from usual if vectors are
   // not unit or the same length vectors, so quat would be not consistent
-  Quat(const V3D &src, const V3D &des);
+  Quat(const V3D &src, const V3D &des)
+      : m_quat(Eigen::Quaterniond::FromTwoVectors(src.getVector().normalized(),
+                                                  des.getVector().normalized())
+                   .normalized()) {}
+
   Quat(const V3D &rX, const V3D &rY, const V3D &rZ);
+
   //! Set quaternion form an angle in degrees and an axis
-  Quat(const double _deg, const V3D &_axis);
+  Quat(const double _deg, const V3D &_axis) : m_quat() {
+    setAngleAxis(_deg, _axis);
+  }
+
+  Quat(const Eigen::Quaterniond &quat) : m_quat(quat) {}
+
   // set a quaternion from a rotational matrix;
   Quat(const DblMatrix &RotMat);
   void operator()(const Quat &);
@@ -131,13 +145,13 @@ public:
   /** @name Element access. */
   //@{
   /// Access the real part
-  inline double real() const { return w; }
+  inline double real() const { return m_quat.w(); }
   /// Access the coefficient of i
-  inline double imagI() const { return a; }
+  inline double imagI() const { return m_quat.x(); }
   /// Access the coefficient of j
-  inline double imagJ() const { return b; }
+  inline double imagJ() const { return m_quat.y(); }
   /// Access the coefficient of k
-  inline double imagK() const { return c; }
+  inline double imagK() const { return m_quat.z(); }
   //@}
 
   void printSelf(std::ostream &) const;
@@ -146,14 +160,7 @@ public:
   void fromString(const std::string &str);
 
 private:
-  /// Internal value
-  double w;
-  /// Internal value
-  double a;
-  /// Internal value
-  double b;
-  /// Internal value
-  double c;
+  Eigen::Quaterniond m_quat;
 };
 
 MANTID_KERNEL_DLL std::ostream &operator<<(std::ostream &, const Quat &);
