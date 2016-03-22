@@ -78,10 +78,6 @@ Quat::Quat(const Kernel::DblMatrix &RotMat) { this->setQuat(RotMat); }
  * @param rY :: rotated Y reference axis; unit vector.
  * @param rZ :: rotated Z reference axis; unit vector.
  */
-Quat::Quat(const V3D &rX, const V3D &rY, const V3D &rZ) {
-  // Call the operator to do the setting
-  this->operator()(rX, rY, rZ);
-}
 
 /** Sets the quat values from four doubles
  * @param ww :: the value for w
@@ -89,11 +85,6 @@ Quat::Quat(const V3D &rX, const V3D &rY, const V3D &rZ) {
  * @param bb :: the value for b
  * @param cc :: the value for c
  */
-void Quat::set(const double ww, const double aa, const double bb,
-               const double cc) {
-  m_quat = Eigen::Quaterniond(ww, aa, bb, cc);
-  return;
-}
 
 /** Constructor from an angle and axis.
  * @param _deg :: angle of rotation
@@ -104,10 +95,6 @@ void Quat::set(const double ww, const double aa, const double bb,
  *unit
  *vector
  * */
-void Quat::setAngleAxis(const double _deg, const V3D &_axis) {
-  m_quat = Eigen::Quaterniond(
-      Eigen::AngleAxisd(_deg * M_PI / 180.0, _axis.getVector().normalized()));
-}
 
 bool Quat::isNull(const double tolerance) const {
   using namespace std;
@@ -206,10 +193,6 @@ void Quat::operator()(const V3D &rX, const V3D &rY, const V3D &rZ) {
 
 /** Re-initialise m_quat.x() quaternion to identity.
  */
-void Quat::init() {
-  m_quat.setIdentity();
-  return;
-}
 
 /** Quaternion addition operator
  * @param _q :: the quaternion to add
@@ -312,29 +295,24 @@ bool Quat::operator!=(const Quat &_q) const { return (!operator==(_q)); }
  *
  * Divide all elements by the quaternion norm
  */
-void Quat::normalize() { m_quat.normalize(); }
 
 /** Quaternion complex conjugate
  *
  *  Reverse the sign of the 3 imaginary components of the
  *  quaternion
  */
-void Quat::conjugate() { m_quat = m_quat.conjugate(); }
 
 /** Quaternion length
  * @return the length
  */
-double Quat::len() const { return m_quat.norm(); }
 
 /** Quaternion norm (length squared)
  * @return the length squared
  */
-double Quat::len2() const { return m_quat.squaredNorm(); }
 
 /** Inverse m_quat.x() quaternion
  *
  */
-void Quat::inverse() { m_quat = m_quat.inverse(); }
 
 /** 	Rotate m_quat.x() vector.
  *  @param v :: the vector to be rotated
@@ -344,9 +322,6 @@ void Quat::inverse() { m_quat = m_quat.inverse(); }
  *   is represented by q.v.q-1 where q-1 is the inverse of
  *   v.
  */
-void Quat::rotate(V3D &v) const {
-  v = V3D(m_quat._transformVector(v.getVector()));
-}
 
 /** Convert quaternion rotation to an OpenGL matrix [4x4] matrix
  * stored as an linear array of 16 double

@@ -67,7 +67,10 @@ public:
                                                   des.getVector().normalized())
                    .normalized()) {}
 
-  Quat(const V3D &rX, const V3D &rY, const V3D &rZ);
+  Quat(const V3D &rX, const V3D &rY, const V3D &rZ) {
+    // Call the operator to do the setting
+    this->operator()(rX, rY, rZ);
+  }
 
   //! Set quaternion form an angle in degrees and an axis
   Quat(const double _deg, const V3D &_axis) : m_quat() {
@@ -84,25 +87,30 @@ public:
   void operator()(const double angle, const V3D &);
   void operator()(const V3D &rX, const V3D &rY, const V3D &rZ);
 
-  void set(const double ww, const double aa, const double bb, const double cc);
-  void setAngleAxis(const double _deg, const V3D &_axis);
+  void set(const double ww, const double aa, const double bb, const double cc) {
+    m_quat = Eigen::Quaterniond(ww, aa, bb, cc);
+  }
+  void setAngleAxis(const double _deg, const V3D &_axis) {
+    m_quat = Eigen::Quaterniond(
+        Eigen::AngleAxisd(_deg * M_PI / 180.0, _axis.getVector().normalized()));
+  }
   void getAngleAxis(double &_deg, double &_ax0, double &_ax1,
                     double &ax2) const;
   std::vector<double> getEulerAngles(const std::string &convention) const;
   /// Set the rotation (both don't change rotation axis)
   void setRotation(const double deg);
   //! Norm of a quaternion
-  double len() const;
+  double len() const { return m_quat.norm(); }
   //! Norm squared
-  double len2() const;
+  double len2() const { return m_quat.squaredNorm(); }
   //! Re-initialize to identity
-  void init();
+  void init() { m_quat.setIdentity(); }
   //! Normalize
-  void normalize();
+  void normalize() { m_quat.normalize(); }
   //! Take the complex conjugate
-  void conjugate();
+  void conjugate() { m_quat = m_quat.conjugate(); }
   //! Inverse a quaternion (in the sense of rotation inversion)
-  void inverse();
+  void inverse() { m_quat = m_quat.inverse(); }
   //! Is the quaternion representing a null rotation
   bool isNull(const double tolerance = 0.001) const;
   //! Convert quaternion rotation to an OpenGL matrix [4x4] matrix
@@ -121,7 +129,7 @@ public:
   // rotational;
   void setQuat(const DblMatrix &rMat);
   //! Rotate a vector
-  void rotate(V3D &) const;
+  void rotate(V3D &v) const { v = V3D(m_quat._transformVector(v.getVector())); }
 
   //! Taking two points defining a cuboid bounding box (xmin,ymin,zmin) and
   //(xmax,ymax,zmax)
