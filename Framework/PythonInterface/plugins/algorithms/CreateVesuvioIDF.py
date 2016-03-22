@@ -10,6 +10,9 @@ IDF_PROP = "OutputFilename"
 
 class CreateVesuvioIDF(PythonAlgorithm):
 
+    _ip_filename = None
+    _idf_filename = None
+
     _phi_data = [-128.0874448587, -137.4504101855, -147.5076669307, -157.6896897223, -167.3819019002, -176.1271875294,
                  -131.6778173977, -141.9927254194, -152.8143229161, -163.4092563484, -173.1233208227, -125.5728641099,
                  -135.920364941, -147.2440564461, -158.7466822376, -169.5515011966, -129.3597185468, -140.9477882504,
@@ -56,7 +59,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
 
     def PyInit(self):
         self.declareProperty(FileProperty(IP_PROP, "", action=FileAction.OptionalLoad,
-                                          extensions=["par"]),
+                                          extensions=["par","dat"]),
                               doc="The file path to the Vesuvio IP file.")
 
         self.declareProperty(FileProperty(IDF_PROP, "", Direction.Output,
@@ -66,16 +69,13 @@ class CreateVesuvioIDF(PythonAlgorithm):
     def validateInputs(self):
         # Requires check to ensure files are valid
         # .xml on idf
+        self.getProperties()
         issues = dict()
-        ip_filename = self.getPropertyValue(IP_PROP)
-        idf_filename = self.getPropertyValue(IDF_PROP)
 
         return issues
 
     def PyExec(self):
-        ip_filename = self.getPropertyValue(IP_PROP)
-        idf_filename = self.getPropertyValue(IDF_PROP)
-        ip_lines = self._read_ip(ip_filename)
+        ip_lines = self._read_ip(self._ip_filename)
 
         # Read headings
         ip_heading = ip_lines[0].split()
@@ -94,7 +94,11 @@ class CreateVesuvioIDF(PythonAlgorithm):
         idf_string += self._construct_idf_pixel()
         idf_string += self._construct_idf_det_list()
 
-        self._write_idf(idf_filename, idf_string)
+        self._write_idf(self._idf_filename, idf_string)
+
+    def getProperties(self):
+        self._ip_filename = self.getPropertyValue(IP_PROP)
+        self._idf_filename = self.getPropertyValue(IDF_PROP)
 
 
 #===========================================================================================================================================#
