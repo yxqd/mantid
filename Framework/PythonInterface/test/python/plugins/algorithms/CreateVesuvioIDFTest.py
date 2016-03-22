@@ -11,10 +11,22 @@ class CreateVesuvioIDFTest(unittest.TestCase):
     _old_definition = None
     _new_definition = None
 
-    def setUp(self):
+    def tearDown(self):
         """
-        Generate IDF from IP file.
-        Load instruments from IP and IDF
+        Remove workspaces
+        """
+        if mtd.doesExist('old_idf'):
+            mtd.remove('old_idf')
+        if mtd.doesExist('new_idf'):
+            mtd.remove('new_idf')
+
+# --------------------------------- success cases ---------------------------------
+
+    def test_generated_values(self):
+        """
+        Test LoadEmptyInstrument with generated IDF from IP file aganist LoadEmptyVesuvio with the same IP File
+        Test will compare z values
+        Due to current lack of Phi value, x and y can not be checked as they depend on Phi)
         """
         # Run new algorithm
         CreateVesuvioIDF(IPFilename=self._ip_filename,
@@ -25,12 +37,6 @@ class CreateVesuvioIDFTest(unittest.TestCase):
         self._old_definition = mtd['old_idf']
         self._new_definition = mtd['new_idf']
 
-    def test_generated_values(self):
-        """
-        Test LoadEmptyInstrument with generated IDF from IP file aganist LoadEmptyVesuvio with the same IP File
-        Test will compare z values
-        Due to current lack of Phi value, x and y can not be checked as they depend on Phi)
-        """
         # Obtain sample position and detector number for old/new files
         new_instrument = self._new_definition.getInstrument()
         old_instrument = self._old_definition.getInstrument()
@@ -64,6 +70,13 @@ class CreateVesuvioIDFTest(unittest.TestCase):
         """
         Test that the monitors are 0 and 1
         """
+        # Run new algorithm
+        CreateVesuvioIDF(IPFilename=self._ip_filename,
+                         OutputFilename=self._idf_filename)
+        # Get Definitions
+        LoadEmptyInstrument(Filename=self._idf_filename, OutputWorkspace='new_idf')
+        self._new_definition = mtd['new_idf']
+
         # Get monitors
         monitor_one = self._new_definition.getDetector(0)
         monitor_two = self._new_definition.getDetector(1)
@@ -78,6 +91,23 @@ class CreateVesuvioIDFTest(unittest.TestCase):
         # Check Phi
         self.assertEquals(monitor_one.getPhi(), 0)
         self.assertEquals(monitor_two.getPhi(), 0)
+        self.assertEquals(monitor_two.getPhi(), 0)
+
+
+#------------------------ failure cases -------------------------------------
+
+    def test_invalid_file_extension(self):
+        self.assertRaises(RuntimeError, CreateVesuvioIDF, self._ip_filename, 'wrong_extension.txt')
+
+
+    def test_incorrect_file_length(self):
+        ip_file = open('incorrect_length_vesuvio_ip_file.par', 'w')
+        ip_file.write('single line')
+        ip_file.close()
+
+        self.assertRaises(RuntimeError, CreateVesuvioIDF, 'incorrect_length_vesuvio_ip_file.par', self._idf_filename)
+
+        os.remove('incorrect_length_vesuvio_ip_file.par')
 
 
 if __name__=="__main__":
