@@ -52,7 +52,6 @@ Quat::Quat(const V3D &src, const V3D &des) {
   }
 }
 */
-Quat::Quat(const Kernel::DblMatrix &RotMat) { this->setQuat(RotMat); }
 
 //! Constructor with values
 
@@ -139,30 +138,6 @@ void Quat::setRotation(const double deg) {
   setAngleAxis(deg, V3D(ax0, ax1, ax2));
 }
 
-/** Sets the quat values from four doubles
- * @param ww :: the value for w
- * @param aa :: the value for a
- * @param bb :: the value for b
- * @param cc :: the value for c
- */
-void Quat::operator()(const double ww, const double aa, const double bb,
-                      const double cc) {
-  this->set(ww, aa, bb, cc);
-}
-
-/** Sets the quat values from an angle and m_quat.x() vector
- * @param angle :: the numbers of degrees
- * @param axis :: the axis of rotation
- */
-void Quat::operator()(const double angle, const V3D &axis) {
-  this->setAngleAxis(angle, axis);
-}
-
-/** Sets the quat values from another Quat
- * @param q :: the quat to copy
- */
-void Quat::operator()(const Quat &q) { m_quat = q.m_quat; }
-
 /**
  * Set m_quat.x() Quaternion that performs m_quat.x() reference frame rotation.
  *  Specify the X,Y,Z vectors of the rotated reference frame, assuming that
@@ -174,94 +149,7 @@ void Quat::operator()(const Quat &q) { m_quat = q.m_quat; }
  * @param rY :: rotated Y reference axis; unit vector.
  * @param rZ :: rotated Z reference axis; unit vector.
  */
-void Quat::operator()(const V3D &rX, const V3D &rY, const V3D &rZ) {
-  // The quaternion will combine two quaternions.
-  (void)rZ; // Avoid compiler warning
 
-  Quat Q1(V3D(1., 0., 0.), rX);
-  // Now we rotate the original Y using Q1
-  V3D roY(0., 1., 0.);
-  Q1.rotate(roY);
-
-  Quat Q2(roY, rY);
-  // Final = those two rotations in succession; Q1 is done first.
-  Quat final = Q2 * Q1;
-
-  // Set it
-  this->operator()(final);
-}
-
-/** Re-initialise m_quat.x() quaternion to identity.
- */
-
-/** Quaternion addition operator
- * @param _q :: the quaternion to add
- * @return *this+_q
- */
-Quat Quat::operator+(const Quat &_q) const {
-  Quat out(*this);
-  out += _q;
-
-  return out;
-}
-
-/** Quaternion self-addition operator
- * @param _q :: the quaternion to add
- * @return *this+=_q
- */
-Quat &Quat::operator+=(const Quat &_q) {
-  m_quat.w() += _q.m_quat.w();
-  m_quat.x() += _q.m_quat.x();
-  m_quat.y() += _q.m_quat.y();
-  m_quat.z() += _q.m_quat.z();
-  return *this;
-}
-
-/** Quaternion subtraction operator
- * @param _q :: the quaternion to add
- * @return *this-_q
- */
-Quat Quat::operator-(const Quat &_q) const {
-  Quat out(*this);
-  out -= _q;
-
-  return out;
-}
-
-/** Quaternion self-substraction operator
- * @param _q :: the quaternion to add
- * @return *this-=_q
- */
-Quat &Quat::operator-=(const Quat &_q) {
-  m_quat.w() -= _q.m_quat.w();
-  m_quat.x() -= _q.m_quat.x();
-  m_quat.y() -= _q.m_quat.y();
-  m_quat.z() -= _q.m_quat.z();
-  return *this;
-}
-
-/** Quaternion multiplication operator
- * @param _q :: the quaternion to multiply
- * @return *this*_q
- *
- *  Quaternion multiplication is non commutative
- *  in the same way multiplication of rotation matrices
- *  isn't.
- */
-Quat Quat::operator*(const Quat &_q) const {
-  Quat out(*this);
-  out *= _q;
-  return out;
-}
-
-/** Quaternion self-multiplication operator
- * @param _q :: the quaternion to multiply
- * @return *this*=_q
- */
-Quat &Quat::operator*=(const Quat &_q) {
-  m_quat *= _q.m_quat;
-  return (*this);
-}
 
 /** Quaternion equal operator
  * @param q :: the quaternion to compare
@@ -269,18 +157,8 @@ Quat &Quat::operator*=(const Quat &_q) {
  * Compare two quaternions at 1e-6%tolerance.
  * Use boost close_at_tolerance method
  * @return true if equal
- */
-bool Quat::operator==(const Quat &q) const {
-  using namespace std;
-  return !(fabs(m_quat.w() - q.m_quat.w()) > Tolerance ||
-           fabs(m_quat.x() - q.m_quat.x()) > Tolerance ||
-           fabs(m_quat.y() - q.m_quat.y()) > Tolerance ||
-           fabs(m_quat.z() - q.m_quat.z()) > Tolerance);
-
-  // return (quat_tol(w,q.m_quat.w()) && quat_tol(a,q.m_quat.x()) &&
-  // quat_tol(b,q.m_quat.y()) &&
-  // quat_tol(c,q.m_quat.z()));
-}
+ *
+bool Quat::operator==(const Quat &q) const
 
 /** Quaternion non-equal operator
  * @param _q :: the quaternion to compare
@@ -289,7 +167,6 @@ bool Quat::operator==(const Quat &q) const {
  *  Use boost close_at_tolerance method
  * @return true if not equal
  */
-bool Quat::operator!=(const Quat &_q) const { return (!operator==(_q)); }
 
 /** Quaternion normalization
  *

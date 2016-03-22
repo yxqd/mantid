@@ -54,38 +54,56 @@ File change history is stored at: <https://github.com/mantidproject/mantid>
 class MANTID_KERNEL_DLL Quat {
 
 public:
-  Quat() : m_quat(Eigen::Quaterniond::Identity()) {}
+  inline Quat() : m_quat(Eigen::Quaterniond::Identity()) {}
   // direct quat definition
-  Quat(const double _w, const double _a, const double _b, const double _c)
+  inline Quat(const double _w, const double _a, const double _b,
+              const double _c)
       : m_quat(Eigen::Quaterniond(_w, _a, _b, _c)) {}
 
   // * Construct a Quat between two vectors;
   // * The angle between them is defined differently from usual if vectors are
   // not unit or the same length vectors, so quat would be not consistent
-  Quat(const V3D &src, const V3D &des)
+  inline Quat(const V3D &src, const V3D &des)
       : m_quat(Eigen::Quaterniond::FromTwoVectors(src.getVector().normalized(),
                                                   des.getVector().normalized())
                    .normalized()) {}
 
-  Quat(const V3D &rX, const V3D &rY, const V3D &rZ) {
+  inline Quat(const V3D &rX, const V3D &rY, const V3D &rZ) {
     // Call the operator to do the setting
     this->operator()(rX, rY, rZ);
   }
 
   //! Set quaternion form an angle in degrees and an axis
-  Quat(const double _deg, const V3D &_axis) : m_quat() {
-    setAngleAxis(_deg, _axis);
-  }
+  inline Quat(const double _deg, const V3D &_axis)
+      : m_quat(Eigen::AngleAxisd(_deg / 180.0 * M_PI,
+                                 _axis.getVector().normalized())) {}
 
-  Quat(const Eigen::Quaterniond &quat) : m_quat(quat) {}
+  explicit Quat(const Eigen::Quaterniond &quat) : m_quat(quat) {}
 
   // set a quaternion from a rotational matrix;
-  Quat(const DblMatrix &RotMat);
-  void operator()(const Quat &);
-  void operator()(const double ww, const double aa, const double bb,
-                  const double cc);
-  void operator()(const double angle, const V3D &);
-  void operator()(const V3D &rX, const V3D &rY, const V3D &rZ);
+  Quat(const DblMatrix &RotMat) { this->setQuat(RotMat); }
+  inline void operator()(const Quat &q) { m_quat = q.m_quat; }
+  inline void operator()(const double ww, const double aa, const double bb,
+                         const double cc) {
+    set(ww, aa, bb, cc);
+  }
+  void operator()(const double angle, const V3D &v) {
+    m_quat = Eigen::Quaterniond(
+        Eigen::AngleAxisd(angle / 180.0 * M_PI, v.getVector().normalized()));
+  }
+
+  void operator()(const V3D &rX, const V3D &rY, const V3D &rZ) {
+    // The quaternion will combine two quaternions.
+    UNUSED_ARG(rZ); // Avoid compiler warning
+
+    Eigen::Quaterniond Q1 = Eigen::Quaterniond::FromTwoVectors(
+        Eigen::Vector3d(1, 0, 0), rX.getVector());
+
+    Eigen::Quaterniond Q2 = Eigen::Quaterniond::FromTwoVectors(
+        Q1._transformVector(Eigen::Vector3d(0, 1, 0)), rY.getVector());
+
+    m_quat = Q2 * Q1;
+  }
 
   void set(const double ww, const double aa, const double bb, const double cc) {
     m_quat = Eigen::Quaterniond(ww, aa, bb, cc);
@@ -139,14 +157,56 @@ public:
   void rotateBB(double &xmin, double &ymin, double &zmin, double &xmax,
                 double &ymax, double &zmax) const;
   //! Overload operators
-  Quat operator+(const Quat &) const;
-  Quat &operator+=(const Quat &);
-  Quat operator-(const Quat &) const;
-  Quat &operator-=(const Quat &);
-  Quat operator*(const Quat &) const;
-  Quat &operator*=(const Quat &);
-  bool operator==(const Quat &) const;
-  bool operator!=(const Quat &) const;
+  inline Quat operator+(const Quat &_q) const {
+    Quat out(*this);
+    out += _q;
+
+    return out;
+  }
+
+  inline Quat &operator+=(const Quat &_q) {
+    m_quat.w() += _q.m_quat.w();
+    m_quat.x() += _q.m_quat.x();
+    m_quat.y() += _q.m_quat.y();
+    m_quat.z() += _q.m_quat.z();
+    return *this;
+  }
+
+  inline Quat operator-(const Quat &_q) const {
+    Quat out(*this);
+    out -= _q;
+
+    return out;
+  }
+
+  inline Quat &operator-=(const Quat &_q) {
+    m_quat.w() -= _q.m_quat.w();
+    m_quat.x() -= _q.m_quat.x();
+    m_quat.y() -= _q.m_quat.y();
+    m_quat.z() -= _q.m_quat.z();
+    return *this;
+  }
+
+  inline Quat operator*(const Quat &_q) const {
+    Quat out(*this);
+    out *= _q;
+    return out;
+  }
+
+  inline Quat &operator*=(const Quat &_q) {
+    m_quat *= _q.m_quat;
+    return *this;
+  }
+
+  inline bool operator==(const Quat &q) const {
+    using namespace std;
+    return !(fabs(m_quat.w() - q.m_quat.w()) > Tolerance ||
+             fabs(m_quat.x() - q.m_quat.x()) > Tolerance ||
+             fabs(m_quat.y() - q.m_quat.y()) > Tolerance ||
+             fabs(m_quat.z() - q.m_quat.z()) > Tolerance);
+  }
+
+  inline bool operator!=(const Quat &q) const { return !(this->operator==(q)); }
   const double &operator[](int) const;
   double &operator[](int);
 
