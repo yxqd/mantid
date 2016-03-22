@@ -12,6 +12,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
 
     _ip_filename = None
     _idf_filename = None
+    _ip_lines = None
 
     _phi_data = [-128.0874448587, -137.4504101855, -147.5076669307, -157.6896897223, -167.3819019002, -176.1271875294,
                  -131.6778173977, -141.9927254194, -152.8143229161, -163.4092563484, -173.1233208227, -125.5728641099,
@@ -72,25 +73,32 @@ class CreateVesuvioIDF(PythonAlgorithm):
         self.getProperties()
         issues = dict()
 
+        # Validate output filename
+        output_ext = self._idf_filename[self._idf_filename.find('.'):]
+        if output_ext != '.xml':
+            issues[IDF_PROP] = 'OutputFileName does not have .xml extension. Please supply an OutputFileName ending in .xml'
+
+        if len(self._ip_lines) != 199:
+            issues[IP_PROP] = 'IP file was not the correct length. expected length is 199 lines'
+
         return issues
 
     def PyExec(self):
-        ip_lines = self._read_ip(self._ip_filename)
 
         # Read headings
-        ip_heading = ip_lines[0].split()
+        ip_heading = self._ip_lines[0].split()
 
         # Read Monitors
-        ip_monitor_one = ip_lines[1].split()
-        ip_monitor_two = ip_lines[2].split()
+        ip_monitor_one = self._ip_lines[1].split()
+        ip_monitor_two = self._ip_lines[2].split()
 
         # Construct full IDF
         idf_string = self._construct_idf_header()
-        idf_string += self._construct_idf_source_sample(ip_lines[3].split()[4])
+        idf_string += self._construct_idf_source_sample(self._ip_lines[3].split()[4])
         idf_string += self._construct_idf_monitors(ip_monitor_one, ip_monitor_two)
         idf_string += self._construct_idf_foils()
-        idf_string += self._construct_idf_forward(ip_lines)
-        idf_string += self._construct_idf_back(ip_lines)
+        idf_string += self._construct_idf_forward()
+        idf_string += self._construct_idf_back()
         idf_string += self._construct_idf_pixel()
         idf_string += self._construct_idf_det_list()
 
@@ -99,14 +107,15 @@ class CreateVesuvioIDF(PythonAlgorithm):
     def getProperties(self):
         self._ip_filename = self.getPropertyValue(IP_PROP)
         self._idf_filename = self.getPropertyValue(IDF_PROP)
+        self._read_ip(self._ip_filename)
 
 
 #===========================================================================================================================================#
     def _read_ip(self, ip_file_name):
         # Read IP file
         ip_file = open(ip_file_name, 'r')
-        ip_lines = ip_file.readlines()
-        return ip_lines
+        self._ip_lines = ip_file.readlines()
+        return self._ip_lines
 
 
 #===========================================================================================================================================#
@@ -245,7 +254,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
 
 
 #===========================================================================================================================================#
-    def _construct_idf_forward(self, ip_lines):
+    def _construct_idf_forward(self):
         # Define the forward scattering detectors
         idf_forward_det_head = (
         '  <!-- DETECTORS -->\n' +
@@ -266,7 +275,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
         idf_forward_locations = ''
         for idx in range(135,  199):
             # Get corresponding detector from IP file
-            ip_det = ip_lines[idx].split()
+            ip_det = self._ip_lines[idx].split()
             idf_forward_locations += ('      <location t="%f" r="%s" p="%f" name="S%s"/>\n' % (float(ip_det[2]), ip_det[5], self._phi_data[idx - 3], ip_det[1]))
 
         idf_forward_det_end = (
@@ -280,7 +289,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
 
 
 #===========================================================================================================================================#
-    def _construct_idf_back(self, ip_lines):
+    def _construct_idf_back(self):
         # Define the back scattering detectors
         idf_back_head =(
         '   <type name="back">\n' +
@@ -290,7 +299,7 @@ class CreateVesuvioIDF(PythonAlgorithm):
         idf_back_locations = ''
         for idx in range (3,135):
             # Get corresponding detector from IP file
-            ip_det = ip_lines[idx].split()
+            ip_det = self._ip_lines[idx].split()
             idf_back_locations += ('      <location t="%f" r="%s" p="%f" name="S%s"/>\n' % (float(ip_det[2]), ip_det[5], self._phi_data[idx - 3], ip_det[1]))
 
         idf_back_end = (
