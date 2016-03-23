@@ -4,27 +4,26 @@
 <instrument xmlns="http://www.mantidproject.org/IDF/1.0"
             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
             xsi:schemaLocation="http://www.mantidproject.org/IDF/1.0 http://schema.mantidproject.org/IDF/1.0/IDFSchema.xsd"
- name="VESUVIO" valid-from   ="2006-08-11 00:00:00"
-                           valid-to     ="2100-01-31 23:59:59"
-		           last-modified="2011-07-20 00:00:21"
-  >
+            name="VESUVIO"
+            valid-from="2006-08-11 00:00:00"
+            valid-to="2100-01-31 23:59:59"
+            last-modified="2011-07-20 00:00:21">
 
 <defaults>
-    <length unit="meter"/>
-    <angle unit="degree"/>
-    <reference-frame>
+   <length unit="meter"/>
+   <angle unit="degree"/>
+   <reference-frame>
       <!-- The z-axis is set parallel to and in the direction of the beam. the
            y-axis points up and the coordinate system is right handed. -->
       <along-beam axis="z"/>
       <pointing-up axis="y"/>
       <handedness val="right"/>
-    </reference-frame>
+   </reference-frame>
 </defaults>
-
   <!--  SOURCE AND SAMPLE POSITION -->
 
   <component type="moderator">
-    <location z="-11.005" />
+    <location z="-11.0049" />
   </component>
 
   <type name="moderator" is="Source" />
@@ -40,7 +39,7 @@
 
   <component type="monitor" idlist="monitors">
     <location z="-2.4594" name="Monitor 1"/>
-    <location z="2.38" name="Monitor 2"/>
+    <location z="2.3800" name="Monitor 2"/>
   </component>
 
   <type name="monitor" is="monitor">
@@ -51,6 +50,27 @@
       <right-front-bottom-point  x="0.01" y="0.01" z="0.0"  />
    </cuboid>
   </type>
+
+  <!-- FOILS  -->
+
+  <!-- midpoint positions
+       phi is simply set to put them all in the scattering plane
+  -->
+  <component name="foil-pos0" type="foil">
+   <!-- position 0 -->
+   <location t="-42" r="0.225" p="0"/>
+   <location t="-64" r="0.225" p="0"/>
+   <location t="35" r="0.225" p="0"/>
+   <location t="55" r="0.225" p="0"/>
+  </component>
+
+  <component name="foil-pos1" type="foil">
+   <!-- position 1 -->
+   <location t="-31" r="0.225" p="0"/>
+   <location t="-50" r="0.225" p="0"/>
+   <location t="46" r="0.225" p="0"/>
+   <location t="67" r="0.225" p="0"/>
+  </component>
 
   <!-- The foil shape is currently set to give the correct dTheta as seen
        from the sample position -->
@@ -81,7 +101,6 @@
     </cylinder>
   </type>
 
-
   <!-- DETECTORS -->
 
   <component type="forward" idlist="forward">
@@ -94,232 +113,794 @@
   </component>
 
   <type name="forward">
-    <!-- FOILS  -->
-
-    <!-- midpoint positions
-	 phi is simply set to put them all in the scattering plane
-    -->
-    <component name="foil-pos0" type="foil">
-      <!-- position 0 -->
-      <location t="-42" r="0.225" p="0"/>
-      <location t="-64" r="0.225" p="0"/>
-      <location t="35" r="0.225" p="0"/>
-      <location t="55" r="0.225" p="0"/>
-    </component>
-
-    <component name="foil-pos1" type="foil">
-      <!-- position 1 -->
-      <location t="-31" r="0.225" p="0"/>
-      <location t="-50" r="0.225" p="0"/>
-      <location t="46" r="0.225" p="0"/>
-      <location t="67" r="0.225" p="0"/>
-    </component>
-
-    <component type="pixel forward" >
-      <location t="-6.6563E+01" r="5.5370E-01" p="-4.1391E+01"/>
-      <location t="-6.4196E+01" r="5.3790E-01" p="-3.2529E+01"/>
-      <location t="-6.2328E+01" r="5.3380E-01" p="-2.3037E+01"/>
-      <location t="-6.1108E+01" r="5.4150E-01" p="-1.3354E+01"/>
-      <location t="-6.6446E+01" r="5.4890E-01" p="-3.1987E+02"/>
-      <location t="-6.4226E+01" r="5.3670E-01" p="-3.2904E+02"/>
-      <location t="-6.2349E+01" r="5.3260E-01" p="-3.3849E+02"/>
-      <location t="-6.1202E+01" r="5.4140E-01" p="-3.4817E+02"/>
-      <location t="-5.7613E+01" r="7.5850E-01" p="-3.9105E+01"/>
-      <location t="-5.5469E+01" r="7.5140E-01" p="-3.2084E+01"/>
-      <location t="-5.3379E+01" r="7.5040E-01" p="-2.4913E+01"/>
-      <location t="-5.1953E+01" r="7.5330E-01" p="-1.7511E+01"/>
-      <location t="-5.7722E+01" r="7.6320E-01" p="-3.2234E+02"/>
-      <location t="-5.5299E+01" r="7.5260E-01" p="-3.2903E+02"/>
-      <location t="-5.3485E+01" r="7.4920E-01" p="-3.3624E+02"/>
-      <location t="-4.0052E+01" r="7.5450E-01" p="-3.4372E+02"/>
-      <location t="-5.2976E+01" r="5.5370E-01" p="-4.8994E+01"/>
-      <location t="-4.8599E+01" r="5.3910E-01" p="-3.9681E+01"/>
-      <location t="-4.4966E+01" r="5.3380E-01" p="-2.9003E+01"/>
-      <location t="-4.2616E+01" r="5.4260E-01" p="-1.7014E+01"/>
-      <location t="-5.3035E+01" r="5.5250E-01" p="-3.1249E+02"/>
-      <location t="-4.8623E+01" r="5.3910E-01" p="-3.2179E+02"/>
-      <location t="-4.4805E+01" r="5.3500E-01" p="-3.3236E+02"/>
-      <location t="-4.2476E+01" r="5.4380E-01" p="-3.4426E+02"/>
-      <location t="-3.8548E+01" r="7.4890E-01" p="-4.4550E+01"/>
-      <location t="-4.2424E+01" r="7.5740E-01" p="-5.2103E+01"/>
-      <location t="-3.5127E+01" r="7.4910E-01" p="-3.5713E+01"/>
-      <location t="-3.2748E+01" r="7.5100E-01" p="-2.5641E+01"/>
-      <location t="-4.2827E+01" r="7.5610E-01" p="-3.0802E+02"/>
-      <location t="-3.8613E+01" r="7.4540E-01" p="-3.1506E+02"/>
-      <location t="-3.5702E+01" r="7.4680E-01" p="-3.2461E+02"/>
-      <location t="-3.3046E+01" r="7.5210E-01" p="-3.3457E+02"/>
-      <location t="-4.7278E+01" r="7.5260E-01" p="-1.3435E+02"/>
-      <location t="-4.3862E+01" r="7.4300E-01" p="-1.4151E+02"/>
-      <location t="-4.0825E+01" r="7.3730E-01" p="-1.4938E+02"/>
-      <location t="-3.8820E+01" r="7.4500E-01" p="-1.5859E+02"/>
-      <location t="-4.7237E+01" r="7.5970E-01" p="-2.2704E+02"/>
-      <location t="-4.3832E+01" r="7.4420E-01" p="-2.2016E+02"/>
-      <location t="-4.0986E+01" r="7.4080E-01" p="-2.1188E+02"/>
-      <location t="-3.8747E+01" r="7.4730E-01" p="-2.0275E+02"/>
-      <location t="-5.6329E+01" r="5.4660E-01" p="-1.3429E+02"/>
-      <location t="-5.2790E+01" r="5.3070E-01" p="-1.4369E+02"/>
-      <location t="-4.9461E+01" r="5.2780E-01" p="-1.5415E+02"/>
-      <location t="-4.7332E+01" r="5.3540E-01" p="-1.6536E+02"/>
-      <location t="-5.6442E+01" r="5.5250E-01" p="-2.2658E+02"/>
-      <location t="-5.2417E+01" r="5.3670E-01" p="-2.1751E+02"/>
-      <location t="-4.9440E+01" r="5.3150E-01" p="-2.0703E+02"/>
-      <location t="-4.7287E+01" r="5.3670E-01" p="-1.9591E+02"/>
-      <location t="-6.1728E+01" r="7.5610E-01" p="-1.4318E+02"/>
-      <location t="-6.0190E+01" r="7.5020E-01" p="-1.5022E+02"/>
-      <location t="-5.8464E+01" r="7.4680E-01" p="-1.5712E+02"/>
-      <location t="-5.7407E+01" r="7.5450E-01" p="-1.6432E+02"/>
-      <location t="-6.1868E+01" r="7.5860E-01" p="-2.1645E+02"/>
-      <location t="-5.9988E+01" r="7.5020E-01" p="-2.0973E+02"/>
-      <location t="-5.8435E+01" r="7.4680E-01" p="-2.0283E+02"/>
-      <location t="-5.7260E+01" r="7.4850E-01" p="-1.9582E+02"/>
-      <location t="-7.2220E+01" r="5.4890E-01" p="-1.4232E+02"/>
-      <location t="-7.0325E+01" r="5.3430E-01" p="-1.5098E+02"/>
-      <location t="-6.8708E+01" r="5.3260E-01" p="-1.6011E+02"/>
-      <location t="-6.7757E+01" r="5.4150E-01" p="-1.6926E+02"/>
-      <location t="-7.2503E+01" r="5.5730E-01" p="-2.1967E+02"/>
-      <location t="-7.0732E+01" r="5.4150E-01" p="-2.1106E+02"/>
-      <location t="-6.8832E+01" r="5.3860E-01" p="-2.0201E+02"/>
-      <location t="-6.7880E+01" r="5.4500E-01" p="-1.9290E+02"/>
-    </component>
-  </type>
-
-  <type name="back">
     <component type="pixel back" >
-      <location t="130.4672" r="0.6747705" p="-56" name="S3"/>
-      <location t="131.9338" r="0.6716131" p="-45" name="S4"/>
-      <location t="133.0579" r="0.6588817" p="-35" name="S5"/>
-      <location t="132.8050" r="0.6642183" p="-25" name="S6"/>
-      <location t="132.2996" r="0.6686869" p="-15" name="S7"/>
-      <location t="130.9003" r="0.6882817" p="-4 " name="S8"/>
-      <location t="132.6673" r="0.6574392" p="-53" name="S9"/>
-      <location t="134.3881" r="0.6410817" p="-41" name="S10"/>
-      <location t="134.8883" r="0.6379817" p="-30" name="S11"/>
-      <location t="134.7490" r="0.6374661" p="-19" name="S12"/>
-      <location t="133.3403" r="0.6579713" p="-7 " name="S13"/>
-      <location t="134.5436" r="0.6318235" p="-54" name="S14"/>
-      <location t="136.0912" r="0.6213817" p="-42" name="S15"/>
-      <location t="136.7689" r="0.6192765" p="-30" name="S16"/>
-      <location t="136.2204" r="0.6294765" p="-18" name="S17"/>
-      <location t="134.9788" r="0.6433660" p="-6 " name="S18"/>
-      <location t="136.0485" r="0.6207287" p="-55" name="S19"/>
-      <location t="137.6185" r="0.6130078" p="-43" name="S20"/>
-      <location t="138.3813" r="0.6082869" p="-30" name="S21"/>
-      <location t="137.7410" r="0.6155922" p="-17" name="S22"/>
-      <location t="138.8744" r="0.5977131" p="-51" name="S23"/>
-      <location t="140.3823" r="0.5882974" p="-36" name="S24"/>
-      <location t="140.5575" r="0.5903713" p="-24" name="S25"/>
-      <location t="139.3308" r="0.6017765" p="-9 " name="S26"/>
-      <location t="140.8276" r="0.5800183" p="-52" name="S27"/>
-      <location t="142.3703" r="0.5734869" p="-37" name="S28"/>
-      <location t="142.3065" r="0.5804765" p="-23" name="S29"/>
-      <location t="141.2702" r="0.5856817" p="-8 " name="S30"/>
-      <location t="143.4913" r="0.5631026" p="-46" name="S31"/>
-      <location t="145.1110" r="0.5534869" p="-30" name="S32"/>
-      <location t="144.1598" r="0.5636817" p="-14" name="S33"/>
-      <location t="146.1180" r="0.5460026" p="-48" name="S34"/>
-      <location t="147.3548" r="0.5426713" p="-30" name="S35"/>
-      <location t="146.3615" r="0.5507922" p="-12" name="S36"/>
-      <location t="148.2314" r="0.5336131" p="-50" name="S37"/>
-      <location t="149.7075" r="0.5331713" p="-30" name="S38"/>
-      <location t="148.6062" r="0.5371026" p="-10" name="S39"/>
-      <location t="151.9368" r="0.5180922" p="-41" name="S40"/>
-      <location t="151.8600" r="0.5234922" p="-19" name="S41"/>
-      <location t="154.6504" r="0.5028974" p="-42" name="S42"/>
-      <location t="154.6273" r="0.5092869" p="-16" name="S43"/>
-      <location t="160.2468" r="0.4892026" p="-17" name="S44"/>
-      <location t="157.5291" r="0.4985870" p="-30" name="S45"/>
-      <location t="162.8277" r="0.4800235" p="-30" name="S46"/>
-      <location t="130.7935" r="0.6771497" p="-116" name="S47"/>
-      <location t="132.1970" r="0.6642183" p="-105" name="S48"/>
-      <location t="133.1700" r="0.6544765" p="-95" name="S49"/>
-      <location t="133.0489" r="0.6551817" p="-85" name="S50"/>
-      <location t="132.0011" r="0.6699026" p="-75" name="S51"/>
-      <location t="130.6237" r="0.6881765" p="-64" name="S52"/>
-      <location t="132.9112" r="0.6541392" p="-113" name="S53"/>
-      <location t="134.3012" r="0.6416131" p="-101" name="S54"/>
-      <location t="136.4848" r="0.6400000" p="-90" name="S55"/>
-      <location t="134.4089" r="0.6421713" p="-79" name="S56"/>
-      <location t="132.9198" r="0.6580870" p="-67" name="S57"/>
-      <location t="134.5938" r="0.6356288" p="-114" name="S58"/>
-      <location t="135.9571" r="0.6284183" p="-102" name="S59"/>
-      <location t="136.7983" r="0.6180713" p="-90" name="S60"/>
-      <location t="136.0501" r="0.6256869" p="-78" name="S61"/>
-      <location t="134.4992" r="0.6414817" p="-66" name="S62"/>
-      <location t="136.3356" r="0.6170288" p="-115" name="S63"/>
-      <location t="138.0733" r="0.6061869" p="-103" name="S64"/>
-      <location t="138.5809" r="0.6038817" p="-90" name="S65"/>
-      <location t="137.9523" r="0.6089713" p="-77" name="S66"/>
-      <location t="139.0672" r="0.5971235" p="-111" name="S67"/>
-      <location t="140.2882" r="0.5912974" p="-96" name="S68"/>
-      <location t="140.2659" r="0.5921922" p="-84" name="S69"/>
-      <location t="139.0866" r="0.6020765" p="-69" name="S70"/>
-      <location t="140.9989" r="0.5778288" p="-112" name="S71"/>
-      <location t="142.5156" r="0.5735869" p="-97" name="S72"/>
-      <location t="142.4799" r="0.5736817" p="-83" name="S73"/>
-      <location t="141.0699" r="0.5859765" p="-68" name="S74"/>
-      <location t="144.1488" r="0.5579078" p="-106" name="S75"/>
-      <location t="145.0556" r="0.5585660" p="-90" name="S76"/>
-      <location t="143.7413" r="0.5675921" p="-74" name="S77"/>
-      <location t="146.2234" r="0.5451078" p="-108" name="S78"/>
-      <location t="147.2485" r="0.5453765" p="-90" name="S79"/>
-      <location t="146.3060" r="0.5520660" p="-72" name="S80"/>
-      <location t="148.8123" r="0.5318131" p="-110" name="S81"/>
-      <location t="149.8621" r="0.5295817" p="-90" name="S82"/>
-      <location t="148.7900" r="0.5366660" p="-70" name="S83"/>
-      <location t="151.8867" r="0.5160235" p="-101" name="S84"/>
-      <location t="152.1363" r="0.5181765" p="-79" name="S85"/>
-      <location t="154.6800" r="0.5011183" p="-102" name="S86"/>
-      <location t="154.6256" r="0.5099765" p="-76" name="S87"/>
-      <location t="157.3379" r="0.4983869" p="-77" name="S88"/>
-      <location t="160.3500" r="0.4863183" p="-90" name="S89"/>
-      <location t="163.1410" r="0.4784183" p="-90" name="S90"/>
-      <location t="131.1180" r="0.6301287" p="-176" name="S91"/>
-      <location t="132.8132" r="0.6030974" p="-165" name="S92"/>
-      <location t="133.4570" r="0.6007869" p="-155" name="S93"/>
-      <location t="133.4908" r="0.6006713" p="-145" name="S94"/>
-      <location t="132.2988" r="0.6180869" p="-135" name="S95"/>
-      <location t="130.6160" r="0.6358183" p="-124" name="S96"/>
-      <location t="133.5822" r="0.5983922" p="-173" name="S97"/>
-      <location t="134.9576" r="0.5833765" p="-161" name="S98"/>
-      <location t="135.3030" r="0.5829765" p="-150" name="S99"/>
-      <location t="134.5561" r="0.5903765" p="-139" name="S100"/>
-      <location t="133.1175" r="0.6081921" p="-127" name="S101"/>
-      <location t="135.1621" r="0.5838974" p="-174" name="S102"/>
-      <location t="136.5101" r="0.5707870" p="-162" name="S103"/>
-      <location t="137.0373" r="0.5665817" p="-150" name="S104"/>
-      <location t="136.5596" r="0.5724504" p="-138" name="S105"/>
-      <location t="136.5596" r="0.5519000" p="-126" name="S106"/>
-      <location t="136.8396" r="0.5668079" p="-175" name="S107"/>
-      <location t="138.5584" r="0.5546660" p="-163" name="S108"/>
-      <location t="138.9462" r="0.5503713" p="-150" name="S109"/>
-      <location t="138.1395" r="0.5572765" p="-137" name="S110"/>
-      <location t="139.3408" r="0.5432974" p="-171" name="S111"/>
-      <location t="141.0563" r="0.5331661" p="-156" name="S112"/>
-      <location t="140.8032" r="0.5337817" p="-144" name="S113"/>
-      <location t="139.2979" r="0.5434870" p="-129" name="S114"/>
-      <location t="141.6319" r="0.5280921" p="-172" name="S115"/>
-      <location t="143.1375" r="0.5212556" p="-157" name="S116"/>
-      <location t="142.7428" r="0.5253661" p="-143" name="S117"/>
-      <location t="141.2269" r="0.5330817" p="-128" name="S118"/>
-      <location t="136.5242" r="0.6334428" p="-166" name="S119"/>
-      <location t="145.4173" r="0.5015712" p="-150" name="S120"/>
-      <location t="144.2731" r="0.5120660" p="-134" name="S121"/>
-      <location t="146.7183" r="0.4965817" p="-168" name="S122"/>
-      <location t="147.6929" r="0.4921713" p="-150" name="S123"/>
-      <location t="146.5414" r="0.4962713" p="-132" name="S124"/>
-      <location t="149.0569" r="0.4833026" p="-170" name="S125"/>
-      <location t="150.2828" r="0.4788608" p="-150" name="S126"/>
-      <location t="148.8338" r="0.4860765" p="-130" name="S127"/>
-      <location t="152.6647" r="0.4676765" p="-161" name="S128"/>
-      <location t="152.1087" r="0.4680922" p="-139" name="S129"/>
-      <location t="155.0412" r="0.4562869" p="-162" name="S130"/>
-      <location t="154.7799" r="0.4562817" p="-136" name="S131"/>
-      <location t="157.3462" r="0.4479922" p="-137" name="S132"/>
-      <location t="160.8082" r="0.4342974" p="-150" name="S133"/>
-      <location t="163.5115" r="0.4271026" p="-150" name="S134"/>
+      <location t="66.302800" r="0.534776" p="38.540931" name="S135"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="63.901800" r="0.522908" p="30.153529" name="S136"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="62.287700" r="0.513927" p="21.202842" name="S137"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="60.955800" r="0.5254" p="12.090917" name="S138"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="66.593300" r="0.528882" p="-36.491834" name="S139"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="64.282600" r="0.520292" p="-27.825716" name="S140"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="62.377100" r="0.516937" p="-18.722364" name="S141"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="61.114100" r="0.526719" p="-9.620127" name="S142"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="56.603700" r="0.745883" p="37.390804" name="S143"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="54.307100" r="0.734394" p="30.747598" name="S144"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="52.448700" r="0.73152" p="23.670197" name="S145"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="51.000000" r="0.734538" p="16.343869" name="S146"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="56.577200" r="0.745803" p="-36.440725" name="S147"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="54.447800" r="0.735631" p="-29.493224" name="S148"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="52.602400" r="0.734699" p="-22.163762" name="S149"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="51.051400" r="0.739116" p="-14.674608" name="S150"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="52.096700" r="0.527069" p="46.777160" name="S151"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="47.235400" r="0.516856" p="37.860293" name="S152"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="43.999500" r="0.513364" p="27.435966" name="S153"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="41.357200" r="0.522349" p="15.925338" name="S154"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="51.848900" r="0.53113" p="-44.979436" name="S155"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="47.304000" r="0.51585" p="-35.546101" name="S156"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="43.747900" r="0.515791" p="-24.745819" name="S157"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="41.194100" r="0.520767" p="-13.148435" name="S158"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="42.289800" r="0.732871" p="49.789398" name="S159"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="38.141300" r="0.724261" p="42.642730" name="S160"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="36.582600" r="0.726958" p="34.130765" name="S161"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="32.046800" r="0.731392" p="24.306056" name="S162"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="42.506100" r="0.738534" p="-49.760729" name="S163"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="38.776800" r="0.733576" p="-42.390279" name="S164"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="34.749900" r="0.728475" p="-33.655809" name="S165"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="32.545700" r="0.731388" p="-23.657263" name="S166"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="45.943100" r="0.730929" p="134.038060" name="S167"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="42.400900" r="0.721133" p="141.178755" name="S168"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="39.422800" r="0.723341" p="149.322754" name="S169"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="37.030800" r="0.723743" p="158.304180" name="S170"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="45.974600" r="0.735741" p="-134.240048" name="S171"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="42.615500" r="0.725498" p="-141.621399" name="S172"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="37.421200" r="0.736236" p="-150.036975" name="S173"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="37.171000" r="0.730685" p="-159.285791" name="S174"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="55.085200" r="0.523516" p="136.122932" name="S175"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="51.065200" r="0.511367" p="145.188779" name="S176"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="48.041400" r="0.510688" p="155.361898" name="S177"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="45.975900" r="0.514187" p="166.133639" name="S178"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="54.881000" r="0.528325" p="-136.287343" name="S179"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="51.195600" r="0.512578" p="-145.592401" name="S180"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="48.033500" r="0.486485" p="-156.015137" name="S181"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="45.947100" r="0.517757" p="-166.994804" name="S182"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="60.339000" r="0.746496" p="144.558585" name="S183"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="58.311100" r="0.735198" p="151.082395" name="S184"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="56.714100" r="0.735651" p="157.946747" name="S185"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="55.571200" r="0.741823" p="164.969862" name="S186"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="60.339200" r="0.745321" p="-144.728897" name="S187"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="58.411000" r="0.727954" p="-151.371546" name="S188"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="56.808000" r="0.72734" p="-158.326438" name="S189"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="55.624400" r="0.731304" p="-165.402983" name="S190"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="69.576500" r="0.532008" p="143.922578" name="S191"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="67.714400" r="0.516059" p="152.280307" name="S192"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="66.193900" r="0.517317" p="161.036377" name="S193"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="65.165700" r="0.523885" p="169.800570" name="S194"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="70.105600" r="0.537542" p="-143.654349" name="S195"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="67.995400" r="0.524751" p="-151.995522" name="S196"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="66.499300" r="0.522274" p="-160.717855" name="S197"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="65.364400" r="0.527034" p="-169.434876" name="S198"/>
+      <parameter name="t0"> <value val="-0.198189"/> </parameter>
     </component>
   </type>
 
+   <type name="back">
+    <component type="pixel back" >
+      <location t="131.457000" r="0.645517" p="-128.087445" name="S3"/>
+      <parameter name="t0"> <value val="-0.093457"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="132.996000" r="0.628232" p="-137.450410" name="S4"/>
+      <parameter name="t0"> <value val="-0.026697"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="133.787000" r="0.620911" p="-147.507667" name="S5"/>
+      <parameter name="t0"> <value val="-0.035297"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="133.862000" r="0.619134" p="-157.689690" name="S6"/>
+      <parameter name="t0"> <value val="-0.005360"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="133.029000" r="0.630837" p="-167.381902" name="S7"/>
+      <parameter name="t0"> <value val="-0.085512"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="131.728000" r="0.645828" p="-176.127188" name="S8"/>
+      <parameter name="t0"> <value val="0.072992"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="133.835000" r="0.616991" p="-131.677817" name="S9"/>
+      <parameter name="t0"> <value val="-0.014105"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="135.102000" r="0.605929" p="-141.992725" name="S10"/>
+      <parameter name="t0"> <value val="0.076819"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="135.781000" r="0.597124" p="-152.814323" name="S11"/>
+      <parameter name="t0"> <value val="0.040870"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="135.226000" r="0.606662" p="-163.409256" name="S12"/>
+      <parameter name="t0"> <value val="0.016876"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="133.916000" r="0.622119" p="-173.123321" name="S13"/>
+      <parameter name="t0"> <value val="-0.035997"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="135.217000" r="0.601905" p="-125.572864" name="S14"/>
+      <parameter name="t0"> <value val="0.056943"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="136.814000" r="0.590484" p="-135.920365" name="S15"/>
+      <parameter name="t0"> <value val="0.058028"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="137.500000" r="0.58358" p="-147.244056" name="S16"/>
+      <parameter name="t0"> <value val="0.002132"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="136.965000" r="0.591857" p="-158.746682" name="S17"/>
+      <parameter name="t0"> <value val="-0.029548"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="135.945000" r="0.600355" p="-169.551501" name="S18"/>
+      <parameter name="t0"> <value val="0.061657"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="137.018000" r="0.586425" p="-129.359719" name="S19"/>
+      <parameter name="t0"> <value val="-0.120997"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="138.672000" r="0.574292" p="-140.947788" name="S20"/>
+      <parameter name="t0"> <value val="-0.048027"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="139.406000" r="0.566735" p="-153.277183" name="S21"/>
+      <parameter name="t0"> <value val="-0.017131"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="138.850000" r="0.571311" p="-165.270673" name="S22"/>
+      <parameter name="t0"> <value val="0.081772"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="140.011000" r="0.557903" p="-133.955343" name="S23"/>
+      <parameter name="t0"> <value val="-0.022678"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="141.085000" r="0.556047" p="-146.900728" name="S24"/>
+      <parameter name="t0"> <value val="0.001338"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="141.214000" r="0.556447" p="-160.113694" name="S25"/>
+      <parameter name="t0"> <value val="-0.058328"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="139.965000" r="0.566256" p="-172.291041" name="S26"/>
+      <parameter name="t0"> <value val="-0.002729"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="141.904000" r="0.544018" p="-126.386748" name="S27"/>
+      <parameter name="t0"> <value val="-0.011217"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="143.122000" r="0.544741" p="-139.571627" name="S28"/>
+      <parameter name="t0"> <value val="-0.135807"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="143.237000" r="0.543717" p="-153.890884" name="S29"/>
+      <parameter name="t0"> <value val="-0.150149"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="142.070000" r="0.548671" p="-167.691071" name="S30"/>
+      <parameter name="t0"> <value val="0.009556"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="144.972000" r="0.523301" p="-131.351084" name="S31"/>
+      <parameter name="t0"> <value val="0.142149"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="145.857000" r="0.523202" p="-146.435714" name="S32"/>
+      <parameter name="t0"> <value val="0.014265"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="145.207000" r="0.524496" p="-161.946922" name="S33"/>
+      <parameter name="t0"> <value val="0.055544"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="147.306000" r="0.509063" p="-137.675906" name="S34"/>
+      <parameter name="t0"> <value val="0.027143"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="148.073000" r="0.513333" p="-154.743025" name="S35"/>
+      <parameter name="t0"> <value val="-0.056123"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="147.292000" r="0.513907" p="-170.948987" name="S36"/>
+      <parameter name="t0"> <value val="-0.000486"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="149.502000" r="0.498712" p="-127.750283" name="S37"/>
+      <parameter name="t0"> <value val="-0.006143"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="150.815000" r="0.495747" p="-145.769116" name="S38"/>
+      <parameter name="t0"> <value val="-0.026651"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="149.870000" r="0.498633" p="-164.532494" name="S39"/>
+      <parameter name="t0"> <value val="0.064330"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="153.077000" r="0.483211" p="-134.906241" name="S40"/>
+      <parameter name="t0"> <value val="-0.004513"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="153.113000" r="0.486992" p="-156.002993" name="S41"/>
+      <parameter name="t0"> <value val="-0.019032"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="156.062000" r="0.469736" p="-144.733400" name="S42"/>
+      <parameter name="t0"> <value val="0.066023"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="155.871000" r="0.47587" p="-168.426860" name="S43"/>
+      <parameter name="t0"> <value val="-0.059571"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="162.280000" r="0.453071" p="-158.062581" name="S44"/>
+      <parameter name="t0"> <value val="-0.095801"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="158.951000" r="0.462762" p="-142.914818" name="S45"/>
+      <parameter name="t0"> <value val="-0.015803"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="165.884000" r="0.44215" p="-162.007940" name="S46"/>
+      <parameter name="t0"> <value val="-0.120844"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="131.312000" r="0.6662" p="-68.125702" name="S47"/>
+      <parameter name="t0"> <value val="-0.977986"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="133.032000" r="0.633747" p="-77.574860" name="S48"/>
+      <parameter name="t0"> <value val="-0.234934"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="133.923000" r="0.620668" p="-87.757169" name="S49"/>
+      <parameter name="t0"> <value val="-0.089613"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="133.683000" r="0.626854" p="-98.082538" name="S50"/>
+      <parameter name="t0"> <value val="-0.258645"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="132.875000" r="0.635237" p="-107.910367" name="S51"/>
+      <parameter name="t0"> <value val="-0.250182"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="125.391000" r="0.955653" p="-116.765676" name="S52"/>
+      <parameter name="t0"> <value val="-10.233000"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="133.866000" r="0.627736" p="-71.718836" name="S53"/>
+      <parameter name="t0"> <value val="-0.395466"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="135.161000" r="0.611967" p="-82.149985" name="S54"/>
+      <parameter name="t0"> <value val="-0.228386"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="133.040000" r="0.718432" p="-93.127017" name="S55"/>
+      <parameter name="t0"> <value val="-3.910000"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="135.046000" r="0.607912" p="-103.881978" name="S56"/>
+      <parameter name="t0"> <value val="-0.111517"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="133.648000" r="0.62422" p="-113.733828" name="S57"/>
+      <parameter name="t0"> <value val="-0.238651"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="135.576000" r="0.6052" p="-65.530201" name="S58"/>
+      <parameter name="t0"> <value val="-0.325001"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="136.980000" r="0.592149" p="-75.976976" name="S59"/>
+      <parameter name="t0"> <value val="-0.206905"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="137.477000" r="0.586791" p="-87.457202" name="S60"/>
+      <parameter name="t0"> <value val="-0.067927"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="136.789000" r="0.593712" p="-99.142870" name="S61"/>
+      <parameter name="t0"> <value val="-0.065740"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="135.613000" r="0.606204" p="-110.118669" name="S62"/>
+      <parameter name="t0"> <value val="-0.107371"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="137.351000" r="0.586172" p="-69.312410" name="S63"/>
+      <parameter name="t0"> <value val="-0.242380"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="139.143000" r="0.569155" p="-81.043510" name="S64"/>
+      <parameter name="t0"> <value val="-0.148934"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="139.390000" r="0.570962" p="-93.572076" name="S65"/>
+      <parameter name="t0"> <value val="-0.180147"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="138.658000" r="0.577006" p="-105.773570" name="S66"/>
+      <parameter name="t0"> <value val="-0.134493"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="140.212000" r="0.560063" p="-73.920893" name="S67"/>
+      <parameter name="t0"> <value val="-0.141661"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="141.349000" r="0.556554" p="-87.064969" name="S68"/>
+      <parameter name="t0"> <value val="-0.201900"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="141.180000" r="0.558243" p="-100.520855" name="S69"/>
+      <parameter name="t0"> <value val="-0.186161"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="139.759000" r="0.569335" p="-112.914556" name="S70"/>
+      <parameter name="t0"> <value val="-0.180009"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="142.390000" r="0.540052" p="-66.218779" name="S71"/>
+      <parameter name="t0"> <value val="-0.153508"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="143.591000" r="0.536089" p="-79.577848" name="S72"/>
+      <parameter name="t0"> <value val="-0.161928"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="143.555000" r="0.539874" p="-94.164698" name="S73"/>
+      <parameter name="t0"> <value val="-0.181702"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="141.942000" r="0.551979" p="-108.241312" name="S74"/>
+      <parameter name="t0"> <value val="-0.224473"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="145.249000" r="0.524508" p="-71.183852" name="S75"/>
+      <parameter name="t0"> <value val="-0.145222"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="145.906000" r="0.524907" p="-86.530468" name="S76"/>
+      <parameter name="t0"> <value val="-0.174678"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="144.949000" r="0.531369" p="-102.380547" name="S77"/>
+      <parameter name="t0"> <value val="-0.219877"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="147.559000" r="0.512717" p="-77.548547" name="S78"/>
+      <parameter name="t0"> <value val="-0.139981"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="148.339000" r="0.511007" p="-94.993580" name="S79"/>
+      <parameter name="t0"> <value val="-0.199146"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="147.164000" r="0.517574" p="-111.582818" name="S80"/>
+      <parameter name="t0"> <value val="-0.227715"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="149.719000" r="0.505461" p="-67.382504" name="S81"/>
+      <parameter name="t0"> <value val="-0.417332"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="150.983000" r="0.496852" p="-85.758961" name="S82"/>
+      <parameter name="t0"> <value val="-0.263502"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="149.465000" r="0.508889" p="-105.020693" name="S83"/>
+      <parameter name="t0"> <value val="-0.326274"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="153.550000" r="0.481378" p="-74.563212" name="S84"/>
+      <parameter name="t0"> <value val="-0.183891"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="153.084000" r="0.489623" p="-96.233417" name="S85"/>
+      <parameter name="t0"> <value val="-0.338715"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="156.328000" r="0.474858" p="-84.548501" name="S86"/>
+      <parameter name="t0"> <value val="-0.271530"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="155.532000" r="0.483975" p="-109.041737" name="S87"/>
+      <parameter name="t0"> <value val="-0.464557"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="157.348000" r="0.494838" p="-98.288776" name="S88"/>
+      <parameter name="t0"> <value val="-1.180480"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="160.948000" r="0.480031" p="-82.381033" name="S89"/>
+      <parameter name="t0"> <value val="-1.163190"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="159.683000" r="0.540992" p="-102.338922" name="S90"/>
+      <parameter name="t0"> <value val="-3.354190"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="132.308000" r="0.639733" p="-7.286973" name="S91"/>
+      <parameter name="t0"> <value val="-0.114064"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="133.673000" r="0.625936" p="-16.747173" name="S92"/>
+      <parameter name="t0"> <value val="-0.126752"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="134.534000" r="0.612593" p="-26.962806" name="S93"/>
+      <parameter name="t0"> <value val="-0.080779"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="134.285000" r="0.618545" p="-37.343110" name="S94"/>
+      <parameter name="t0"> <value val="-0.170417"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="133.257000" r="0.6293" p="-47.235277" name="S95"/>
+      <parameter name="t0"> <value val="-0.163195"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="131.619000" r="0.651327" p="-56.151027" name="S96"/>
+      <parameter name="t0"> <value val="-0.197365"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="134.743000" r="0.621577" p="-10.861003" name="S97"/>
+      <parameter name="t0"> <value val="-0.132340"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="135.910000" r="0.599307" p="-21.314789" name="S98"/>
+      <parameter name="t0"> <value val="-0.124424"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="136.275000" r="0.596069" p="-32.342844" name="S99"/>
+      <parameter name="t0"> <value val="-0.105060"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="135.448000" r="0.609458" p="-43.166390" name="S100"/>
+      <parameter name="t0"> <value val="-0.072554"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="134.076000" r="0.619729" p="-53.090168" name="S101"/>
+      <parameter name="t0"> <value val="-0.186951"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="136.219000" r="0.595488" p="-4.647688" name="S102"/>
+      <parameter name="t0"> <value val="-0.074144"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="137.579000" r="0.587802" p="-15.101996" name="S103"/>
+      <parameter name="t0"> <value val="-0.135052"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="138.030000" r="0.582642" p="-26.621989" name="S104"/>
+      <parameter name="t0"> <value val="-0.130134"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="137.296000" r="0.58986" p="-38.378985" name="S105"/>
+      <parameter name="t0"> <value val="-0.075360"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="135.773000" r="0.60835" p="-49.436301" name="S106"/>
+      <parameter name="t0"> <value val="-0.402906"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="138.050000" r="0.580621" p="-8.400420" name="S107"/>
+      <parameter name="t0"> <value val="-0.103827"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="139.720000" r="0.564781" p="-20.156139" name="S108"/>
+      <parameter name="t0"> <value val="-0.088667"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="140.080000" r="0.565177" p="-32.748958" name="S109"/>
+      <parameter name="t0"> <value val="-0.158236"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="139.218000" r="0.570888" p="-45.042445" name="S110"/>
+      <parameter name="t0"> <value val="-0.011432"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="140.811000" r="0.558277" p="-12.981950" name="S111"/>
+      <parameter name="t0"> <value val="-0.124590"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="142.055000" r="0.5524" p="-26.176270" name="S112"/>
+      <parameter name="t0"> <value val="-0.103755"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="141.868000" r="0.551093" p="-39.725825" name="S113"/>
+      <parameter name="t0"> <value val="-0.140999"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="140.299000" r="0.564416" p="-52.230138" name="S114"/>
+      <parameter name="t0"> <value val="-0.184863"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="142.857000" r="0.543973" p="-5.238227" name="S115"/>
+      <parameter name="t0"> <value val="-0.155287"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="144.141000" r="0.535609" p="-18.617970" name="S116"/>
+      <parameter name="t0"> <value val="-0.077673"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="144.160000" r="0.533518" p="-33.292512" name="S117"/>
+      <parameter name="t0"> <value val="-0.109723"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="142.321000" r="0.546234" p="-47.496217" name="S118"/>
+      <parameter name="t0"> <value val="-0.100841"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="146.014000" r="0.519355" p="-10.159910" name="S119"/>
+      <parameter name="t0"> <value val="0.128805"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="146.512000" r="0.52409" p="-25.566958" name="S120"/>
+      <parameter name="t0"> <value val="-0.079543"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="145.482000" r="0.526081" p="-41.550592" name="S121"/>
+      <parameter name="t0"> <value val="-0.038544"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="148.149000" r="0.512784" p="-16.487744" name="S122"/>
+      <parameter name="t0"> <value val="-0.131373"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="149.024000" r="0.507291" p="-34.054111" name="S123"/>
+      <parameter name="t0"> <value val="-0.093849"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="147.761000" r="0.513578" p="-50.826122" name="S124"/>
+      <parameter name="t0"> <value val="-0.109319"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="150.641000" r="0.498371" p="-6.239304" name="S125"/>
+      <parameter name="t0"> <value val="-0.165425"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="151.433000" r="0.497922" p="-24.683443" name="S126"/>
+      <parameter name="t0"> <value val="-0.107096"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="150.009000" r="0.503368" p="-44.150373" name="S127"/>
+      <parameter name="t0"> <value val="-0.166931"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="154.166000" r="0.481084" p="-13.348259" name="S128"/>
+      <parameter name="t0"> <value val="-0.078941"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="153.817000" r="0.484387" p="-35.196333" name="S129"/>
+      <parameter name="t0"> <value val="-0.155506"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="157.143000" r="0.470795" p="-23.295669" name="S130"/>
+      <parameter name="t0"> <value val="-0.142702"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="156.442000" r="0.470712" p="-48.131321" name="S131"/>
+      <parameter name="t0"> <value val="-0.112249"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="159.626000" r="0.461589" p="-37.105022" name="S132"/>
+      <parameter name="t0"> <value val="-0.148709"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="163.455000" r="0.450845" p="-20.794536" name="S133"/>
+      <parameter name="t0"> <value val="-0.155906"/> </parameter>
+    </component>
+    <component type="pixel back" >
+      <location t="166.875000" r="0.440506" p="-40.914802" name="S134"/>
+      <parameter name="t0"> <value val="-0.134691"/> </parameter>
+    </component>
+  </type>
   <type name="pixel forward" is="detector">
     <cuboid id="shape">
       <left-front-bottom-point x="0.0125" y="-0.0395" z= "0.0045" />
