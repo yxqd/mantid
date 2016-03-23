@@ -268,18 +268,19 @@ class CreateVesuvioIDF(PythonAlgorithm):
         '    <location />\n' +
         '  </component>\n' +
         '\n' +
-        '  <type name="forward">\n' +
-        '    <component type="pixel forward" >\n')
+        '  <type name="forward">\n')
 
         # Define all locations of forward scattering detectors
         idf_forward_locations = ''
         for idx in range(135,  199):
             # Get corresponding detector from IP file
             ip_det = self._ip_lines[idx].split()
+            idf_forward_locations += ('    <component type="pixel back" >\n')
             idf_forward_locations += ('      <location t="%f" r="%s" p="%f" name="S%s"/>\n' % (float(ip_det[2]), ip_det[5], self._phi_data[idx - 3], ip_det[1]))
+            idf_forward_locations += ('      <parameter name="t0"> <value val="%f"/> </parameter>\n' % (float(ip_det[3])))
+            idf_forward_locations += ('    </component>\n')
 
         idf_forward_det_end = (
-        '    </component>\n' +
         '  </type>\n' +
         '\n')
 
@@ -292,18 +293,19 @@ class CreateVesuvioIDF(PythonAlgorithm):
     def _construct_idf_back(self):
         # Define the back scattering detectors
         idf_back_head =(
-        '   <type name="back">\n' +
-        '     <component type="pixel back" >\n')
+        '   <type name="back">\n')
 
         # Define all locations of back scattering detectors
         idf_back_locations = ''
         for idx in range (3,135):
             # Get corresponding detector from IP file
             ip_det = self._ip_lines[idx].split()
+            idf_back_locations += ('    <component type="pixel back" >\n')
             idf_back_locations += ('      <location t="%f" r="%s" p="%f" name="S%s"/>\n' % (float(ip_det[2]), ip_det[5], self._phi_data[idx - 3], ip_det[1]))
+            idf_back_locations += ('      <parameter name="t0"> <value val="%f"/> </parameter>\n' % (float(ip_det[3])))
+            idf_back_locations += ('    </component>\n')
 
         idf_back_end = (
-        '    </component>\n' +
         '  </type>\n')
 
         # Construct back detector definitions string
