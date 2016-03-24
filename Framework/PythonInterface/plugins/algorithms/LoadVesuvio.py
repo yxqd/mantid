@@ -192,7 +192,7 @@ class LoadVesuvio(LoadEmptyVesuvio):
         try:
             all_spectra = [item for sublist in self._spectra for item in sublist]
             self._raise_error_if_mix_fwd_back(all_spectra)
-            self._raise_error_mode_scatter(self._diff_opt, self._back_scattering)
+            validation._raise_error_mode_scatter(self._diff_opt, self._back_scattering)
             self._set_spectra_type(all_spectra[0])
             self._setup_raw(all_spectra)
             self._create_foil_workspaces()
@@ -237,19 +237,6 @@ class LoadVesuvio(LoadEmptyVesuvio):
                                    "Please correct the SpectrumList property.")
         self._back_scattering = all_back
 
-
-#----------------------------------------------------------------------------------------
-
-    def _raise_error_mode_scatter(self, mode, back_scattering):
-        """
-        Checks that the input is valid for the Mode of operation selected with the current scattering
-        SingleDifference - Forward Scattering
-        DoubleDifference - Back Scattering
-        """
-
-        if mode == "DoubleDifference" or mode == "ThickDifference":
-            if not back_scattering:
-                raise RuntimeError("%s can only be used for back scattering spectra" % mode)
 
 #----------------------------------------------------------------------------------------
 

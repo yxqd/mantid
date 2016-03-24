@@ -52,3 +52,16 @@ def _raise_error_period_scatter(run_str, back_scattering):
     if nperiods == 3:
         if not back_scattering:
             raise RuntimeError("3 period data can only be used for back scattering spectra")
+
+#----------------------------------------------------------------------------------------
+
+def _raise_error_mode_scatter(self, mode, back_scattering):
+    """
+    Checks that the input is valid for the Mode of operation selected with the current scattering
+    SingleDifference - Forward Scattering
+    DoubleDifference - Back Scattering
+    """
+
+    if mode == "DoubleDifference" or mode == "ThickDifference":
+        if not back_scattering:
+            raise RuntimeError("%s can only be used for back scattering spectra" % mode)
