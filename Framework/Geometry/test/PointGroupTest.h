@@ -7,6 +7,8 @@
 #include "MantidKernel/Timer.h"
 #include "MantidKernel/Strings.h"
 #include "MantidKernel/System.h"
+#include "MantidKernel/MersenneTwister.h"
+
 #include "MantidGeometry/Crystal/PointGroupFactory.h"
 #include "MantidGeometry/Crystal/PointGroup.h"
 #include <boost/lexical_cast.hpp>
@@ -458,6 +460,118 @@ private:
 
     std::cout << "Eq: " << h << ", Time: " << time / 1000.0 << std::endl;
   }
+};
+
+V3D getRandomIntegerVector(MersenneTwister &rng) {
+  V3D out(rng.nextValue(), rng.nextValue(), rng.nextValue());
+  out.round();
+
+  return out;
+}
+
+std::vector<V3D> getRandomHKLs(size_t count) {
+  MersenneTwister rng(1000, -20, 20);
+
+  std::vector<V3D> hkls;
+  hkls.reserve(count);
+
+  std::generate_n(std::back_inserter(hkls), count,
+                  [&]() { return getRandomIntegerVector(rng); });
+
+  return hkls;
+}
+
+class PointGroupTestPerformance : public CxxTest::TestSuite {
+public:
+  static PointGroupTestPerformance *createSuite() {
+    return new PointGroupTestPerformance();
+  }
+  static void destroySuite(PointGroupTestPerformance *suite) { delete suite; }
+
+  PointGroupTestPerformance() { hkls = getRandomHKLs(100000); }
+
+  void test_getEquivalents_cubic() {
+    PointGroup_sptr m3m =
+        PointGroupFactory::Instance().createPointGroup("m-3m");
+
+    for (const auto &hkl : hkls) {
+      std::vector<V3D> equivalents = m3m->getEquivalents(hkl);
+      TS_ASSERT_LESS_THAN(0, equivalents.size());
+    }
+  }
+
+  void test_getEquivalents_monoclinic() {
+    PointGroup_sptr mono =
+        PointGroupFactory::Instance().createPointGroup("2/m");
+
+    for (const auto &hkl : hkls) {
+      std::vector<V3D> equivalents = mono->getEquivalents(hkl);
+      TS_ASSERT_LESS_THAN(0, equivalents.size());
+    }
+  }
+
+  void test_isEquivalent_cubic() {
+    PointGroup_sptr m3m =
+        PointGroupFactory::Instance().createPointGroup("m-3m");
+
+    V3D baseHKL = getRandomHKLs(1).front();
+
+    int i = 1;
+    for (const auto &hkl : hkls) {
+      if (m3m->isEquivalent(baseHKL, hkl)) {
+        ++i;
+      }
+    }
+
+    TS_ASSERT_LESS_THAN_EQUALS(0, i);
+  }
+
+  void test_isEquivalent_monoclinic() {
+    PointGroup_sptr mono =
+        PointGroupFactory::Instance().createPointGroup("2/m");
+
+    V3D baseHKL = getRandomHKLs(1).front();
+
+    int i = 1;
+    for (const auto &hkl : hkls) {
+      if (mono->isEquivalent(baseHKL, hkl)) {
+        ++i;
+      }
+    }
+
+    TS_ASSERT_LESS_THAN_EQUALS(0, i);
+  }
+
+  void test_getReflectionFamily_cubic() {
+    PointGroup_sptr m3m =
+        PointGroupFactory::Instance().createPointGroup("m-3m");
+
+    std::vector<V3D> reflectionFamilies;
+    reflectionFamilies.reserve(hkls.size());
+
+    std::transform(
+        hkls.cbegin(), hkls.cend(), std::back_inserter(reflectionFamilies),
+        [&](const V3D &hkl) { return m3m->getReflectionFamily(hkl); });
+
+    TS_ASSERT_EQUALS(reflectionFamilies.size(), hkls.size());
+  }
+
+  void test_getReflectionFamily_monoclinic() {
+    PointGroup_sptr mono =
+        PointGroupFactory::Instance().createPointGroup("2/m");
+
+    std::vector<V3D> reflectionFamilies;
+    reflectionFamilies.reserve(hkls.size());
+
+    std::transform(
+        hkls.cbegin(), hkls.cend(), std::back_inserter(reflectionFamilies),
+        [&](const V3D &hkl) { return mono->getReflectionFamily(hkl); });
+
+    TS_ASSERT_EQUALS(reflectionFamilies.size(), hkls.size());
+  }
+
+private:
+  std::vector<V3D> hkls;
 };
 
 #endif /* MANTID_GEOMETRY_POINTGROUPTEST_H_ */

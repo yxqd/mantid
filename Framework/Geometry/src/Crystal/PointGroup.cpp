@@ -31,7 +31,14 @@ using Kernel::IntMatrix;
  * @return :: std::vector containing all equivalent hkls.
  */
 std::vector<V3D> PointGroup::getEquivalents(const V3D &hkl) const {
-  return getEquivalentSet(hkl);
+  std::vector<V3D> equivalents = getEquivalentSet(hkl);
+
+  std::sort(equivalents.begin(), equivalents.end(), std::greater<V3D>());
+
+  equivalents.erase(std::unique(equivalents.begin(), equivalents.end()),
+                    equivalents.end());
+
+  return equivalents;
 }
 
 /**
@@ -48,7 +55,9 @@ std::vector<V3D> PointGroup::getEquivalents(const V3D &hkl) const {
  * @return :: hkl specific to a family of index-triplets
  */
 V3D PointGroup::getReflectionFamily(const Kernel::V3D &hkl) const {
-  return *getEquivalentSet(hkl).begin();
+  const std::vector<V3D> equivalents = getEquivalentSet(hkl);
+
+  return *std::max_element(equivalents.cbegin(), equivalents.cend());
 }
 
 /// Protected constructor - can not be used directly.
@@ -67,7 +76,7 @@ bool PointGroup::isEquivalent(const Kernel::V3D &hkl,
                               const Kernel::V3D &hkl2) const {
   std::vector<V3D> hklEquivalents = getEquivalentSet(hkl);
 
-  return (std::find(hklEquivalents.begin(), hklEquivalents.end(), hkl2) !=
+  return (std::find(hklEquivalents.cbegin(), hklEquivalents.cend(), hkl2) !=
           hklEquivalents.end());
 }
 
@@ -90,13 +99,8 @@ std::vector<V3D> PointGroup::getEquivalentSet(const Kernel::V3D &hkl) const {
   equivalents.reserve(m_allOperations.size());
 
   for (const auto &operation : m_allOperations) {
-    equivalents.push_back(operation.transformHKL(hkl));
+    equivalents.emplace_back(operation.transformHKL(hkl));
   }
-
-  std::sort(equivalents.begin(), equivalents.end(), std::greater<V3D>());
-
-  equivalents.erase(std::unique(equivalents.begin(), equivalents.end()),
-                    equivalents.end());
 
   return equivalents;
 }
