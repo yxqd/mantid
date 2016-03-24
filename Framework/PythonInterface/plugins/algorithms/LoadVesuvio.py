@@ -6,6 +6,7 @@ from mantid.api import *
 import mantid.simpleapi as ms
 
 from LoadEmptyVesuvio import LoadEmptyVesuvio
+import LoadVesuvioValidation as validation
 
 import copy
 import numpy as np
@@ -145,12 +146,12 @@ class LoadVesuvio(LoadEmptyVesuvio):
     def validateInputs(self):
         self._load_common_inst_parameters()
         issues = {}
-
+        diff_mode = self.getPropertyValue(MODE_PROP)
         # Validate run number ranges
         run_str = self.getProperty(RUN_PROP).value
         if "-" in run_str:
             lower, upper = run_str.split("-")
-            issues = self._validate_range_formatting(lower, upper, RUN_PROP, issues)
+            issues = validation._validate_range_formatting(lower, upper, RUN_PROP, issues)
 
         # Validate SpectrumList
         grp_spectra_list = self.getProperty(SPECTRA_PROP).value
@@ -178,36 +179,7 @@ class LoadVesuvio(LoadEmptyVesuvio):
             # Validate boundaries
             for spec in spectra_list:
                 spec = int(spec)
-                issues = self._validate_spec_min_max(spec, issues)
-
-        return issues
-
-#----------------------------------------------------------------------------------------
-
-    def _validate_range_formatting(self, lower, upper, property_name, issues):
-        """
-        Validates is a range style input is in the correct form of lower-upper
-        """
-        upper = int(upper)
-        lower = int(lower)
-        if upper < lower:
-            issues[property_name] = "Range must be in format lower-upper"
-        return issues
-
-#----------------------------------------------------------------------------------------
-
-    def _validate_spec_min_max(self, spectra, issues):
-        """
-        Validates if the spectra is with the minimum and maximum boundaries
-        """
-        # Only validate boundaries if in difference Mode
-        if "Difference" in self.getProperty(MODE_PROP).value:
-            specMin = self._backward_spectra_list[0]
-            specMax = self._forward_spectra_list[-1]
-            if spectra < specMin:
-                issues[SPECTRA_PROP] = ("Lower limit for spectra is %d in difference mode" % specMin)
-            if spectra > specMax:
-                issues[SPECTRA_PROP] = ("Upper limit for spectra is %d in difference mode" % specMax)
+                issues = validation._validate_spec_min_max(diff_mode, spec, SPECTRA_PROP, issues)
 
         return issues
 
@@ -265,28 +237,6 @@ class LoadVesuvio(LoadEmptyVesuvio):
                                    "Please correct the SpectrumList property.")
         self._back_scattering = all_back
 
-#----------------------------------------------------------------------------------------
-
-    def _raise_error_period_scatter(self, run_str, back_scattering):
-        """
-        Checks that the input is valid for the number of periods in the data with the current scattering
-        2 Period - Only Forward Scattering
-        3 Period - Only Back Scattering
-        6 Period - Both Forward and Back
-        """
-        rfi_alg = self.createChildAlgorithm(name='RawFileInfo', enableLogging=False)
-        rfi_alg.setProperty('Filename', run_str)
-        rfi_alg.execute()
-        nperiods = rfi_alg.getProperty('PeriodCount').value
-
-        if nperiods == 2:
-            if back_scattering:
-                raise RuntimeError("2 period data can only be used for forward scattering spectra")
-
-        if nperiods == 3:
-            if not back_scattering:
-                raise RuntimeError("3 period data can only be used for back scattering spectra")
-
 
 #----------------------------------------------------------------------------------------
 
@@ -320,7 +270,7 @@ class LoadVesuvio(LoadEmptyVesuvio):
         except ValueError:
             run_str = runs[0]
 
-        self._raise_error_period_scatter(run_str, self._back_scattering)
+        validation._raise_error_period_scatter(run_str, self._back_scattering)
         all_spectra = [item for sublist in self._spectra for item in sublist]
         ms.LoadRaw(Filename=run_str, OutputWorkspace=SUMMED_WS, SpectrumList=all_spectra,
                    EnableLogging=_LOGGING_)
@@ -513,8 +463,7 @@ class LoadVesuvio(LoadEmptyVesuvio):
 
         self.summed_ws, self.summed_mon = "__loadraw_evs", "__loadraw_evs_monitors"
         for index, run in enumerate(runs):
-            run = inst_prefix + str(run)
-            self._raise_error_period_scatter(run, self._back_scattering)
+            validation._raise_error_period_scatter(run, self._back_scattering)
             if index == 0:
                 out_name, out_mon = SUMMED_WS, SUMMED_MON
             else:
