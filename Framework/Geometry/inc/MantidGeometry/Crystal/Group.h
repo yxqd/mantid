@@ -188,7 +188,6 @@ protected:
   bool associativityHolds() const;
 
   std::vector<SymmetryOperation> m_allOperations;
-  std::set<SymmetryOperation> m_operationSet;
   CoordinateSystem m_axisSystem;
 };
 

@@ -5,7 +5,7 @@ namespace Mantid {
 namespace Geometry {
 
 /// Default constructor. Creates a group with one symmetry operation (identity).
-Group::Group() : m_allOperations(), m_operationSet(), m_axisSystem() {
+Group::Group() : m_allOperations(), m_axisSystem() {
   std::vector<SymmetryOperation> operation(1);
   setSymmetryOperations(operation);
 }
@@ -13,7 +13,7 @@ Group::Group() : m_allOperations(), m_operationSet(), m_axisSystem() {
 /// Uses SymmetryOperationFactory to create a vector of symmetry operations from
 /// the string.
 Group::Group(const std::string &symmetryOperationString)
-    : m_allOperations(), m_operationSet(), m_axisSystem() {
+    : m_allOperations(), m_axisSystem() {
   setSymmetryOperations(SymmetryOperationFactory::Instance().createSymOps(
       symmetryOperationString));
 }
@@ -21,7 +21,7 @@ Group::Group(const std::string &symmetryOperationString)
 /// Constructs a group from the symmetry operations in the vector, duplicates
 /// are removed.
 Group::Group(const std::vector<SymmetryOperation> &symmetryOperations)
-    : m_allOperations(), m_operationSet(), m_axisSystem() {
+    : m_allOperations(), m_axisSystem() {
   setSymmetryOperations(symmetryOperations);
 }
 
@@ -59,7 +59,7 @@ Group Group::operator*(const Group &other) const {
 
   for (const auto &operation : m_allOperations) {
     for (const auto &otherOp : other.m_allOperations) {
-      result.push_back(operation * otherOp);
+      result.emplace_back(operation * otherOp);
     }
   }
 
@@ -71,8 +71,9 @@ Group Group::operator*(const Group &other) const {
 std::vector<Kernel::V3D> Group::operator*(const Kernel::V3D &vector) const {
   std::vector<Kernel::V3D> result;
   result.reserve(m_allOperations.size());
+
   for (const auto &operation : m_allOperations) {
-    result.push_back(Geometry::getWrappedVector(operation * vector));
+    result.emplace_back(Geometry::getWrappedVector(operation * vector));
   }
 
   std::sort(result.begin(), result.end(), AtomPositionsLessThan());
@@ -83,7 +84,7 @@ std::vector<Kernel::V3D> Group::operator*(const Kernel::V3D &vector) const {
 
 /// Returns true if both groups contain the same set of symmetry operations.
 bool Group::operator==(const Group &other) const {
-  return m_operationSet == other.m_operationSet;
+  return m_allOperations == other.m_allOperations;
 }
 
 /// Returns true if groups are different from eachother.
@@ -132,13 +133,13 @@ void Group::setSymmetryOperations(
     throw std::invalid_argument("Group needs at least one element.");
   }
 
-  m_operationSet.clear();
+  std::set<SymmetryOperation> uniqueSymOps;
   std::transform(symmetryOperations.cbegin(), symmetryOperations.cend(),
-                 std::inserter(m_operationSet, m_operationSet.begin()),
+                 std::inserter(uniqueSymOps, uniqueSymOps.begin()),
                  &getUnitCellIntervalOperation);
 
-  m_allOperations = std::vector<SymmetryOperation>(m_operationSet.begin(),
-                                                   m_operationSet.end());
+  m_allOperations = std::vector<SymmetryOperation>(uniqueSymOps.cbegin(),
+                                                   uniqueSymOps.cend());
   m_axisSystem = getCoordinateSystemFromOperations(m_allOperations);
 }
 
