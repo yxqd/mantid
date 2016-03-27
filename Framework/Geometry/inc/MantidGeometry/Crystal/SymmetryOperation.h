@@ -142,7 +142,19 @@ public:
     return m_matrixVectorPair * operand;
   }
 
-  Kernel::V3D transformHKL(const Kernel::V3D &hkl) const;
+  /**
+   * Transforms an index triplet hkl
+   *
+   * Unlike coordinates, hkls are transformed using the inverse transformation
+   * matrix, as detailed in the footnote on ITA, page 766.
+   * This method performs the multiplication with the transposed matrix.
+   *
+   * @param hkl :: HKL index triplet to transform
+   * @return :: Transformed index triplet.
+   */
+  inline Kernel::V3D transformHKL(const Kernel::V3D &hkl) const {
+    return m_transposedInverseMatrix * hkl;
+  }
 
   SymmetryOperation operator*(const SymmetryOperation &operand) const;
   SymmetryOperation inverse() const;

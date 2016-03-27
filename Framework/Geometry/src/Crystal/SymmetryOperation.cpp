@@ -125,20 +125,6 @@ bool SymmetryOperation::hasTranslation() const {
 }
 
 /**
- * Transforms an index triplet hkl
- *
- * Unlike coordinates, hkls are transformed using the inverse transformation
- * matrix, as detailed in the footnote on ITA, page 766.
- * This method performs the multiplication with the transposed matrix.
- *
- * @param hkl :: HKL index triplet to transform
- * @return :: Transformed index triplet.
- */
-Kernel::V3D SymmetryOperation::transformHKL(const Kernel::V3D &hkl) const {
-  return m_transposedInverseMatrix * hkl;
-}
-
-/**
  * Multiplication operator for combining symmetry operations
  *
  * This operator constructs from S1 (this) and S2 (other) a new symmetry
