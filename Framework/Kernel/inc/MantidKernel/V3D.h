@@ -118,14 +118,21 @@ public:
   }
 
   // Simple Comparison
-  bool operator==(const V3D &v) const {
-    return (m_vector - v.m_vector).isZero(Kernel::Tolerance);
+  bool operator==(const V3D &other) const {
+    return (m_vector - other.m_vector).isZero(Kernel::Tolerance);
   }
 
   bool operator!=(const V3D &other) const { return !(this->operator==(other)); }
 
-  bool operator<(const V3D &) const;
-  bool operator>(const V3D &rhs) const;
+  bool operator<(const V3D &other) const {
+    if (m_vector(0) != other.m_vector(0))
+      return m_vector(0) < other.m_vector(0);
+    if (m_vector(1) != other.m_vector(1))
+      return m_vector(1) < other.m_vector(1);
+    return m_vector(2) < other.m_vector(2);
+  }
+
+  bool operator>(const V3D &other) const { return other < *this; }
 
   // Access
   // Setting x, y and z values
@@ -138,6 +145,7 @@ public:
                      const double &azimuth);
   void azimuth_polar_SNS(const double &R, const double &azimuth,
                          const double &polar);
+
   void setX(const double x) { m_vector(0) = x; }
   void setY(const double y) { m_vector(1) = y; }
   void setZ(const double z) { m_vector(2) = z; }
@@ -164,17 +172,11 @@ public:
 
   void getSpherical(double &R, double &theta, double &phi) const;
 
-  //      void rotate(const V3D&,const V3D&,const double);
-  void rotate(const Matrix<double> &A)
-  /**
-  Rotate a point by a matrix
-  @param A :: Rotation matrix (needs to be >3x3)
-*/
-  {
-    double xold(m_vector(0)), yold(m_vector(1)), zold(m_vector(2));
-    m_vector(0) = A[0][0] * xold + A[0][1] * yold + A[0][2] * zold;
-    m_vector(1) = A[1][0] * xold + A[1][1] * yold + A[1][2] * zold;
-    m_vector(2) = A[2][0] * xold + A[2][1] * yold + A[2][2] * zold;
+  void rotate(const Matrix<double> &A) {
+    m_vector = Eigen::Vector3d(
+        A[0][0] * m_vector(0) + A[0][1] * m_vector(1) + A[0][2] * m_vector(2),
+        A[1][0] * m_vector(0) + A[1][1] * m_vector(1) + A[1][2] * m_vector(2),
+        A[2][0] * m_vector(0) + A[2][1] * m_vector(1) + A[2][2] * m_vector(2));
   }
 
   void round() {

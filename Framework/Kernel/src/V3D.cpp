@@ -88,21 +88,6 @@ void V3D::azimuth_polar_SNS(const double &R, const double &azimuth,
     m_vector(2) = 0.0;
 }
 
-/**
-  compare
-  @return true if V is greater
- */
-bool V3D::operator<(const V3D &V) const {
-  if (m_vector(0) != V.m_vector(0))
-    return m_vector(0) < V.m_vector(0);
-  if (m_vector(1) != V.m_vector(1))
-    return m_vector(1) < V.m_vector(1);
-  return m_vector(2) < V.m_vector(2);
-}
-
-/// Comparison operator greater than.
-bool V3D::operator>(const V3D &rhs) const { return rhs < *this; }
-
 /** Return the vector's position in spherical coordinates
  *  @param R ::     Returns the radial distance
  *  @param theta :: Returns the theta angle in degrees
@@ -172,8 +157,6 @@ int V3D::reBase(const V3D &A, const V3D &B, const V3D &C)
   rotate(T);
   return 0;
 }
-
-
 
 /**
   Determines if this,B,C are collinear
