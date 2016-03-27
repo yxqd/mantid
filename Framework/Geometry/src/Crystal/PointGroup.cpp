@@ -33,7 +33,8 @@ using Kernel::IntMatrix;
 std::vector<V3D> PointGroup::getEquivalents(const V3D &hkl) const {
   std::vector<V3D> equivalents = getEquivalentSet(hkl);
 
-  std::sort(equivalents.begin(), equivalents.end(), std::greater<V3D>());
+  std::sort(equivalents.begin(), equivalents.end(),
+            [](const V3D &lhs, const V3D &rhs) { return lhs > rhs; });
 
   equivalents.erase(std::unique(equivalents.begin(), equivalents.end()),
                     equivalents.end());
@@ -74,10 +75,10 @@ std::string PointGroup::getSymbol() const { return m_symbolHM; }
 
 bool PointGroup::isEquivalent(const Kernel::V3D &hkl,
                               const Kernel::V3D &hkl2) const {
-  std::vector<V3D> hklEquivalents = getEquivalentSet(hkl);
+  const std::vector<V3D> hklEquivalents = getEquivalentSet(hkl);
 
   return (std::find(hklEquivalents.cbegin(), hklEquivalents.cend(), hkl2) !=
-          hklEquivalents.end());
+          hklEquivalents.cend());
 }
 
 /**
@@ -98,9 +99,10 @@ std::vector<V3D> PointGroup::getEquivalentSet(const Kernel::V3D &hkl) const {
   std::vector<V3D> equivalents;
   equivalents.reserve(m_allOperations.size());
 
-  for (const auto &operation : m_allOperations) {
-    equivalents.emplace_back(operation.transformHKL(hkl));
-  }
+  std::transform(
+      m_allOperations.cbegin(), m_allOperations.cend(),
+      std::back_inserter(equivalents),
+      [&hkl](const SymmetryOperation &op) { return op.transformHKL(hkl); });
 
   return equivalents;
 }
