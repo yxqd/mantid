@@ -16,14 +16,15 @@ def _validate_range_formatting(lower, upper, property_name, issues):
 
 #----------------------------------------------------------------------------------------
 
-def _validate_spec_min_max(diff_mode, spectra, property_name, issues):
+def _validate_spec_min_max(diff_mode, spec_range, spectra, property_name, issues):
     """
     Validates if the spectra is with the minimum and maximum boundaries
+    @param spec_range :: The minimum [0] and maximum [1] spectra range
     """
     # Only validate boundaries if in difference Mode
     if "Difference" in diff_mode:
-        specMin = self._backward_spectra_list[0]
-        specMax = self._forward_spectra_list[-1]
+        specMin = spec_range[0]
+        specMax = spec_range[1]
         if spectra < specMin:
             issues[property_name] = ("Lower limit for spectra is %d in difference mode" % specMin)
         if spectra > specMax:
@@ -55,7 +56,7 @@ def _raise_error_period_scatter(run_str, back_scattering):
 
 #----------------------------------------------------------------------------------------
 
-def _raise_error_mode_scatter(self, mode, back_scattering):
+def _raise_error_mode_scatter(mode, back_scattering):
     """
     Checks that the input is valid for the Mode of operation selected with the current scattering
     SingleDifference - Forward Scattering
