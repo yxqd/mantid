@@ -44,6 +44,7 @@ set ( TEST_PY_FILES
       test/SANSBatchModeTest.py
       test/SANSCentreFinderTest.py
       test/SANSCommandInterfaceTest.py
+      test/SANSDataFileInfoTest.py
       test/SANSDarkRunCorrectionTest.py
       test/SANSUserFileParserTest.py
       test/SANSUtilityTest.py
