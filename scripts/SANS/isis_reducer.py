@@ -38,6 +38,7 @@ if sys.version_info[0] == 2 and sys.version_info[1] == 6:
 ## Version number
 __version__ = '0.0'
 
+# GLOBALS
 current_settings = None
 
 
@@ -862,3 +863,6 @@ class ISISReducer(Reducer):
             except:
                 was_event = False
         return was_event
+
+    def get_calibration_file_handler(self):
+        return self.get_instrument().get_calibration_file_handler()

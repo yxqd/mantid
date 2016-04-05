@@ -9,8 +9,11 @@ from mantid.api import WorkspaceGroup, Workspace
 from mantid.kernel import Logger
 from mantid.kernel import V3D
 import SANSUtility as su
+import SANSCalibrationFileHandler
 
+# GLOBALS
 sanslog = Logger("SANS")
+calibration_file_handler = SANSCalibrationFileHandler.SANSCalibrationFileHandler()
 
 
 class BaseInstrument(object):
@@ -813,6 +816,10 @@ class ISISInstrument(BaseInstrument):
         # this forces us to have 'copyable' objects.
         self._newCalibrationWS = str(ws_reference)
 
+    def get_calibration_file_handler(self):
+        global calibration_file_handler
+        return calibration_file_handler
+
     def get_updated_beam_centre_after_move(self):
         '''
         @returns the beam centre position after the instrument has moved
@@ -840,6 +847,8 @@ class ISISInstrument(BaseInstrument):
         original_parmeters = workspace.getInstrument().getParameterNames()
         for param in original_parmeters:
             if not calibration_workspace.getInstrument().hasParameter(param):
+                calibration_file_handler = self.get_calibration_file_handler()
+                calibration_file_handler.calibration_was_updated = True
                 self._add_new_parameter_to_calibration(param, workspace, calibration_workspace)
 
     def _add_new_parameter_to_calibration(self, param_name, workspace, calibration_workspace):

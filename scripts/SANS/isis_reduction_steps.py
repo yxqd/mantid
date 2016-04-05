@@ -3946,7 +3946,8 @@ class UserFile(ReductionStep):
 
         try:
             file_path, suggested_name = getFileAndName(path2file)
-            __calibrationWs = Load(file_path, OutputWorkspace=suggested_name)
+            calibration_file_handler = reducer.get_calibration_file_handler()
+            __calibrationWs = calibration_file_handler.provide_calibration_file(suggested_name, file_path)
             reducer.instrument.setCalibrationWorkspace(__calibrationWs)
         except:
             # If we throw a runtime here, then we cannot execute 'Load Data'.
