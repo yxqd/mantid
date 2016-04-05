@@ -546,26 +546,85 @@ public:
     m_instrumentParameterized = boost::make_shared<Instrument>(m_instrumentNotParameterized, map);
   }
 
-  void test_access_non_parameterized() {
-
-    const detid_t nPixels = 100 * 100 * 6;
-    double pos_x = 0;
-    for (detid_t i = 1; i <= nPixels; i++) {
-      pos_x += m_instrumentNotParameterized->getDetector(i)->getPos().X();
-    }
+  void test_access_non_parameterized_1_threads() {
+    access_instrument(*m_instrumentNotParameterized, 1, 16);
   }
 
-  void test_access_parameterized() {
-
-    const detid_t nPixels = 100 * 100 * 6;
-    double pos_x = 0;
-    for (detid_t i = 1; i <= nPixels; i++) {
-      pos_x += m_instrumentParameterized->getDetector(i)->getPos().X();
-    }
+  void test_access_non_parameterized_2_threads() {
+    access_instrument(*m_instrumentNotParameterized, 2, 16);
   }
 
+  void test_access_non_parameterized_4_threads() {
+    access_instrument(*m_instrumentNotParameterized, 4, 16);
+  }
+
+  void test_access_non_parameterized_8_threads() {
+    access_instrument(*m_instrumentNotParameterized, 8, 16);
+  }
+
+  void test_access_non_parameterized_12_threads() {
+    access_instrument(*m_instrumentNotParameterized, 12, 16);
+  }
+
+  void test_access_non_parameterized_16_threads() {
+    access_instrument(*m_instrumentNotParameterized, 16, 16);
+  }
+
+  void test_access_non_parameterized_20_threads() {
+    access_instrument(*m_instrumentNotParameterized, 20, 16);
+  }
+
+  void test_access_non_parameterized_24_threads() {
+    access_instrument(*m_instrumentNotParameterized, 24, 16);
+  }
+
+  void test_access_parameterized_1_threads() {
+    access_instrument(*m_instrumentParameterized, 1, 16);
+  }
+
+  void test_access_parameterized_2_threads() {
+    access_instrument(*m_instrumentParameterized, 2, 16);
+  }
+
+  void test_access_parameterized_4_threads() {
+    access_instrument(*m_instrumentParameterized, 4, 16);
+  }
+
+  void test_access_parameterized_8_threads() {
+    access_instrument(*m_instrumentParameterized, 8, 16);
+  }
+
+  void test_access_parameterized_12_threads() {
+    access_instrument(*m_instrumentParameterized, 12, 16);
+  }
+
+  void test_access_parameterized_16_threads() {
+    access_instrument(*m_instrumentParameterized, 16, 16);
+  }
+
+  void test_access_parameterized_20_threads() {
+    access_instrument(*m_instrumentParameterized, 20, 16);
+  }
+
+  void test_access_parameterized_24_threads() {
+    access_instrument(*m_instrumentParameterized, 24, 16);
+  }
 
 private:
+  void access_instrument(const Instrument &instrument, int numberOfThreads,
+                         int repetitions = 1) {
+    auto threads = std::min(numberOfThreads, omp_get_max_threads());
+
+    const detid_t nPixels = 100 * 100 * 6;
+    double sum = 0.0;
+    for (int rep = 0; rep < repetitions; ++rep) {
+#pragma omp parallel for reduction(+:sum) num_threads(threads)
+      for (detid_t i = 1; i <= nPixels; i++) {
+        sum += instrument.getDetector(i)->getPos().X();
+      }
+    }
+  }
+
   Instrument_sptr m_instrumentParameterized;
   Instrument_sptr m_instrumentNotParameterized;
 };
