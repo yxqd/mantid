@@ -11,7 +11,7 @@ CMakeFiles
 Makefile
 cmake_install.cmake
 install_manifest.txt
-
+compile_commands.json
 
 
 # Compiled Object files
@@ -77,8 +77,9 @@ local.properties
 *.log
 
 # Build results
-[Dd]ebug/
-[Rr]elease/
+build/
+/[Rr]elease/
+/[Dd]ebug/
 *_i.c
 *_p.c
 *.ilk
@@ -166,4 +167,13 @@ Desktop.ini
 .tags
 .tags_sorted_by_file
 
-Code/Mantid/Vates/VatesSimpleGui/ViewWidgets/inc/MantidVatesSimpleGuiViewWidgets/LibHelper.h
+Vates/VatesSimpleGui/ViewWidgets/inc/MantidVatesSimpleGuiViewWidgets/LibHelper.h
+
+
+# Make sure Third_Party doesn't get checked into the main repository
+Third_Party/
+# Common out-of-source build directory names. Usually, these should go in your .git/info/exclude
+win64/
+dbg/
+rel/
+

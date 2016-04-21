@@ -1,7 +1,0 @@
-//--------------------------------------------------------------------------------------
-// A wrapper for the auto-generated sipmantidqtpythonpart?.cpp files to disable warnings
-// that we can't control. The warnings are actually suppressed in qti.sip
-// with '#pragma GCC system_header' but that pragma only works if it occurs
-// in a file that has been included with '#include'
-//-------------------------------------------------------------------------------------
-#include "sipmantidqtpythonpart0.cpp"

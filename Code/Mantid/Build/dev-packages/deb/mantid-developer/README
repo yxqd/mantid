@@ -1,6 +1,0 @@
-This directory contains the structure required to build the simple mantid-developer debian file.
-
-To build the package:
-   * Switch to the directory containing this file
-   * Run "dpkg --build mantid-developer-1.2.4"
-   * A file called mantid-developer-1.2.4.deb will appear in the current directory.
