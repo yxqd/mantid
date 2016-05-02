@@ -188,14 +188,12 @@ class PoldiCalibration(PythonAlgorithm):
 
                     ws = self.getWorkspaceWithParameters(workspace, *params)
 
-                    try:
-                        slope, slope_error = self.getSlopeParameter(ws)
-                        a, a_error, fwhms = self.getLatticeParameter(ws)
+                    slope, slope_error = self.getSlopeParameter(ws)
+                    a, a_error, fwhms = self.getLatticeParameter(ws)
 
-                        lines.append([two_theta, x0, y0, a, a_error, slope * 1000.0, slope_error * 1000.0,
-                                      fwhms[0][0], fwhms[0][1]])
-                    except:
-                        pass
+                    lines.append([two_theta, x0, y0, a, a_error, slope * 1000.0, slope_error * 1000.0,
+                                  fwhms[0][0], fwhms[0][1]])
+
 
         return lines
 
@@ -217,12 +215,19 @@ class PoldiCalibration(PythonAlgorithm):
 
         return params
 
+    def _getChopperSpeed(self, ws):
+        try:
+            return ws.getRun().getProperty('chopperspeed').value[0]
+        except Exception:
+            return ws.getRun().getProperty('chopperspeed').value
+
     def getWorkspaceWithHighestChopperSpeed(self, workspaces):
         resultWs = workspaces[0]
-        highestChopperSpeed = resultWs.getRun().getProperty('chopperspeed').value[0]
+
+        highestChopperSpeed = self._getChopperSpeed(resultWs)
 
         for ws in workspaces[1:]:
-            chopperSpeed = ws.getRun().getProperty('chopperspeed').value[0]
+            chopperSpeed = self._getChopperSpeed(ws)
             print chopperSpeed
 
             if chopperSpeed > highestChopperSpeed:
@@ -363,14 +368,9 @@ class PoldiCalibration(PythonAlgorithm):
         if isinstance(fpeaks, WorkspaceGroup):
             fpeaks = fpeaks.getItem(0)
 
-        fwhms = []
-        for i in range(fpeaks.rowCount()):
-            fpeaks.setCell(i, 1, fpeaks.cell(i, 1).split()[0])
+        fwhms = zip(fpeaks.column(7), fpeaks.column(8))
 
-            fwhmStrs = fpeaks.cell(i, 4).split()
-            fwhms.append((float(fwhmStrs[0]), float(fwhmStrs[-1])))
-
-        Fit("name=LatticeFunction,CrystalSystem=Cubic,a=5.4", Ties="ZeroShift=0.0",
+        Fit("name=LatticeFunction,LatticeSystem=Cubic,a=5.4", Ties="ZeroShift=0.0",
             CostFunction="Unweighted least squares", InputWorkspace=fpeaks, CreateOutput=True, Output='cell')
 
         params = AnalysisDataService.retrieve('cell_Parameters')
