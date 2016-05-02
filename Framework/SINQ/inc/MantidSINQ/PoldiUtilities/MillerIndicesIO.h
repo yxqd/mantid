@@ -54,8 +54,6 @@ public:
       indices[i] = boost::lexical_cast<int>(substrings[i]);
     }
 
-    std::cout << millerIncidesString << " " << indices[0] << std::endl;
-
     return MillerIndices(indices);
   }
 
