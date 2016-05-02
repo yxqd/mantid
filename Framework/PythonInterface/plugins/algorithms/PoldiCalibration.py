@@ -15,17 +15,17 @@ def optimizationWrapperT0(t0, parameters, workspaces, algorithmObject):
     paramCopy[0] = t0
 
     # Slope differences are relevant
-    try:
-        slopes = algorithmObject.getDataWithTimingParameters(workspaces, paramCopy)
+    # try:
+    slopes = algorithmObject.getDataWithTimingParameters(workspaces, paramCopy)
 
-        slopeDifferences = []
-        for i in range(len(slopes)):
-            for j in range(i + 1, len(slopes)):
-                slopeDifferences.append(slopes[i] - slopes[j])
+    slopeDifferences = []
+    for i in range(len(slopes)):
+        for j in range(i + 1, len(slopes)):
+            slopeDifferences.append(slopes[i] - slopes[j])
 
-        return np.sum(np.square(np.array(slopeDifferences)))
-    except:
-        return 1e10
+    return np.sum(np.square(np.array(slopeDifferences)))
+    # except Exception as e:
+    #    return 1e10
 
 
 def optimizationWrapperTConst(tconst, parameters, t0, workspaces, algorithmObject):
@@ -125,7 +125,6 @@ class PoldiCalibration(PythonAlgorithm):
 
             outputWorkspace = self.createOutputWorkspacePosition(lines)
             self.setProperty('OutputWorkspace', outputWorkspace)
-
 
     def createOutputWorkspacePosition(self, data):
         columnNames = ['TwoTheta', 'x0', 'y0', 'a', 'delta_a', 'slope', 'delta_slope', 'fwhm', 'delta_fwhm']
@@ -232,7 +231,6 @@ class PoldiCalibration(PythonAlgorithm):
 
         return resultWs
 
-
     def getRangesFromProperty(self):
         rangeString = self.getProperty('ParameterRanges').value
         rangeStrings = rangeString.split(';')
@@ -249,7 +247,6 @@ class PoldiCalibration(PythonAlgorithm):
             ranges.append(np.arange(*params))
 
         return ranges
-
 
     def calibrateTiming(self, workspaces):
         # First, calibrate t0
@@ -300,10 +297,9 @@ class PoldiCalibration(PythonAlgorithm):
         # Extract hkls and q-values
         hkls = fittedPeaks.column(0)
 
-        qs = fittedPeaks.column(2)
-        q_values = np.array([float(x.split()[0]) for x in qs])
-        q_errors = [float(x.split()[-1]) for x in qs]
-        rel_errors = [x / y for x, y in zip(q_errors, q_values)]
+        q_values = np.array(fittedPeaks.column(3))
+        q_errors = np.array(fittedPeaks.column(4))
+        rel_errors = q_errors / q_values
 
         # calculate sqrt(h^2 + k^2 + l^2) - calibration substance is always cubic
         hkl_sums = [np.sqrt(np.sum([int(x) * int(x) for x in y.split()])) for y in hkls]
