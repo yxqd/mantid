@@ -82,7 +82,7 @@ class PoldiCalibration(PythonAlgorithm):
                                  'used. For position refinement it is enough to provide the first two.')
 
         self.declareProperty('ParameterRanges', '', direction=Direction.Input,
-                             doc='Parameter ranges for two_theta, x0, y0 in the form \'start,stop,step\', '
+                             doc='Parameter ranges for two_theta, x0, y0 in the form \'start,stop,number of points\', '
                                  'separated by semicolons. Ignored for t0, tconst optimization.')
 
         self.declareProperty(WorkspaceProperty(name='OutputWorkspace',
@@ -176,15 +176,19 @@ class PoldiCalibration(PythonAlgorithm):
         workspace = self.getWorkspaceWithHighestChopperSpeed(workspaces)
         ranges = self.getRangesFromProperty()
 
-        print ranges
+        combinations = np.cumprod([len(x) for x in ranges])[-1]
+        self.log().warning('Number of parameter combinations: ' + str())
 
         lines = []
+
+        prog = Progress(self, 0.0, 1.0, combinations)
 
         for two_theta in ranges[0]:
             for x0 in ranges[1]:
                 for y0 in ranges[2]:
                     params = self.getParameters(two_theta, x0, y0)
-                    print params
+
+                    self.log().warning('Parameters: ' + str(params))
 
                     ws = self.getWorkspaceWithParameters(workspace, *params)
 
@@ -194,6 +198,7 @@ class PoldiCalibration(PythonAlgorithm):
                     lines.append([two_theta, x0, y0, a, a_error, slope * 1000.0, slope_error * 1000.0,
                                   fwhms[0][0], fwhms[0][1]])
 
+                    prog.report()
 
         return lines
 
@@ -247,9 +252,9 @@ class PoldiCalibration(PythonAlgorithm):
         for rStr in rangeStrings:
             params = [float(x) for x in rStr.split(',')]
             if not len(params) == 3:
-                raise RuntimeError('Parameter range must be specified by start,stop,step')
+                raise RuntimeError('Parameter range must be specified by start,stop,number of points')
 
-            ranges.append(np.arange(*params))
+            ranges.append(np.linspace(start=min(params[:2]), stop=max(params[:2]), num=int(params[2])))
 
         return ranges
 
@@ -394,4 +399,4 @@ class PoldiCalibration(PythonAlgorithm):
         return workWs
 
 
-AlgorithmFactory.subscribe(PoldiCalibration())
+AlgorithmFactory.subscribe(PoldiCalibration)
