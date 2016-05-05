@@ -530,12 +530,6 @@ Poldi2DFunction_sptr PoldiFitPeaks2D::getFunctionCalibration(
   Poldi2DFunction_sptr calibrationFunction =
       getFunctionIndividualPeaks("", peakCollection);
 
-  for (size_t i = 1; i < calibrationFunction->nFunctions(); ++i) {
-    std::string paramName =
-        "f" + boost::lexical_cast<std::string>(i) + ".Slope";
-    calibrationFunction->tie(paramName, paramName + "=f0.Slope");
-  }
-
   return calibrationFunction;
 }
 

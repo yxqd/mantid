@@ -68,7 +68,7 @@ class PoldiDataAnalysis(PythonAlgorithm):
         self.declareProperty("TieProfileParameters", True, direction=Direction.Input,
                              doc=('If this option is activated, certain parameters are kept the same for all peaks. '
                                   'An example is the mixing parameter of the PseudoVoigt function.'))
-                                  
+
         self.declareProperty("CalibrationRun", False, direction=Direction.Input,
                              doc='In this mode, an additional parameter is fitted for calibration purposes. Can not '
                                  'be used in combination with PawleyFit. Will automatically disable residual analysis.')
@@ -111,7 +111,7 @@ class PoldiDataAnalysis(PythonAlgorithm):
         self.isCalibration = self.getProperty("CalibrationRun").value
         self.analyseResiduals = self.getProperty("AnalyseResiduals").value and not self.isCalibration
         self.isPawleyFit = self.getProperty("PawleyFit").value and not self.isCalibration
-        
+
         self.useGlobalParameters = self.getProperty("TieProfileParameters").value
         self.maximumRelativeFwhm = self.getProperty("MaximumRelativeFwhm").value
         self.outputIntegratedIntensities = self.getProperty("OutputIntegratedIntensities").value
@@ -119,6 +119,9 @@ class PoldiDataAnalysis(PythonAlgorithm):
         self.globalParameters = ''
         if self.useGlobalParameters:
             self.globalParameters = ','.join(self._globalParameters[self.profileFunction])
+
+        if self.isCalibration:
+            self.globalParameters = 'Slope'
 
         if not self.workspaceHasCounts(self.inputWorkspace):
             raise RuntimeError("Aborting analysis since workspace " + self.baseName + " does not contain any counts.")
@@ -220,7 +223,6 @@ class PoldiDataAnalysis(PythonAlgorithm):
                         FitPlotsWorkspace=plotNames)
 
         return AnalysisDataService.retrieve(refinedPeaksName), AnalysisDataService.retrieve(plotNames)
-
 
     def runIndex(self, peaks):
         indexedPeaksName = self.baseName + "_indexed"
