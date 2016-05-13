@@ -177,7 +177,7 @@ class PoldiCalibration(PythonAlgorithm):
         ranges = self.getRangesFromProperty()
 
         combinations = np.cumprod([len(x) for x in ranges])[-1]
-        self.log().warning('Number of parameter combinations: ' + str())
+        self.log().warning('Number of parameter combinations: ' + str(combinations))
 
         lines = []
 
