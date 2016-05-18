@@ -171,11 +171,6 @@ public:
 
   void unsubscribeSpaceGroup(const std::string &hmSymbol);
 
-  void subscribeGeneratedSpaceGroup(size_t number, const std::string &hmSymbol,
-                                    const std::string &generators);
-  void subscribeTabulatedSpaceGroup(size_t number, const std::string &hmSymbol,
-                                    const std::string &symmetryOperations);
-
   /// Templated method to subscribe other generators than the ones provided
   /// here.
   template <typename T>
@@ -296,7 +291,8 @@ typedef Mantid::Kernel::SingletonHolder<SpaceGroupFactoryImpl>
   Mantid::Kernel::RegistrationHelper SPGF_CONCAT(register_spacegroup_,         \
                                                  __COUNTER__)(                 \
       ((Mantid::Geometry::SpaceGroupFactory::Instance()                        \
-            .subscribeGeneratedSpaceGroup(number, hmSymbol, generators)),      \
+            .subscribeUsingGenerator<AlgorithmicSpaceGroupGenerator>(          \
+                number, hmSymbol, generators)),                                \
        0));                                                                    \
   }
 
@@ -315,8 +311,8 @@ typedef Mantid::Kernel::SingletonHolder<SpaceGroupFactoryImpl>
   Mantid::Kernel::RegistrationHelper SPGF_CONCAT(register_spacegroup_,         \
                                                  __COUNTER__)(                 \
       ((Mantid::Geometry::SpaceGroupFactory::Instance()                        \
-            .subscribeTabulatedSpaceGroup(number, hmSymbol,                    \
-                                          symmetryOperations)),                \
+            .subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(            \
+                number, hmSymbol, symmetryOperations)),                        \
        0));                                                                    \
   }
 

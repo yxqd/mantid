@@ -35,31 +35,39 @@ public:
     TS_ASSERT(!factory.isSubscribed("P-1"));
 
     TS_ASSERT_THROWS_NOTHING(
-        factory.subscribeGeneratedSpaceGroup(2, "P-1", "-x,-y,-z"));
+        factory.subscribeUsingGenerator<AlgorithmicSpaceGroupGenerator>(
+            2, "P-1", "-x,-y,-z"));
 
     TS_ASSERT(factory.isSubscribed(2));
     TS_ASSERT(factory.isSubscribed("P-1"));
 
     // subscribing twice does not work
-    TS_ASSERT_THROWS(factory.subscribeGeneratedSpaceGroup(2, "P-1", "-x,-y,-z"),
-                     std::invalid_argument);
+    TS_ASSERT_THROWS(
+        factory.subscribeUsingGenerator<AlgorithmicSpaceGroupGenerator>(
+            2, "P-1", "-x,-y,-z"),
+        std::invalid_argument);
 
     // but having a different symbol for the same number is ok.
     TS_ASSERT_THROWS_NOTHING(
-        factory.subscribeGeneratedSpaceGroup(2, "F-1", "-x,-y,-z"))
+        factory.subscribeUsingGenerator<AlgorithmicSpaceGroupGenerator>(
+            2, "F-1", "-x,-y,-z"));
 
     // neither does with a tabulated space group
     TS_ASSERT_THROWS(
-        factory.subscribeTabulatedSpaceGroup(2, "P-1", "x,y,z; -x,-y,-z"),
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+            2, "P-1", "x,y,z; -x,-y,-z"),
         std::invalid_argument);
 
     // Different number with same symbol - does not work
-    TS_ASSERT_THROWS(factory.subscribeGeneratedSpaceGroup(3, "P-1", "-x,-y,-z"),
-                     std::invalid_argument);
+    TS_ASSERT_THROWS(
+        factory.subscribeUsingGenerator<AlgorithmicSpaceGroupGenerator>(
+            3, "P-1", "-x,-y,-z"),
+        std::invalid_argument);
 
     // invalid generators are caught before anything is done
     TS_ASSERT_THROWS_ANYTHING(
-        factory.subscribeGeneratedSpaceGroup(4, "Fake", "invalid"));
+        factory.subscribeUsingGenerator<AlgorithmicSpaceGroupGenerator>(
+            4, "Fake", "invalid"));
 
     TS_ASSERT(!factory.isSubscribed(4));
     TS_ASSERT(!factory.isSubscribed("Fake"));
@@ -72,31 +80,39 @@ public:
     TS_ASSERT(!factory.isSubscribed("P-1"));
 
     TS_ASSERT_THROWS_NOTHING(
-        factory.subscribeTabulatedSpaceGroup(2, "P-1", "x,y,z; -x,-y,-z"));
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+            2, "P-1", "x,y,z; -x,-y,-z"));
 
     TS_ASSERT(factory.isSubscribed(2));
     TS_ASSERT(factory.isSubscribed("P-1"));
 
     // subscribing twice does not work
     TS_ASSERT_THROWS(
-        factory.subscribeTabulatedSpaceGroup(2, "P-1", "x,y,z; -x,-y,-z"),
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+            2, "P-1", "x,y,z; -x,-y,-z"),
         std::invalid_argument);
 
     // but having a different symbol for the same number is ok.
     TS_ASSERT_THROWS_NOTHING(
-        factory.subscribeTabulatedSpaceGroup(2, "F-1", "x,y,z; -x,-y,-z"))
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+            2, "F-1", "x,y,z; -x,-y,-z"));
 
     // neither does with a generated space group
-    TS_ASSERT_THROWS(factory.subscribeGeneratedSpaceGroup(2, "P-1", "-x,-y,-z"),
-                     std::invalid_argument);
+    TS_ASSERT_THROWS(
+        factory.subscribeUsingGenerator<AlgorithmicSpaceGroupGenerator>(
+            2, "P-1", "-x,-y,-z"),
+        std::invalid_argument);
 
     // Different number with same symbol - does not work
-    TS_ASSERT_THROWS(factory.subscribeTabulatedSpaceGroup(3, "P-1", "-x,-y,-z"),
-                     std::invalid_argument);
+    TS_ASSERT_THROWS(
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+            3, "P-1", "-x,-y,-z"),
+        std::invalid_argument);
 
     // invalid generators are caught before anything is done
     TS_ASSERT_THROWS_ANYTHING(
-        factory.subscribeTabulatedSpaceGroup(4, "Fake", "invalid"));
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+            4, "Fake", "invalid"));
 
     TS_ASSERT(!factory.isSubscribed(4));
     TS_ASSERT(!factory.isSubscribed("Fake"));
@@ -111,7 +127,8 @@ public:
     TS_ASSERT(!factory.isSubscribed("P-1"));
 
     TS_ASSERT_THROWS_NOTHING(
-        factory.subscribeTabulatedSpaceGroup(2, "P-1", "x,y,z; -x,-y,-z"));
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+            2, "P-1", "x,y,z; -x,-y,-z"));
 
     TS_ASSERT(factory.isSubscribed(2));
     TS_ASSERT(factory.isSubscribed("P-1"));
@@ -125,7 +142,8 @@ public:
     TS_ASSERT(factory.subscribedSpaceGroupSymbols().empty());
 
     TS_ASSERT_THROWS_NOTHING(
-        factory.subscribeTabulatedSpaceGroup(2, "P-1", "x,y,z; -x,-y,-z"));
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+            2, "P-1", "x,y,z; -x,-y,-z"));
 
     std::vector<std::string> symbols = factory.subscribedSpaceGroupSymbols();
     TS_ASSERT_EQUALS(symbols.size(), 1);
@@ -133,7 +151,8 @@ public:
                       symbols.end());
 
     TS_ASSERT_THROWS_NOTHING(
-        factory.subscribeTabulatedSpaceGroup(1, "P1", "x,y,z"));
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(1, "P1",
+                                                                      "x,y,z"));
     symbols = factory.subscribedSpaceGroupSymbols();
     TS_ASSERT_EQUALS(symbols.size(), 2);
     TS_ASSERT_DIFFERS(std::find(symbols.begin(), symbols.end(), "P1"),
@@ -146,7 +165,8 @@ public:
     TS_ASSERT(factory.subscribedSpaceGroupNumbers().empty());
 
     TS_ASSERT_THROWS_NOTHING(
-        factory.subscribeTabulatedSpaceGroup(2, "P-1", "x,y,z; -x,-y,-z"));
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+            2, "P-1", "x,y,z; -x,-y,-z"));
 
     std::vector<size_t> numbers = factory.subscribedSpaceGroupNumbers();
     TS_ASSERT_EQUALS(numbers.size(), 1);
@@ -154,7 +174,8 @@ public:
                       numbers.end());
 
     TS_ASSERT_THROWS_NOTHING(
-        factory.subscribeTabulatedSpaceGroup(1, "P1", "x,y,z"));
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(1, "P1",
+                                                                      "x,y,z"));
     numbers = factory.subscribedSpaceGroupNumbers();
     TS_ASSERT_EQUALS(numbers.size(), 2);
     TS_ASSERT_DIFFERS(std::find(numbers.begin(), numbers.end(), 1),
@@ -162,16 +183,20 @@ public:
 
     // Subscribing the same number twice should not influence vector size
     TS_ASSERT_THROWS_NOTHING(
-        factory.subscribeTabulatedSpaceGroup(1, "F1", "x,y,z"));
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(1, "F1",
+                                                                      "x,y,z"));
     numbers = factory.subscribedSpaceGroupNumbers();
     TS_ASSERT_EQUALS(numbers.size(), 2);
   }
 
   void testSubscribedSpaceGroupSymbolsForNumber() {
     TestableSpaceGroupFactory factory;
-    factory.subscribeTabulatedSpaceGroup(2, "P-1", "x,y,z; -x,-y,-z");
-    factory.subscribeTabulatedSpaceGroup(2, "F-1", "x,y,z; -x,-y,-z");
-    factory.subscribeTabulatedSpaceGroup(1, "P1", "x,y,z");
+    factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+        2, "P-1", "x,y,z; -x,-y,-z");
+    factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+        2, "F-1", "x,y,z; -x,-y,-z");
+    factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(1, "P1",
+                                                                  "x,y,z");
 
     std::vector<std::string> symbols = factory.subscribedSpaceGroupSymbols(1);
     TS_ASSERT_EQUALS(symbols.size(), 1);
@@ -188,11 +213,13 @@ public:
     TS_ASSERT_EQUALS(factory.subscribedSpaceGroupSymbols(pg).size(), 0);
     TS_ASSERT(factory.m_pointGroupMap.empty());
 
-    factory.subscribeTabulatedSpaceGroup(2, "P-1", "x,y,z; -x,-y,-z");
+    factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+        2, "P-1", "x,y,z; -x,-y,-z");
     TS_ASSERT_EQUALS(factory.subscribedSpaceGroupSymbols(pg).size(), 1);
     TS_ASSERT(!factory.m_pointGroupMap.empty());
 
-    factory.subscribeTabulatedSpaceGroup(2, "F-1", "x,y,z; -x,-y,-z");
+    factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+        2, "F-1", "x,y,z; -x,-y,-z");
     TS_ASSERT(factory.m_pointGroupMap.empty());
     TS_ASSERT_EQUALS(factory.subscribedSpaceGroupSymbols(pg).size(), 2);
     TS_ASSERT(!factory.m_pointGroupMap.empty());
@@ -205,15 +232,18 @@ public:
                      std::invalid_argument);
 
     TS_ASSERT_THROWS_NOTHING(
-        factory.subscribeTabulatedSpaceGroup(2, "P-1", "x,y,z; -x,-y,-z"));
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+            2, "P-1", "x,y,z; -x,-y,-z"));
     TS_ASSERT_THROWS_NOTHING(factory.unsubscribeSpaceGroup("P-1"));
   }
 
   void testUnsubscribeSymbol_multiple_groups_per_number() {
     TestableSpaceGroupFactory factory;
 
-    factory.subscribeTabulatedSpaceGroup(2, "P-1", "x,y,z; -x,-y,-z");
-    factory.subscribeTabulatedSpaceGroup(2, "F-1", "x,y,z; -x,-y,-z");
+    factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+        2, "P-1", "x,y,z; -x,-y,-z");
+    factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+        2, "F-1", "x,y,z; -x,-y,-z");
 
     TS_ASSERT_THROWS_NOTHING(factory.unsubscribeSpaceGroup("F-1"));
 
@@ -283,7 +313,8 @@ public:
 
   void testTransformationSpaceGroupGenerator_succeeds_with_registered_base() {
     TestableSpaceGroupFactory factory;
-    factory.subscribeGeneratedSpaceGroup(1, "Fake base symbol", "x,-y,z+1/2");
+    factory.subscribeUsingGenerator<AlgorithmicSpaceGroupGenerator>(
+        1, "Fake base symbol", "x,-y,z+1/2");
 
     TestableTransformationSpaceGroupGenerator generator(
         1, "fake symbol", "Fake base symbol | -x+z,y,-x", factory);
@@ -300,7 +331,8 @@ public:
   void testTransformationSpaceGroupGenerator_performs_correct_transformation() {
     // The P is required to determine the centering from the first character.
     TestableSpaceGroupFactory factory;
-    factory.subscribeGeneratedSpaceGroup(1, "P Fake base symbol", "x,-y,z+1/2");
+    factory.subscribeUsingGenerator<AlgorithmicSpaceGroupGenerator>(
+        1, "P Fake base symbol", "x,-y,z+1/2");
 
     TestableTransformationSpaceGroupGenerator generator(
         1, "fake symbol", "P Fake base symbol | -x+z,y,-x", factory);
