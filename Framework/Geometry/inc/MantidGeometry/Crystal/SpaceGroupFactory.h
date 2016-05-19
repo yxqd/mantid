@@ -171,12 +171,14 @@ public:
 
   void unsubscribeSpaceGroup(const std::string &hmSymbol);
 
+  void registerAliases(const std::string &hmSymbol, const std::string &aliases);
+  void registerDefaultAlias(const std::string &hmSymbol);
+
   /// Templated method to subscribe other generators than the ones provided
   /// here.
   template <typename T>
   void subscribeUsingGenerator(size_t number, const std::string &hmSymbol,
-                               const std::string &generatorString,
-                               const std::string &aliases = "") {
+                               const std::string &generatorString) {
     if (isSubscribed(hmSymbol)) {
       throw std::invalid_argument("Space group with symbol '" + hmSymbol +
                                   "' is already registered.");
@@ -245,7 +247,19 @@ protected:
                                    const std::string &transformation) const;
 
   SpaceGroup_const_sptr getPrototype(const std::string &hmSymbol);
+
+  AbstractSpaceGroupGenerator_sptr getGenerator(const std::string &hmSymbol);
+  AbstractSpaceGroupGenerator_sptr
+  getGeneratorByAlias(const std::string &alias);
+
   void subscribe(const AbstractSpaceGroupGenerator_sptr &generator);
+  void removeAllAliases(const AbstractSpaceGroupGenerator_sptr &generator);
+
+  void insertAliases(const std::string &aliases,
+                     const AbstractSpaceGroupGenerator_sptr &generator);
+  void insertAlias(const std::string &alias,
+                   const AbstractSpaceGroupGenerator_sptr &generator);
+
   SpaceGroup_const_sptr
   constructFromPrototype(const SpaceGroup_const_sptr prototype) const;
 
@@ -253,6 +267,7 @@ protected:
 
   std::multimap<size_t, std::string> m_numberMap;
   std::map<std::string, AbstractSpaceGroupGenerator_sptr> m_generatorMap;
+  std::map<std::string, AbstractSpaceGroupGenerator_sptr> m_aliasMap;
   std::multimap<std::string, std::string> m_pointGroupMap;
 
   SpaceGroupFactoryImpl();

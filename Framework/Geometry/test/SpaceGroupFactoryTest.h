@@ -136,6 +136,41 @@ public:
     TS_ASSERT(!factory.isSubscribed(1));
   }
 
+  void testIsSubscribed_default_alias() {
+    TestableSpaceGroupFactory factory;
+
+    TS_ASSERT_THROWS_NOTHING(
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+            2, "P -1", "x,y,z; -x,-y,-z"));
+
+    TS_ASSERT(factory.isSubscribed("P -1"));
+
+    TS_ASSERT(!factory.isSubscribed("P-1"));
+    factory.registerDefaultAlias("P -1");
+
+    TS_ASSERT(factory.isSubscribed("P-1"));
+  }
+
+  void testIsSubscribed_aliases() {
+    TestableSpaceGroupFactory factory;
+
+    TS_ASSERT_THROWS_NOTHING(
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+            2, "P -1", "x,y,z; -x,-y,-z"));
+
+    TS_ASSERT(factory.isSubscribed("P -1"));
+
+    TS_ASSERT(!factory.isSubscribed("Strange Alias"));
+    TS_ASSERT(!factory.isSubscribed("StrangeAlias"));
+    TS_ASSERT(!factory.isSubscribed("Test"));
+
+    factory.registerAliases("P -1", "Strange Alias, Test");
+
+    TS_ASSERT(factory.isSubscribed("Strange Alias"));
+    TS_ASSERT(factory.isSubscribed("StrangeAlias"));
+    TS_ASSERT(factory.isSubscribed("Test"));
+  }
+
   void testSubscribedSpaceGroupSymbols() {
     TestableSpaceGroupFactory factory;
 
@@ -225,6 +260,62 @@ public:
     TS_ASSERT(!factory.m_pointGroupMap.empty());
   }
 
+  void testRegisterDefaultAlias() {
+    TestableSpaceGroupFactory factory;
+    factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+        2, "P -1", "x,y,z; -x,-y,-z");
+
+    TS_ASSERT(!factory.isSubscribed("P-1"));
+    TS_ASSERT_THROWS_NOTHING(factory.registerDefaultAlias("P -1"));
+    TS_ASSERT(factory.isSubscribed("P-1"));
+  }
+
+  void testRegisterAliases_not_registered_throws() {
+    TestableSpaceGroupFactory factory;
+
+    TS_ASSERT_THROWS(factory.registerAliases("P -1", "test"),
+                     std::invalid_argument);
+  }
+
+  void testRegisterAliases_also_registers_no_space_aliases() {
+    TestableSpaceGroupFactory factory;
+    factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+        2, "P -1", "x,y,z; -x,-y,-z");
+
+    factory.registerAliases("P -1", "test alias");
+
+    TS_ASSERT(factory.isSubscribed("test alias"));
+    TS_ASSERT(factory.isSubscribed("testalias"));
+  }
+
+  void testRegisterAliases_removes_duplicates() {
+    TestableSpaceGroupFactory factory;
+    factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+        2, "P -1", "x,y,z; -x,-y,-z");
+
+    TS_ASSERT_THROWS_NOTHING(factory.registerAliases("P -1", "test,test,a"));
+    TS_ASSERT(factory.isSubscribed("test"));
+    TS_ASSERT(factory.isSubscribed("a"));
+  }
+
+  void testRegisterAliases_existing_alias_throws() {
+    TestableSpaceGroupFactory factory;
+    factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+        2, "P -1", "x,y,z; -x,-y,-z");
+
+    TS_ASSERT_THROWS_NOTHING(factory.registerAliases("P -1", "test"));
+    TS_ASSERT_THROWS(factory.registerAliases("P -1", "test"),
+                     std::runtime_error);
+  }
+
+  void testRegisterAliases_empty_does_nothing() {
+    TestableSpaceGroupFactory factory;
+    factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+        2, "P -1", "x,y,z; -x,-y,-z");
+
+    TS_ASSERT_THROWS_NOTHING(factory.registerAliases("P -1", ""));
+  }
+
   void testUnsubscribeSymbol() {
     TestableSpaceGroupFactory factory;
 
@@ -235,6 +326,26 @@ public:
         factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
             2, "P-1", "x,y,z; -x,-y,-z"));
     TS_ASSERT_THROWS_NOTHING(factory.unsubscribeSpaceGroup("P-1"));
+  }
+
+  void testUnsubscribeSymbol_aliases() {
+    TestableSpaceGroupFactory factory;
+
+    TS_ASSERT_THROWS(factory.unsubscribeSpaceGroup("P -1"),
+                     std::invalid_argument);
+
+    TS_ASSERT_THROWS_NOTHING(
+        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
+            2, "P -1", "x,y,z; -x,-y,-z"));
+    factory.registerAliases("P -1", "Test,test2");
+
+    TS_ASSERT(factory.isSubscribed("Test"));
+    TS_ASSERT(factory.isSubscribed("test2"));
+
+    TS_ASSERT_THROWS_NOTHING(factory.unsubscribeSpaceGroup("P -1"));
+
+    TS_ASSERT(!factory.isSubscribed("Test"));
+    TS_ASSERT(!factory.isSubscribed("test2"));
   }
 
   void testUnsubscribeSymbol_multiple_groups_per_number() {

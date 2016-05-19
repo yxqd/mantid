@@ -78,6 +78,21 @@ std::vector<std::string> operator*(const SymmetryOperation &symOp,
   return transformedStrings;
 }
 
+/// Return a copy of the input string without spaces in it.
+std::string copy_remove_spaces(const std::string &str) {
+  std::string result;
+
+  std::remove_copy_if(str.cbegin(), str.cend(), std::back_inserter(result),
+                      [](const char &ch) { return ch == ' '; });
+
+  return result;
+}
+
+/// Returns true if the supplied string contains a space
+bool contains_space(const std::string &str) {
+  return std::find(str.cbegin(), str.cend(), ' ') != str.cend();
+}
+
 /// Constructor for AbstractSpaceGroupGenerator
 AbstractSpaceGroupGenerator::AbstractSpaceGroupGenerator(
     size_t number, const std::string &hmSymbol,
@@ -241,7 +256,8 @@ SpaceGroupFactoryImpl::createSpaceGroup(const std::string &hmSymbol) {
 
 /// Returns true if space group with given symbol is subscribed.
 bool SpaceGroupFactoryImpl::isSubscribed(const std::string &hmSymbol) const {
-  return m_generatorMap.find(hmSymbol) != m_generatorMap.end();
+  return m_generatorMap.find(hmSymbol) != m_generatorMap.end() ||
+         m_aliasMap.find(hmSymbol) != m_aliasMap.end();
 }
 
 /// Returns true if space group with given number is subscribed.
@@ -310,18 +326,61 @@ std::vector<std::string> SpaceGroupFactoryImpl::subscribedSpaceGroupSymbols(
 /// Unsubscribes the space group with the given Hermann-Mauguin symbol, but
 /// throws std::invalid_argument if symbol is not registered.
 void SpaceGroupFactoryImpl::unsubscribeSpaceGroup(const std::string &hmSymbol) {
-  if (!isSubscribed(hmSymbol)) {
-    throw std::invalid_argument(
-        "Cannot unsubscribe space group that is not registered.");
+  auto eraseGenerator = m_generatorMap.find(hmSymbol);
+  if (eraseGenerator == m_generatorMap.end()) {
+    throw std::invalid_argument("Cannot unsubscribe space group that is not "
+                                "registered. If you called this method with an "
+                                "alias, try getting the subscribed symbol from "
+                                "the generated space group.");
   }
 
-  auto eraseGenerator = m_generatorMap.find(hmSymbol);
   AbstractSpaceGroupGenerator_sptr generator = eraseGenerator->second;
 
   auto eraseNumber = m_numberMap.find(generator->getNumber());
 
   m_numberMap.erase(eraseNumber);
   m_generatorMap.erase(eraseGenerator);
+  removeAllAliases(generator);
+}
+
+/**
+ * Registers aliases for the supplied Hermann-Mauguin symbol
+ *
+ * This method registers aliases given in the second argument so that the space
+ * group with the supplied symbol can be created using these aliases.
+ *
+ * Aliases must be a list of comma-separated strings (a list of length 1 is
+ * acceptable). For each alias, a second alias with all spaces removed is
+ * created as well. This is useful for example in the monoclinic case, where
+ * C 2 and C2 should both be present, the same for different origin choices.
+ *
+ * If any alias in the list is already registered for something else, an
+ * exception is thrown.
+ *
+ * @param hmSymbol :: Herrmann-Mauguin symbol for which to register aliases.
+ * @param aliases :: Comma-separated list of aliases.
+ */
+void SpaceGroupFactoryImpl::registerAliases(const std::string &hmSymbol,
+                                            const std::string &aliases) {
+  AbstractSpaceGroupGenerator_sptr generator = getGenerator(hmSymbol);
+
+  if (!generator) {
+    throw std::invalid_argument("Can not register alias for " + hmSymbol +
+                                ", it is not subscribed to the factory.");
+  }
+
+  insertAliases(aliases, generator);
+}
+
+void SpaceGroupFactoryImpl::registerDefaultAlias(const std::string &hmSymbol) {
+  AbstractSpaceGroupGenerator_sptr generator = getGenerator(hmSymbol);
+
+  if (!generator) {
+    throw std::invalid_argument("Can not register alias for " + hmSymbol +
+                                ", it is not subscribed to the factory.");
+  }
+
+  insertAlias(copy_remove_spaces(hmSymbol), generator);
 }
 
 /// Method to get the transformed symbol of an orthorhombic space group under
@@ -395,14 +454,39 @@ void SpaceGroupFactoryImpl::fillPointGroupMap() {
 /// Returns a prototype object for the requested space group.
 SpaceGroup_const_sptr
 SpaceGroupFactoryImpl::getPrototype(const std::string &hmSymbol) {
-  AbstractSpaceGroupGenerator_sptr generator =
-      m_generatorMap.find(hmSymbol)->second;
+  AbstractSpaceGroupGenerator_sptr generator = getGenerator(hmSymbol);
 
   if (!generator) {
-    throw std::runtime_error("No generator for symbol '" + hmSymbol + "'");
+    generator = getGeneratorByAlias(hmSymbol);
+
+    if (!generator) {
+      throw std::runtime_error("No generator for symbol '" + hmSymbol + "'");
+    }
   }
 
   return generator->getPrototype();
+}
+
+/// Returns the generator for the given symbol from the generator map, may be an
+/// invalid pointer.
+AbstractSpaceGroupGenerator_sptr
+SpaceGroupFactoryImpl::getGenerator(const std::string &hmSymbol) {
+  try {
+    return m_generatorMap.at(hmSymbol);
+  } catch (std::out_of_range) {
+    return AbstractSpaceGroupGenerator_sptr();
+  }
+}
+
+/// Returns the generator for the given alias from the alias map, may be an
+/// invalid pointer
+AbstractSpaceGroupGenerator_sptr
+SpaceGroupFactoryImpl::getGeneratorByAlias(const std::string &alias) {
+  try {
+    return m_aliasMap.at(alias);
+  } catch (std::out_of_range) {
+    return AbstractSpaceGroupGenerator_sptr();
+  }
 }
 
 /// Puts the space group factory into the factory.
@@ -419,9 +503,56 @@ void SpaceGroupFactoryImpl::subscribe(
   m_pointGroupMap.clear();
 }
 
+/// Remove all alias entries from the alias map for the given generator.
+void SpaceGroupFactoryImpl::removeAllAliases(
+    const AbstractSpaceGroupGenerator_sptr &generator) {
+  auto iter = m_aliasMap.begin();
+  auto end = m_aliasMap.end();
+
+  while (iter != end) {
+    if (iter->second == generator) {
+      iter = m_aliasMap.erase(iter);
+    } else {
+      ++iter;
+    }
+  }
+}
+
+/// Store aliases for given generator. Will add a version without spaces for
+/// each alias.
+void SpaceGroupFactoryImpl::insertAliases(
+    const std::string &aliases,
+    const AbstractSpaceGroupGenerator_sptr &generator) {
+  StringTokenizer tokenizer(aliases, ",",
+                            StringTokenizer::TOK_TRIM |
+                                StringTokenizer::TOK_IGNORE_EMPTY);
+
+  std::vector<std::string> aliasList(tokenizer.cbegin(), tokenizer.cend());
+  std::transform(tokenizer.cbegin(), tokenizer.cend(),
+                 std::back_inserter(aliasList), copy_remove_spaces);
+
+  std::sort(aliasList.begin(), aliasList.end());
+  aliasList.erase(std::unique(aliasList.begin(), aliasList.end()),
+                  aliasList.end());
+
+  for (const auto &alias : aliasList) {
+    insertAlias(alias, generator);
+  }
+}
+
+/// Store alias for given generator. Throws std::runtime_error if the alias
+/// already exists.
+void SpaceGroupFactoryImpl::insertAlias(
+    const std::string &alias,
+    const AbstractSpaceGroupGenerator_sptr &generator) {
+  if (!m_aliasMap.emplace(alias, generator).second) {
+    throw std::runtime_error("Alias already exists: " + alias);
+  }
+}
+
 /// Constructor cannot be called, since SingletonHolder is used.
 SpaceGroupFactoryImpl::SpaceGroupFactoryImpl()
-    : m_numberMap(), m_generatorMap(), m_pointGroupMap() {
+    : m_numberMap(), m_generatorMap(), m_aliasMap(), m_pointGroupMap() {
   Kernel::LibraryManager::Instance();
 }
 
@@ -940,5 +1071,6 @@ Subscribe cubic(
                          "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y; "
                          "y+3/4,x+1/4,-z+1/4; -x,-y,-z")));
 }
+
 } // namespace Geometry
 } // namespace Mantid
