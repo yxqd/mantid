@@ -7,6 +7,7 @@
 #include "MantidGeometry/Crystal/GroupTransformation.h"
 
 #include "MantidKernel/LibraryManager.h"
+#include "MantidKernel/StringTokenizer.h"
 
 #include <boost/make_shared.hpp>
 #include <boost/algorithm/string.hpp>
@@ -15,11 +16,14 @@
 namespace Mantid {
 namespace Geometry {
 
+using namespace Kernel;
+
 /// Free function that tries to parse the given list of symmetry operations and
 /// returns true if successfull.
 bool isValidGeneratorString(const std::string &generatorString) {
-  std::vector<std::string> generatorStrings;
-  boost::split(generatorStrings, generatorString, boost::is_any_of(";"));
+  StringTokenizer generatorStrings(generatorString, ";",
+                                   StringTokenizer::TOK_TRIM |
+                                       StringTokenizer::TOK_IGNORE_EMPTY);
 
   for (auto &generatorString : generatorStrings) {
     try {
@@ -191,17 +195,18 @@ TransformationSpaceGroupGenerator::getBaseSpaceGroup() const {
  */
 void TransformationSpaceGroupGenerator::setBaseAndTransformation(
     const std::string &generatorInformation) {
-  std::vector<std::string> parts;
-  boost::split(parts, generatorInformation, boost::is_any_of("|"));
+  StringTokenizer generatorParts(generatorInformation, "|",
+                                 StringTokenizer::TOK_IGNORE_EMPTY |
+                                     StringTokenizer::TOK_TRIM);
 
-  if (parts.size() != 2) {
+  if (generatorParts.count() != 2) {
     throw std::invalid_argument("Not a valid string for generation of "
                                 "transformed space groups. Correct format is "
                                 "'HM symbol | transformation'.");
   }
 
-  m_baseGroupHMSymbol = boost::trim_copy(parts.front());
-  m_transformation = parts.back();
+  m_baseGroupHMSymbol = generatorParts[0];
+  m_transformation = generatorParts[1];
 }
 
 /// Constructor of TabulatedSpaceGroupGenerator, throws an std::runtime_error
@@ -324,8 +329,10 @@ void SpaceGroupFactoryImpl::unsubscribeSpaceGroup(const std::string &hmSymbol) {
 std::string SpaceGroupFactoryImpl::getTransformedSymbolOrthorhombic(
     const std::string &hmSymbol, const std::string &transformation) const {
   // Split the symbol up in its components
-  std::vector<std::string> symbolComponents;
-  boost::split(symbolComponents, hmSymbol, boost::is_any_of(" "));
+  StringTokenizer tokenizer(hmSymbol, " ", StringTokenizer::TOK_IGNORE_EMPTY);
+
+  std::vector<std::string> symbolComponents(tokenizer.cbegin(),
+                                            tokenizer.cend());
 
   // Get the centering, that needs to be transformed as well.
   std::string centeringLowerCase =
