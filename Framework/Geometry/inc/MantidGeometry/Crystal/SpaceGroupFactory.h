@@ -175,7 +175,8 @@ public:
   /// here.
   template <typename T>
   void subscribeUsingGenerator(size_t number, const std::string &hmSymbol,
-                               const std::string &generatorString) {
+                               const std::string &generatorString,
+                               const std::string &aliases = "") {
     if (isSubscribed(hmSymbol)) {
       throw std::invalid_argument("Space group with symbol '" + hmSymbol +
                                   "' is already registered.");
@@ -269,73 +270,72 @@ template class MANTID_GEOMETRY_DLL
 typedef Mantid::Kernel::SingletonHolder<SpaceGroupFactoryImpl>
     SpaceGroupFactory;
 
+// Registration helpers are in their own namespace so that names can be readable
+namespace SpaceGroupRegistration {
+
+// Using this name fits the "grammar" for registration better.
+using Subscribe = Kernel::RegistrationHelper;
+
+/**
+ * @class SpaceGroupRegistrationHelper
+ *
+ * This class does essentially nothing, it assists registering space groups into
+ * the factory at compile time. This is done using the comma operator, which
+ * evaluates all statements, discards their value and returns only the last
+ * value. It is used like this:
+ *
+ *  using namespace Mantid::Geometry::SpaceGroupRegistration;
+ *
+ *  Subscribe groups(
+ *        (GeneratedSpaceGroup(....),
+ *         GeneratedSpaceGroup(...))
+ *        );
+ *
+ * The additional parantheses are required because the comma operator has lowest
+ * precedence. Please note that very long "comma-chains" increase compile times.
+ */
+template <typename GeneratorType> struct SpaceGroupRegistrationHelper {
+  SpaceGroupRegistrationHelper(size_t number, const std::string &hmSymbol,
+                               const std::string &generators) {
+    SpaceGroupFactory::Instance().subscribeUsingGenerator<GeneratorType>(
+        number, hmSymbol, generators);
+  }
+
+  /// Required to work in connection with Kernel::RegistrationHelper
+  inline operator int() const { return 1; }
+
+protected:
+  SpaceGroupRegistrationHelper() = default;
+};
+
+using GeneratedSpaceGroup =
+    SpaceGroupRegistrationHelper<AlgorithmicSpaceGroupGenerator>;
+
+using TabulatedSpaceGroup =
+    SpaceGroupRegistrationHelper<TabulatedSpaceGroupGenerator>;
+
+using TransformedSpaceGroup =
+    SpaceGroupRegistrationHelper<TransformationSpaceGroupGenerator>;
+
+template <typename GeneratorType>
+struct OrthorhombicSpaceGroupRegistrationHelper
+    : public SpaceGroupRegistrationHelper<GeneratorType> {
+  OrthorhombicSpaceGroupRegistrationHelper(size_t number,
+                                           const std::string &hmSymbol,
+                                           const std::string &generators) {
+    SpaceGroupFactory::Instance()
+        .subscribeOrthorhombicSpaceGroup<GeneratorType>(number, hmSymbol,
+                                                        generators);
+  }
+};
+
+using OrthorhombicSpaceGroup =
+    OrthorhombicSpaceGroupRegistrationHelper<AlgorithmicSpaceGroupGenerator>;
+
+using TransformedOrthorhombicSpaceGroup =
+    OrthorhombicSpaceGroupRegistrationHelper<TransformationSpaceGroupGenerator>;
+}
 } // namespace Geometry
 } // namespace Mantid
-
-/* Macros for compile time space group registration
- *
- * The macros are a bit different than in other factories,
- * because there is no identifier that can be used to generate
- * a unique name for each RegistrationHelper instance.
- *
- * Instead, the __COUNTER__ macro is used, which is available
- * in many compilers and is incremented every time it's called.
- *
- * Solution was found here: http://stackoverflow.com/a/1295338
- */
-#define SPGF_CONCAT_IMPL(x, y) x##y
-#define SPGF_CONCAT(x, y) SPGF_CONCAT_IMPL(x, y)
-
-#define DECLARE_GENERATED_SPACE_GROUP(number, hmSymbol, generators)            \
-  namespace {                                                                  \
-  Mantid::Kernel::RegistrationHelper SPGF_CONCAT(register_spacegroup_,         \
-                                                 __COUNTER__)(                 \
-      ((Mantid::Geometry::SpaceGroupFactory::Instance()                        \
-            .subscribeUsingGenerator<AlgorithmicSpaceGroupGenerator>(          \
-                number, hmSymbol, generators)),                                \
-       0));                                                                    \
-  }
-
-#define DECLARE_TRANSFORMED_SPACE_GROUP(number, hmSymbol, generators)          \
-  namespace {                                                                  \
-  Mantid::Kernel::RegistrationHelper SPGF_CONCAT(register_spacegroup_,         \
-                                                 __COUNTER__)(                 \
-      ((Mantid::Geometry::SpaceGroupFactory::Instance()                        \
-            .subscribeUsingGenerator<TransformationSpaceGroupGenerator>(       \
-                number, hmSymbol, generators)),                                \
-       0));                                                                    \
-  }
-
-#define DECLARE_TABULATED_SPACE_GROUP(number, hmSymbol, symmetryOperations)    \
-  namespace {                                                                  \
-  Mantid::Kernel::RegistrationHelper SPGF_CONCAT(register_spacegroup_,         \
-                                                 __COUNTER__)(                 \
-      ((Mantid::Geometry::SpaceGroupFactory::Instance()                        \
-            .subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(            \
-                number, hmSymbol, symmetryOperations)),                        \
-       0));                                                                    \
-  }
-
-#define DECLARE_ORTHORHOMBIC_SPACE_GROUP(number, hmSymbol, generators)         \
-  namespace {                                                                  \
-  Mantid::Kernel::RegistrationHelper SPGF_CONCAT(register_spacegroup_,         \
-                                                 __COUNTER__)(                 \
-      ((Mantid::Geometry::SpaceGroupFactory::Instance()                        \
-            .subscribeOrthorhombicSpaceGroup<AlgorithmicSpaceGroupGenerator>(  \
-                number, hmSymbol, generators)),                                \
-       0));                                                                    \
-  }
-
-#define DECLARE_TRANSFORMED_ORTHORHOMBIC_SPACE_GROUP(number, hmSymbol,         \
-                                                     generators)               \
-  namespace {                                                                  \
-  Mantid::Kernel::RegistrationHelper SPGF_CONCAT(register_spacegroup_,         \
-                                                 __COUNTER__)(                 \
-      ((Mantid::Geometry::SpaceGroupFactory::Instance()                        \
-            .subscribeOrthorhombicSpaceGroup<                                  \
-                TransformationSpaceGroupGenerator>(number, hmSymbol,           \
-                                                   generators)),               \
-       0));                                                                    \
-  }
 
 #endif /* MANTID_GEOMETRY_SPACEGROUPFACTORY_H_ */
