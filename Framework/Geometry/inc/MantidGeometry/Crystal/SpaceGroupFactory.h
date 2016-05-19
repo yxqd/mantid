@@ -312,8 +312,18 @@ using Subscribe = Kernel::RegistrationHelper;
 template <typename GeneratorType> struct SpaceGroupRegistrationHelper {
   SpaceGroupRegistrationHelper(size_t number, const std::string &hmSymbol,
                                const std::string &generators) {
-    SpaceGroupFactory::Instance().subscribeUsingGenerator<GeneratorType>(
-        number, hmSymbol, generators);
+    SpaceGroupFactoryImpl &factory = SpaceGroupFactory::Instance();
+
+    factory.subscribeUsingGenerator<GeneratorType>(number, hmSymbol,
+                                                   generators);
+    factory.registerDefaultAlias(hmSymbol);
+  }
+
+  SpaceGroupRegistrationHelper(size_t number, const std::string &hmSymbol,
+                               const std::string &generators,
+                               const std::string &aliases)
+      : SpaceGroupRegistrationHelper(number, hmSymbol, generators) {
+    SpaceGroupFactory::Instance().registerAliases(hmSymbol, aliases);
   }
 
   /// Required to work in connection with Kernel::RegistrationHelper
