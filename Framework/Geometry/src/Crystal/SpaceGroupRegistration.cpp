@@ -131,9 +131,9 @@ Subscribe orthorhombic((
     OrthorhombicSpaceGroup(36, "C m c 21", "-x,-y,z+1/2; x,-y,z+1/2"),
     OrthorhombicSpaceGroup(37, "C c c 2", "-x,-y,z; x,-y,z+1/2"),
     OrthorhombicSpaceGroup(38, "A m m 2", "-x,-y,z; x,-y,z"),
-    OrthorhombicSpaceGroup(39, "A e m 2", "-x,-y,z; x,-y,z+1/2"),
+    OrthorhombicSpaceGroup(39, "A e m 2", "-x,-y,z; x,-y,z+1/2", "A b m 2"),
     OrthorhombicSpaceGroup(40, "A m a 2", "-x,-y,z; x+1/2,-y,z"),
-    OrthorhombicSpaceGroup(41, "A e a 2", "-x,-y,z; x+1/2,-y+1/2,z"),
+    OrthorhombicSpaceGroup(41, "A e a 2", "-x,-y,z; x+1/2,-y+1/2,z", "A b a 2"),
     OrthorhombicSpaceGroup(42, "F m m 2", "-x,-y,z; x,-y,z"),
     OrthorhombicSpaceGroup(43, "F d d 2", "-x,-y,z; x+1/4,-y+1/4,z+1/4"),
     OrthorhombicSpaceGroup(44, "I m m 2", "-x,-y,z; x,-y,z"),
@@ -141,16 +141,20 @@ Subscribe orthorhombic((
     OrthorhombicSpaceGroup(46, "I m a 2", "-x,-y,z; x+1/2,-y,z"),
     OrthorhombicSpaceGroup(47, "P m m m", "-x,-y,z; -x,y,-z; -x,-y,-z"),
 
-    OrthorhombicSpaceGroup(48, "P n n n",
-                           "-x,-y,z; -x,y,-z; -x+1/2,-y+1/2,-z+1/2"),
+    OrthorhombicSpaceGroup(48, "P n n n :1",
+                           "-x,-y,z; -x,y,-z; -x+1/2,-y+1/2,-z+1/2",
+                           "P n n n :S"),
     TransformedOrthorhombicSpaceGroup(48, "P n n n :2",
-                                      "P n n n | x-1/4,y-1/4,z-1/4"),
+                                      "P n n n :1 | x-1/4,y-1/4,z-1/4",
+                                      "P n n n :Z, P n n n"),
 
     OrthorhombicSpaceGroup(49, "P c c m", "-x,-y,z; -x,y,-z+1/2; -x,-y,-z"),
 
-    OrthorhombicSpaceGroup(50, "P b a n", "-x,-y,z; -x,y,-z; -x+1/2,-y+1/2,-z"),
+    OrthorhombicSpaceGroup(50, "P b a n :1",
+                           "-x,-y,z; -x,y,-z; -x+1/2,-y+1/2,-z", "P b a n :S"),
     TransformedOrthorhombicSpaceGroup(50, "P b a n :2",
-                                      "P b a n | x-1/4,y-1/4,z"),
+                                      "P b a n :1 | x-1/4,y-1/4,z",
+                                      "P b a n :Z, P b a n"),
 
     OrthorhombicSpaceGroup(51, "P m m a", "-x+1/2,-y,z; -x,y,-z; -x,-y,-z"),
     OrthorhombicSpaceGroup(52, "P n n a",
@@ -166,10 +170,12 @@ Subscribe orthorhombic((
     OrthorhombicSpaceGroup(58, "P n n m",
                            "-x,-y,z; -x+1/2,y+1/2,-z+1/2; -x,-y,-z"),
 
-    OrthorhombicSpaceGroup(59, "P m m n",
-                           "-x,-y,z; -x+1/2,y+1/2,-z; -x+1/2,-y+1/2,-z"),
+    OrthorhombicSpaceGroup(59, "P m m n :1",
+                           "-x,-y,z; -x+1/2,y+1/2,-z; -x+1/2,-y+1/2,-z",
+                           "P m m n :S"),
     TransformedOrthorhombicSpaceGroup(59, "P m m n :2",
-                                      "P m m n | x-1/4,y-1/4,z"),
+                                      "P m m n :1 | x-1/4,y-1/4,z",
+                                      "P m m n :Z, P m m n"),
 
     OrthorhombicSpaceGroup(60, "P b c n",
                            "-x+1/2,-y+1/2,z+1/2; -x,y,-z+1/2; -x,-y,-z"),
@@ -179,18 +185,23 @@ Subscribe orthorhombic((
                            "-x+1/2,-y,z+1/2; -x,y+1/2,-z; -x,-y,-z"),
     OrthorhombicSpaceGroup(63, "C m c m", "-x,-y,z+1/2; -x,y,-z+1/2; -x,-y,-z"),
     OrthorhombicSpaceGroup(64, "C m c e",
-                           "-x,-y+1/2,z+1/2; -x,y+1/2,-z+1/2; -x,-y,-z"),
+                           "-x,-y+1/2,z+1/2; -x,y+1/2,-z+1/2; -x,-y,-z",
+                           "C m c a"),
     OrthorhombicSpaceGroup(65, "C m m m", "-x,-y,z; -x,y,-z; -x,-y,-z"),
     OrthorhombicSpaceGroup(66, "C c c m", "-x,-y,z; -x,y,-z+1/2; -x,-y,-z"),
-    OrthorhombicSpaceGroup(67, "C m m e", "-x,-y+1/2,z; -x,y+1/2,-z; -x,-y,-z"),
+    OrthorhombicSpaceGroup(67, "C m m e", "-x,-y+1/2,z; -x,y+1/2,-z; -x,-y,-z",
+                           "C m m a"),
     OrthorhombicSpaceGroup(68, "C c c e",
-                           "-x+1/2,-y+1/2,z; -x,y,-z; -x,-y+1/2,-z+1/2"),
+                           "-x+1/2,-y+1/2,z; -x,y,-z; -x,-y+1/2,-z+1/2",
+                           "C c c a"),
     OrthorhombicSpaceGroup(69, "F m m m", "-x,-y,z; -x,y,-z; -x,-y,-z"),
 
-    OrthorhombicSpaceGroup(70, "F d d d",
-                           "-x,-y,z; -x,y,-z; -x+1/4,-y+1/4,-z+1/4"),
+    OrthorhombicSpaceGroup(70, "F d d d :1",
+                           "-x,-y,z; -x,y,-z; -x+1/4,-y+1/4,-z+1/4",
+                           "F d d d :S"),
     TransformedOrthorhombicSpaceGroup(70, "F d d d :2",
-                                      "F d d d | x+1/8,y+1/8,z+1/8"),
+                                      "F d d d :1 | x+1/8,y+1/8,z+1/8",
+                                      "F d d d :Z, F d d d"),
 
     OrthorhombicSpaceGroup(71, "I m m m", "-x,-y,z; -x,y,-z; -x,-y,-z"),
     OrthorhombicSpaceGroup(72, "I b a m", "-x,-y,z; -x+1/2,y+1/2,-z; -x,-y,-z"),
@@ -211,19 +222,25 @@ Subscribe tetragonal((
     GeneratedSpaceGroup(83, "P 4/m", "-x,-y,z; -y,x,z; -x,-y,-z"),
     GeneratedSpaceGroup(84, "P 42/m", "-x,-y,z; -y,x,z+1/2; -x,-y,-z"),
 
-    GeneratedSpaceGroup(85, "P 4/n",
-                        "-x,-y,z; -y+1/2,x+1/2,z; -x+1/2,-y+1/2,-z"),
-    TransformedSpaceGroup(85, "P 4/n :2", "P 4/n | x+1/4,y-1/4,z"),
+    GeneratedSpaceGroup(85, "P 4/n :1",
+                        "-x,-y,z; -y+1/2,x+1/2,z; -x+1/2,-y+1/2,-z",
+                        "P 4/n :S"),
+    TransformedSpaceGroup(85, "P 4/n :2", "P 4/n :1 | x+1/4,y-1/4,z",
+                          "P 4/n :Z, P 4/n"),
 
-    GeneratedSpaceGroup(86, "P 42/n",
-                        "-x,-y,z; -y+1/2,x+1/2,z+1/2; -x+1/2,-y+1/2,-z+1/2"),
-    TransformedSpaceGroup(86, "P 42/n :2", "P 42/n | x+1/4,y+1/4,z+1/4"),
+    GeneratedSpaceGroup(86, "P 42/n :1",
+                        "-x,-y,z; -y+1/2,x+1/2,z+1/2; -x+1/2,-y+1/2,-z+1/2",
+                        "P 42/n :S"),
+    TransformedSpaceGroup(86, "P 42/n :2", "P 42/n :1 | x+1/4,y+1/4,z+1/4",
+                          "P 42/n :Z, P 42/n"),
 
     GeneratedSpaceGroup(87, "I 4/m", "-x,-y,z; -y,x,z; -x,-y,-z"),
 
-    GeneratedSpaceGroup(
-        88, "I 41/a", "-x+1/2,-y+1/2,z+1/2; -y,x+1/2,z+1/4; -x,-y+1/2,-z+1/4"),
-    TransformedSpaceGroup(88, "I 41/a :2", "I 41/a | x,y+1/4,z+1/8"),
+    GeneratedSpaceGroup(88, "I 41/a :1",
+                        "-x+1/2,-y+1/2,z+1/2; -y,x+1/2,z+1/4; -x,-y+1/2,-z+1/4",
+                        "I 41/n :S"),
+    TransformedSpaceGroup(88, "I 41/a :2", "I 41/a :1 | x,y+1/4,z+1/8",
+                          "I 41/a :Z, I 41/a"),
 
     GeneratedSpaceGroup(89, "P 4 2 2", "-x,-y,z; -y,x,z; -x,y,-z"),
     GeneratedSpaceGroup(90, "P 4 21 2",
@@ -273,13 +290,18 @@ Subscribe tetragonal((
     GeneratedSpaceGroup(124, "P 4/m c c",
                         "-x,-y,z; -y,x,z; -x,y,-z+1/2; -x,-y,-z"),
 
-    GeneratedSpaceGroup(125, "P 4/n b m",
-                        "-x,-y,z; -y,x,z; -x,y,-z; -x+1/2,-y+1/2,-z"),
-    TransformedSpaceGroup(125, "P 4/n b m :2", "P 4/n b m | x+1/4,y+1/4,z"),
+    GeneratedSpaceGroup(125, "P 4/n b m :1",
+                        "-x,-y,z; -y,x,z; -x,y,-z; -x+1/2,-y+1/2,-z",
+                        "P 4/n b m :S"),
+    TransformedSpaceGroup(125, "P 4/n b m :2", "P 4/n b m :1 | x+1/4,y+1/4,z",
+                          "P 4/n b m :Z, P 4/n b m"),
 
-    GeneratedSpaceGroup(126, "P 4/n n c",
-                        "-x,-y,z; -y,x,z; -x,y,-z; -x+1/2,-y+1/2,-z+1/2"),
-    TransformedSpaceGroup(126, "P 4/n n c :2", "P 4/n n c | x+1/4,y+1/4,z+1/4"),
+    GeneratedSpaceGroup(126, "P 4/n n c :1",
+                        "-x,-y,z; -y,x,z; -x,y,-z; -x+1/2,-y+1/2,-z+1/2",
+                        "P 4/n n c :S"),
+    TransformedSpaceGroup(126, "P 4/n n c :2",
+                          "P 4/n n c :1 | x+1/4,y+1/4,z+1/4",
+                          "P 4/n n c :Z, P 4/n n c"),
 
     GeneratedSpaceGroup(127, "P 4/m b m",
                         "-x,-y,z; -y,x,z; -x+1/2,y+1/2,-z; -x,-y,-z"),
@@ -287,14 +309,18 @@ Subscribe tetragonal((
                         "-x,-y,z; -y,x,z; -x+1/2,y+1/2,-z+1/2; -x,-y,-z"),
 
     GeneratedSpaceGroup(
-        129, "P 4/n m m",
-        "-x,-y,z; -y+1/2,x+1/2,z; -x+1/2,y+1/2,-z; -x+1/2,-y+1/2,-z"),
-    TransformedSpaceGroup(129, "P 4/n m m :2", "P 4/n m m | x+1/4,y-1/4,z"),
+        129, "P 4/n m m :1",
+        "-x,-y,z; -y+1/2,x+1/2,z; -x+1/2,y+1/2,-z; -x+1/2,-y+1/2,-z",
+        "P 4/n m m :S"),
+    TransformedSpaceGroup(129, "P 4/n m m :2", "P 4/n m m :1 | x+1/4,y-1/4,z",
+                          "P 4/n m m :Z, P 4/n m m"),
 
     GeneratedSpaceGroup(
-        130, "P 4/n c c",
-        "-x,-y,z; -y+1/2,x+1/2,z; -x+1/2,y+1/2,-z+1/2; -x+1/2,-y+1/2,-z"),
-    TransformedSpaceGroup(130, "P 4/n c c :2", "P 4/n c c | x+1/4,y-1/4,z"),
+        130, "P 4/n c c :1",
+        "-x,-y,z; -y+1/2,x+1/2,z; -x+1/2,y+1/2,-z+1/2; -x+1/2,-y+1/2,-z",
+        "P 4/n c c :S"),
+    TransformedSpaceGroup(130, "P 4/n c c :2", "P 4/n c c :1 | x+1/4,y-1/4,z",
+                          "P 4/n c c :Z, P 4/n c c"),
 
     GeneratedSpaceGroup(131, "P 42/m m c",
                         "-x,-y,z; -y,x,z+1/2; -x,y,-z; -x,-y,-z"),
@@ -302,16 +328,20 @@ Subscribe tetragonal((
                         "-x,-y,z; -y,x,z+1/2; -x,y,-z+1/2; -x,-y,-z"),
 
     GeneratedSpaceGroup(
-        133, "P 42/n b c",
-        "-x,-y,z; -y+1/2,x+1/2,z+1/2; -x,y,-z+1/2; -x+1/2,-y+1/2,-z+1/2"),
+        133, "P 42/n b c :1",
+        "-x,-y,z; -y+1/2,x+1/2,z+1/2; -x,y,-z+1/2; -x+1/2,-y+1/2,-z+1/2",
+        "P 42/n b c :S"),
     TransformedSpaceGroup(133, "P 42/n b c :2",
-                          "P 42/n b c | x+1/4,y-1/4,z+1/4"),
+                          "P 42/n b c :1 | x+1/4,y-1/4,z+1/4",
+                          "P 42/n b c :Z, P 42/n b c"),
 
     GeneratedSpaceGroup(
-        134, "P 42/n n m",
-        "-x,-y,z; -y+1/2,x+1/2,z+1/2; -x,y,-z; -x+1/2,-y+1/2,-z+1/2"),
+        134, "P 42/n n m :1",
+        "-x,-y,z; -y+1/2,x+1/2,z+1/2; -x,y,-z; -x+1/2,-y+1/2,-z+1/2",
+        "P 42/n n m :S"),
     TransformedSpaceGroup(134, "P 42/n n m :2",
-                          "P 42/n n m | x+1/4,y-1/4,z+1/4"),
+                          "P 42/n n m :1 | x+1/4,y-1/4,z+1/4",
+                          "P 42/n n m :Z, P 42/n n m"),
 
     GeneratedSpaceGroup(135, "P 42/m b c",
                         "-x,-y,z; -y,x,z+1/2; -x+1/2,y+1/2,-z; -x,-y,-z"),
@@ -319,88 +349,102 @@ Subscribe tetragonal((
         136, "P 42/m n m",
         "-x,-y,z; -y+1/2,x+1/2,z+1/2; -x+1/2,y+1/2,-z+1/2; -x,-y,-z"),
 
-    GeneratedSpaceGroup(137, "P 42/n m c",
+    GeneratedSpaceGroup(137, "P 42/n m c :1",
                         "-x,-y,z; -y+1/2,x+1/2,z+1/2; "
-                        "-x+1/2,y+1/2,-z+1/2; -x+1/2,-y+1/2,-z+1/2"),
+                        "-x+1/2,y+1/2,-z+1/2; -x+1/2,-y+1/2,-z+1/2",
+                        "P 42/n m c :S"),
     TransformedSpaceGroup(137, "P 42/n m c :2",
-                          "P 42/n m c | x+1/4,y-1/4,z+1/4"),
+                          "P 42/n m c :1 | x+1/4,y-1/4,z+1/4",
+                          "P 42/n m c :Z, P 42/n m c"),
 
     GeneratedSpaceGroup(
-        138, "P 42/n c m",
-        "-x,-y,z; -y+1/2,x+1/2,z+1/2; -x+1/2,y+1/2,-z; -x+1/2,-y+1/2,-z+1/2"),
+        138, "P 42/n c m :1",
+        "-x,-y,z; -y+1/2,x+1/2,z+1/2; -x+1/2,y+1/2,-z; -x+1/2,-y+1/2,-z+1/2",
+        "P 42/n c m :S"),
     TransformedSpaceGroup(138, "P 42/n c m :2",
-                          "P 42/n c m | x+1/4,y-1/4,z+1/4"),
+                          "P 42/n c m :1 | x+1/4,y-1/4,z+1/4",
+                          "P 42/n c m :Z, P 42/n c m"),
 
     GeneratedSpaceGroup(139, "I 4/m m m", "-x,-y,z; -y,x,z; -x,y,-z; -x,-y,-z"),
     GeneratedSpaceGroup(140, "I 4/m c m",
                         "-x,-y,z; -y,x,z; -x,y,-z+1/2; -x,-y,-z"),
-    GeneratedSpaceGroup(141, "I 41/a m d",
+    GeneratedSpaceGroup(141, "I 41/a m d :1",
                         "-x+1/2,-y+1/2,z+1/2; -y,x+1/2,z+1/4; "
-                        "-x+1/2,y,-z+3/4; -x,-y+1/2,-z+1/4"),
-    TransformedSpaceGroup(141, "I 41/a m d :2", "I 41/a m d | x,y-1/4,z+1/8"),
+                        "-x+1/2,y,-z+3/4; -x,-y+1/2,-z+1/4",
+                        "I 41/a m d :S"),
+    TransformedSpaceGroup(141, "I 41/a m d :2", "I 41/a m d :1 | x,y-1/4,z+1/8",
+                          "I 41/a m d :Z, I 41/a m d"),
 
-    GeneratedSpaceGroup(142, "I 41/a c d",
+    GeneratedSpaceGroup(142, "I 41/a c d :1",
                         "-x+1/2,-y+1/2,z+1/2; -y,x+1/2,z+1/4; "
-                        "-x+1/2,y,-z+1/4; -x,-y+1/2,-z+1/4"),
-    TransformedSpaceGroup(142, "I 41/a c d :2", "I 41/a c d | x,y-1/4,z+1/8")));
+                        "-x+1/2,y,-z+1/4; -x,-y+1/2,-z+1/4",
+                        "I 41/a c d :S"),
+    TransformedSpaceGroup(142, "I 41/a c d :2", "I 41/a c d :1 | x,y-1/4,z+1/8",
+                          "I 41/a c d :Z, I 41/a c d")));
 
-Subscribe trigonal(
-    (GeneratedSpaceGroup(143, "P 3", "-y,x-y,z"),
-     GeneratedSpaceGroup(144, "P 31", "-y,x-y,z+1/3"),
-     GeneratedSpaceGroup(145, "P 32", "-y,x-y,z+2/3"),
+Subscribe trigonal((
+    GeneratedSpaceGroup(143, "P 3", "-y,x-y,z"),
+    GeneratedSpaceGroup(144, "P 31", "-y,x-y,z+1/3"),
+    GeneratedSpaceGroup(145, "P 32", "-y,x-y,z+2/3"),
 
-     GeneratedSpaceGroup(146, "R 3", "-y,x-y,z"),
-     TransformedSpaceGroup(
-         146, "R 3 :r", "R 3 | 2/3x-1/3y-1/3z, 1/3x+1/3y-2/3z, 1/3x+1/3y+1/3z"),
+    GeneratedSpaceGroup(146, "R 3", "-y,x-y,z", "R 3 :H, R 3 :h"),
+    TransformedSpaceGroup(
+        146, "R 3 :r", "R 3 | 2/3x-1/3y-1/3z, 1/3x+1/3y-2/3z, 1/3x+1/3y+1/3z",
+        "R 3 :R"),
 
-     GeneratedSpaceGroup(147, "P -3", "-y,x-y,z; -x,-y,-z"),
+    GeneratedSpaceGroup(147, "P -3", "-y,x-y,z; -x,-y,-z"),
 
-     GeneratedSpaceGroup(148, "R -3", "-y,x-y,z; -x,-y,-z"),
-     TransformedSpaceGroup(
-         148, "R -3 :r",
-         "R -3 | 2/3x-1/3y-1/3z, 1/3x+1/3y-2/3z, 1/3x+1/3y+1/3z"),
+    GeneratedSpaceGroup(148, "R -3", "-y,x-y,z; -x,-y,-z", "R -3 :H, R -3 :h"),
+    TransformedSpaceGroup(
+        148, "R -3 :r", "R -3 | 2/3x-1/3y-1/3z, 1/3x+1/3y-2/3z, 1/3x+1/3y+1/3z",
+        "R -r :R"),
 
-     GeneratedSpaceGroup(149, "P 3 1 2", "-y,x-y,z; -y,-x,-z"),
-     GeneratedSpaceGroup(150, "P 3 2 1", "-y,x-y,z; y,x,-z"),
-     GeneratedSpaceGroup(151, "P 31 1 2", "-y,x-y,z+1/3; -y,-x,-z+2/3"),
-     GeneratedSpaceGroup(152, "P 31 2 1", "-y,x-y,z+1/3; y,x,-z"),
-     GeneratedSpaceGroup(153, "P 32 1 2", "-y,x-y,z+2/3; -y,-x,-z+1/3"),
-     GeneratedSpaceGroup(154, "P 32 2 1", "-y,x-y,z+2/3; y,x,-z"),
+    GeneratedSpaceGroup(149, "P 3 1 2", "-y,x-y,z; -y,-x,-z"),
+    GeneratedSpaceGroup(150, "P 3 2 1", "-y,x-y,z; y,x,-z"),
+    GeneratedSpaceGroup(151, "P 31 1 2", "-y,x-y,z+1/3; -y,-x,-z+2/3"),
+    GeneratedSpaceGroup(152, "P 31 2 1", "-y,x-y,z+1/3; y,x,-z"),
+    GeneratedSpaceGroup(153, "P 32 1 2", "-y,x-y,z+2/3; -y,-x,-z+1/3"),
+    GeneratedSpaceGroup(154, "P 32 2 1", "-y,x-y,z+2/3; y,x,-z"),
 
-     GeneratedSpaceGroup(155, "R 32", "-y,x-y,z; y,x,-z"),
-     TransformedSpaceGroup(
-         155, "R 32 :r",
-         "R 32 | 2/3x-1/3y-1/3z, 1/3x+1/3y-2/3z, 1/3x+1/3y+1/3z"),
+    GeneratedSpaceGroup(155, "R 32", "-y,x-y,z; y,x,-z", "R 32 :H, R 32 :h"),
+    TransformedSpaceGroup(
+        155, "R 32 :r", "R 32 | 2/3x-1/3y-1/3z, 1/3x+1/3y-2/3z, 1/3x+1/3y+1/3z",
+        "R 32 :R"),
 
-     GeneratedSpaceGroup(156, "P 3 m 1", "-y,x-y,z; -y,-x,z"),
-     GeneratedSpaceGroup(157, "P 3 1 m", "-y,x-y,z; y,x,z"),
-     GeneratedSpaceGroup(158, "P 3 c 1", "-y,x-y,z; -y,-x,z+1/2"),
-     GeneratedSpaceGroup(159, "P 3 1 c", "-y,x-y,z; y,x,z+1/2"),
+    GeneratedSpaceGroup(156, "P 3 m 1", "-y,x-y,z; -y,-x,z"),
+    GeneratedSpaceGroup(157, "P 3 1 m", "-y,x-y,z; y,x,z"),
+    GeneratedSpaceGroup(158, "P 3 c 1", "-y,x-y,z; -y,-x,z+1/2"),
+    GeneratedSpaceGroup(159, "P 3 1 c", "-y,x-y,z; y,x,z+1/2"),
 
-     GeneratedSpaceGroup(160, "R 3 m", "-y,x-y,z; -y,-x,z"),
-     TransformedSpaceGroup(
-         160, "R 3 m :r",
-         "R 3 m | 2/3x-1/3y-1/3z, 1/3x+1/3y-2/3z, 1/3x+1/3y+1/3z"),
+    GeneratedSpaceGroup(160, "R 3 m", "-y,x-y,z; -y,-x,z",
+                        "R 3 m :H, R 3 m :h"),
+    TransformedSpaceGroup(
+        160, "R 3 m :r",
+        "R 3 m | 2/3x-1/3y-1/3z, 1/3x+1/3y-2/3z, 1/3x+1/3y+1/3z", "R 3 m :R"),
 
-     GeneratedSpaceGroup(161, "R 3 c", "-y,x-y,z; -y,-x,z+1/2"),
-     TransformedSpaceGroup(
-         161, "R 3 c :r",
-         "R 3 c | 2/3x-1/3y-1/3z, 1/3x+1/3y-2/3z, 1/3x+1/3y+1/3z"),
+    GeneratedSpaceGroup(161, "R 3 c", "-y,x-y,z; -y,-x,z+1/2",
+                        "R 3 c :H, R 3 c :h"),
+    TransformedSpaceGroup(
+        161, "R 3 c :r",
+        "R 3 c | 2/3x-1/3y-1/3z, 1/3x+1/3y-2/3z, 1/3x+1/3y+1/3z", "R 3 c :R"),
 
-     GeneratedSpaceGroup(162, "P -3 1 m", "-y,x-y,z; -y,-x,-z; -x,-y,-z"),
-     GeneratedSpaceGroup(163, "P -3 1 c", "-y,x-y,z; -y,-x,-z+1/2; -x,-y,-z"),
-     GeneratedSpaceGroup(164, "P -3 m 1", "-y,x-y,z; y,x,-z; -x,-y,-z"),
-     GeneratedSpaceGroup(165, "P -3 c 1", "-y,x-y,z; y,x,-z+1/2; -x,-y,-z"),
+    GeneratedSpaceGroup(162, "P -3 1 m", "-y,x-y,z; -y,-x,-z; -x,-y,-z"),
+    GeneratedSpaceGroup(163, "P -3 1 c", "-y,x-y,z; -y,-x,-z+1/2; -x,-y,-z"),
+    GeneratedSpaceGroup(164, "P -3 m 1", "-y,x-y,z; y,x,-z; -x,-y,-z"),
+    GeneratedSpaceGroup(165, "P -3 c 1", "-y,x-y,z; y,x,-z+1/2; -x,-y,-z"),
 
-     GeneratedSpaceGroup(166, "R -3 m", "-y,x-y,z; y,x,-z; -x,-y,-z"),
-     TransformedSpaceGroup(
-         166, "R -3 m :r",
-         "R -3 m | 2/3x-1/3y-1/3z, 1/3x+1/3y-2/3z, 1/3x+1/3y+1/3z"),
+    GeneratedSpaceGroup(166, "R -3 m", "-y,x-y,z; y,x,-z; -x,-y,-z",
+                        "R -3 m :H, R -3 m :h"),
+    TransformedSpaceGroup(
+        166, "R -3 m :r",
+        "R -3 m | 2/3x-1/3y-1/3z, 1/3x+1/3y-2/3z, 1/3x+1/3y+1/3z", "R -3 m :R"),
 
-     GeneratedSpaceGroup(167, "R -3 c", "-y,x-y,z; y,x,-z+1/2; -x,-y,-z"),
-     TransformedSpaceGroup(
-         167, "R -3 c :r",
-         "R -3 c | 2/3x-1/3y-1/3z, 1/3x+1/3y-2/3z, 1/3x+1/3y+1/3z")));
+    GeneratedSpaceGroup(167, "R -3 c", "-y,x-y,z; y,x,-z+1/2; -x,-y,-z",
+                        "R -3 c :H, R -3 c :h"),
+    TransformedSpaceGroup(
+        167, "R -3 c :r",
+        "R -3 c | 2/3x-1/3y-1/3z, 1/3x+1/3y-2/3z, 1/3x+1/3y+1/3z",
+        "R -3 c :R")));
 
 Subscribe hexagonal((
     GeneratedSpaceGroup(168, "P 6", "-y,x-y,z; -x,-y,z"),
@@ -435,97 +479,108 @@ Subscribe hexagonal((
                         "-y,x-y,z; -x,-y,z+1/2; y,x,-z+1/2; -x,-y,-z"),
     GeneratedSpaceGroup(194, "P 63/m m c",
                         "-y,x-y,z; -x,-y,z+1/2; y,x,-z; -x,-y,-z")));
-Subscribe cubic(
-    (GeneratedSpaceGroup(195, "P 2 3", "-x,-y,z; -x,y,-z; z,x,y"),
-     GeneratedSpaceGroup(196, "F 2 3", "-x,-y,z; -x,y,-z; z,x,y"),
-     GeneratedSpaceGroup(197, "I 2 3", "-x,-y,z; -x,y,-z; z,x,y"),
-     GeneratedSpaceGroup(198, "P 21 3",
-                         "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y"),
-     GeneratedSpaceGroup(199, "I 21 3",
-                         "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y"),
-     GeneratedSpaceGroup(200, "P m -3", "-x,-y,z; -x,y,-z; z,x,y; -x,-y,-z"),
+Subscribe cubic((
+    GeneratedSpaceGroup(195, "P 2 3", "-x,-y,z; -x,y,-z; z,x,y"),
+    GeneratedSpaceGroup(196, "F 2 3", "-x,-y,z; -x,y,-z; z,x,y"),
+    GeneratedSpaceGroup(197, "I 2 3", "-x,-y,z; -x,y,-z; z,x,y"),
+    GeneratedSpaceGroup(198, "P 21 3",
+                        "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y"),
+    GeneratedSpaceGroup(199, "I 21 3",
+                        "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y"),
+    GeneratedSpaceGroup(200, "P m -3", "-x,-y,z; -x,y,-z; z,x,y; -x,-y,-z"),
 
-     GeneratedSpaceGroup(201, "P n -3",
-                         "-x,-y,z; -x,y,-z; z,x,y; -x+1/2,-y+1/2,-z+1/2"),
-     TransformedSpaceGroup(201, "P n -3 :2", "P n -3 | x+1/4,y+1/4,z+1/4"),
+    GeneratedSpaceGroup(201, "P n -3 :1",
+                        "-x,-y,z; -x,y,-z; z,x,y; -x+1/2,-y+1/2,-z+1/2",
+                        "P n -3 :S"),
+    TransformedSpaceGroup(201, "P n -3 :2", "P n -3 :1 | x+1/4,y+1/4,z+1/4",
+                          "P n -3 :Z, P n -3"),
 
-     GeneratedSpaceGroup(202, "F m -3", "-x,-y,z; -x,y,-z; z,x,y; -x,-y,-z"),
+    GeneratedSpaceGroup(202, "F m -3", "-x,-y,z; -x,y,-z; z,x,y; -x,-y,-z"),
 
-     GeneratedSpaceGroup(203, "F d -3",
-                         "-x,-y,z; -x,y,-z; z,x,y; -x+1/4,-y+1/4,-z+1/4"),
-     TransformedSpaceGroup(203, "F d -3 :2", "F d -3 | x+1/8,y+1/8,z+1/8"),
+    GeneratedSpaceGroup(203, "F d -3 :1",
+                        "-x,-y,z; -x,y,-z; z,x,y; -x+1/4,-y+1/4,-z+1/4",
+                        "F d -3 :S"),
+    TransformedSpaceGroup(203, "F d -3 :2", "F d -3 :1 | x+1/8,y+1/8,z+1/8",
+                          "F d -3 :Z, F d -3"),
 
-     GeneratedSpaceGroup(204, "I m -3", "-x,-y,z; -x,y,-z; z,x,y; -x,-y,-z"),
-     GeneratedSpaceGroup(205, "P a -3",
-                         "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y; -x,-y,-z"),
-     GeneratedSpaceGroup(206, "I a -3",
-                         "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y; -x,-y,-z"),
-     GeneratedSpaceGroup(207, "P 4 3 2", "-x,-y,z; -x,y,-z; z,x,y; y,x,-z"),
-     GeneratedSpaceGroup(208, "P 42 3 2",
-                         "-x,-y,z; -x,y,-z; z,x,y; y+1/2,x+1/2,-z+1/2"),
-     GeneratedSpaceGroup(209, "F 4 3 2", "-x,-y,z; -x,y,-z; z,x,y; y,x,-z"),
+    GeneratedSpaceGroup(204, "I m -3", "-x,-y,z; -x,y,-z; z,x,y; -x,-y,-z"),
+    GeneratedSpaceGroup(205, "P a -3",
+                        "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y; -x,-y,-z"),
+    GeneratedSpaceGroup(206, "I a -3",
+                        "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y; -x,-y,-z"),
+    GeneratedSpaceGroup(207, "P 4 3 2", "-x,-y,z; -x,y,-z; z,x,y; y,x,-z"),
+    GeneratedSpaceGroup(208, "P 42 3 2",
+                        "-x,-y,z; -x,y,-z; z,x,y; y+1/2,x+1/2,-z+1/2"),
+    GeneratedSpaceGroup(209, "F 4 3 2", "-x,-y,z; -x,y,-z; z,x,y; y,x,-z"),
 
-     GeneratedSpaceGroup(
-         210, "F 41 3 2",
-         "-x,-y+1/2,z+1/2; -x+1/2,y+1/2,-z; z,x,y; y+3/4,x+1/4,-z+3/4"),
-     GeneratedSpaceGroup(211, "I 4 3 2", "-x,-y,z; -x,y,-z; z,x,y; y,x,-z"),
-     GeneratedSpaceGroup(
-         212, "P 43 3 2",
-         "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y; y+1/4,x+3/4,-z+3/4"),
-     GeneratedSpaceGroup(
-         213, "P 41 3 2",
-         "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y; y+3/4,x+1/4,-z+1/4"),
-     GeneratedSpaceGroup(
-         214, "I 41 3 2",
-         "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y; y+3/4,x+1/4,-z+1/4"),
-     GeneratedSpaceGroup(215, "P -4 3 m", "-x,-y,z; -x,y,-z; z,x,y; y,x,z"),
-     GeneratedSpaceGroup(216, "F -4 3 m", "-x,-y,z; -x,y,-z; z,x,y; y,x,z"),
-     GeneratedSpaceGroup(217, "I -4 3 m", "-x,-y,z; -x,y,-z; z,x,y; y,x,z"),
-     GeneratedSpaceGroup(218, "P -4 3 n",
-                         "-x,-y,z; -x,y,-z; z,x,y; y+1/2,x+1/2,z+1/2"),
-     GeneratedSpaceGroup(219, "F -4 3 c",
-                         "-x,-y,z; -x,y,-z; z,x,y; y+1/2,x+1/2,z+1/2"),
-     GeneratedSpaceGroup(
-         220, "I -4 3 d",
-         "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y; y+1/4,x+1/4,z+1/4"),
-     GeneratedSpaceGroup(221, "P m -3 m",
-                         "-x,-y,z; -x,y,-z; z,x,y; y,x,-z; -x,-y,-z"),
+    GeneratedSpaceGroup(
+        210, "F 41 3 2",
+        "-x,-y+1/2,z+1/2; -x+1/2,y+1/2,-z; z,x,y; y+3/4,x+1/4,-z+3/4"),
+    GeneratedSpaceGroup(211, "I 4 3 2", "-x,-y,z; -x,y,-z; z,x,y; y,x,-z"),
+    GeneratedSpaceGroup(
+        212, "P 43 3 2",
+        "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y; y+1/4,x+3/4,-z+3/4"),
+    GeneratedSpaceGroup(
+        213, "P 41 3 2",
+        "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y; y+3/4,x+1/4,-z+1/4"),
+    GeneratedSpaceGroup(
+        214, "I 41 3 2",
+        "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y; y+3/4,x+1/4,-z+1/4"),
+    GeneratedSpaceGroup(215, "P -4 3 m", "-x,-y,z; -x,y,-z; z,x,y; y,x,z"),
+    GeneratedSpaceGroup(216, "F -4 3 m", "-x,-y,z; -x,y,-z; z,x,y; y,x,z"),
+    GeneratedSpaceGroup(217, "I -4 3 m", "-x,-y,z; -x,y,-z; z,x,y; y,x,z"),
+    GeneratedSpaceGroup(218, "P -4 3 n",
+                        "-x,-y,z; -x,y,-z; z,x,y; y+1/2,x+1/2,z+1/2"),
+    GeneratedSpaceGroup(219, "F -4 3 c",
+                        "-x,-y,z; -x,y,-z; z,x,y; y+1/2,x+1/2,z+1/2"),
+    GeneratedSpaceGroup(
+        220, "I -4 3 d",
+        "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y; y+1/4,x+1/4,z+1/4"),
+    GeneratedSpaceGroup(221, "P m -3 m",
+                        "-x,-y,z; -x,y,-z; z,x,y; y,x,-z; -x,-y,-z"),
 
-     GeneratedSpaceGroup(
-         222, "P n -3 n",
-         "-x,-y,z; -x,y,-z; z,x,y; y,x,-z; -x+1/2,-y+1/2,-z+1/2"),
-     TransformedSpaceGroup(222, "P n -3 n :2", "P n -3 n | x+1/4,y+1/4,z+1/4"),
+    GeneratedSpaceGroup(222, "P n -3 n :1",
+                        "-x,-y,z; -x,y,-z; z,x,y; y,x,-z; -x+1/2,-y+1/2,-z+1/2",
+                        "P n -3 n :S"),
+    TransformedSpaceGroup(222, "P n -3 n :2", "P n -3 n :1 | x+1/4,y+1/4,z+1/4",
+                          "P n -3 n :Z, P n -3 n"),
 
-     GeneratedSpaceGroup(
-         223, "P m -3 n",
-         "-x,-y,z; -x,y,-z; z,x,y; y+1/2,x+1/2,-z+1/2; -x,-y,-z"),
+    GeneratedSpaceGroup(
+        223, "P m -3 n",
+        "-x,-y,z; -x,y,-z; z,x,y; y+1/2,x+1/2,-z+1/2; -x,-y,-z"),
 
-     GeneratedSpaceGroup(224, "P n -3 m",
-                         "-x,-y,z; -x,y,-z; z,x,y; y+1/2,x+1/2,-z+1/2; "
-                         "-x+1/2,-y+1/2,-z+1/2"),
-     TransformedSpaceGroup(224, "P n -3 m :2", "P n -3 m | x+1/4,y+1/4,z+1/4"),
+    GeneratedSpaceGroup(224, "P n -3 m :1",
+                        "-x,-y,z; -x,y,-z; z,x,y; y+1/2,x+1/2,-z+1/2; "
+                        "-x+1/2,-y+1/2,-z+1/2",
+                        "P n -3 m :S"),
+    TransformedSpaceGroup(224, "P n -3 m :2", "P n -3 m :1 | x+1/4,y+1/4,z+1/4",
+                          "P n -3 m :Z, P n -3 m"),
 
-     GeneratedSpaceGroup(225, "F m -3 m",
-                         "-x,-y,z; -x,y,-z; z,x,y; y,x,-z; -x,-y,-z"),
-     GeneratedSpaceGroup(
-         226, "F m -3 c",
-         "-x,-y,z; -x,y,-z; z,x,y; y+1/2,x+1/2,-z+1/2; -x,-y,-z"),
+    GeneratedSpaceGroup(225, "F m -3 m",
+                        "-x,-y,z; -x,y,-z; z,x,y; y,x,-z; -x,-y,-z"),
+    GeneratedSpaceGroup(
+        226, "F m -3 c",
+        "-x,-y,z; -x,y,-z; z,x,y; y+1/2,x+1/2,-z+1/2; -x,-y,-z"),
 
-     GeneratedSpaceGroup(227, "F d -3 m",
-                         "-x,-y+1/2,z+1/2; -x+1/2,y+1/2,-z; z,x,y; "
-                         "y+3/4,x+1/4,-z+3/4; -x+1/4,-y+1/4,-z+1/4"),
-     TransformedSpaceGroup(227, "F d -3 m :2", "F d -3 m | x+1/8,y+1/8,z+1/8"),
+    GeneratedSpaceGroup(227, "F d -3 m :1",
+                        "-x,-y+1/2,z+1/2; -x+1/2,y+1/2,-z; z,x,y; "
+                        "y+3/4,x+1/4,-z+3/4; -x+1/4,-y+1/4,-z+1/4",
+                        "F d -3 m :S"),
+    TransformedSpaceGroup(227, "F d -3 m :2", "F d -3 m :1 | x+1/8,y+1/8,z+1/8",
+                          "F d -3 m :Z, F d -3 m"),
 
-     GeneratedSpaceGroup(228, "F d -3 c",
-                         "-x,-y+1/2,z+1/2; -x+1/2,y+1/2,-z; z,x,y; "
-                         "y+3/4,x+1/4,-z+3/4; -x+3/4,-y+3/4,-z+3/4"),
-     TransformedSpaceGroup(228, "F d -3 c :2", "F d -3 c | x+3/8,y+3/8,z+3/8"),
+    GeneratedSpaceGroup(228, "F d -3 c :1",
+                        "-x,-y+1/2,z+1/2; -x+1/2,y+1/2,-z; z,x,y; "
+                        "y+3/4,x+1/4,-z+3/4; -x+3/4,-y+3/4,-z+3/4",
+                        "F d -3 c :S"),
+    TransformedSpaceGroup(228, "F d -3 c :2", "F d -3 c :1 | x+3/8,y+3/8,z+3/8",
+                          "F d -3 c :Z, F d -3 c"),
 
-     GeneratedSpaceGroup(229, "I m -3 m",
-                         "-x,-y,z; -x,y,-z; z,x,y; y,x,-z; -x,-y,-z"),
-     GeneratedSpaceGroup(230, "I a -3 d",
-                         "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y; "
-                         "y+3/4,x+1/4,-z+1/4; -x,-y,-z")));
+    GeneratedSpaceGroup(229, "I m -3 m",
+                        "-x,-y,z; -x,y,-z; z,x,y; y,x,-z; -x,-y,-z"),
+    GeneratedSpaceGroup(230, "I a -3 d",
+                        "-x+1/2,-y,z+1/2; -x,y+1/2,-z+1/2; z,x,y; "
+                        "y+3/4,x+1/4,-z+1/4; -x,-y,-z")));
 }
 }
 }
