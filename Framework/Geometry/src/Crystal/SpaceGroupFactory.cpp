@@ -372,17 +372,6 @@ void SpaceGroupFactoryImpl::registerAliases(const std::string &hmSymbol,
   insertAliases(aliases, generator);
 }
 
-void SpaceGroupFactoryImpl::registerDefaultAlias(const std::string &hmSymbol) {
-  AbstractSpaceGroupGenerator_sptr generator = getGenerator(hmSymbol);
-
-  if (!generator) {
-    throw std::invalid_argument("Can not register alias for " + hmSymbol +
-                                ", it is not subscribed to the factory.");
-  }
-
-  insertAlias(copy_remove_spaces(hmSymbol), generator);
-}
-
 /// Method to get the transformed symbol of an orthorhombic space group under
 /// the supplied transformation.
 std::string SpaceGroupFactoryImpl::getTransformedSymbolOrthorhombic(
@@ -528,8 +517,6 @@ void SpaceGroupFactoryImpl::insertAliases(
                                 StringTokenizer::TOK_IGNORE_EMPTY);
 
   std::vector<std::string> aliasList(tokenizer.cbegin(), tokenizer.cend());
-  std::transform(tokenizer.cbegin(), tokenizer.cend(),
-                 std::back_inserter(aliasList), copy_remove_spaces);
 
   std::sort(aliasList.begin(), aliasList.end());
   aliasList.erase(std::unique(aliasList.begin(), aliasList.end()),

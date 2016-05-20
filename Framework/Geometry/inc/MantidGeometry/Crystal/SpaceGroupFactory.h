@@ -18,6 +18,8 @@ std::vector<std::string> MANTID_GEOMETRY_DLL
 operator*(const SymmetryOperation &symOp,
           const std::vector<std::string> &strings);
 
+std::string MANTID_GEOMETRY_DLL copy_remove_spaces(const std::string &str);
+
 /**
  * @class AbstractSpaceGroupGenerator
  *
@@ -172,7 +174,6 @@ public:
   void unsubscribeSpaceGroup(const std::string &hmSymbol);
 
   void registerAliases(const std::string &hmSymbol, const std::string &aliases);
-  void registerDefaultAlias(const std::string &hmSymbol);
 
   /// Templated method to subscribe other generators than the ones provided
   /// here.
@@ -316,7 +317,7 @@ template <typename GeneratorType> struct SpaceGroupRegistrationHelper {
 
     factory.subscribeUsingGenerator<GeneratorType>(number, hmSymbol,
                                                    generators);
-    factory.registerDefaultAlias(hmSymbol);
+    factory.registerAliases(hmSymbol, copy_remove_spaces(hmSymbol));
   }
 
   SpaceGroupRegistrationHelper(size_t number, const std::string &hmSymbol,

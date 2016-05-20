@@ -136,21 +136,6 @@ public:
     TS_ASSERT(!factory.isSubscribed(1));
   }
 
-  void testIsSubscribed_default_alias() {
-    TestableSpaceGroupFactory factory;
-
-    TS_ASSERT_THROWS_NOTHING(
-        factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
-            2, "P -1", "x,y,z; -x,-y,-z"));
-
-    TS_ASSERT(factory.isSubscribed("P -1"));
-
-    TS_ASSERT(!factory.isSubscribed("P-1"));
-    factory.registerDefaultAlias("P -1");
-
-    TS_ASSERT(factory.isSubscribed("P-1"));
-  }
-
   void testIsSubscribed_aliases() {
     TestableSpaceGroupFactory factory;
 
@@ -167,7 +152,6 @@ public:
     factory.registerAliases("P -1", "Strange Alias, Test");
 
     TS_ASSERT(factory.isSubscribed("Strange Alias"));
-    TS_ASSERT(factory.isSubscribed("StrangeAlias"));
     TS_ASSERT(factory.isSubscribed("Test"));
   }
 
@@ -260,32 +244,11 @@ public:
     TS_ASSERT(!factory.m_pointGroupMap.empty());
   }
 
-  void testRegisterDefaultAlias() {
-    TestableSpaceGroupFactory factory;
-    factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
-        2, "P -1", "x,y,z; -x,-y,-z");
-
-    TS_ASSERT(!factory.isSubscribed("P-1"));
-    TS_ASSERT_THROWS_NOTHING(factory.registerDefaultAlias("P -1"));
-    TS_ASSERT(factory.isSubscribed("P-1"));
-  }
-
   void testRegisterAliases_not_registered_throws() {
     TestableSpaceGroupFactory factory;
 
     TS_ASSERT_THROWS(factory.registerAliases("P -1", "test"),
                      std::invalid_argument);
-  }
-
-  void testRegisterAliases_also_registers_no_space_aliases() {
-    TestableSpaceGroupFactory factory;
-    factory.subscribeUsingGenerator<TabulatedSpaceGroupGenerator>(
-        2, "P -1", "x,y,z; -x,-y,-z");
-
-    factory.registerAliases("P -1", "test alias");
-
-    TS_ASSERT(factory.isSubscribed("test alias"));
-    TS_ASSERT(factory.isSubscribed("testalias"));
   }
 
   void testRegisterAliases_removes_duplicates() {
