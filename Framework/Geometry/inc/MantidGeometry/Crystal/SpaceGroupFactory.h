@@ -4,7 +4,6 @@
 #include "MantidGeometry/DllConfig.h"
 #include "MantidKernel/SingletonHolder.h"
 #include "MantidGeometry/Crystal/SpaceGroup.h"
-#include "MantidKernel/RegistrationHelper.h"
 
 #include <map>
 
@@ -17,8 +16,6 @@ isValidGeneratorString(const std::string &generatorString);
 std::vector<std::string> MANTID_GEOMETRY_DLL
 operator*(const SymmetryOperation &symOp,
           const std::vector<std::string> &strings);
-
-std::string MANTID_GEOMETRY_DLL copy_remove_spaces(const std::string &str);
 
 /**
  * @class AbstractSpaceGroupGenerator
@@ -204,11 +201,12 @@ public:
    * @param number :: Space group number (ITA)
    * @param hmSymbol :: Herrman-Mauguin symbol (standard setting)
    * @param generatorString :: Generating symmetry operations (standard setting)
+   * @return :: Additional subscribed space group symbols
    */
   template <typename T>
-  void subscribeOrthorhombicSpaceGroup(size_t number,
-                                       const std::string &hmSymbol,
-                                       const std::string &generatorString) {
+  std::vector<std::string>
+  subscribeOrthorhombicSpaceGroup(size_t number, const std::string &hmSymbol,
+                                  const std::string &generatorString) {
     // Subscribe the base type, this must always be done.
     subscribeUsingGenerator<T>(number, hmSymbol, generatorString);
 
@@ -240,6 +238,8 @@ public:
         transformedSpaceGroupSymbols.push_back(transformedSymbol);
       }
     }
+
+    return transformedSpaceGroupSymbols;
   }
 
 protected:
@@ -286,81 +286,6 @@ template class MANTID_GEOMETRY_DLL
 typedef Mantid::Kernel::SingletonHolder<SpaceGroupFactoryImpl>
     SpaceGroupFactory;
 
-// Registration helpers are in their own namespace so that names can be readable
-namespace SpaceGroupRegistration {
-
-// Using this name fits the "grammar" for registration better.
-using Subscribe = Kernel::RegistrationHelper;
-
-/**
- * @class SpaceGroupRegistrationHelper
- *
- * This class does essentially nothing, it assists registering space groups into
- * the factory at compile time. This is done using the comma operator, which
- * evaluates all statements, discards their value and returns only the last
- * value. It is used like this:
- *
- *  using namespace Mantid::Geometry::SpaceGroupRegistration;
- *
- *  Subscribe groups(
- *        (GeneratedSpaceGroup(....),
- *         GeneratedSpaceGroup(...))
- *        );
- *
- * The additional parantheses are required because the comma operator has lowest
- * precedence. Please note that very long "comma-chains" increase compile times.
- */
-template <typename GeneratorType> struct SpaceGroupRegistrationHelper {
-  SpaceGroupRegistrationHelper(size_t number, const std::string &hmSymbol,
-                               const std::string &generators) {
-    SpaceGroupFactoryImpl &factory = SpaceGroupFactory::Instance();
-
-    factory.subscribeUsingGenerator<GeneratorType>(number, hmSymbol,
-                                                   generators);
-    factory.registerAliases(hmSymbol, copy_remove_spaces(hmSymbol));
-  }
-
-  SpaceGroupRegistrationHelper(size_t number, const std::string &hmSymbol,
-                               const std::string &generators,
-                               const std::string &aliases)
-      : SpaceGroupRegistrationHelper(number, hmSymbol, generators) {
-    SpaceGroupFactory::Instance().registerAliases(hmSymbol, aliases);
-  }
-
-  /// Required to work in connection with Kernel::RegistrationHelper
-  inline operator int() const { return 1; }
-
-protected:
-  SpaceGroupRegistrationHelper() = default;
-};
-
-using GeneratedSpaceGroup =
-    SpaceGroupRegistrationHelper<AlgorithmicSpaceGroupGenerator>;
-
-using TabulatedSpaceGroup =
-    SpaceGroupRegistrationHelper<TabulatedSpaceGroupGenerator>;
-
-using TransformedSpaceGroup =
-    SpaceGroupRegistrationHelper<TransformationSpaceGroupGenerator>;
-
-template <typename GeneratorType>
-struct OrthorhombicSpaceGroupRegistrationHelper
-    : public SpaceGroupRegistrationHelper<GeneratorType> {
-  OrthorhombicSpaceGroupRegistrationHelper(size_t number,
-                                           const std::string &hmSymbol,
-                                           const std::string &generators) {
-    SpaceGroupFactory::Instance()
-        .subscribeOrthorhombicSpaceGroup<GeneratorType>(number, hmSymbol,
-                                                        generators);
-  }
-};
-
-using OrthorhombicSpaceGroup =
-    OrthorhombicSpaceGroupRegistrationHelper<AlgorithmicSpaceGroupGenerator>;
-
-using TransformedOrthorhombicSpaceGroup =
-    OrthorhombicSpaceGroupRegistrationHelper<TransformationSpaceGroupGenerator>;
-}
 } // namespace Geometry
 } // namespace Mantid
 
