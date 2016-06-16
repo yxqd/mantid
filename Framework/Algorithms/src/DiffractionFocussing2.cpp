@@ -63,7 +63,7 @@ void DiffractionFocussing2::cleanup() {
   // Clear maps and vectors to free up memory.
   udet2group.clear();
   groupAtWorkspaceIndex.clear();
-  std::vector<int>().swap(groupAtWorkspaceIndex);
+  groupAtWorkspaceIndex.shrink_to_fit();
   group2xvector.clear();
   group2wgtvector.clear();
   this->m_validGroups.clear();

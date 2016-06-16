@@ -861,13 +861,11 @@ EventList::getWeightedEventsNoTime() const {
  * */
 void EventList::clear(const bool removeDetIDs) {
   this->events.clear();
-  std::vector<TofEvent>().swap(this->events); // STL Trick to release memory
+  this->events.shrink_to_fit();
   this->weightedEvents.clear();
-  std::vector<WeightedEvent>().swap(
-      this->weightedEvents); // STL Trick to release memory
+  this->weightedEvents.shrink_to_fit();
   this->weightedEventsNoTime.clear();
-  std::vector<WeightedEventNoTime>().swap(
-      this->weightedEventsNoTime); // STL Trick to release memory
+  this->weightedEventsNoTime.shrink_to_fit();
   if (removeDetIDs)
     this->detectorIDs.clear();
 }
@@ -879,17 +877,15 @@ void EventList::clear(const bool removeDetIDs) {
 void EventList::clearUnused() {
   if (eventType != TOF) {
     this->events.clear();
-    std::vector<TofEvent>().swap(this->events); // STL Trick to release memory
+    this->events.shrink_to_fit();
   }
   if (eventType != WEIGHTED) {
     this->weightedEvents.clear();
-    std::vector<WeightedEvent>().swap(
-        this->weightedEvents); // STL Trick to release memory
+    this->weightedEvents.shrink_to_fit();
   }
   if (eventType != WEIGHTED_NOTIME) {
     this->weightedEventsNoTime.clear();
-    std::vector<WeightedEventNoTime>().swap(
-        this->weightedEventsNoTime); // STL Trick to release memory
+    this->weightedEventsNoTime.shrink_to_fit();
   }
 }
 
@@ -1122,9 +1118,9 @@ template <typename T> void parallel_sort4(std::vector<T> &vec) {
 
   // Clear out this temporary storage
   temp1.clear();
+  temp1.shrink_to_fit();
   temp2.clear();
-  std::vector<T>().swap(temp1);
-  std::vector<T>().swap(temp2);
+  temp2.shrink_to_fit();
 
   // Swap storage with the temp vector
   vec.swap(temp);
@@ -1658,7 +1654,7 @@ EventList::compressEventsHelper(const std::vector<T> &events,
   size_t excess_limit = out.size() / 20;
   if ((out.capacity() - out.size()) > excess_limit) {
     // Note: This forces a copy!
-    std::vector<WeightedEventNoTime>(out).swap(out);
+    out.shrink_to_fit();
   }
 }
 

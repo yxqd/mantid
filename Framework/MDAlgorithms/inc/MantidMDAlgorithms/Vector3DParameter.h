@@ -68,9 +68,7 @@ template <typename Derived, typename ElemType>
 Derived &Vector3DParameter<Derived, ElemType>::operator=(const Derived &other) {
   if (&other != this) {
     this->m_isValid = other.m_isValid;
-    this->m_vector.swap(std::vector<ElemType>(3));
-    std::copy(other.m_vector.begin(), other.m_vector.end(),
-              this->m_vector.begin());
+    this->m_vector.assign(other.m_vector.begin(), other.m_vector.end());
   }
   return *(dynamic_cast<Derived *>(this));
 }
