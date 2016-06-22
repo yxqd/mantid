@@ -264,7 +264,7 @@
         <item>
          <widget class="QLabel" name="label_cropped_spec_nos">
           <property name="enabled">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="text">
            <string>Spectrum Numbers:</string>
@@ -351,7 +351,7 @@
         <item>
          <widget class="QLabel" name="label_calib_cropped_spec_ids">
           <property name="enabled">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="text">
            <string>Bank Name:</string>
@@ -361,7 +361,7 @@
         <item>
          <widget class="QComboBox" name="comboBox_calib_cropped_bank_name">
           <property name="enabled">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <item>
            <property name="text">
@@ -385,7 +385,7 @@
      </layout>
     </widget>
    </item>
-   <item row="3" column="0">
+   <item row="4" column="0">
     <widget class="QGroupBox" name="groupBox_output_calib">
      <property name="title">
       <string>Output:</string>
@@ -413,7 +413,7 @@
      </layout>
     </widget>
    </item>
-   <item row="4" column="0">
+   <item row="5" column="0">
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -425,6 +425,116 @@
       </size>
      </property>
     </spacer>
+   </item>
+   <item row="3" column="0">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Texture Calibration</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_6">
+      <item row="0" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_texture">
+        <item>
+         <widget class="QLabel" name="label_texture_run_num">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_texture_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>98</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="MantidQt::MantidWidgets::MWRunFiles" name="MWRunFiles_texture_run_num" native="true">
+          <property name="text" stdset="0">
+           <string/>
+          </property>
+          <property name="readOnly" stdset="0">
+           <bool>false</bool>
+          </property>
+          <property name="label" stdset="0">
+           <string>Run #:</string>
+          </property>
+          <property name="multipleFiles" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_texture_2">
+        <item>
+         <widget class="QLabel" name="label_texture_detector_grouping_file">
+          <property name="text">
+           <string>Detector Grouping File:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="lineEdit_texture_grouping_file">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>1</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_texture_browse_grouping_file">
+          <property name="text">
+           <string>Browse</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="2" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_texture_3">
+        <item>
+         <spacer name="horizontalSpacer_texture_3">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_calibrate_texture">
+          <property name="text">
+           <string>Calibrate</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
    </item>
   </layout>
  </widget>
