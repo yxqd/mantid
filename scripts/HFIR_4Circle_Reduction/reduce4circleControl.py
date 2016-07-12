@@ -91,6 +91,9 @@ class CWSCDReductionControl(object):
         # A dictionary to manage all loaded and processed MDEventWorkspaces
         # self._expDataDict = {}
 
+        #register startup
+        mantid.UsageService.registerFeatureUsage("Interface","4-Circle Reduction",False)
+
         return
 
     def _add_merged_ws(self, exp_number, scan_number, pt_number_list):
@@ -566,13 +569,14 @@ class CWSCDReductionControl(object):
         assert isinstance(exp_number, int), 'Experiment number must be an integer.'
         assert isinstance(scan_number_list, list), 'Scan number list must be a list but not %s.' \
                                                    '' % str(type(scan_number_list))
-        assert len(scan_number_list) > 0
+        assert len(scan_number_list) > 0, 'Scan number list must larger than 0, but ' \
+                                          'now %d. ' % len(scan_number_list)
 
         # get wave-length
         try:
             exp_wave_length = self.get_wave_length(exp_number, scan_number_list)
         except RuntimeError as error:
-            return False, str(error)
+            return False, 'RuntimeError: %s.' % str(error)
 
         # get the information whether there is any k-shift vector specified by user
         print '[DB...Prototype] Current k-shift vectors are ... ', self._kShiftDict
@@ -613,9 +617,9 @@ class CWSCDReductionControl(object):
                 k_vector_dict=k_shift_dict, peak_dict_list=peaks,
                 fp_file_name=fullprof_file_name)
         except AssertionError as error:
-            return False, str(error)
+            return False, 'AssertionError: %s.' % str(error)
         except RuntimeError as error:
-            return False, str(error)
+            return False, 'RuntimeError; %s.' % str(error)
 
         return True, file_content
 
