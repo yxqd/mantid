@@ -125,21 +125,21 @@ void SetUncertainties::exec() {
     PARALLEL_START_INTERUPT_REGION
 
     // copy the X/Y
-    outputWorkspace->setX(i, inputWorkspace->refX(i));
-    outputWorkspace->dataY(i) = inputWorkspace->readY(i);
+    outputWorkspace->setSharedX(i, inputWorkspace->sharedX(i));
+    outputWorkspace->mutableY(i) = inputWorkspace->y(i);
     // copy the E or set to zero depending on the mode
     if (errorType.compare(ONE_IF_ZERO) == 0) {
-      outputWorkspace->dataE(i) = inputWorkspace->readE(i);
+      outputWorkspace->mutableE(i) = inputWorkspace->e(i);
     } else {
-      outputWorkspace->dataE(i) =
-          std::vector<double>(inputWorkspace->readE(i).size(), 0.);
+      outputWorkspace->mutableE(i) =
+          std::vector<double>(inputWorkspace->e(i).size(), 0.);
     }
 
     // ZERO mode doesn't calculate anything further
     if ((!zeroError) && (!isMasked(inputWorkspace, i))) {
-      MantidVec &E = outputWorkspace->dataE(i);
+      auto &E = outputWorkspace->mutableE(i);
       if (takeSqrt) {
-        const MantidVec &Y = outputWorkspace->readY(i);
+        const auto &Y = outputWorkspace->y(i);
         std::transform(Y.begin(), Y.end(), E.begin(),
                        sqrterror(resetOne ? 1. : 0.));
       } else {
