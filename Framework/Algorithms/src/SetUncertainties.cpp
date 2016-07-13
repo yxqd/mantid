@@ -29,6 +29,8 @@ const std::string SQRT("sqrt");
 const std::string ONE_IF_ZERO("oneIfZero");
 const std::string SQRT_OR_ONE("sqrtOrOne");
 
+const std::string CUSTOM_UNCERTAINTY("customUncertainty");
+
 struct resetzeroerror {
   explicit resetzeroerror(const double constant) : zeroErrorValue(constant) {}
 
@@ -70,10 +72,12 @@ void SetUncertainties::init() {
       "InputWorkspace", "", Direction::Input));
   declareProperty(make_unique<WorkspaceProperty<API::MatrixWorkspace>>(
       "OutputWorkspace", "", Direction::Output));
-  std::vector<std::string> errorTypes = {ZERO, SQRT, SQRT_OR_ONE, ONE_IF_ZERO};
+  std::vector<std::string> errorTypes = {ZERO, SQRT, SQRT_OR_ONE, ONE_IF_ZERO, CUSTOM_UNCERTAINTY};
   declareProperty("SetError", ZERO,
                   boost::make_shared<StringListValidator>(errorTypes),
                   "How to reset the uncertainties");
+  declareProperty(make_unique<WorkspaceProperty<API::MatrixWorkspace>>(
+	  "CustomError", 0.0, Direction::Input, "This field will be ignored, unless the Custom option is selected"));
 }
 
 namespace {
@@ -96,12 +100,15 @@ inline bool isMasked(MatrixWorkspace_const_sptr wksp, const size_t index) {
 void SetUncertainties::exec() {
   MatrixWorkspace_const_sptr inputWorkspace = getProperty("InputWorkspace");
   std::string errorType = getProperty("SetError");
+  double customErrorValue = getProperty("CustomError");
+
+  bool customError = (errorType.compare(CUSTOM_UNCERTAINTY) == 0);
   bool zeroError = (errorType.compare(ZERO) == 0);
   bool takeSqrt =
       ((errorType.compare(SQRT) == 0) || (errorType.compare(SQRT_OR_ONE) == 0));
   bool resetOne = ((errorType.compare(ONE_IF_ZERO) == 0) ||
                    (errorType.compare(SQRT_OR_ONE) == 0));
-
+  bool oneIfZero = errorType.compare(ONE_IF_ZERO) == 0;
   // Create the output workspace. This will copy many aspects from the input
   // one.
   MatrixWorkspace_sptr outputWorkspace =
@@ -119,7 +126,7 @@ void SetUncertainties::exec() {
     outputWorkspace->setX(i, inputWorkspace->refX(i));
     outputWorkspace->dataY(i) = inputWorkspace->readY(i);
     // copy the E or set to zero depending on the mode
-    if (errorType.compare(ONE_IF_ZERO) == 0) {
+    if (oneIfZero) {
       outputWorkspace->dataE(i) = inputWorkspace->readE(i);
     } else {
       outputWorkspace->dataE(i) =
