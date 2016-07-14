@@ -85,10 +85,11 @@ namespace Mantid{
 			                "How to reset the uncertainties");
 			declareProperty("SetErrorTo", 0.0, "This field will be ignored, unless the Custom option is selected. This is the new value that will be assigned to errors matching the specified value.");
 			declareProperty("IfEqualTo", 0.0, "This field will be ignored, unless the Custom option is selected. This is the value that is looked up. All error that have this value will be changed.");
-			declareProperty("ComparisonAccuracy", "", "This field will be ignored, unless the Custom option is selected. This is the decimal place to which the comparison will be done, decimal places after that will be ignored");
+			declareProperty("ComparisonAccuracy 1.e-", 1.e-1, "This field will be ignored, unless the Custom option is selected. This is the decimal place to which the comparison will be done, decimal places after that will be ignored");
 		}
 
 		int SetUncertainties::countDecimalPlaces(const std::string &cs) {
+				return -1; // TODO
 		}
 
 		namespace{
