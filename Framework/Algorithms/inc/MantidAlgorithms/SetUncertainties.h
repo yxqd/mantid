@@ -59,7 +59,8 @@ public:
 private:
   /// Initialisation code
   void init() override;
-  /// Execution code
+	int countDecimalPlaces(const std::string & cs);
+	/// Execution code
   void exec() override;
 };
 
