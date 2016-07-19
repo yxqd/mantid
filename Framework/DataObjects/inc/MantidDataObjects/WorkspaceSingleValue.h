@@ -69,7 +69,7 @@ public:
 
 protected:
   /// Protected copy constructor. May be used by childs for cloning.
-  WorkspaceSingleValue(const WorkspaceSingleValue &other);
+  WorkspaceSingleValue(const WorkspaceSingleValue &other) = default;
 
 private:
   WorkspaceSingleValue *doClone() const override {
@@ -82,7 +82,7 @@ private:
 
   /// Instance of Histogram1D that holds the "spectrum" (AKA the single value);
   Histogram1D data{HistogramData::Histogram::XMode::Points,
-                   HistogramData::Histogram::YMode::Counts};
+                   HistogramData::Histogram::YMode::Frequencies};
 };
 
 /// shared pointer to the WorkspaceSingleValue class

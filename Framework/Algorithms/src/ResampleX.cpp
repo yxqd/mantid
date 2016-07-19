@@ -366,13 +366,8 @@ void ResampleX::exec() {
                           << inputEventWS->getName() << ".\n";
 
       // Create a Workspace2D
-      // This creates a new Workspace2D through a torturous route using the
-      // WorkspaceFactory.
-      // The Workspace2D is created with an EMPTY CONSTRUCTOR
-      outputWS = WorkspaceFactory::Instance().create("Workspace2D", numSpectra,
+      outputWS = WorkspaceFactory::Instance().create(inputWS, numSpectra,
                                                      m_numBins, m_numBins - 1);
-      WorkspaceFactory::Instance().initializeFromParent(inputWS, outputWS,
-                                                        true);
       // Initialize progress reporting.
       Progress prog(this, 0.0, 1.0, numSpectra);
 
@@ -485,7 +480,6 @@ void ResampleX::exec() {
       PARALLEL_END_INTERUPT_REGION
     }
     PARALLEL_CHECK_INTERUPT_REGION
-    outputWS->setDistribution(m_isDistribution);
 
     // Now propagate any masking correctly to the output workspace
     // More efficient to have this in a separate loop because

@@ -162,15 +162,6 @@ Workspace_sptr SeqDomainSpectrumCreator::createOutputWorkspace(
     m_manager->setProperty(outputWorkspacePropertyName, outputWs);
   }
 
-  // If the input is a not an EventWorkspace and is a distrubution, then convert
-  // the output also to a distribution
-  if (!boost::dynamic_pointer_cast<Mantid::API::IEventWorkspace>(
-          m_matrixWorkspace)) {
-    if (m_matrixWorkspace->isDistribution()) {
-      outputWs->setDistribution(true);
-    }
-  }
-
   return outputWs;
 }
 

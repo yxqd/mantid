@@ -101,8 +101,6 @@ void Regroup::exec() {
     }
   }
 
-  outputW->setDistribution(dist);
-
   // Copy units
   if (outputW->getAxis(0)->unit().get())
     outputW->getAxis(0)->unit() = inputW->getAxis(0)->unit();

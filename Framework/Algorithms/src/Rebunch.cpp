@@ -109,7 +109,6 @@ void Rebunch::exec() {
     PARALLEL_END_INTERUPT_REGION
   }
   PARALLEL_CHECK_INTERUPT_REGION
-  outputW->setDistribution(dist);
 
   // Copy units
   if (outputW->getAxis(0)->unit().get())

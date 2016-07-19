@@ -14,16 +14,9 @@ WorkspaceSingleValue::WorkspaceSingleValue(double value, double error)
     : API::MatrixWorkspace() {
   // Set the "histogram" to the single value
   data.dataX().resize(1, 0.0);
-  data.setCounts(1, value);
-  data.setCountStandardDeviations(1, error);
+  data.setFrequencies(1, value);
+  data.setFrequencyStandardDeviations(1, error);
   data.setPointStandardDeviations(1, 0.0);
-
-  setDistribution(true);
-}
-
-WorkspaceSingleValue::WorkspaceSingleValue(const WorkspaceSingleValue &other)
-    : MatrixWorkspace(other), data(other.data) {
-  setDistribution(true);
 }
 
 /** Does nothing in this case

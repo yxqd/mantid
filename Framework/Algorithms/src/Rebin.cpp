@@ -162,18 +162,11 @@ void Rebin::exec() {
       eventOutputWS->setAllX(XValues_new);
     } else {
       //--------- Different output, OR you're inplace but not preserving Events
-      //--- create a Workspace2D -------
       g_log.information() << "Creating a Workspace2D from the EventWorkspace "
                           << eventInputWS->getName() << ".\n";
-
       // Create a Workspace2D
-      // This creates a new Workspace2D through a torturous route using the
-      // WorkspaceFactory.
-      // The Workspace2D is created with an EMPTY CONSTRUCTOR
-      outputWS = WorkspaceFactory::Instance().create("Workspace2D", histnumber,
-                                                     ntcnew, ntcnew - 1);
-      WorkspaceFactory::Instance().initializeFromParent(inputWS, outputWS,
-                                                        true);
+      outputWS = API::WorkspaceFactory::Instance().create(inputWS, histnumber,
+                                                          ntcnew, ntcnew - 1);
 
       // Initialize progress reporting.
       Progress prog(this, 0.0, 1.0, histnumber);
@@ -275,7 +268,6 @@ void Rebin::exec() {
       PARALLEL_END_INTERUPT_REGION
     }
     PARALLEL_CHECK_INTERUPT_REGION
-    outputWS->setDistribution(dist);
 
     // Now propagate any masking correctly to the output workspace
     // More efficient to have this in a separate loop because
