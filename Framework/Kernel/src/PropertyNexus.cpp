@@ -117,6 +117,8 @@ makeStringProperty(::NeXus::File *file, const std::string &name,
  * @param group :: name of NXlog group to open
  * @return Property pointer
  */
+typedef std::vector<double>::iterator vd_it;
+
 std::unique_ptr<Property> loadProperty(::NeXus::File *file,
                                        const std::string &group) {
   file->openGroup(group, "NXlog");
@@ -130,7 +132,7 @@ std::unique_ptr<Property> loadProperty(::NeXus::File *file,
   std::map<std::string, std::string> entries = file->getEntries();
   if (entries.find("time") != entries.end()) {
     file->openData("time");
-    file->getData(timeSec);
+    file->getDataCoerce(timeSec);
     // Optionally get a start
     try {
       file->getAttr("start", startStr);
