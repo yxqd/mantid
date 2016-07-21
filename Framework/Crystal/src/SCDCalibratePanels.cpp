@@ -148,7 +148,8 @@ SCDCalibratePanels::calcWorkspace(DataObjects::PeaksWorkspace_sptr &pwks,
   if (N < 4) // If not well indexed
     return boost::make_shared<DataObjects::Workspace2D>();
 
-  auto mwkspc = API::createWorkspace<Workspace2D>(1, N, N);
+  auto mwkspc = API::createWorkspace<Workspace2D>(
+      HistogramData::Histogram::YMode::Counts, 1, N, N);
 
   mwkspc->setPoints(0, xRef);
   mwkspc->setCounts(0, xRef.size(), 0.0);

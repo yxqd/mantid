@@ -25,9 +25,15 @@ WorkspaceSingleValue::WorkspaceSingleValue(double value, double error)
 *  @param XLength :: The number of X data points/bin boundaries
 *  @param YLength :: The number of data/error points
 */
-void WorkspaceSingleValue::init(const std::size_t &NVectors,
+void WorkspaceSingleValue::init(const HistogramData::Histogram::YMode ymode,
+                                const std::size_t &NVectors,
                                 const std::size_t &XLength,
                                 const std::size_t &YLength) {
+  // There is no bin width for a single point so only Frequencies makes sense.
+  if(ymode != HistogramData::Histogram::YMode::Frequencies)
+    throw std::invalid_argument(
+        "WorkspaceSingleValue can only be initialized with YMode::Frequencies");
+
   (void)NVectors;
   (void)XLength;
   (void)YLength; // Avoid compiler warning

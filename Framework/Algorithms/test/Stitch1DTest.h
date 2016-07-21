@@ -19,6 +19,7 @@ using namespace Mantid::Kernel;
 using Mantid::Algorithms::Stitch1D;
 using Mantid::MantidVec;
 using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 
 double roundSix(double i) { return floor(i * 1000000 + 0.5) / 1000000; }
 
@@ -45,7 +46,8 @@ private:
                                        MantidVec &eData, const int nSpec = 1) {
 
     Workspace2D_sptr outWS = boost::make_shared<Workspace2D>();
-    outWS->initialize(nSpec, xData.size(), yData.size());
+    outWS->initialize(Histogram::YMode::Counts, nSpec, xData.size(),
+                      yData.size());
     for (int i = 0; i < nSpec; ++i) {
       outWS->dataY(i) = yData;
       outWS->dataE(i) = eData;
@@ -59,7 +61,7 @@ private:
 
   MatrixWorkspace_sptr create1DWorkspace(MantidVec &xData, MantidVec &yData) {
     Workspace2D_sptr outWS = boost::make_shared<Workspace2D>();
-    outWS->initialize(1, xData.size(), yData.size());
+    outWS->initialize(Histogram::YMode::Counts, 1, xData.size(), yData.size());
     outWS->dataY(0) = yData;
     outWS->dataX(0) = xData;
 

@@ -23,6 +23,7 @@ using namespace Mantid::Algorithms;
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 
 namespace {
 /**
@@ -37,7 +38,7 @@ createEventWorkspace(const int numberspectra, const int nDistrubutedEvents,
   uint64_t pulseTimeMax = uint64_t(1e9) * pulseTimeMaxSecs;
 
   EventWorkspace_sptr retVal(new EventWorkspace);
-  retVal->initialize(numberspectra, 1, 1);
+  retVal->initialize(Histogram::YMode::Counts, numberspectra, 1, 1);
   double binWidth =
       std::abs(double(pulseTimeMax - pulseTimeMin) / nDistrubutedEvents);
 
@@ -95,7 +96,8 @@ public:
   MOCK_METHOD1(getSpectrum, Mantid::API::IEventList &(const std::size_t));
   MOCK_CONST_METHOD1(getSpectrum,
                      const Mantid::API::IEventList &(const std::size_t));
-  MOCK_METHOD3(init, void(const size_t &, const size_t &, const size_t &));
+  MOCK_METHOD4(init, void(const Histogram::YMode, const size_t &,
+                          const size_t &, const size_t &));
   MOCK_CONST_METHOD0(getSpecialCoordinateSystem,
                      Mantid::Kernel::SpecialCoordinateSystem());
 

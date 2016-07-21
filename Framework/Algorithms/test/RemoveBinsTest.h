@@ -17,7 +17,7 @@
 using namespace Mantid::Algorithms;
 using namespace Mantid::API;
 using namespace Mantid::DataObjects;
-using Mantid::HistogramData::BinEdges;
+using namespace Mantid::HistogramData;
 
 class RemoveBinsTest : public CxxTest::TestSuite {
 public:
@@ -218,7 +218,7 @@ public:
     Workspace2D_sptr testWorkspace(new Workspace2D);
 
     testWorkspace->setTitle("input2D");
-    testWorkspace->initialize(2, 5, 4);
+    testWorkspace->initialize(Histogram::YMode::Counts, 2, 5, 4);
 
     BinEdges X{0, 10, 20, 30, 40};
     std::vector<double> Y{0, 2, 5, 6};

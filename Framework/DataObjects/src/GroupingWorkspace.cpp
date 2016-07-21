@@ -19,7 +19,7 @@ DECLARE_WORKSPACE(GroupingWorkspace)
  * @return created GroupingWorkspace
  */
 GroupingWorkspace::GroupingWorkspace(size_t numvectors) {
-  this->init(numvectors, 1, 1);
+  this->init(HistogramData::Histogram::YMode::Counts, numvectors, 1, 1);
 }
 
 //----------------------------------------------------------------------------------------------

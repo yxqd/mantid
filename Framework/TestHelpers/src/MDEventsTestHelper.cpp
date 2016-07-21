@@ -66,7 +66,7 @@ createDiffractionEventWorkspace(int numEvents, int numPixels, int numBins) {
   double binDelta = 10.0;
 
   auto retVal = boost::make_shared<EventWorkspace>();
-  retVal->initialize(numPixels, 1, 1);
+  retVal->initialize(HistogramData::Histogram::YMode::Counts, numPixels, 1, 1);
 
   // --------- Load the instrument -----------
   const std::string filename = FileFinder::Instance().getFullPath(

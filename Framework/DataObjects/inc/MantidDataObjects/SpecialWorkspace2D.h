@@ -65,8 +65,8 @@ protected:
   /// Protected copy constructor. May be used by childs for cloning.
   SpecialWorkspace2D(const SpecialWorkspace2D &) = default;
 
-  void init(const size_t &NVectors, const size_t &XLength,
-            const size_t &YLength) override;
+  void init(const HistogramData::Histogram::YMode ymode, const size_t &NVectors,
+            const size_t &XLength, const size_t &YLength) override;
 
   /// Return human-readable string
   const std::string toString() const override;

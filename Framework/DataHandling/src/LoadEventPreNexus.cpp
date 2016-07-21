@@ -2,6 +2,7 @@
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/FileFinder.h"
 #include "MantidAPI/RegisterFileLoader.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/EventList.h"
 #include "MantidKernel/ArrayProperty.h"
@@ -307,13 +308,10 @@ void LoadEventPreNexus::exec() {
   this->openEventFile(event_filename);
 
   prog->report("Creating output workspace");
-  // prep the output workspace
-  EventWorkspace_sptr localWorkspace =
-      EventWorkspace_sptr(new EventWorkspace());
-  // Make sure to initialize.
-  //   We can use dummy numbers for arguments, for event workspace it doesn't
-  //   matter
-  localWorkspace->initialize(1, 1, 1);
+  // prep the output workspace. We can use dummy numbers for arguments, for
+  // event workspace it doesn't matter
+  auto localWorkspace = createWorkspace<EventWorkspace>(
+      HistogramData::Histogram::YMode::Counts, 1, 1, 1);
 
   // Set the units
   localWorkspace->getAxis(0)->unit() = UnitFactory::Instance().create("TOF");
@@ -510,9 +508,8 @@ void LoadEventPreNexus::procEvents(
     if (parallelProcessing) {
       prog->report("Creating Partial Workspace");
       // Create a partial workspace
-      partWS = EventWorkspace_sptr(new EventWorkspace());
-      // Make sure to initialize.
-      partWS->initialize(1, 1, 1);
+      partWS = createWorkspace<EventWorkspace>(
+          HistogramData::Histogram::YMode::Counts, 1, 1, 1);
       // Copy all the spectra numbers and stuff (no actual events to copy
       // though).
       partWS->copyDataFrom(*workspace);

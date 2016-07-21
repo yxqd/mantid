@@ -19,7 +19,7 @@ public:
     boost::shared_ptr<MatrixWorkspace> ws =
         boost::make_shared<WorkspaceTester>();
     // Matrix with 4 spectra, 5 bins each
-    ws->initialize(4, 6, 5);
+    ws->initialize(HistogramData::Histogram::YMode::Counts, 4, 6, 5);
     NumericAxis *ax1 = new NumericAxis(4);
     for (size_t wi = 0; wi < 4; wi++) {
       ax1->setValue(wi, double(wi) * 2.0);

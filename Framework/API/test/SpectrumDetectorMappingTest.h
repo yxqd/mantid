@@ -9,6 +9,7 @@
 
 using Mantid::API::SpectrumDetectorMapping;
 using Mantid::API::MatrixWorkspace_sptr;
+using Mantid::HistogramData::Histogram;
 
 class SpectrumDetectorMappingTest : public CxxTest::TestSuite {
 public:
@@ -25,7 +26,7 @@ public:
 
   void test_workspace_constructor_fills_map() {
     auto ws = boost::make_shared<WorkspaceTester>();
-    ws->init(3, 1, 1);
+    ws->init(Histogram::YMode::Counts, 3, 1, 1);
     // Override some of the default detector numbers to make it more interesting
     ws->getSpectrum(0).setDetectorIDs(std::set<detid_t>());
     int detids[] = {10, 20};

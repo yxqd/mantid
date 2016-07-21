@@ -212,7 +212,8 @@ void OptimizeCrystalPlacement::exec() {
   }
 
   int N = 3 * nPeaksUsed; // Peaks->getNumberPeaks();
-  auto mwkspc = createWorkspace<Workspace2D>(1, N, N);
+  auto mwkspc = createWorkspace<Workspace2D>(
+      HistogramData::Histogram::YMode::Counts, 1, N, N);
   mwkspc->setPoints(0, xRef);
   mwkspc->setCounts(0, N, 0.0);
   mwkspc->setCountStandardDeviations(0, N, 1.0);

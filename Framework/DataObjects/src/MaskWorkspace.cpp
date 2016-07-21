@@ -32,7 +32,7 @@ const double ERROR_VALUE = 0.;
  * @return MaskWorkspace
  */
 MaskWorkspace::MaskWorkspace(std::size_t numvectors) {
-  this->init(numvectors, 1, 1);
+  this->init(HistogramData::Histogram::YMode::Counts, numvectors, 1, 1);
   this->clearMask();
 }
 

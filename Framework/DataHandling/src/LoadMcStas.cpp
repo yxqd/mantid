@@ -210,10 +210,11 @@ void LoadMcStas::readEventData(
 
   // create and prepare an event workspace ready to receive the mcstas events
   progInitial.report("Set up EventWorkspace");
-  EventWorkspace_sptr eventWS(new EventWorkspace());
   // initialize, where create up front number of eventlists = number of
   // detectors
-  eventWS->initialize(instrument->getNumberDetectors(), 1, 1);
+  auto eventWS =
+      createWorkspace<EventWorkspace>(HistogramData::Histogram::YMode::Counts,
+                                      instrument->getNumberDetectors(), 1, 1);
   // Set the units
   eventWS->getAxis(0)->unit() = UnitFactory::Instance().create("TOF");
   eventWS->setYUnit("Counts");

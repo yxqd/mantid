@@ -535,12 +535,11 @@ FilterEventsByLogValuePreNexus::setupOutputEventWorkspace() {
   // Create and initialize output EventWorkspace
   m_prog->report("Creating output workspace");
 
-  EventWorkspace_sptr tempworkspace;
+  // We can use dummy numbers for arguments, for event workspace it doesn't
+  // matter
+  auto tempworkspace = createWorkspace<EventWorkspace>(
+      HistogramData::Histogram::YMode::Counts, 1, 1, 1);
 
-  tempworkspace = EventWorkspace_sptr(new EventWorkspace());
-  // Make sure to initialize. We can use dummy numbers for arguments, for event
-  // workspace it doesn't matter
-  tempworkspace->initialize(1, 1, 1);
   // Set the units and title
   tempworkspace->getAxis(0)->unit() = UnitFactory::Instance().create("TOF");
   tempworkspace->setYUnit("Counts");
@@ -916,9 +915,8 @@ void FilterEventsByLogValuePreNexus::procEvents(
       if (m_parallelProcessing) {
         m_prog->report("Creating Partial Workspace");
         // Create a partial workspace
-        partWS = EventWorkspace_sptr(new EventWorkspace());
-        // Make sure to initialize.
-        partWS->initialize(1, 1, 1);
+        partWS = createWorkspace<EventWorkspace>(
+            HistogramData::Histogram::YMode::Counts, 1, 1, 1);
         // Copy all the spectra numbers and stuff (no actual events to copy
         // though).
         partWS->copyDataFrom(*workspace);
@@ -1535,9 +1533,8 @@ void FilterEventsByLogValuePreNexus::filterEvents() {
       if (m_parallelProcessing) {
         m_prog->report("Creating Partial Workspace");
         // Create a partial workspace
-        partWS = EventWorkspace_sptr(new EventWorkspace());
-        // Make sure to initialize.
-        partWS->initialize(1, 1, 1);
+        partWS = createWorkspace<EventWorkspace>(
+            HistogramData::Histogram::YMode::Counts, 1, 1, 1);
         // Copy all the spectra numbers and stuff (no actual events to copy
         // though).
         partWS->copyDataFrom(*m_localWorkspace);

@@ -16,7 +16,7 @@ using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::Algorithms;
 using namespace Mantid::DataObjects;
-using Mantid::HistogramData::HistogramX;
+using namespace Mantid::HistogramData;
 
 class CorrectKiKfTest : public CxxTest::TestSuite {
 public:
@@ -252,7 +252,8 @@ private:
       h = 0.5;
 
     Workspace2D_sptr ws2D(new Workspace2D);
-    ws2D->initialize(nspecs, isHistogram ? nbins + 1 : nbins, nbins);
+    ws2D->initialize(Histogram::YMode::Counts, nspecs,
+                     isHistogram ? nbins + 1 : nbins, nbins);
     ws2D->getAxis(0)->unit() = UnitFactory::Instance().create("DeltaE");
 
     Mantid::MantidVec xv;

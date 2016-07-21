@@ -365,7 +365,7 @@ public:
 
   void test_create_SeqDomain() {
     MatrixWorkspace_sptr ws2(new WorkspaceTester);
-    ws2->initialize(2, 11, 10);
+    ws2->initialize(HistogramData::Histogram::YMode::Counts, 2, 11, 10);
 
     for (size_t is = 0; is < ws2->getNumberHistograms(); ++is) {
       Mantid::MantidVec &x = ws2->dataX(is);
@@ -679,7 +679,7 @@ public:
     // workspace with 100 points on interval -10 <= x <= 10
     boost::shared_ptr<WorkspaceTester> data =
         boost::make_shared<WorkspaceTester>();
-    data->init(1, 100, 100);
+    data->init(HistogramData::Histogram::YMode::Counts, 1, 100, 100);
     for (size_t i = 0; i < data->blocksize(); i++) {
       data->dataX(0)[i] = -10.0 + 0.2 * double(i);
     }
@@ -780,7 +780,7 @@ private:
     MatrixWorkspace_sptr ws2(new WorkspaceTester);
     size_t ny = 20;
     size_t nx = ny + (histogram ? 1 : 0);
-    ws2->initialize(2, nx, ny);
+    ws2->initialize(HistogramData::Histogram::YMode::Counts, 2, nx, ny);
 
     for (size_t is = 0; is < ws2->getNumberHistograms(); ++is) {
       Mantid::MantidVec &x = ws2->dataX(is);

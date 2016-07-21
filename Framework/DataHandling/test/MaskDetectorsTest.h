@@ -21,13 +21,10 @@ using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::DataObjects;
 using namespace Mantid::Geometry;
+using namespace Mantid::HistogramData;
 using Mantid::MantidVecPtr;
 using Mantid::detid_t;
 using Mantid::specnum_t;
-using Mantid::HistogramData::BinEdges;
-using Mantid::HistogramData::Counts;
-using Mantid::HistogramData::CountStandardDeviations;
-using Mantid::HistogramData::LinearGenerator;
 
 class MaskDetectorsTest : public CxxTest::TestSuite {
 public:
@@ -73,7 +70,8 @@ public:
       spaceEvent->setAllX(BinEdges{0.0, 10.0});
 
     } else if (!asMaskWorkspace) {
-      auto space2D = createWorkspace<Workspace2D>(numspec, 6, 5);
+      auto space2D =
+          createWorkspace<Workspace2D>(Histogram::YMode::Counts, numspec, 6, 5);
       space = space2D;
 
       BinEdges x(6, LinearGenerator(10.0, 1.0));
@@ -89,7 +87,7 @@ public:
     } else {
       // In case of MaskWorkspace
       MaskWorkspace_sptr specspace(new MaskWorkspace());
-      specspace->initialize(numspec, 1, 1);
+      specspace->initialize(Histogram::YMode::Counts, numspec, 1, 1);
       for (size_t i = 0; i < specspace->getNumberHistograms(); i++) {
         // default to use all the detectors
         specspace->dataY(i)[0] = 0.0;

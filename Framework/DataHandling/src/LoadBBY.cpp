@@ -5,6 +5,7 @@
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/RegisterFileLoader.h"
+#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidGeometry/Instrument/RectangularDetector.h"
@@ -191,13 +192,9 @@ void LoadBBY::exec() {
 
   createInstrument(tarFile, /* ref */ instrumentInfo);
 
-  // create workspace
-  DataObjects::EventWorkspace_sptr eventWS =
-      boost::make_shared<DataObjects::EventWorkspace>();
-
-  eventWS->initialize(HISTO_BINS_Y * HISTO_BINS_X,
-                      2, // number of TOF bin boundaries
-                      1);
+  auto eventWS = API::createWorkspace<DataObjects::EventWorkspace>(
+      HistogramData::Histogram::YMode::Counts, HISTO_BINS_Y * HISTO_BINS_X, 2,
+      1);
 
   // set the units
   if (instrumentInfo.is_tof)

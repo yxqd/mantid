@@ -125,7 +125,8 @@ const std::string MatrixWorkspace::toString() const {
 *  @param YLength :: The number of data/error points in each vector (must all be
 * the same)
 */
-void MatrixWorkspace::initialize(const std::size_t &NVectors,
+void MatrixWorkspace::initialize(const HistogramData::Histogram::YMode ymode,
+                                 const std::size_t &NVectors,
                                  const std::size_t &XLength,
                                  const std::size_t &YLength) {
   // Check validity of arguments
@@ -140,7 +141,7 @@ void MatrixWorkspace::initialize(const std::size_t &NVectors,
 
   // Invoke init() method of the derived class inside a try/catch clause
   try {
-    this->init(NVectors, XLength, YLength);
+    this->init(ymode, NVectors, XLength, YLength);
   } catch (std::runtime_error &) {
     throw;
   }

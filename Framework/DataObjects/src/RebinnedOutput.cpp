@@ -28,10 +28,11 @@ const std::string RebinnedOutput::id() const { return "RebinnedOutput"; }
  * @param YLength :: The number of data/error points in each vector (must all be
  * the same)
  */
-void RebinnedOutput::init(const std::size_t &NVectors,
+void RebinnedOutput::init(const HistogramData::Histogram::YMode ymode,
+                          const std::size_t &NVectors,
                           const std::size_t &XLength,
                           const std::size_t &YLength) {
-  Workspace2D::init(NVectors, XLength, YLength);
+  Workspace2D::init(ymode, NVectors, XLength, YLength);
   std::size_t nHist = this->getNumberHistograms();
   this->fracArea.resize(nHist);
   for (std::size_t i = 0; i < nHist; ++i) {

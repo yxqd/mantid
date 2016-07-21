@@ -15,9 +15,9 @@ using namespace Mantid::API;
 using namespace Mantid::DataObjects;
 using namespace Mantid::Geometry;
 using namespace Mantid::Kernel;
+using namespace Mantid::HistogramData;
 using Mantid::MantidVec;
 using Mantid::MantidVecPtr;
-using Mantid::HistogramData::BinEdges;
 
 namespace {
 class PropertyFinder {
@@ -396,7 +396,8 @@ public:
     BinEdges x{1, 2};
 
     // 2 spectra, 2 x values, 1 y value per spectra
-    auto tinyWS = createWorkspace<Workspace2D>(2, 2, 1);
+    auto tinyWS =
+        createWorkspace<Workspace2D>(Histogram::YMode::Counts, 2, 2, 1);
     tinyWS->setBinEdges(0, x);
     tinyWS->setBinEdges(1, x);
     tinyWS->setCounts(0, 1, 10.0);

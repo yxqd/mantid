@@ -22,6 +22,7 @@ using Mantid::Kernel::make_cow;
 using Mantid::HistogramData::BinEdges;
 using Mantid::HistogramData::Counts;
 using Mantid::HistogramData::CountStandardDeviations;
+using Mantid::HistogramData::Histogram;
 
 class ConvolutionFitSequentialTest : public CxxTest::TestSuite {
 public:
@@ -277,7 +278,7 @@ public:
   MatrixWorkspace_sptr create2DWorkspace(int xlen, int ylen) {
     auto ws = WorkspaceCreationHelper::create2DWorkspaceWithFullInstrument(
         xlen, xlen - 1, false, false, true, "testInst");
-    ws->initialize(ylen, xlen, xlen - 1);
+    ws->initialize(Histogram::YMode::Counts, ylen, xlen, xlen - 1);
 
     BinEdges x1(xlen, 0.0);
     Counts y1(xlen - 1, 3.0);
@@ -308,8 +309,8 @@ public:
   }
 
   void createConvFitResWorkspace(int totalHist, int totalBins) {
-    auto convFitRes =
-        createWorkspace<Workspace2D>(totalHist + 1, totalBins + 1, totalBins);
+    auto convFitRes = createWorkspace<Workspace2D>(
+        Histogram::YMode::Counts, totalHist + 1, totalBins + 1, totalBins);
     BinEdges x1(totalBins + 1, 0.0);
     Counts y1(totalBins, 3.0);
     CountStandardDeviations e1(totalBins, sqrt(3.0));

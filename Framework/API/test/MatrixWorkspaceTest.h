@@ -31,6 +31,7 @@ using std::size_t;
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::Geometry;
+using namespace Mantid::HistogramData;
 using namespace testing;
 
 // Declare into the factory.
@@ -45,7 +46,7 @@ boost::shared_ptr<MatrixWorkspace> makeWorkspaceWithDetectors(size_t numSpectra,
                                                               size_t numBins) {
   boost::shared_ptr<MatrixWorkspace> ws2 =
       boost::make_shared<WorkspaceTester>();
-  ws2->initialize(numSpectra, numBins, numBins);
+  ws2->initialize(Histogram::YMode::Counts, numSpectra, numBins, numBins);
 
   auto inst = boost::make_shared<Instrument>("TestInstrument");
   ws2->setInstrument(inst);
@@ -71,12 +72,12 @@ public:
   static void destroySuite(MatrixWorkspaceTest *suite) { delete suite; }
 
   MatrixWorkspaceTest() : ws(boost::make_shared<WorkspaceTester>()) {
-    ws->initialize(1, 1, 1);
+    ws->initialize(Histogram::YMode::Counts, 1, 1, 1);
   }
 
   void test_toString_Produces_Expected_Contents() {
     auto testWS = boost::make_shared<WorkspaceTester>();
-    testWS->initialize(1, 2, 1);
+    testWS->initialize(Histogram::YMode::Counts, 1, 2, 1);
     testWS->setTitle("A test run");
     testWS->getAxis(0)->setUnit("TOF");
     testWS->setYUnitLabel("Counts");
@@ -112,7 +113,7 @@ public:
 
   void test_getIndicesFromDetectorIDs() {
     WorkspaceTester ws;
-    ws.initialize(10, 1, 1);
+    ws.initialize(Histogram::YMode::Counts, 10, 1, 1);
     for (size_t i = 0; i < 10; i++)
       ws.getSpectrum(i).setDetectorID(detid_t(i * 10));
     std::vector<detid_t> dets;
@@ -130,7 +131,7 @@ public:
   test_That_A_Workspace_Gets_SpectraMap_When_Initialized_With_NVector_Elements() {
     WorkspaceTester testWS;
     const size_t nhist(10);
-    testWS.initialize(nhist, 1, 1);
+    testWS.initialize(Histogram::YMode::Counts, nhist, 1, 1);
     for (size_t i = 0; i < testWS.getNumberHistograms(); i++) {
       TS_ASSERT_EQUALS(testWS.getSpectrum(i).getSpectrumNo(), specnum_t(i + 1));
       TS_ASSERT(testWS.getSpectrum(i).hasDetectorID(detid_t(i)));
@@ -139,7 +140,7 @@ public:
 
   void test_updateSpectraUsing() {
     WorkspaceTester testWS;
-    testWS.initialize(3, 1, 1);
+    testWS.initialize(Histogram::YMode::Counts, 3, 1, 1);
 
     specnum_t specs[] = {1, 2, 2, 3};
     detid_t detids[] = {10, 99, 20, 30};
@@ -155,7 +156,7 @@ public:
   void testDetectorMappingCopiedWhenAWorkspaceIsCopied() {
     boost::shared_ptr<MatrixWorkspace> parent =
         boost::make_shared<WorkspaceTester>();
-    parent->initialize(1, 1, 1);
+    parent->initialize(Histogram::YMode::Counts, 1, 1, 1);
     parent->getSpectrum(0).setSpectrumNo(99);
     parent->getSpectrum(0).setDetectorID(999);
 
@@ -200,7 +201,7 @@ public:
 
   void testGetSpectrum() {
     WorkspaceTester ws;
-    ws.initialize(4, 1, 1);
+    ws.initialize(Histogram::YMode::Counts, 4, 1, 1);
     TS_ASSERT_THROWS_NOTHING(ws.getSpectrum(0));
     TS_ASSERT_THROWS_NOTHING(ws.getSpectrum(3));
   }
@@ -374,14 +375,14 @@ public:
 
   void testSize() {
     WorkspaceTester wkspace;
-    wkspace.initialize(1, 4, 3);
+    wkspace.initialize(Histogram::YMode::Counts, 1, 4, 3);
     TS_ASSERT_EQUALS(wkspace.blocksize(), 3);
     TS_ASSERT_EQUALS(wkspace.size(), 3);
   }
 
   void testBinIndexOf() {
     WorkspaceTester wkspace;
-    wkspace.initialize(1, 4, 3);
+    wkspace.initialize(Histogram::YMode::Counts, 1, 4, 3);
     // Data is all 1.0s
     wkspace.dataX(0)[1] = 2.0;
     wkspace.dataX(0)[2] = 3.0;
@@ -442,7 +443,7 @@ public:
         .WillOnce(Return(product));
 
     WorkspaceTester wkspace(factory);
-    wkspace.initialize(1, 4, 3);
+    wkspace.initialize(Histogram::YMode::Counts, 1, 4, 3);
     wkspace.getNeighboursExact(0, 1); // First call should construct nearest
                                       // neighbours before calling ::neighbours
     wkspace.getNeighboursExact(0, 1); // Second call should not construct
@@ -462,7 +463,7 @@ public:
     EXPECT_CALL(*factory, create(_, _, _)).Times(1).WillOnce(Return(product));
 
     WorkspaceTester wkspace(factory);
-    wkspace.initialize(1, 4, 3);
+    wkspace.initialize(Histogram::YMode::Counts, 1, 4, 3);
     wkspace.getNeighbours(0, 1); // First call should construct nearest
                                  // neighbours before calling ::neighbours
     wkspace.getNeighbours(0, 1); // Second call should not construct nearest
@@ -482,7 +483,7 @@ public:
     EXPECT_CALL(*factory, create(_, _, _)).Times(1).WillOnce(Return(product));
 
     WorkspaceTester wkspace(factory);
-    wkspace.initialize(1, 4, 3);
+    wkspace.initialize(Histogram::YMode::Counts, 1, 4, 3);
     wkspace.getNeighbours(0, 1); // First call should construct nearest
                                  // neighbours before calling ::neighbours
     wkspace.rebuildNearestNeighbours(); // should cause die.
@@ -520,7 +521,7 @@ public:
         .WillOnce(Return(productC));
 
     WorkspaceTester wkspace(factory);
-    wkspace.initialize(1, 4, 3);
+    wkspace.initialize(Histogram::YMode::Counts, 1, 4, 3);
     wkspace.getNeighbours(0, 1); // First call should construct nearest
                                  // neighbours before calling ::neighbours
     wkspace.rebuildNearestNeighbours(); // should cause die.
@@ -601,7 +602,7 @@ public:
 
   void test_getSpectrumToWorkspaceIndexMap() {
     WorkspaceTester ws;
-    ws.initialize(2, 1, 1);
+    ws.initialize(Histogram::YMode::Counts, 2, 1, 1);
     const auto map = ws.getSpectrumToWorkspaceIndexMap();
     TS_ASSERT_EQUALS(map.size(), 2);
     TS_ASSERT_EQUALS(map.begin()->first, 1);
@@ -730,7 +731,7 @@ public:
 
     const int nBins = 2;
     const int nYValues = 1;
-    ws.initialize(nVertical, nBins, nYValues);
+    ws.initialize(Histogram::YMode::Counts, nVertical, nBins, nYValues);
     NumericAxis *verticalAxis = new NumericAxis(nVertical);
     for (int i = 0; i < nVertical; ++i) {
       for (int j = 0; j < nBins; ++j) {
@@ -865,7 +866,7 @@ public:
 
   void test_getXIndex() {
     WorkspaceTester ws;
-    ws.init(1, 4, 3);
+    ws.init(Histogram::YMode::Counts, 1, 4, 3);
     auto &X = ws.dataX(0);
     X[0] = 1.0;
     X[1] = 2.0;
@@ -979,7 +980,7 @@ public:
 
   void test_getImage_0_width() {
     WorkspaceTester ws;
-    ws.init(9, 2, 1);
+    ws.init(Histogram::YMode::Counts, 9, 2, 1);
     auto &X = ws.dataX(0);
     X[0] = 1.0;
     X[1] = 2.0;
@@ -993,7 +994,7 @@ public:
 
   void test_getImage_wrong_start() {
     WorkspaceTester ws;
-    ws.init(9, 2, 1);
+    ws.init(Histogram::YMode::Counts, 9, 2, 1);
     auto &X = ws.dataX(0);
     X[0] = 1.0;
     X[1] = 2.0;
@@ -1009,7 +1010,7 @@ public:
 
   void test_getImage_wrong_stop() {
     WorkspaceTester ws;
-    ws.init(9, 2, 1);
+    ws.init(Histogram::YMode::Counts, 9, 2, 1);
     auto &X = ws.dataX(0);
     X[0] = 1.0;
     X[1] = 2.0;
@@ -1025,7 +1026,7 @@ public:
 
   void test_getImage_empty_set() {
     WorkspaceTester ws;
-    ws.init(9, 2, 1);
+    ws.init(Histogram::YMode::Counts, 9, 2, 1);
     auto &X = ws.dataX(0);
     X[0] = 1.0;
     X[1] = 2.0;
@@ -1039,7 +1040,7 @@ public:
 
   void test_getImage_non_rectangular() {
     WorkspaceTester ws;
-    ws.init(9, 2, 1);
+    ws.init(Histogram::YMode::Counts, 9, 2, 1);
     auto &X = ws.dataX(0);
     X[0] = 1.0;
     X[1] = 2.0;
@@ -1051,7 +1052,7 @@ public:
 
   void test_getImage_wrong_indexStart() {
     WorkspaceTester ws;
-    ws.init(9, 2, 1);
+    ws.init(Histogram::YMode::Counts, 9, 2, 1);
     auto &X = ws.dataX(0);
     X[0] = 1.0;
     X[1] = 2.0;
@@ -1064,7 +1065,7 @@ public:
                      std::runtime_error);
 
     WorkspaceTester wsh;
-    wsh.init(9, 1, 1);
+    wsh.init(Histogram::YMode::Counts, 9, 1, 1);
     startX = 2;
     endX = 2;
     TS_ASSERT_THROWS(wsh.getImageY(start, stop, width, startX, endX),
@@ -1073,7 +1074,7 @@ public:
 
   void test_getImage_wrong_indexEnd() {
     WorkspaceTester ws;
-    ws.init(9, 2, 1);
+    ws.init(Histogram::YMode::Counts, 9, 2, 1);
     auto &X = ws.dataX(0);
     X[0] = 1.0;
     X[1] = 2.0;
@@ -1086,7 +1087,7 @@ public:
                      std::runtime_error);
 
     WorkspaceTester wsh;
-    wsh.init(9, 2, 2);
+    wsh.init(Histogram::YMode::Counts, 9, 2, 2);
     auto &X1 = ws.dataX(0);
     X1[0] = 1.0;
     X1[1] = 2.0;
@@ -1098,7 +1099,7 @@ public:
 
   void test_getImage_single_bin_histo() {
     WorkspaceTester ws;
-    ws.init(9, 2, 1);
+    ws.init(Histogram::YMode::Counts, 9, 2, 1);
     auto &X = ws.dataX(0);
     X[0] = 1.0;
     X[1] = 2.0;
@@ -1133,7 +1134,7 @@ public:
 
   void test_getImage_single_bin_points() {
     WorkspaceTester ws;
-    ws.init(9, 1, 1);
+    ws.init(Histogram::YMode::Counts, 9, 1, 1);
     auto &X = ws.dataX(0);
     X[0] = 1.0;
     for (size_t i = 0; i < ws.getNumberHistograms(); ++i) {
@@ -1167,7 +1168,7 @@ public:
 
   void test_getImage_multi_bin_histo() {
     WorkspaceTester ws;
-    ws.init(9, 4, 3);
+    ws.init(Histogram::YMode::Counts, 9, 4, 3);
     auto &X = ws.dataX(0);
     X[0] = 1.0;
     X[1] = 2.0;
@@ -1203,7 +1204,7 @@ public:
 
   void test_getImage_multi_bin_points() {
     WorkspaceTester ws;
-    ws.init(9, 3, 3);
+    ws.init(Histogram::YMode::Counts, 9, 3, 3);
     auto &X = ws.dataX(0);
     X[0] = 1.0;
     X[1] = 2.0;
@@ -1239,21 +1240,21 @@ public:
   void test_setImage_too_large() {
     auto image = createImage(2, 3);
     WorkspaceTester ws;
-    ws.init(2, 2, 1);
+    ws.init(Histogram::YMode::Counts, 2, 2, 1);
     TS_ASSERT_THROWS(ws.setImageY(*image), std::runtime_error);
   }
 
   void test_setImage_not_single_bin() {
     auto image = createImage(2, 3);
     WorkspaceTester ws;
-    ws.init(20, 3, 2);
+    ws.init(Histogram::YMode::Counts, 20, 3, 2);
     TS_ASSERT_THROWS(ws.setImageY(*image), std::runtime_error);
   }
 
   void test_setImageY() {
     auto image = createImage(2, 3);
     WorkspaceTester ws;
-    ws.init(6, 2, 1);
+    ws.init(Histogram::YMode::Counts, 6, 2, 1);
     TS_ASSERT_THROWS_NOTHING(ws.setImageY(*image));
     TS_ASSERT_EQUALS(ws.readY(0)[0], 1);
     TS_ASSERT_EQUALS(ws.readY(1)[0], 2);
@@ -1266,7 +1267,7 @@ public:
   void test_setImageE() {
     auto image = createImage(2, 3);
     WorkspaceTester ws;
-    ws.init(6, 2, 1);
+    ws.init(Histogram::YMode::Counts, 6, 2, 1);
     TS_ASSERT_THROWS_NOTHING(ws.setImageE(*image));
     TS_ASSERT_EQUALS(ws.readE(0)[0], 1);
     TS_ASSERT_EQUALS(ws.readE(1)[0], 2);
@@ -1279,7 +1280,7 @@ public:
   void test_setImageY_start() {
     auto image = createImage(2, 3);
     WorkspaceTester ws;
-    ws.init(9, 2, 1);
+    ws.init(Histogram::YMode::Counts, 9, 2, 1);
     TS_ASSERT_THROWS_NOTHING(ws.setImageY(*image, 3));
     TS_ASSERT_EQUALS(ws.readY(3)[0], 1);
     TS_ASSERT_EQUALS(ws.readY(4)[0], 2);
@@ -1292,7 +1293,7 @@ public:
   void test_setImageE_start() {
     auto image = createImage(2, 3);
     WorkspaceTester ws;
-    ws.init(9, 2, 1);
+    ws.init(Histogram::YMode::Counts, 9, 2, 1);
     TS_ASSERT_THROWS_NOTHING(ws.setImageE(*image, 2));
     TS_ASSERT_EQUALS(ws.readE(2)[0], 1);
     TS_ASSERT_EQUALS(ws.readE(3)[0], 2);
@@ -1339,7 +1340,7 @@ public:
     const size_t numspec = 4;
     const size_t j = 3;
     const size_t k = j;
-    ws.init(numspec, j, k);
+    ws.init(Histogram::YMode::Counts, numspec, j, k);
 
     double values[3] = {10, 11, 17};
     size_t workspaceIndexWithDx[3] = {0, 1, 2};
@@ -1461,7 +1462,8 @@ public:
   MatrixWorkspaceTestPerformance() : m_workspace(nullptr) {
     size_t numberOfHistograms = 10000;
     size_t numberOfBins = 1;
-    m_workspace.init(numberOfHistograms, numberOfBins, numberOfBins - 1);
+    m_workspace.init(Histogram::YMode::Counts, numberOfHistograms, numberOfBins,
+                     numberOfBins - 1);
     bool includeMonitors = false;
     bool startYNegative = true;
     const std::string instrumentName("SimpleFakeInstrument");

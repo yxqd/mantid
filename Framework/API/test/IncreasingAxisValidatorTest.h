@@ -24,13 +24,13 @@ public:
 
   IncreasingAxisValidatorTest() {
     m_right_ws = boost::make_shared<WorkspaceTester>();
-    m_right_ws->initialize(1, 3, 3);
+    m_right_ws->initialize(HistogramData::Histogram::YMode::Counts, 1, 3, 3);
 
     auto points = {0.0, 1.0, 2.0};
     m_right_ws->setPoints(0, points);
 
     m_wrong_ws = boost::make_shared<WorkspaceTester>();
-    m_wrong_ws->initialize(1, 3, 3);
+    m_wrong_ws->initialize(HistogramData::Histogram::YMode::Counts, 1, 3, 3);
 
     auto bad_points = {2.0, 1.0, 0.0};
     std::copy(bad_points.begin(), bad_points.end(),

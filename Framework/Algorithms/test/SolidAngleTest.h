@@ -18,9 +18,7 @@ using namespace Mantid::Geometry;
 using namespace Mantid::API;
 using namespace Mantid::Algorithms;
 using namespace Mantid::DataObjects;
-using Mantid::HistogramData::BinEdges;
-using Mantid::HistogramData::Counts;
-using Mantid::HistogramData::CountVariances;
+using namespace Mantid::HistogramData;
 
 class SolidAngleTest : public CxxTest::TestSuite {
 public:
@@ -30,7 +28,8 @@ public:
   SolidAngleTest() : inputSpace(""), outputSpace("") {
     // Set up a small workspace for testing
     // Nhist = 144;
-    auto space2D = createWorkspace<Workspace2D>(Nhist, 11, 10);
+    auto space2D =
+        createWorkspace<Workspace2D>(Histogram::YMode::Counts, Nhist, 11, 10);
     BinEdges x{0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000};
     Counts a{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     CountVariances e(a.begin(), a.end());

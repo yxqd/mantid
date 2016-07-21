@@ -56,7 +56,7 @@ EventWorkspaceCollection::createEmptyEventWorkspace() const {
   // Make sure to initialize.
   //   We can use dummy numbers for arguments, for event workspace it doesn't
   //   matter
-  eventWS->initialize(1, 1, 1);
+  eventWS->initialize(HistogramData::Histogram::YMode::Counts, 1, 1, 1);
 
   // Set the units
   eventWS->getAxis(0)->unit() = UnitFactory::Instance().create("TOF");

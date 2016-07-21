@@ -68,7 +68,7 @@ public:
 
     EventWorkspace_sptr retVal(new EventWorkspace);
     if (initialize_pixels) {
-      retVal->initialize(NUMPIXELS, 1, 1);
+      retVal->initialize(Histogram::YMode::Counts, NUMPIXELS, 1, 1);
 
       // Make fake events
       for (int pix = 0; pix < NUMPIXELS; pix++) {
@@ -88,7 +88,7 @@ public:
         retVal->getSpectrum(pix).setSpectrumNo(pix);
       }
     } else {
-      retVal->initialize(1, 1, 1);
+      retVal->initialize(Histogram::YMode::Counts, 1, 1, 1);
     }
 
     if (setX) {
@@ -163,7 +163,7 @@ public:
     TS_ASSERT_DELTA(ew1->readY(1)[0], 2.0, 1e-5);
 
     EventWorkspace_sptr ew2(new EventWorkspace);
-    ew2->initialize(2, 2, 2);
+    ew2->initialize(Histogram::YMode::Counts, 2, 2, 2);
     ew2->copyDataFrom(*ew1);
     TS_ASSERT_EQUALS(ew2->getNumberHistograms(), ew1->getNumberHistograms());
     TS_ASSERT_EQUALS(ew2->getNumberEvents(), ew1->getNumberEvents());
@@ -286,7 +286,7 @@ public:
   //------------------------------------------------------------------------------
   void test_uneven_pixel_ids() {
     EventWorkspace_sptr uneven(new EventWorkspace);
-    uneven->initialize(NUMPIXELS / 10, 1, 1);
+    uneven->initialize(Histogram::YMode::Counts, NUMPIXELS / 10, 1, 1);
 
     // Make fake events. Pixel IDs start at 5 increment by 10
     size_t wi = 0;
@@ -505,7 +505,7 @@ public:
   void test_histogram_pulse_time_throws_if_index_too_large() {
     const size_t nHistos = 10;
     EventWorkspace_sptr ws = boost::make_shared<EventWorkspace>();
-    ws->initialize(nHistos, 1, 1);
+    ws->initialize(Histogram::YMode::Counts, nHistos, 1, 1);
 
     MantidVec X, Y, E;
     TSM_ASSERT_THROWS("Number of histograms is out of range, should throw",
@@ -559,7 +559,7 @@ public:
     DateAndTime max = DateAndTime(1);
 
     EventWorkspace_sptr ws(new EventWorkspace);
-    ws->initialize(1, 2, 1);
+    ws->initialize(Histogram::YMode::Counts, 1, 2, 1);
     ws->getSpectrum(0) += TofEvent(0, min); // min
     ws->getSpectrum(0) += TofEvent(0, max); // max;
 
@@ -571,7 +571,7 @@ public:
     DateAndTime max = DateAndTime(1);
 
     EventWorkspace_sptr ws(new EventWorkspace);
-    ws->initialize(1, 2, 1);
+    ws->initialize(Histogram::YMode::Counts, 1, 2, 1);
     ws->getSpectrum(0) += TofEvent(0, min); // min
     ws->getSpectrum(0) += TofEvent(0, max); // max;
 
@@ -583,7 +583,7 @@ public:
     DateAndTime max = DateAndTime(4);
 
     EventWorkspace_sptr ws(new EventWorkspace);
-    ws->initialize(2, 2, 1);
+    ws->initialize(Histogram::YMode::Counts, 2, 2, 1);
     // First spectrum
     ws->getSpectrum(0) += TofEvent(0, min + int64_t(1));
     ws->getSpectrum(0) += TofEvent(0, max); // max in spectra 1

@@ -30,13 +30,8 @@ using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::Geometry;
 using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 using Mantid::detid_t;
-using Mantid::HistogramData::BinEdges;
-using Mantid::HistogramData::Histogram;
-using Mantid::HistogramData::HistogramX;
-using Mantid::HistogramData::Counts;
-using Mantid::HistogramData::CountStandardDeviations;
-using Mantid::HistogramData::LinearGenerator;
 
 class GroupDetectors2Test : public CxxTest::TestSuite {
 public:
@@ -54,7 +49,8 @@ public:
     // which is a Child Algorithm of GroupDetectors)
     FrameworkManager::Instance();
     // Set up a small workspace for testing
-    auto space2D = createWorkspace<Workspace2D>(NHIST, NBINS + 1, NBINS);
+    auto space2D = createWorkspace<Workspace2D>(Histogram::YMode::Counts, NHIST,
+                                                NBINS + 1, NBINS);
     space2D->getAxis(0)->unit() = UnitFactory::Instance().create("TOF");
     BinEdges xs(NBINS + 1, LinearGenerator(10.0, 1.0));
     CountStandardDeviations errors(NBINS, 1.0);

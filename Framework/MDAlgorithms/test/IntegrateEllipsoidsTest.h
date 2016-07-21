@@ -62,7 +62,8 @@ createDiffractionData(const int nPixels = 100, const int nEventsPerPeak = 20,
   // Make an event workspace and add fake peak data
   auto eventWS = boost::make_shared<EventWorkspace>();
   eventWS->setInstrument(inst);
-  eventWS->initialize(nPixels * nPixels /*n spectra*/, 3 /* x-size */,
+  eventWS->initialize(HistogramData::Histogram::YMode::Counts,
+                      nPixels * nPixels /*n spectra*/, 3 /* x-size */,
                       3 /* y-size */);
   eventWS->getAxis(0)->setUnit("TOF");
   // Give the spectra-detector mapping for all event lists

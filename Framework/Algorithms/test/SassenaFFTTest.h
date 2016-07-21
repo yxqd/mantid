@@ -232,7 +232,7 @@ private:
   void createWorkspace2D(const std::string &wsName, const double &Heigth,
                          const double &sigma0, const size_t &nspectra) {
     DataObjects::Workspace2D_sptr ws(new DataObjects::Workspace2D);
-    ws->initialize(nspectra, nbins,
+    ws->initialize(HistogramData::Histogram::YMode::Counts, nspectra, nbins,
                    nbins); // arguments are NVectors, XLength, and YLength
     ws->getAxis(0)->unit() = Kernel::UnitFactory::Instance().create("TOF");
 

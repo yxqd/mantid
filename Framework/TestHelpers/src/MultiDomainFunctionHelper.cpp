@@ -74,7 +74,7 @@ const double B0 = 1, B1 = 2, B2 = 3;
 
 Mantid::API::MatrixWorkspace_sptr makeMultiDomainWorkspace1() {
   Mantid::API::MatrixWorkspace_sptr ws1 = boost::make_shared<WorkspaceTester>();
-  ws1->initialize(1, 10, 10);
+  ws1->initialize(HistogramData::Histogram::YMode::Counts, 1, 10, 10);
   {
     Mantid::MantidVec &x = ws1->dataX(0);
     Mantid::MantidVec &y = ws1->dataY(0);
@@ -90,7 +90,7 @@ Mantid::API::MatrixWorkspace_sptr makeMultiDomainWorkspace1() {
 
 Mantid::API::MatrixWorkspace_sptr makeMultiDomainWorkspace2() {
   Mantid::API::MatrixWorkspace_sptr ws2 = boost::make_shared<WorkspaceTester>();
-  ws2->initialize(1, 10, 10);
+  ws2->initialize(HistogramData::Histogram::YMode::Counts, 1, 10, 10);
   {
     Mantid::MantidVec &x = ws2->dataX(0);
     Mantid::MantidVec &y = ws2->dataY(0);
@@ -106,7 +106,7 @@ Mantid::API::MatrixWorkspace_sptr makeMultiDomainWorkspace2() {
 
 Mantid::API::MatrixWorkspace_sptr makeMultiDomainWorkspace3() {
   Mantid::API::MatrixWorkspace_sptr ws3 = boost::make_shared<WorkspaceTester>();
-  ws3->initialize(1, 10, 10);
+  ws3->initialize(HistogramData::Histogram::YMode::Counts, 1, 10, 10);
   {
     Mantid::MantidVec &x = ws3->dataX(0);
     Mantid::MantidVec &y = ws3->dataY(0);

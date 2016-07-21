@@ -82,7 +82,7 @@ Workspace2D_sptr Create1DWorkspaceRand(int size) {
   std::generate(y1.begin(), y1.end(), randFunc);
   std::generate(e1.begin(), e1.end(), randFunc);
   auto retVal = boost::make_shared<Workspace2D>();
-  retVal->initialize(1, size, size);
+  retVal->initialize(HistogramData::Histogram::YMode::Counts, 1, size, size);
   retVal->setPoints(0, size, LinearGenerator(1.0, 1.0));
   retVal->dataY(0) = y1;
   retVal->dataE(0) = e1;
@@ -94,7 +94,7 @@ Workspace2D_sptr Create1DWorkspaceConstant(int size, double value,
   MantidVec y1(size, value);
   MantidVec e1(size, error);
   auto retVal = boost::make_shared<Workspace2D>();
-  retVal->initialize(1, size, size);
+  retVal->initialize(HistogramData::Histogram::YMode::Counts, 1, size, size);
   retVal->setPoints(0, size, LinearGenerator(1.0, 1.0));
   retVal->dataY(0) = y1;
   retVal->dataE(0) = e1;
@@ -115,7 +115,7 @@ Workspace2D_sptr Create1DWorkspaceFib(int size) {
   MantidVec e1(size);
   std::generate(y1.begin(), y1.end(), FibSeries<double>());
   auto retVal = boost::make_shared<Workspace2D>();
-  retVal->initialize(1, size, size);
+  retVal->initialize(HistogramData::Histogram::YMode::Counts, 1, size, size);
   retVal->setPoints(0, size, LinearGenerator(1.0, 1.0));
   retVal->dataY(0) = y1;
   retVal->dataE(0) = e1;
@@ -163,7 +163,8 @@ Create2DWorkspaceWithValues(int64_t nHist, int64_t nBins, bool isHist,
   Counts y1(nBins, yVal);
   CountStandardDeviations e1(nBins, eVal);
   auto retVal = boost::make_shared<Workspace2D>();
-  retVal->initialize(nHist, isHist ? nBins + 1 : nBins, nBins);
+  retVal->initialize(HistogramData::Histogram::YMode::Counts, nHist,
+                     isHist ? nBins + 1 : nBins, nBins);
   for (int i = 0; i < nHist; i++) {
     retVal->setX(i, x1);
     retVal->setCounts(i, y1);
@@ -264,7 +265,8 @@ Workspace2D_sptr Create2DWorkspaceBinned(int nhist, int nbins, double x0,
   Counts y(nbins, 2);
   CountStandardDeviations e(nbins, M_SQRT2);
   auto retVal = boost::make_shared<Workspace2D>();
-  retVal->initialize(nhist, nbins + 1, nbins);
+  retVal->initialize(HistogramData::Histogram::YMode::Counts, nhist, nbins + 1,
+                     nbins);
   for (int i = 0; i < nhist; i++) {
     retVal->setBinEdges(i, x);
     retVal->setCounts(i, y);
@@ -284,7 +286,8 @@ Workspace2D_sptr Create2DWorkspaceBinned(int nhist, const int numBoundaries,
   Counts y(numBins, 2);
   CountStandardDeviations e(numBins, M_SQRT2);
   auto retVal = boost::make_shared<Workspace2D>();
-  retVal->initialize(nhist, numBins + 1, numBins);
+  retVal->initialize(HistogramData::Histogram::YMode::Counts, nhist,
+                     numBins + 1, numBins);
   for (int i = 0; i < nhist; i++) {
     retVal->setBinEdges(i, x);
     retVal->setCounts(i, y);
@@ -586,7 +589,7 @@ CreateEventWorkspaceWithStartTime(int numPixels, int numBins, int numEvents,
   numBins++;
 
   auto retVal = boost::make_shared<EventWorkspace>();
-  retVal->initialize(numPixels, 1, 1);
+  retVal->initialize(HistogramData::Histogram::YMode::Counts, numPixels, 1, 1);
 
   // Make fake events
   if (eventPattern) // 0 == no events
@@ -632,7 +635,7 @@ CreateGroupedEventWorkspace(std::vector<std::vector<int>> groups, int numBins,
                             double binDelta, double xOffset) {
 
   auto retVal = boost::make_shared<EventWorkspace>();
-  retVal->initialize(1, 2, 1);
+  retVal->initialize(HistogramData::Histogram::YMode::Counts, 1, 2, 1);
 
   for (size_t g = 0; g < groups.size(); g++) {
     retVal->getOrAddEventList(g).clearDetectorIDs();
@@ -669,7 +672,8 @@ CreateGroupedEventWorkspace(std::vector<std::vector<int>> groups, int numBins,
 EventWorkspace_sptr CreateRandomEventWorkspace(size_t numbins, size_t numpixels,
                                                double bin_delta) {
   auto retVal = boost::make_shared<EventWorkspace>();
-  retVal->initialize(numpixels, numbins, numbins - 1);
+  retVal->initialize(HistogramData::Histogram::YMode::Counts, numpixels,
+                     numbins, numbins - 1);
 
   // and X-axis for references:
   auto pAxis0 = new NumericAxis(numbins);
@@ -959,7 +963,7 @@ createEventWorkspace3(Mantid::DataObjects::EventWorkspace_const_sptr sourceWS,
       Mantid::DataObjects::EventWorkspace_sptr(
           new DataObjects::EventWorkspace());
   // outputWS->setName(wsname);
-  outputWS->initialize(1, 1, 1);
+  outputWS->initialize(HistogramData::Histogram::YMode::Counts, 1, 1, 1);
 
   // 2. Set the units
   outputWS->getAxis(0)->unit() = UnitFactory::Instance().create("TOF");
@@ -1041,7 +1045,8 @@ RebinnedOutput_sptr CreateRebinnedOutputWorkspace() {
   // Initialize the workspace
   const int numHist = numY - 1;
   const int numX = 7;
-  outputWS->initialize(numHist, numX, numX - 1);
+  outputWS->initialize(HistogramData::Histogram::YMode::Counts, numHist, numX,
+                       numX - 1);
 
   // Set the normal units
   outputWS->getAxis(0)->unit() = UnitFactory::Instance().create("DeltaE");

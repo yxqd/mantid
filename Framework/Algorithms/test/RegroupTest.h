@@ -14,10 +14,7 @@ using namespace Mantid::Kernel;
 using namespace Mantid::DataObjects;
 using namespace Mantid::API;
 using namespace Mantid::Algorithms;
-using Mantid::HistogramData::BinEdges;
-using Mantid::HistogramData::Counts;
-using Mantid::HistogramData::CountStandardDeviations;
-using Mantid::HistogramData::LinearGenerator;
+using namespace Mantid::HistogramData;
 
 class RegroupTest : public CxxTest::TestSuite {
 public:
@@ -57,7 +54,8 @@ public:
 
 private:
   Workspace2D_sptr Create1DWorkspace(int size) {
-    auto retVal = createWorkspace<Workspace2D>(1, size, size - 1);
+    auto retVal = createWorkspace<Workspace2D>(Histogram::YMode::Counts, 1,
+                                               size, size - 1);
     double j = 1.0;
     for (int i = 0; i < size; i++) {
       retVal->dataX(0)[i] = j * 0.5;
@@ -73,7 +71,8 @@ private:
     Counts y1(xlen - 1, 3.0);
     CountStandardDeviations e1(xlen - 1, sqrt(3.0));
 
-    auto retVal = createWorkspace<Workspace2D>(ylen, xlen, xlen - 1);
+    auto retVal = createWorkspace<Workspace2D>(Histogram::YMode::Counts, ylen,
+                                               xlen, xlen - 1);
 
     for (int i = 0; i < ylen; i++) {
       retVal->setBinEdges(i, x1);

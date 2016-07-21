@@ -14,6 +14,7 @@
 
 using namespace Mantid::API;
 using namespace Mantid::Kernel;
+using Mantid::HistogramData::Histogram;
 
 class RefAxisTest : public CxxTest::TestSuite {
 public:
@@ -25,9 +26,9 @@ public:
   RefAxisTest() {
     // Set up two small workspaces for these tests
     space = new Mantid::DataObjects::Workspace2D;
-    space->initialize(5, 25, 25);
+    space->initialize(Histogram::YMode::Counts, 5, 25, 25);
     space2 = new Mantid::DataObjects::Workspace2D;
-    space2->initialize(1, 5, 5);
+    space2->initialize(Histogram::YMode::Counts, 1, 5, 5);
 
     // Fill them
     double *a = new double[25];

@@ -71,7 +71,8 @@ public:
     }
 
     EventWorkspace_sptr retVal(new EventWorkspace);
-    retVal->initialize(numPixels, 1, 1);
+    retVal->initialize(HistogramData::Histogram::YMode::Counts, numPixels, 1,
+                       1);
 
     // --------- Load the instrument -----------
     LoadInstrument *loadInst = new LoadInstrument();

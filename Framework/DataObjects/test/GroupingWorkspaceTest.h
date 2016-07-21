@@ -18,11 +18,14 @@ class GroupingWorkspaceTest : public CxxTest::TestSuite {
 public:
   void test_default_constructor() {
     GroupingWorkspace_sptr ws(new GroupingWorkspace());
-    TSM_ASSERT_THROWS_ANYTHING("Can't init with > 1 X or Y entries.",
-                               ws->initialize(100, 2, 1));
-    TSM_ASSERT_THROWS_ANYTHING("Can't init with > 1 X or Y entries.",
-                               ws->initialize(100, 1, 2));
-    TS_ASSERT_THROWS_NOTHING(ws->initialize(100, 1, 1));
+    TSM_ASSERT_THROWS_ANYTHING(
+        "Can't init with > 1 X or Y entries.",
+        ws->initialize(HistogramData::Histogram::YMode::Counts, 100, 2, 1));
+    TSM_ASSERT_THROWS_ANYTHING(
+        "Can't init with > 1 X or Y entries.",
+        ws->initialize(HistogramData::Histogram::YMode::Counts, 100, 1, 2));
+    TS_ASSERT_THROWS_NOTHING(
+        ws->initialize(HistogramData::Histogram::YMode::Counts, 100, 1, 1));
     TS_ASSERT_EQUALS(ws->getNumberHistograms(), 100);
     TS_ASSERT_EQUALS(ws->blocksize(), 1);
   }

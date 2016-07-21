@@ -29,7 +29,8 @@ DECLARE_WORKSPACE(SpecialWorkspace2D)
 SpecialWorkspace2D::SpecialWorkspace2D(Geometry::Instrument_const_sptr inst,
                                        const bool includeMonitors) {
   // Init the Workspace2D with one spectrum per detector, in the same order.
-  this->init(inst->getNumberDetectors(!includeMonitors), 1, 1);
+  this->init(HistogramData::Histogram::YMode::Counts,
+             inst->getNumberDetectors(!includeMonitors), 1, 1);
 
   // Copy the instrument
   this->setInstrument(inst);
@@ -54,7 +55,8 @@ SpecialWorkspace2D::SpecialWorkspace2D(Geometry::Instrument_const_sptr inst,
  * @return created SpecialWorkspace2D
  */
 SpecialWorkspace2D::SpecialWorkspace2D(API::MatrixWorkspace_const_sptr parent) {
-  this->init(parent->getNumberHistograms(), 1, 1);
+  this->init(HistogramData::Histogram::YMode::Counts,
+             parent->getNumberHistograms(), 1, 1);
   API::WorkspaceFactory::Instance().initializeFromParent(
       parent, API::MatrixWorkspace_sptr(this, Mantid::NoDeleting()), false);
   // Make the mapping, which will be used for speed later.
@@ -74,13 +76,14 @@ SpecialWorkspace2D::SpecialWorkspace2D(API::MatrixWorkspace_const_sptr parent) {
 *  @param XLength :: Must be 1
 *  @param YLength :: Must be 1
 */
-void SpecialWorkspace2D::init(const size_t &NVectors, const size_t &XLength,
+void SpecialWorkspace2D::init(const HistogramData::Histogram::YMode ymode,
+                              const size_t &NVectors, const size_t &XLength,
                               const size_t &YLength) {
   if ((XLength != 1) || (YLength != 1))
     throw std::invalid_argument(
         "SpecialWorkspace2D must have 'spectra' of length 1 only.");
   // Continue with standard initialization
-  Workspace2D::init(NVectors, XLength, YLength);
+  Workspace2D::init(ymode, NVectors, XLength, YLength);
 }
 
 /**

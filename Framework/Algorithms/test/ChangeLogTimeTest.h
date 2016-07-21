@@ -11,6 +11,7 @@ using namespace Mantid::Algorithms;
 using namespace Mantid::API;
 using namespace Mantid::DataObjects;
 using namespace Mantid::Kernel;
+using namespace Mantid::HistogramData;
 
 class ChangeLogTimeTest : public CxxTest::TestSuite {
 public:
@@ -50,7 +51,7 @@ private:
     // create a workspace to mess with
     Workspace2D_sptr testWorkspace(new Workspace2D);
     testWorkspace->setTitle("input2D");
-    testWorkspace->initialize(5, 2, 2);
+    testWorkspace->initialize(Histogram::YMode::Counts, 5, 2, 2);
     int jj = 0;
     for (int i = 0; i < 2; ++i) {
       for (jj = 0; jj < 4; ++jj)

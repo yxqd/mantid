@@ -302,7 +302,8 @@ MatrixWorkspace_sptr CreateSampleWorkspace::createHistogramWorkspace(
   Counts y(evalFunction(functionString, xValues, isRandom ? 1 : 0));
   CountStandardDeviations e(CountVariances(y.cbegin(), y.cend()));
 
-  auto retVal = createWorkspace<Workspace2D>(numPixels, numBins + 1, numBins);
+  auto retVal = createWorkspace<Workspace2D>(
+      HistogramData::Histogram::YMode::Counts, numPixels, numBins + 1, numBins);
   retVal->setInstrument(inst);
 
   for (size_t wi = 0; wi < static_cast<size_t>(numPixels); wi++) {
@@ -328,7 +329,7 @@ EventWorkspace_sptr CreateSampleWorkspace::createEventWorkspace(
   int numXBins = numBins + 1;
 
   auto retVal = boost::make_shared<EventWorkspace>();
-  retVal->initialize(numPixels, 1, 1);
+  retVal->initialize(HistogramData::Histogram::YMode::Counts, numPixels, 1, 1);
 
   retVal->setInstrument(inst);
 

@@ -94,7 +94,8 @@ protected:
   Workspace2D(const Workspace2D &other);
 
   /// Called by initialize()
-  void init(const std::size_t &NVectors, const std::size_t &XLength,
+  void init(const HistogramData::Histogram::YMode ymode,
+            const std::size_t &NVectors, const std::size_t &XLength,
             const std::size_t &YLength) override;
 
   /// The number of vectors in the workspace

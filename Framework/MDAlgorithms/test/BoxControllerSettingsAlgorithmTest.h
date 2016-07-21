@@ -59,7 +59,7 @@ private:
   create_workspace_with_splitting_params(int splitThreshold, int splitInto,
                                          int maxRecursionDepth) {
     auto ws = boost::make_shared<Mantid::DataObjects::Workspace2D>();
-    ws->initialize(1, 2, 1);
+    ws->initialize(HistogramData::Histogram::YMode::Counts, 1, 2, 1);
     ws->setInstrument(
         ComponentCreationHelper::createTestInstrumentRectangular(6, 1, 0.0));
     const std::string instrumentName = ws->getInstrument()->getName();
@@ -226,7 +226,7 @@ public:
     // Create a workspace with an instrument, but no instrument parameters for
     // box splitting.
     auto ws = boost::make_shared<Mantid::DataObjects::Workspace2D>();
-    ws->initialize(1, 2, 1);
+    ws->initialize(HistogramData::Histogram::YMode::Counts, 1, 2, 1);
     ws->setInstrument(
         ComponentCreationHelper::createTestInstrumentRectangular(6, 1, 0));
 

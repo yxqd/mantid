@@ -157,7 +157,8 @@ std::map<uint32_t, std::vector<uint32_t>> LoadSwans::loadData() {
   std::ifstream input(filename, std::ifstream::binary | std::ios::ate);
   input.seekg(0);
 
-  m_ws->initialize(m_detector_size, 1, 1);
+  m_ws->initialize(HistogramData::Histogram::YMode::Counts, m_detector_size, 1,
+                   1);
 
   std::map<uint32_t, std::vector<uint32_t>> eventMap;
 

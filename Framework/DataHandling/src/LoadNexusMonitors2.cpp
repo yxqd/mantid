@@ -744,8 +744,8 @@ bool LoadNexusMonitors2::createOutputWorkspace(
           "This file may be corrupted or it may not be supported");
 
     // only used if using event monitors
-    EventWorkspace_sptr eventWS = EventWorkspace_sptr(new EventWorkspace());
-    eventWS->initialize(numEventMon, 1, 1);
+    auto eventWS = API::createWorkspace<EventWorkspace>(
+        HistogramData::Histogram::YMode::Counts, numEventMon, 1, 1);
 
     // Set the units
     eventWS->getAxis(0)->unit() =

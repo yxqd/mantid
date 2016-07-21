@@ -7,6 +7,7 @@
 #include "MantidTestHelpers/FakeObjects.h"
 
 using Mantid::API::SpectraAxisValidator;
+using Mantid::HistogramData::Histogram;
 
 class SpectraAxisValidatorTest : public CxxTest::TestSuite {
 public:
@@ -19,7 +20,7 @@ public:
 
   void test_fail() {
     auto ws = boost::make_shared<WorkspaceTester>();
-    ws->init(2, 11, 10);
+    ws->init(Histogram::YMode::Counts, 2, 11, 10);
     auto newAxis = new NumericAxis(2);
     ws->replaceAxis(1, newAxis);
     SpectraAxisValidator validator;
@@ -30,7 +31,7 @@ public:
 
   void test_success() {
     auto ws = boost::make_shared<WorkspaceTester>();
-    ws->init(2, 11, 10);
+    ws->init(Histogram::YMode::Counts, 2, 11, 10);
     SpectraAxisValidator validator;
     TS_ASSERT_EQUALS(validator.isValid(ws), "");
   }

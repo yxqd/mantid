@@ -325,7 +325,8 @@ Mantid::API::MatrixWorkspace_sptr ReflectometryTransform::execute(
     Mantid::API::MatrixWorkspace_const_sptr inputWs) const {
   auto ws = boost::make_shared<Mantid::DataObjects::Workspace2D>();
 
-  ws->initialize(m_d1NumBins, m_d0NumBins,
+  ws->initialize(HistogramData::Histogram::YMode::Counts, m_d1NumBins,
+                 m_d0NumBins,
                  m_d0NumBins); // Create the output workspace as a distribution
 
   // Mapping so that d0 and d1 values calculated can be added to the matrix

@@ -16,6 +16,7 @@
 using namespace Mantid;
 using namespace Mantid::API;
 using namespace Mantid::Kernel;
+using namespace Mantid::HistogramData;
 
 static const int NUMBINS = 31;
 static const int NUMSPECS = 4;
@@ -112,7 +113,7 @@ public:
     bg = 100.0;
     Mantid::DataObjects::Workspace2D_sptr WS(
         new Mantid::DataObjects::Workspace2D);
-    WS->initialize(1, NUMBINS + 1, NUMBINS);
+    WS->initialize(Histogram::YMode::Counts, 1, NUMBINS + 1, NUMBINS);
     const size_t seed(12345);
     const double lower(-1.0), upper(1.0);
     MersenneTwister randGen(seed, lower, upper);
@@ -129,7 +130,7 @@ public:
     // create another test workspace
     Mantid::DataObjects::Workspace2D_sptr WS2D(
         new Mantid::DataObjects::Workspace2D);
-    WS2D->initialize(NUMSPECS, NUMBINS + 1, NUMBINS);
+    WS2D->initialize(Histogram::YMode::Counts, NUMSPECS, NUMBINS + 1, NUMBINS);
 
     for (int j = 0; j < NUMSPECS; ++j) {
       for (int i = 0; i < NUMBINS; ++i) {
@@ -352,7 +353,7 @@ public:
     const double YVALUE = 100.0;
     Mantid::DataObjects::Workspace2D_sptr WS(
         new Mantid::DataObjects::Workspace2D);
-    WS->initialize(1, NUMBINS + 1, NUMBINS);
+    WS->initialize(Histogram::YMode::Counts, 1, NUMBINS + 1, NUMBINS);
 
     for (int i = 0; i < NUMBINS; ++i) {
       WS->mutableX(0)[i] = 2 * i;

@@ -19,6 +19,7 @@
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
+using namespace Mantid::HistogramData;
 
 class StubbedWorkspaceAlgorithm : public Algorithm {
 public:
@@ -47,10 +48,10 @@ public:
   void exec() override {
     boost::shared_ptr<WorkspaceTester> out1 =
         boost::make_shared<WorkspaceTester>();
-    out1->init(10, 10, 10);
+    out1->init(Histogram::YMode::Counts, 10, 10, 10);
     boost::shared_ptr<WorkspaceTester> out2 =
         boost::make_shared<WorkspaceTester>();
-    out2->init(10, 10, 10);
+    out2->init(Histogram::YMode::Counts, 10, 10, 10);
     std::string outName = getPropertyValue("InputWorkspace1") + "+" +
                           getPropertyValue("InputWorkspace2") + "+" +
                           getPropertyValue("InOutWorkspace");
@@ -539,7 +540,7 @@ public:
       for (; it != names.end(); it++) {
         boost::shared_ptr<WorkspaceTester> ws =
             boost::make_shared<WorkspaceTester>();
-        ws->init(10, 10, 10);
+        ws->init(Histogram::YMode::Counts, 10, 10, 10);
         AnalysisDataService::Instance().addOrReplace(*it, ws);
         wsGroup->add(*it);
       }

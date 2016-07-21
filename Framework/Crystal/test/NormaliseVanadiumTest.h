@@ -26,8 +26,7 @@ using namespace Mantid::API;
 using namespace Mantid::DataObjects;
 using namespace Mantid::DataHandling;
 using namespace Mantid::Geometry;
-using Mantid::HistogramData::BinEdges;
-using Mantid::HistogramData::LinearGenerator;
+using namespace Mantid::HistogramData;
 
 class NormaliseVanadiumImpl : public NormaliseVanadium {
 public:
@@ -71,7 +70,7 @@ public:
     }
 
     EventWorkspace_sptr retVal(new EventWorkspace);
-    retVal->initialize(numPixels, 1, 1);
+    retVal->initialize(Histogram::YMode::Counts, numPixels, 1, 1);
 
     // --------- Load the instrument -----------
     LoadInstrument *loadInst = new LoadInstrument();

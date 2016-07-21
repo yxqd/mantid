@@ -26,7 +26,8 @@ createSinglePulseEventWorkspace(const V3D &sourcePosition,
   const size_t numberspectra = detectorPositions.size();
 
   EventWorkspace_sptr retVal(new EventWorkspace);
-  retVal->initialize(numberspectra, 1, 1);
+  retVal->initialize(Mantid::HistogramData::Histogram::YMode::Counts,
+                     numberspectra, 1, 1);
 
   // Make fake events
   for (size_t pix = 0; pix < numberspectra; pix++) {

@@ -59,7 +59,7 @@ public:
 
   MultiDomainCreatorTest() {
     ws1.reset(new WorkspaceTester);
-    ws1->initialize(1, 10, 10);
+    ws1->initialize(Mantid::HistogramData::Histogram::YMode::Counts, 1, 10, 10);
     {
       Mantid::MantidVec &x = ws1->dataX(0);
       Mantid::MantidVec &y = ws1->dataY(0);
@@ -71,7 +71,7 @@ public:
     }
 
     ws2.reset(new WorkspaceTester);
-    ws2->initialize(1, 10, 10);
+    ws2->initialize(Mantid::HistogramData::Histogram::YMode::Counts, 1, 10, 10);
     {
       Mantid::MantidVec &x = ws2->dataX(0);
       Mantid::MantidVec &y = ws2->dataY(0);
@@ -83,7 +83,7 @@ public:
     }
 
     ws3.reset(new WorkspaceTester);
-    ws3->initialize(1, 10, 10);
+    ws3->initialize(Mantid::HistogramData::Histogram::YMode::Counts, 1, 10, 10);
     {
       Mantid::MantidVec &x = ws3->dataX(0);
       Mantid::MantidVec &y = ws3->dataY(0);

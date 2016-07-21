@@ -13,6 +13,7 @@ using Mantid::MantidVec;
 using std::size_t;
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
+using namespace Mantid::HistogramData;
 
 class WorkspaceFactoryTest : public CxxTest::TestSuite {
 
@@ -25,12 +26,13 @@ class WorkspaceFactoryTest : public CxxTest::TestSuite {
   public:
     const std::string id() const override { return "Workspace2DTest"; }
 
-    void init(const size_t &NVectors, const size_t &XLength,
+    void init(const HistogramData::Histogram::YMode ymode,
+              const size_t &NVectors, const size_t &XLength,
               const size_t &YLength) override {
       size.push_back(NVectors);
       size.push_back(XLength);
       size.push_back(YLength);
-      WorkspaceTester::init(NVectors, XLength, YLength);
+      WorkspaceTester::init(ymode, NVectors, XLength, YLength);
     }
     std::vector<size_t> size;
   };
@@ -66,7 +68,7 @@ public:
   /** Make a parent, have the child be created with the same sizes */
   void testCreateFromParent() {
     MatrixWorkspace_sptr ws_child(new Workspace1DTest);
-    ws_child->initialize(3, 1, 1);
+    ws_child->initialize(Histogram::YMode::Counts, 3, 1, 1);
     ws_child->getSpectrum(0).setSpectrumNo(123);
     ws_child->getSpectrum(1).setDetectorID(456);
     ws_child->getSpectrum(2).dataY()[0] = 789;
@@ -112,7 +114,7 @@ public:
                !child->monitorWorkspace());
 
     MatrixWorkspace_sptr ws2D(new Workspace2DTest);
-    ws2D->initialize(3, 1, 1);
+    ws2D->initialize(Histogram::YMode::Counts, 3, 1, 1);
     MatrixWorkspace_sptr child2;
     TS_ASSERT_THROWS_NOTHING(child2 =
                                  WorkspaceFactory::Instance().create(ws2D));
@@ -120,7 +122,7 @@ public:
     TS_ASSERT_EQUALS(child2->id(), "Workspace2DTest");
 
     MatrixWorkspace_sptr nif(new NotInFactory);
-    nif->initialize(1, 1, 1);
+    nif->initialize(Histogram::YMode::Counts, 1, 1, 1);
     TS_ASSERT_THROWS(child = WorkspaceFactory::Instance().create(nif),
                      std::runtime_error);
   }

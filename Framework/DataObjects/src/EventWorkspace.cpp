@@ -65,10 +65,18 @@ bool EventWorkspace::threadSafe() const {
  * (ignored)
  *  @param YLength :: The number of data/error points in each vector (ignored)
  */
-void EventWorkspace::init(const std::size_t &NVectors,
+void EventWorkspace::init(const HistogramData::Histogram::YMode ymode,
+                          const std::size_t &NVectors,
                           const std::size_t &XLength,
                           const std::size_t &YLength) {
   (void)YLength; // Avoid compiler warning
+
+  // The only way an EventWorkspace can be a distribution (YMode::Frequencies)
+  // is by somehow absorbing the bin width into the event weight. This can
+  // happen, e.g., in 'Divide', but we do not support creation in this mode.
+  if(ymode != HistogramData::Histogram::YMode::Counts)
+    throw std::invalid_argument(
+        "EventWorkspace can only be initialized with YMode::Counts");
 
   // Check validity of arguments
   if (NVectors <= 0) {

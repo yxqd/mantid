@@ -245,7 +245,8 @@ void GoniometerAnglesFromPhiRotation::exec() {
   //----------------------- Optimize around best
   //-------------------------------------------
 
-  auto ws = createWorkspace<Workspace2D>(1, 3 * Npeaks, 3 * Npeaks);
+  auto ws = createWorkspace<Workspace2D>(
+      HistogramData::Histogram::YMode::Counts, 1, 3 * Npeaks, 3 * Npeaks);
 
   MantidVec Xvals;
 

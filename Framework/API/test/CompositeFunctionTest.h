@@ -58,7 +58,8 @@ public:
     return m_spectra[index];
   }
   const std::string id(void) const override { return ""; }
-  void init(const size_t &, const size_t &, const size_t &) override {}
+  void init(const HistogramData::Histogram::YMode, const size_t &,
+            const size_t &, const size_t &) override {}
   void generateHistogram(const std::size_t, const MantidVec &, MantidVec &,
                          MantidVec &, bool) const override {}
 

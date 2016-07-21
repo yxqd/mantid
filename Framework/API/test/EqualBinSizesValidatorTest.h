@@ -24,21 +24,21 @@ public:
 
   void test_empty() {
     auto ws = boost::make_shared<WorkspaceTester>();
-    ws->init(0, 0, 0);
+    ws->init(Mantid::HistogramData::Histogram::YMode::Counts, 0, 0, 0);
     EqualBinSizesValidator val(0.1);
     TS_ASSERT_EQUALS(val.isValid(ws), "Enter a workspace with some data in it");
   }
 
   void test_noBins() {
     auto ws = boost::make_shared<WorkspaceTester>();
-    ws->init(1, 0, 0);
+    ws->init(Mantid::HistogramData::Histogram::YMode::Counts, 1, 0, 0);
     EqualBinSizesValidator val(0.1);
     TS_ASSERT_EQUALS(val.isValid(ws), "Enter a workspace with some data in it");
   }
 
   void test_noCommonBins() {
     auto ws = boost::make_shared<WorkspaceTester>();
-    ws->init(2, 3, 3);
+    ws->init(Mantid::HistogramData::Histogram::YMode::Counts, 2, 3, 3);
     Mantid::MantidVec xData{1, 2, 3};
     ws->setPoints(1, xData);
     EqualBinSizesValidator val(0.1);
@@ -49,14 +49,14 @@ public:
 
   void test_equalBinSizes() {
     auto ws = boost::make_shared<WorkspaceTester>();
-    ws->init(1, 3, 3);
+    ws->init(Mantid::HistogramData::Histogram::YMode::Counts, 1, 3, 3);
     EqualBinSizesValidator val(0.1);
     TS_ASSERT_EQUALS(val.isValid(ws), "");
   }
 
   void test_unequalBinSizes() {
     auto ws = boost::make_shared<WorkspaceTester>();
-    ws->init(1, 3, 3);
+    ws->init(Mantid::HistogramData::Histogram::YMode::Counts, 1, 3, 3);
     Mantid::MantidVec xData{1, 2, 5};
     ws->setPoints(0, xData);
     EqualBinSizesValidator val(0.1);

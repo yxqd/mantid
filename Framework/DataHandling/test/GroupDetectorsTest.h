@@ -21,12 +21,9 @@ using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::Geometry;
 using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 using Mantid::detid_t;
 using Mantid::specnum_t;
-using Mantid::HistogramData::BinEdges;
-using Mantid::HistogramData::Counts;
-using Mantid::HistogramData::CountStandardDeviations;
-using Mantid::HistogramData::LinearGenerator;
 
 class GroupDetectorsTest : public CxxTest::TestSuite {
 public:
@@ -35,7 +32,8 @@ public:
 
   GroupDetectorsTest() {
     // Set up a small workspace for testing
-    auto space2D = createWorkspace<Workspace2D>(5, 6, 5);
+    auto space2D =
+        createWorkspace<Workspace2D>(Histogram::YMode::Counts, 5, 6, 5);
     space2D->getAxis(0)->unit() = UnitFactory::Instance().create("TOF");
     BinEdges x(6, LinearGenerator(10.0, 1.0));
     Counts y(5, 1.0);

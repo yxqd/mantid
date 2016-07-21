@@ -131,7 +131,7 @@ public:
 
   void test_exec_point_data() {
     MatrixWorkspace_sptr ws2(new IMDWorkspaceTester);
-    ws2->initialize(10, 10, 10);
+    ws2->initialize(HistogramData::Histogram::YMode::Counts, 10, 10, 10);
 
     for (size_t is = 0; is < ws2->getNumberHistograms(); ++is) {
       Mantid::MantidVec &x = ws2->dataX(is);

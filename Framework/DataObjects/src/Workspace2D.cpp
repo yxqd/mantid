@@ -64,7 +64,8 @@ Workspace2D::~Workspace2D() {
  * @param YLength :: The number of data/error points in each vector
  * (must all be the same)
 */
-void Workspace2D::init(const std::size_t &NVectors, const std::size_t &XLength,
+void Workspace2D::init(const HistogramData::Histogram::YMode ymode,
+                       const std::size_t &NVectors, const std::size_t &XLength,
                        const std::size_t &YLength) {
   m_noVectors = NVectors;
   data.resize(m_noVectors);
@@ -75,9 +76,8 @@ void Workspace2D::init(const std::size_t &NVectors, const std::size_t &XLength,
   HistogramData::CountStandardDeviations e(YLength);
   for (size_t i = 0; i < m_noVectors; i++) {
     // Create the spectrum upon init
-    auto spec =
-        new Histogram1D(HistogramData::getHistogramXMode(XLength, YLength),
-                        HistogramData::Histogram::YMode::Counts);
+    auto spec = new Histogram1D(
+        HistogramData::getHistogramXMode(XLength, YLength), ymode);
     data[i] = spec;
     // Set the data and X
     spec->setX(x);

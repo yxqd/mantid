@@ -18,9 +18,7 @@ using namespace Mantid::DataObjects;
 using namespace Mantid::Kernel;
 using namespace Mantid::Geometry;
 using namespace Mantid::API;
-using HistogramData::Counts;
-using HistogramData::CountStandardDeviations;
-using HistogramData::LinearGenerator;
+using namespace Mantid::HistogramData;
 using WorkspaceCreationHelper::Create2DWorkspaceBinned;
 
 class Workspace2DTest : public CxxTest::TestSuite {
@@ -212,7 +210,7 @@ public:
   /** Get spectrum() */
   void testGetSpectrum() {
     boost::shared_ptr<MatrixWorkspace> ws = boost::make_shared<Workspace2D>();
-    ws->initialize(4, 1, 1);
+    ws->initialize(Histogram::YMode::Counts, 4, 1, 1);
     TS_ASSERT_THROWS_NOTHING(ws->getSpectrum(0));
     TS_ASSERT_THROWS_NOTHING(ws->getSpectrum(3));
     TS_ASSERT_THROWS_ANYTHING(ws->getSpectrum(4));

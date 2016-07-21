@@ -77,7 +77,8 @@ private:
   }
 
   // allocates space in a new workspace - does nothing in this case
-  void init(const std::size_t &NVectors, const std::size_t &XLength,
+  void init(const HistogramData::Histogram::YMode ymode,
+            const std::size_t &NVectors, const std::size_t &XLength,
             const std::size_t &YLength) override;
 
   /// Instance of Histogram1D that holds the "spectrum" (AKA the single value);

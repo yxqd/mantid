@@ -18,6 +18,7 @@ using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::Algorithms;
 using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 
 namespace {
 
@@ -95,7 +96,7 @@ Mantid::API::MatrixWorkspace_sptr provideWorkspace2D(LogType logType,
                                                      int length) {
   Workspace2D_sptr ws(new Workspace2D);
   ws->setTitle(wsName);
-  ws->initialize(5, 2, 2);
+  ws->initialize(Histogram::YMode::Counts, 5, 2, 2);
   int jj = 0;
   for (int i = 0; i < 2; ++i) {
     for (jj = 0; jj < 4; ++jj)

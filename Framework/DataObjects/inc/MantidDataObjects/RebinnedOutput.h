@@ -70,7 +70,8 @@ protected:
   RebinnedOutput(const RebinnedOutput &) = default;
 
   /// Called by initialize() in MatrixWorkspace
-  void init(const std::size_t &NVectors, const std::size_t &XLength,
+  void init(const HistogramData::Histogram::YMode ymode,
+            const std::size_t &NVectors, const std::size_t &XLength,
             const std::size_t &YLength) override;
 
   /// A vector that holds the 1D vectors for the fractional area.

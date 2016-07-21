@@ -109,10 +109,11 @@ public:
   // Empty overrides of virtual methods
   size_t getNumberHistograms() const override { return spec; }
   const std::string id() const override { return "WorkspaceTester"; }
-  void init(const size_t &numspec, const size_t &j, const size_t &k) override {
+  void init(const HistogramData::Histogram::YMode ymode, const size_t &numspec,
+            const size_t &j, const size_t &k) override {
     spec = numspec;
-    vec.resize(spec, SpectrumTester(HistogramData::getHistogramXMode(j, k),
-                                    HistogramData::Histogram::YMode::Counts));
+    vec.resize(spec,
+               SpectrumTester(HistogramData::getHistogramXMode(j, k), ymode));
     for (size_t i = 0; i < spec; i++) {
       vec[i].dataX().resize(j, 1.0);
       vec[i].dataY().resize(k, 1.0);

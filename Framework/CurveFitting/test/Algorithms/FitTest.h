@@ -824,7 +824,7 @@ public:
 
     boost::shared_ptr<WorkspaceTester> data =
         boost::make_shared<WorkspaceTester>();
-    data->init(1, 100, 100);
+    data->init(HistogramData::Histogram::YMode::Counts, 1, 100, 100);
 
     auto &x = data->dataX(0);
     auto &y = data->dataY(0);
@@ -1113,7 +1113,7 @@ public:
     // constant value A1
 
     MatrixWorkspace_sptr ws = boost::make_shared<WorkspaceTester>();
-    ws->initialize(1, 30, 30);
+    ws->initialize(HistogramData::Histogram::YMode::Counts, 1, 30, 30);
     {
       const double dx = 1.0;
       Mantid::MantidVec &x = ws->dataX(0);

@@ -16,6 +16,7 @@ Kernel::Logger g_log("WorkspaceFactory");
 }
 
 using std::size_t;
+using HistogramData::Histogram;
 
 /// Private constructor for singleton class
 WorkspaceFactoryImpl::WorkspaceFactoryImpl()
@@ -164,7 +165,7 @@ MatrixWorkspace_sptr WorkspaceFactoryImpl::create(const std::string &className,
     throw std::runtime_error("Workspace was not created");
   }
 
-  ws->initialize(NVectors, XLength, YLength);
+  ws->initialize(Histogram::YMode::Counts, NVectors, XLength, YLength);
   return ws;
 }
 

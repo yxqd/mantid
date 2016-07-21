@@ -13,12 +13,9 @@
 using namespace Mantid::API;
 using namespace Mantid::DataObjects;
 using namespace Mantid::Geometry;
+using namespace Mantid::HistogramData;
 using Mantid::Algorithms::ClearMaskFlag;
 using Mantid::MantidVecPtr;
-using Mantid::HistogramData::BinEdges;
-using Mantid::HistogramData::Counts;
-using Mantid::HistogramData::CountStandardDeviations;
-using Mantid::HistogramData::LinearGenerator;
 
 class ClearMaskFlagTest : public CxxTest::TestSuite {
 public:
@@ -43,7 +40,8 @@ public:
     instr->markAsDetector(d);
 
     // create the workspace
-    auto space2D = createWorkspace<Workspace2D>(numspec, 6, 5);
+    auto space2D =
+        createWorkspace<Workspace2D>(Histogram::YMode::Counts, numspec, 6, 5);
     BinEdges x(6, LinearGenerator(10.0, 1.0));
     Counts y(5, 1.0);
     CountStandardDeviations e(5, 1.0);

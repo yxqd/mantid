@@ -15,7 +15,7 @@ using namespace Mantid::Kernel;
 using namespace Mantid::DataObjects;
 using namespace Mantid::API;
 using namespace Mantid::Algorithms;
-using Mantid::HistogramData::LinearGenerator;
+using namespace Mantid::HistogramData;
 
 class InterpolatingRebinTest : public CxxTest::TestSuite {
 public:
@@ -273,7 +273,7 @@ private:
   Workspace2D_sptr Create1DData() {
     static const int nBins = 50;
     Workspace2D_sptr retVal(new Workspace2D);
-    retVal->initialize(1, nBins + 1, nBins);
+    retVal->initialize(Histogram::YMode::Counts, 1, nBins + 1, nBins);
 
     double j = 1.0;
     int i = 0;
@@ -290,7 +290,7 @@ private:
   Workspace2D_sptr badData() {
     static const int nBins = 24;
     Workspace2D_sptr retVal(new Workspace2D);
-    retVal->initialize(2, nBins + 1, nBins);
+    retVal->initialize(Histogram::YMode::Counts, 2, nBins + 1, nBins);
 
     // the first histogram has all zeros
     retVal->setBinEdges(0, nBins + 1, LinearGenerator(0.0, 1.0));

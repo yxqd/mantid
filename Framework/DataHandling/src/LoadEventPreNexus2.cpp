@@ -401,12 +401,10 @@ void LoadEventPreNexus2::exec() {
   */
 void LoadEventPreNexus2::createOutputWorkspace(
     const std::string event_filename) {
-  // Create the output workspace
-  localWorkspace = EventWorkspace_sptr(new EventWorkspace());
-
-  // Make sure to initialize. We can use dummy numbers for arguments, for event
-  // workspace it doesn't matter
-  localWorkspace->initialize(1, 1, 1);
+  // Create the output workspace. We can use dummy numbers for arguments, for
+  // event workspace it doesn't matter
+  localWorkspace = createWorkspace<EventWorkspace>(
+      HistogramData::Histogram::YMode::Counts, 1, 1, 1);
 
   // Set the units
   localWorkspace->getAxis(0)->unit() = UnitFactory::Instance().create("TOF");
@@ -744,9 +742,8 @@ void LoadEventPreNexus2::procEvents(
       if (parallelProcessing) {
         prog->report("Creating Partial Workspace");
         // Create a partial workspace
-        partWS = EventWorkspace_sptr(new EventWorkspace());
-        // Make sure to initialize.
-        partWS->initialize(1, 1, 1);
+        partWS = createWorkspace<EventWorkspace>(
+            HistogramData::Histogram::YMode::Counts, 1, 1, 1);
         // Copy all the spectra numbers and stuff (no actual events to copy
         // though).
         partWS->copyDataFrom(*workspace);

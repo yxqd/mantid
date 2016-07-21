@@ -18,6 +18,7 @@ using std::size_t;
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::Geometry;
+using namespace Mantid::HistogramData;
 
 // Test the MatrixWorkspace as an IMDWorkspace.
 class IMDWorkspaceTest : public CxxTest::TestSuite {
@@ -32,7 +33,7 @@ public:
 
   IMDWorkspaceTest() {
     workspace.setTitle("workspace");
-    workspace.initialize(2, 4, 3);
+    workspace.initialize(Histogram::YMode::Counts, 2, 4, 3);
     workspace.getSpectrum(0).setSpectrumNo(1);
     workspace.getSpectrum(1).setSpectrumNo(2);
     for (int i = 0; i < 4; ++i) {
@@ -50,7 +51,7 @@ public:
 
   void testGetXDimension() {
     WorkspaceTester matrixWS;
-    matrixWS.init(1, 1, 1);
+    matrixWS.init(Histogram::YMode::Counts, 1, 1, 1);
     boost::shared_ptr<const Mantid::Geometry::IMDDimension> dimension =
         matrixWS.getXDimension();
     std::string id = dimension->getDimensionId();
@@ -60,7 +61,7 @@ public:
 
   void testGetYDimension() {
     WorkspaceTester matrixWS;
-    matrixWS.init(1, 1, 1);
+    matrixWS.init(Histogram::YMode::Counts, 1, 1, 1);
     boost::shared_ptr<const Mantid::Geometry::IMDDimension> dimension =
         matrixWS.getYDimension();
     std::string id = dimension->getDimensionId();
@@ -84,14 +85,14 @@ public:
 
   void testGetDimensionThrows() {
     WorkspaceTester matrixWS;
-    matrixWS.init(1, 1, 1);
+    matrixWS.init(Histogram::YMode::Counts, 1, 1, 1);
     TSM_ASSERT_THROWS("Id doesn't exist. Should throw during find routine.",
                       matrixWS.getDimensionWithId("3"), std::overflow_error);
   }
 
   void testGetDimension() {
     WorkspaceTester matrixWS;
-    matrixWS.init(1, 1, 1);
+    matrixWS.init(Histogram::YMode::Counts, 1, 1, 1);
     boost::shared_ptr<const Mantid::Geometry::IMDDimension> dim =
         matrixWS.getDimensionWithId("yDimension");
     TSM_ASSERT_EQUALS(
@@ -101,7 +102,7 @@ public:
 
   void testGetDimensionOverflow() {
     WorkspaceTester matrixWS;
-    matrixWS.init(1, 1, 1);
+    matrixWS.init(Histogram::YMode::Counts, 1, 1, 1);
     TSM_ASSERT_THROWS(
         "The dimension does not exist. Attempting to get it should throw",
         matrixWS.getDimensionWithId("1"), std::overflow_error);
@@ -109,7 +110,7 @@ public:
 
   void testGetNPoints() {
     WorkspaceTester matrixWS;
-    matrixWS.init(5, 5, 5);
+    matrixWS.init(Histogram::YMode::Counts, 5, 5, 5);
     TSM_ASSERT_EQUALS("The expected number of points have not been returned.",
                       25, matrixWS.getNPoints());
   }

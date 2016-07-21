@@ -21,14 +21,16 @@ public:
   GeometryInfoFactoryTest() : m_workspace(nullptr) {
     size_t numberOfHistograms = 1;
     size_t numberOfBins = 1;
-    m_workspace.init(numberOfHistograms, numberOfBins, numberOfBins - 1);
+    m_workspace.init(HistogramData::Histogram::YMode::Counts,
+                     numberOfHistograms, numberOfBins, numberOfBins - 1);
     bool includeMonitors = false;
     bool startYNegative = true;
     const std::string instrumentName("SimpleFakeInstrument");
     InstrumentCreationHelper::addFullInstrumentToWorkspace(
         m_workspace, includeMonitors, startYNegative, instrumentName);
 
-    m_workspaceNoInstrument.init(numberOfHistograms, numberOfBins,
+    m_workspaceNoInstrument.init(HistogramData::Histogram::YMode::Counts,
+                                 numberOfHistograms, numberOfBins,
                                  numberOfBins - 1);
   }
 
@@ -116,7 +118,8 @@ public:
   GeometryInfoFactoryTestPerformance() : m_workspace(nullptr) {
     size_t numberOfHistograms = 10000;
     size_t numberOfBins = 1;
-    m_workspace.init(numberOfHistograms, numberOfBins, numberOfBins - 1);
+    m_workspace.init(HistogramData::Histogram::YMode::Counts,
+                     numberOfHistograms, numberOfBins, numberOfBins - 1);
     bool includeMonitors = false;
     bool startYNegative = true;
     const std::string instrumentName("SimpleFakeInstrument");

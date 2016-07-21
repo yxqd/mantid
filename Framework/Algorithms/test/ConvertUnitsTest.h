@@ -24,16 +24,14 @@ using namespace Mantid::API;
 using namespace Mantid::Algorithms;
 using namespace Mantid::DataObjects;
 using namespace Mantid::Geometry;
-using Mantid::HistogramData::BinEdges;
-using Mantid::HistogramData::Counts;
-using Mantid::HistogramData::CountVariances;
-using Mantid::HistogramData::CountStandardDeviations;
+using namespace Mantid::HistogramData;
 
 class ConvertUnitsTest : public CxxTest::TestSuite {
 public:
   void setup_WS() {
     // Set up a small workspace for testing
-    auto space2D = createWorkspace<Workspace2D>(256, 11, 10);
+    auto space2D =
+        createWorkspace<Workspace2D>(Histogram::YMode::Counts, 256, 11, 10);
     BinEdges x{0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000};
     Counts a{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     CountVariances variances{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};

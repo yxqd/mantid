@@ -15,11 +15,7 @@ using namespace Mantid::Kernel;
 using namespace Mantid::DataObjects;
 using namespace Mantid::API;
 using namespace Mantid::Algorithms;
-using Mantid::HistogramData::BinEdges;
-using Mantid::HistogramData::Points;
-using Mantid::HistogramData::Counts;
-using Mantid::HistogramData::CountVariances;
-using Mantid::HistogramData::LinearGenerator;
+using namespace Mantid::HistogramData;
 
 class RebunchTest : public CxxTest::TestSuite {
 public:
@@ -153,7 +149,7 @@ public:
 private:
   Workspace2D_sptr Create1DWorkspaceHist(int size) {
     Workspace2D_sptr retVal(new Workspace2D);
-    retVal->initialize(1, size, size - 1);
+    retVal->initialize(Histogram::YMode::Counts, 1, size, size - 1);
     double j = 1.0;
     for (int i = 0; i < size; i++) {
       retVal->dataX(0)[i] = j * 0.5;
@@ -171,7 +167,7 @@ private:
 
   Workspace2D_sptr Create1DWorkspacePnt(int size) {
     Workspace2D_sptr retVal(new Workspace2D);
-    retVal->initialize(1, size, size);
+    retVal->initialize(Histogram::YMode::Counts, 1, size, size);
     double j = 1.0;
     for (int i = 0; i < size; i++) {
       retVal->dataX(0)[i] = j * 0.5;
@@ -187,7 +183,7 @@ private:
     BinEdges x1(xlen, LinearGenerator(0.0, 1.0));
 
     Workspace2D_sptr retVal(new Workspace2D);
-    retVal->initialize(ylen, xlen, xlen - 1);
+    retVal->initialize(Histogram::YMode::Counts, ylen, xlen, xlen - 1);
     double j = 1.0;
 
     for (auto &x : x1) {
@@ -213,7 +209,7 @@ private:
     Points x1(xlen, LinearGenerator(0.0, 1.0));
 
     Workspace2D_sptr retVal(new Workspace2D);
-    retVal->initialize(ylen, xlen, xlen);
+    retVal->initialize(Histogram::YMode::Counts, ylen, xlen, xlen);
     double j = 1.0;
 
     for (auto &x : x1) {

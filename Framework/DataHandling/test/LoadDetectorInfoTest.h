@@ -31,10 +31,7 @@ using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::Geometry;
 using namespace Mantid::DataObjects;
-using Mantid::HistogramData::BinEdges;
-using Mantid::HistogramData::Counts;
-using Mantid::HistogramData::CountStandardDeviations;
-using Mantid::HistogramData::LinearGenerator;
+using namespace Mantid::HistogramData;
 
 /* choose an instrument to test, we could test all instruments
  * every time but I think a detailed test on the smallest workspace
@@ -208,7 +205,8 @@ void writeLargeTestDatFile(const std::string &filename, const int ndets) {
 // Set up a small workspace for testing
 void makeTestWorkspace(const int ndets, const int nbins,
                        const std::string &ads_name) {
-  auto space2D = createWorkspace<Workspace2D>(ndets, nbins + 1, nbins);
+  auto space2D = createWorkspace<Workspace2D>(Histogram::YMode::Counts, ndets,
+                                              nbins + 1, nbins);
   space2D->getAxis(0)->unit() = UnitFactory::Instance().create("TOF");
   BinEdges xs(nbins + 1, LinearGenerator(0.0, 1.0));
   CountStandardDeviations errors(nbins, 1.0);

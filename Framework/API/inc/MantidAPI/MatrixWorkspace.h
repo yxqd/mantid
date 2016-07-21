@@ -75,7 +75,8 @@ public:
   friend class WorkspaceFactoryImpl;
 
   /// Initialize
-  void initialize(const std::size_t &NVectors, const std::size_t &XLength,
+  void initialize(const HistogramData::Histogram::YMode ymode,
+                  const std::size_t &NVectors, const std::size_t &XLength,
                   const std::size_t &YLength);
 
   MatrixWorkspace &operator=(const MatrixWorkspace &other) = delete;
@@ -576,7 +577,8 @@ protected:
 
   /// Initialises the workspace. Sets the size and lengths of the arrays. Must
   /// be overloaded.
-  virtual void init(const std::size_t &NVectors, const std::size_t &XLength,
+  virtual void init(const HistogramData::Histogram::YMode ymode,
+                    const std::size_t &NVectors, const std::size_t &XLength,
                     const std::size_t &YLength) = 0;
 
   /// Invalidates the commons bins flag.  This is generally called when a method
