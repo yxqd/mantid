@@ -72,8 +72,8 @@ void Workspace2D::init(const HistogramData::Histogram::YMode ymode,
 
   auto x = Kernel::make_cow<HistogramData::HistogramX>(
       XLength, HistogramData::LinearGenerator(1.0, 1.0));
-  HistogramData::Counts y(YLength);
-  HistogramData::CountStandardDeviations e(YLength);
+  auto y = Kernel::make_cow<HistogramData::HistogramY>(YLength, 0);
+  auto e = Kernel::make_cow<HistogramData::HistogramE>(YLength, 0);
   for (size_t i = 0; i < m_noVectors; i++) {
     // Create the spectrum upon init
     auto spec = new Histogram1D(
@@ -82,8 +82,8 @@ void Workspace2D::init(const HistogramData::Histogram::YMode ymode,
     // Set the data and X
     spec->setX(x);
     // Y,E arrays populated
-    spec->setCounts(y);
-    spec->setCountStandardDeviations(e);
+    spec->setSharedY(y);
+    spec->setSharedE(e);
     // Default spectrum number = starts at 1, for workspace index 0.
     spec->setSpectrumNo(specnum_t(i + 1));
     spec->setDetectorID(detid_t(i + 1));

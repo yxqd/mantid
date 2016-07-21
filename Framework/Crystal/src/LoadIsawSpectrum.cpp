@@ -122,13 +122,13 @@ void LoadIsawSpectrum::exec() {
     }
   }
 
-  MatrixWorkspace_sptr outWS = boost::dynamic_pointer_cast<MatrixWorkspace>(
-      API::WorkspaceFactory::Instance().create(
-          "Workspace2D", spectra.size(), spectra[0].size(), spectra[0].size()));
+  auto outWS =
+      boost::dynamic_pointer_cast<MatrixWorkspace>(createWorkspace<Workspace2D>(
+          HistogramData::Histogram::YMode::Frequencies, spectra.size(),
+          spectra[0].size(), spectra[0].size()));
   outWS->setInstrument(inst);
   outWS->getAxis(0)->setUnit("TOF");
   outWS->setYUnit("Counts");
-  outWS->setDistribution(true);
   outWS->rebuildSpectraMapping(false);
 
   // Go through each point at this run / bank
