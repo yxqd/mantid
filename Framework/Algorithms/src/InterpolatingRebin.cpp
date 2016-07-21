@@ -75,38 +75,13 @@ void InterpolatingRebin::exec() {
     outputW->replaceAxis(1, inputW->getAxis(1)->clone(outputW.get()));
   outputW->setDistribution(true);
 
-  // this calculation requires a distribution workspace but deal with the
-  // situation when we don't get this
-  bool distCon(false);
-  if (!inputW->isDistribution()) {
-    g_log.debug() << "Converting the input workspace to a distribution\n";
-    WorkspaceHelpers::makeDistribution(inputW);
-    distCon = true;
-  }
+  // evaluate the rebinned data
+  outputYandEValues(inputW, XValues_new, outputW);
 
-  try {
-    // evaluate the rebinned data
-    outputYandEValues(inputW, XValues_new, outputW);
-  } catch (std::exception &) {
-
-    if (distCon) {
-      // we need to return the input workspace to the state we found it in
-      WorkspaceHelpers::makeDistribution(inputW, false);
-    }
-    throw;
-  }
-
-  // check if there was a convert to distribution done previously
-  if (distCon) {
-    g_log.debug()
-        << "Converting the input and output workspaces _from_ distributions\n";
-    WorkspaceHelpers::makeDistribution(inputW, false);
-    // the calculation produces a distribution workspace but if they passed a
-    // non-distribution workspace they maybe not expect it, so convert back to
-    // the same form that was given
-    WorkspaceHelpers::makeDistribution(outputW, false);
-    outputW->setDistribution(false);
-  }
+  // the calculation produces a distribution workspace but if they passed a
+  // non-distribution workspace they maybe not expect it, so convert back to
+  // the same form that was given
+  WorkspaceHelpers::makeDistribution(outputW, inputW->isDistribution());
 
   // Now propagate any masking correctly to the output workspace
   // More efficient to have this in a separate loop because
@@ -147,8 +122,8 @@ void InterpolatingRebin::outputYandEValues(
   for (int hist = 0; hist < histnumber; ++hist) {
     // get const references to input Workspace arrays (no copying)
     const auto &XValues = inputW->binEdges(hist);
-    const MantidVec &YValues = inputW->readY(hist);
-    const MantidVec &YErrors = inputW->readE(hist);
+    const auto &YValues = inputW->frequencies(hist);
+    const auto &YErrors = inputW->frequencyStandardDeviations(hist);
 
     // get references to output workspace data (no copying)
     MantidVec &YValues_new = outputW->dataY(hist);
@@ -156,8 +131,8 @@ void InterpolatingRebin::outputYandEValues(
 
     try {
       // output data arrays are implicitly filled by function
-      cubicInterpolation(XValues, YValues, YErrors, XValues_new, YValues_new,
-                         Errors_new);
+      cubicInterpolation(XValues, YValues.rawData(), YErrors.rawData(),
+                         XValues_new, YValues_new, Errors_new);
     } catch (std::exception &ex) {
       g_log.error() << "Error in rebin function: " << ex.what() << '\n';
       throw;
