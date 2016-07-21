@@ -87,8 +87,6 @@ protected:
   std::vector<double>
   calculateMedian(API::MatrixWorkspace_sptr input, bool excludeZeroes,
                   std::vector<std::vector<size_t>> indexmap);
-  /// Convert to a distribution
-  API::MatrixWorkspace_sptr convertToRate(API::MatrixWorkspace_sptr workspace);
   /// method to check which spectra should be grouped when calculating the
   /// median
   std::vector<std::vector<size_t>> makeMap(API::MatrixWorkspace_sptr countsWS);
@@ -105,15 +103,12 @@ protected:
     RTGetSolidAngle = 15000,
     /// Estimate of the work required from Integrate for each spectrum
     RTGetTotalCounts = 5000,
-    /// Work required by the ConvertToDistribution algorithm
-    RTGetRate = 100,
     /// Time taken to find failing detectors
     RTMarkDetects = 200,
     /// Time taken to find failing detectors
     RTWriteFile = 200,
     /// The total of all run times
-    RTTotal = RTGetSolidAngle + RTGetTotalCounts + RTGetRate + RTMarkDetects +
-              RTWriteFile
+    RTTotal = RTGetSolidAngle + RTGetTotalCounts + RTMarkDetects + RTWriteFile
   };
 
   /// Update the fraction complete estimate assuming that the algorithm has
