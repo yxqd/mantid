@@ -162,15 +162,14 @@ LoadCanSAS1D::loadEntry(Poco::XML::Node *const workspaceData,
       sasDataElem->getElementsByTagName("Idata");
   size_t nBins = idataElemList->length();
 
-  MatrixWorkspace_sptr dataWS =
-      WorkspaceFactory::Instance().create("Workspace2D", 1, nBins, nBins);
+  MatrixWorkspace_sptr dataWS = createWorkspace<Workspace2D>(
+      HistogramData::Histogram::YMode::Frequencies, 1, nBins, nBins);
 
   createLogs(workspaceElem, dataWS);
 
   Element *titleElem = workspaceElem->getChildElement("Title");
   check(titleElem, "<Title>");
   dataWS->setTitle(titleElem->innerText());
-  dataWS->setDistribution(true);
   dataWS->setYUnit("");
 
   // load workspace data

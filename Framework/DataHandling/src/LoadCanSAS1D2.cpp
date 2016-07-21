@@ -164,8 +164,8 @@ LoadCanSAS1D2::loadEntry(Poco::XML::Node *const workspaceData,
         sasTrasElem->getElementsByTagName("Tdata");
     size_t nBins = tdataElemList->length();
 
-    MatrixWorkspace_sptr dataWS =
-        WorkspaceFactory::Instance().create("Workspace2D", 1, nBins, nBins);
+    MatrixWorkspace_sptr dataWS = createWorkspace<Workspace2D>(
+        HistogramData::Histogram::YMode::Frequencies, 1, nBins, nBins);
 
     createLogs(workspaceElem, dataWS);
 
@@ -173,7 +173,6 @@ LoadCanSAS1D2::loadEntry(Poco::XML::Node *const workspaceData,
     title += ":trans";
     title += sasTrasElem->getAttribute("name");
     dataWS->setTitle(title);
-    dataWS->setDistribution(true);
     dataWS->setYUnit("");
 
     // load workspace data

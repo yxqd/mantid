@@ -3,6 +3,7 @@
 //---------------------------------------------------
 #include "MantidDataHandling/LoadSPE.h"
 #include "MantidDataHandling/SaveSPE.h"
+#include "MantidDataObjects/Workspace2D.h"
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/BinEdgeAxis.h"
 #include "MantidAPI/FileProperty.h"
@@ -150,10 +151,9 @@ void LoadSPE::exec() {
   fgets(comment, 100, speFile);
 
   // Now create the output workspace
-  MatrixWorkspace_sptr workspace = WorkspaceFactory::Instance().create(
-      "Workspace2D", nhist, nbins + 1, nbins);
+  MatrixWorkspace_sptr workspace = createWorkspace<DataObjects::Workspace2D>(
+      HistogramData::Histogram::YMode::Frequencies, nhist, nbins + 1, nbins);
   workspace->getAxis(0)->unit() = UnitFactory::Instance().create("DeltaE");
-  workspace->setDistribution(true); // It should be a distribution
   workspace->setYUnitLabel("S(Phi,Energy)");
   // Replace the default spectrum axis with the phi values one
   workspace->replaceAxis(1, phiAxis);

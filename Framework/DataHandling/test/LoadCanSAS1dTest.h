@@ -87,6 +87,8 @@ public:
     TS_ASSERT_DELTA(ws2d->dataE(0)[0], 3.4641, tolerance);
     TS_ASSERT_DELTA(ws2d->dataE(0)[25], 68.3667, tolerance);
     TS_ASSERT_DELTA(ws2d->dataE(0)[99], 1, tolerance);
+
+    TS_ASSERT(ws2d->isDistribution());
   }
 
   void testMultipleEntries() {
@@ -162,6 +164,8 @@ public:
       TS_ASSERT_DELTA(ws2d->dataY(0)[i], ys808[i], tolerance);
       TS_ASSERT_DELTA(ws2d->dataE(0)[i], es808[i], tolerance);
     }
+
+    TS_ASSERT(ws2d->isDistribution());
   }
 
   void testThatMissingIDevIsHandledCorrectly() {
