@@ -51,9 +51,9 @@ public:
     ws1->initialize(Mantid::HistogramData::Histogram::YMode::Counts, 2, 10, 9);
 
     ws2 = MatrixWorkspace_sptr(new Mantid::DataObjects::Workspace2D);
-    ws2->initialize(Mantid::HistogramData::Histogram::YMode::Counts, 2, 10, 10);
+    ws2->initialize(Mantid::HistogramData::Histogram::YMode::Frequencies, 2, 10,
+                    10);
     ws2->getAxis(0)->unit() = UnitFactory::Instance().create("Wavelength");
-    ws2->setDistribution(true);
   }
 
   ~WorkspaceValidatorsTest() override {

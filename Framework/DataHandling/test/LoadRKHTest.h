@@ -113,6 +113,8 @@ public:
     TS_ASSERT_DELTA(data->dataE(0)[0], 0.122346, tolerance);
     TS_ASSERT_DELTA(data->dataE(0)[25], 0.018345, tolerance);
     TS_ASSERT_DELTA(data->dataE(0)[99], 0.0, tolerance);
+
+    TS_ASSERT(data->isDistribution());
   }
 
   void test2D() {
@@ -187,8 +189,7 @@ public:
     TS_ASSERT_DELTA((*secondAxis)(1), -2.850000e-01, tolerance);
 
     TS_ASSERT(data->isHistogramData())
-
-    // remove(tempFile.c_str());
+    TS_ASSERT(data->isDistribution());
   }
 
   void test1DWithDx() {
@@ -248,6 +249,8 @@ public:
     TS_ASSERT_DELTA(data->dx(0)[1], 1.207107e+00, tolerance);
     TS_ASSERT_DELTA(data->dx(0)[2], 1.573132e+00, tolerance);
 
+    TS_ASSERT(data->isDistribution());
+
     remove(tempFile2.c_str());
   }
 
@@ -300,6 +303,8 @@ public:
     TS_ASSERT_DELTA(data->dataE(0)[0], 2.570181e-01, tolerance);
     TS_ASSERT_DELTA(data->dataE(0)[1], 1.365013e-01, tolerance);
     TS_ASSERT_DELTA(data->dataE(0)[2], 9.582824e-02, tolerance);
+
+    TS_ASSERT(data->isDistribution());
 
     remove(tempFile3.c_str());
   }

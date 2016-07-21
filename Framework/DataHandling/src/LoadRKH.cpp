@@ -206,8 +206,6 @@ void LoadRKH::exec() {
   // some data required by the 2D data reader
   MatrixWorkspace_sptr result = is2D(line) ? read2D(line) : read1D();
 
-  // all RKH files contain distribution data
-  result->setDistribution(true);
   // Set the output workspace
   setProperty("OutputWorkspace", result);
 }
@@ -314,8 +312,10 @@ const API::MatrixWorkspace_sptr LoadRKH::read1D() {
   }
 
   if (colIsUnit) {
-    MatrixWorkspace_sptr localworkspace = WorkspaceFactory::Instance().create(
-        "Workspace2D", 1, pointsToRead, pointsToRead);
+    MatrixWorkspace_sptr localworkspace =
+        createWorkspace<DataObjects::Workspace2D>(
+            HistogramData::Histogram::YMode::Frequencies, 1, pointsToRead,
+            pointsToRead);
     localworkspace->getAxis(0)->unit() =
         UnitFactory::Instance().create(firstColVal);
     localworkspace->dataX(0) = columnOne;
@@ -326,8 +326,8 @@ const API::MatrixWorkspace_sptr LoadRKH::read1D() {
     }
     return localworkspace;
   } else {
-    MatrixWorkspace_sptr localworkspace =
-        WorkspaceFactory::Instance().create("Workspace2D", pointsToRead, 1, 1);
+    MatrixWorkspace_sptr localworkspace = createWorkspace<DataObjects::Workspace2D>(
+        HistogramData::Histogram::YMode::Frequencies, pointsToRead, 1, 1);
     // Set the appropriate values
     for (int index = 0; index < pointsToRead; ++index) {
       localworkspace->getSpectrum(index)
@@ -449,8 +449,9 @@ Progress LoadRKH::read2DHeader(const std::string &initalLine,
   Progress prog(this, 0.05, 1.0, 2 * nAxis1Values);
 
   // we now have all the data we need to create the output workspace
-  outWrksp = WorkspaceFactory::Instance().create(
-      "Workspace2D", nAxis1Values, nAxis0Boundaries, nAxis0Values);
+  outWrksp = createWorkspace<DataObjects::Workspace2D>(
+      HistogramData::Histogram::YMode::Frequencies, nAxis1Values,
+      nAxis0Boundaries, nAxis0Values);
   outWrksp->getAxis(0)->unit() = UnitFactory::Instance().create(XUnit);
   outWrksp->setYUnitLabel(intensityUnit);
 
