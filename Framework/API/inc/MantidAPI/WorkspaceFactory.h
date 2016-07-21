@@ -101,7 +101,9 @@ private:
 
 typedef Mantid::Kernel::SingletonHolder<WorkspaceFactoryImpl> WorkspaceFactory;
 
-template <class T, class... InitArgs>
+template <class T, class... InitArgs,
+          class = typename std::enable_if<
+              std::is_base_of<MatrixWorkspace, T>::value>::type>
 boost::shared_ptr<T> createWorkspace(InitArgs... args) {
   auto ws = boost::make_shared<T>();
   ws->initialize(args...);
