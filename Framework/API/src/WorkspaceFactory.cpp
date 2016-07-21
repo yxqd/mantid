@@ -165,7 +165,10 @@ MatrixWorkspace_sptr WorkspaceFactoryImpl::create(const std::string &className,
     throw std::runtime_error("Workspace was not created");
   }
 
-  ws->initialize(Histogram::YMode::Counts, NVectors, XLength, YLength);
+  if (className != "WorkspaceSingleValue")
+    ws->initialize(Histogram::YMode::Counts, NVectors, XLength, YLength);
+  else
+    ws->initialize(Histogram::YMode::Frequencies, NVectors, XLength, YLength);
   return ws;
 }
 
