@@ -155,7 +155,7 @@ SCDCalibratePanels::calcWorkspace(DataObjects::PeaksWorkspace_sptr &pwks,
   mwkspc->setCounts(0, xRef.size(), 0.0);
   mwkspc->setCountStandardDeviations(0, std::move(errB));
 
-  return mwkspc;
+  return std::move(mwkspc);
 }
 
 /**

@@ -212,7 +212,7 @@ void LoadMcStas::readEventData(
   progInitial.report("Set up EventWorkspace");
   // initialize, where create up front number of eventlists = number of
   // detectors
-  auto eventWS =
+  EventWorkspace_sptr eventWS =
       createWorkspace<EventWorkspace>(HistogramData::Histogram::YMode::Counts,
                                       instrument->getNumberDetectors(), 1, 1);
   // Set the units
@@ -377,7 +377,7 @@ void LoadMcStas::readEventData(
       "Outputworkspace_dummy_" + std::to_string(m_countNumWorkspaceAdded);
   declareProperty(Kernel::make_unique<WorkspaceProperty<Workspace>>(
       extraProperty, nameUserSee, Direction::Output));
-  setProperty(extraProperty, boost::static_pointer_cast<Workspace>(eventWS));
+  setProperty(extraProperty, eventWS);
   m_countNumWorkspaceAdded++; // need to increment to ensure extraProperty are
                               // unique
 

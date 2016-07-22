@@ -396,7 +396,7 @@ public:
     BinEdges x{1, 2};
 
     // 2 spectra, 2 x values, 1 y value per spectra
-    auto tinyWS =
+    Workspace2D_sptr tinyWS =
         createWorkspace<Workspace2D>(Histogram::YMode::Counts, 2, 2, 1);
     tinyWS->setBinEdges(0, x);
     tinyWS->setBinEdges(1, x);

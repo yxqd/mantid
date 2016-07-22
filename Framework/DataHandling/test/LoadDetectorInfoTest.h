@@ -205,8 +205,8 @@ void writeLargeTestDatFile(const std::string &filename, const int ndets) {
 // Set up a small workspace for testing
 void makeTestWorkspace(const int ndets, const int nbins,
                        const std::string &ads_name) {
-  auto space2D = createWorkspace<Workspace2D>(Histogram::YMode::Counts, ndets,
-                                              nbins + 1, nbins);
+  Workspace2D_sptr space2D = createWorkspace<Workspace2D>(
+      Histogram::YMode::Counts, ndets, nbins + 1, nbins);
   space2D->getAxis(0)->unit() = UnitFactory::Instance().create("TOF");
   BinEdges xs(nbins + 1, LinearGenerator(0.0, 1.0));
   CountStandardDeviations errors(nbins, 1.0);

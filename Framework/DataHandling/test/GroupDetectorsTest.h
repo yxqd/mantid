@@ -32,7 +32,7 @@ public:
 
   GroupDetectorsTest() {
     // Set up a small workspace for testing
-    auto space2D =
+    Workspace2D_sptr space2D =
         createWorkspace<Workspace2D>(Histogram::YMode::Counts, 5, 6, 5);
     space2D->getAxis(0)->unit() = UnitFactory::Instance().create("TOF");
     BinEdges x(6, LinearGenerator(10.0, 1.0));

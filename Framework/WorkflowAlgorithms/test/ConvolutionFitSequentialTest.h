@@ -309,7 +309,7 @@ public:
   }
 
   void createConvFitResWorkspace(int totalHist, int totalBins) {
-    auto convFitRes = createWorkspace<Workspace2D>(
+    Workspace2D_sptr convFitRes = createWorkspace<Workspace2D>(
         Histogram::YMode::Counts, totalHist + 1, totalBins + 1, totalBins);
     BinEdges x1(totalBins + 1, 0.0);
     Counts y1(totalBins, 3.0);

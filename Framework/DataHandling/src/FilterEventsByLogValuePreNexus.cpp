@@ -537,7 +537,7 @@ FilterEventsByLogValuePreNexus::setupOutputEventWorkspace() {
 
   // We can use dummy numbers for arguments, for event workspace it doesn't
   // matter
-  auto tempworkspace = createWorkspace<EventWorkspace>(
+  EventWorkspace_sptr tempworkspace = createWorkspace<EventWorkspace>(
       HistogramData::Histogram::YMode::Counts, 1, 1, 1);
 
   // Set the units and title

@@ -63,7 +63,7 @@ private:
     }
     retVal->setCounts(0, size - 1, 3.0);
     retVal->setCountVariances(0, size - 1, 3.0);
-    return retVal;
+    return std::move(retVal);
   }
 
   Workspace2D_sptr Create2DWorkspace(int xlen, int ylen) {
@@ -80,7 +80,7 @@ private:
       retVal->setCountStandardDeviations(i, e1);
     }
 
-    return retVal;
+    return std::move(retVal);
   }
 };
 #endif /* REGROUPTEST */

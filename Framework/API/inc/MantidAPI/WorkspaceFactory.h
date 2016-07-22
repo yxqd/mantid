@@ -20,6 +20,7 @@
 #include "MantidAPI/DllConfig.h"
 #include "MantidKernel/DynamicFactory.h"
 #include "MantidKernel/SingletonHolder.h"
+#include "MantidKernel/make_unique.h"
 #include "MantidAPI/MatrixWorkspace_fwd.h"
 #include "MantidAPI/Workspace_fwd.h"
 #include <boost/make_shared.hpp>
@@ -104,8 +105,8 @@ typedef Mantid::Kernel::SingletonHolder<WorkspaceFactoryImpl> WorkspaceFactory;
 template <class T, class... InitArgs,
           class = typename std::enable_if<
               std::is_base_of<MatrixWorkspace, T>::value>::type>
-boost::shared_ptr<T> createWorkspace(InitArgs... args) {
-  auto ws = boost::make_shared<T>();
+std::unique_ptr<T> createWorkspace(InitArgs... args) {
+  auto ws = Kernel::make_unique<T>();
   ws->initialize(args...);
   return ws;
 }

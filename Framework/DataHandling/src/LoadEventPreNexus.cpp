@@ -310,7 +310,7 @@ void LoadEventPreNexus::exec() {
   prog->report("Creating output workspace");
   // prep the output workspace. We can use dummy numbers for arguments, for
   // event workspace it doesn't matter
-  auto localWorkspace = createWorkspace<EventWorkspace>(
+  EventWorkspace_sptr localWorkspace = createWorkspace<EventWorkspace>(
       HistogramData::Histogram::YMode::Counts, 1, 1, 1);
 
   // Set the units

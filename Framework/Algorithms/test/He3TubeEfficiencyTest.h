@@ -167,8 +167,8 @@ private:
     const int nspecs(4);
     const int nbins(5);
 
-    auto space2D = createWorkspace<Workspace2D>(Histogram::YMode::Counts,
-                                                nspecs, nbins + 1, nbins);
+    Workspace2D_sptr space2D = createWorkspace<Workspace2D>(
+        Histogram::YMode::Counts, nspecs, nbins + 1, nbins);
     space2D->getAxis(0)->unit() = UnitFactory::Instance().create("Wavelength");
 
     BinEdges x{0.1, 0.2, 0.3, 0.4, 0.5, 0.6};

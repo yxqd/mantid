@@ -70,19 +70,15 @@ public:
       spaceEvent->setAllX(BinEdges{0.0, 10.0});
 
     } else if (!asMaskWorkspace) {
-      auto space2D =
+      space =
           createWorkspace<Workspace2D>(Histogram::YMode::Counts, numspec, 6, 5);
-      space = space2D;
 
-      BinEdges x(6, LinearGenerator(10.0, 1.0));
-      Counts y(5, 1.0);
-      CountStandardDeviations e(5, 1.0);
+      Histogram histogram(BinEdges(6, LinearGenerator(10.0, 1.0)),
+                          Counts(5, 1.0));
       for (int j = 0; j < numspec; ++j) {
-        space2D->setBinEdges(j, x);
-        space2D->setCounts(j, y);
-        space2D->setCountStandardDeviations(j, e);
-        space2D->getSpectrum(j).setSpectrumNo(j);
-        space2D->getSpectrum(j).setDetectorID(j);
+        space->setHistogram(j, histogram);
+        space->getSpectrum(j).setSpectrumNo(j);
+        space->getSpectrum(j).setDetectorID(j);
       }
     } else {
       // In case of MaskWorkspace

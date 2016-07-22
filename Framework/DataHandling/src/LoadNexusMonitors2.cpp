@@ -744,14 +744,13 @@ bool LoadNexusMonitors2::createOutputWorkspace(
           "This file may be corrupted or it may not be supported");
 
     // only used if using event monitors
-    auto eventWS = API::createWorkspace<EventWorkspace>(
+    m_workspace = API::createWorkspace<EventWorkspace>(
         HistogramData::Histogram::YMode::Counts, numEventMon, 1, 1);
 
     // Set the units
-    eventWS->getAxis(0)->unit() =
+    m_workspace->getAxis(0)->unit() =
         Mantid::Kernel::UnitFactory::Instance().create("TOF");
-    eventWS->setYUnit("Counts");
-    m_workspace = eventWS;
+    m_workspace->setYUnit("Counts");
   } else {
     // Use histogram monitors and event monitors' histogram data.
     // And thus create a Workspace2D.

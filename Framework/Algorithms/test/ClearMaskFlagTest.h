@@ -40,7 +40,7 @@ public:
     instr->markAsDetector(d);
 
     // create the workspace
-    auto space2D =
+    Workspace2D_sptr space2D =
         createWorkspace<Workspace2D>(Histogram::YMode::Counts, numspec, 6, 5);
     BinEdges x(6, LinearGenerator(10.0, 1.0));
     Counts y(5, 1.0);

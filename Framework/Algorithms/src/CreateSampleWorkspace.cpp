@@ -314,7 +314,7 @@ MatrixWorkspace_sptr CreateSampleWorkspace::createHistogramWorkspace(
     retVal->getSpectrum(wi).setSpectrumNo(specnum_t(wi + 1));
   }
 
-  return retVal;
+  return std::move(retVal);
 }
 
 /** Create event workspace

@@ -192,9 +192,10 @@ void LoadBBY::exec() {
 
   createInstrument(tarFile, /* ref */ instrumentInfo);
 
-  auto eventWS = API::createWorkspace<DataObjects::EventWorkspace>(
-      HistogramData::Histogram::YMode::Counts, HISTO_BINS_Y * HISTO_BINS_X, 2,
-      1);
+  DataObjects::EventWorkspace_sptr eventWS =
+      API::createWorkspace<DataObjects::EventWorkspace>(
+          HistogramData::Histogram::YMode::Counts, HISTO_BINS_Y * HISTO_BINS_X,
+          2, 1);
 
   // set the units
   if (instrumentInfo.is_tof)

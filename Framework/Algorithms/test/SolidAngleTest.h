@@ -28,7 +28,7 @@ public:
   SolidAngleTest() : inputSpace(""), outputSpace("") {
     // Set up a small workspace for testing
     // Nhist = 144;
-    auto space2D =
+    Workspace2D_sptr space2D =
         createWorkspace<Workspace2D>(Histogram::YMode::Counts, Nhist, 11, 10);
     BinEdges x{0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000};
     Counts a{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
