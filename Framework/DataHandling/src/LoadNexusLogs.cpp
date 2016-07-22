@@ -403,7 +403,6 @@ void LoadNexusLogs::loadNXLog(
     file.closeGroup();
     return;
   }
-  file.closeGroup();
 
   // whether or not to overwrite logs on workspace
   bool overwritelogs = this->getProperty("OverwriteLogs");
@@ -503,9 +502,6 @@ void LoadNexusLogs::loadSELog(
  * @param prop_name :: The name of the property
  * @returns A pointer to a new property containing the time series
  */
-/*
-typedef std::vector<double>::iterator vd_it;
-
 Kernel::Property *
 LoadNexusLogs::createTimeSeries(::NeXus::File &file,
                                 const std::string &prop_name) const {
@@ -550,10 +546,6 @@ LoadNexusLogs::createTimeSeries(::NeXus::File &file,
   }
   file.closeData(); // Close time data
   g_log.debug() << "   done reading \"time\" array\n";
-
-  for (vd_it v = time_double.begin(); v != time_double.end(); v++) {
-    std::cout << "time = " << *v << "\n";
-  }
 
   // Convert to seconds if needed
   if (time_units == "minutes") {
@@ -642,13 +634,6 @@ LoadNexusLogs::createTimeSeries(::NeXus::File &file,
         "Invalid value type for time series. Only int, double or strings are "
         "supported");
   }
-}*/
-
-Kernel::Property *
-LoadNexusLogs::createTimeSeries(::NeXus::File &file,
-  const std::string &prop_name) const {
-
-  return PropertyNexus::loadProperty(&file, prop_name).get();
 }
 
 } // namespace DataHandling

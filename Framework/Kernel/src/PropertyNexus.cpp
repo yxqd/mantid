@@ -132,7 +132,7 @@ std::unique_ptr<Property> loadProperty(::NeXus::File *file,
   std::map<std::string, std::string> entries = file->getEntries();
   if (entries.find("time") != entries.end()) {
     file->openData("time");
-    file->getDataCoerce(timeSec);
+    file->getData(timeSec);
     // Optionally get a start
     try {
       file->getAttr("start", startStr);
