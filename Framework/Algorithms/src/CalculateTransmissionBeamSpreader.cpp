@@ -155,10 +155,9 @@ void CalculateTransmissionBeamSpreader::exec() {
   direct_spreader_sum = out_ws[3];
 
   // Beam spreader transmission
-  MatrixWorkspace_sptr spreader_trans =
-      WorkspaceFactory::Instance().create("WorkspaceSingleValue", 1, 1, 1);
+  MatrixWorkspace_sptr spreader_trans = createWorkspace<WorkspaceSingleValue>(
+      HistogramData::Histogram::YMode::Frequencies, 1, 1, 1);
   spreader_trans->setYUnit("");
-  spreader_trans->setDistribution(true);
   spreader_trans->mutableX(0)[0] = 0.0;
   spreader_trans->mutableY(0)[0] = getProperty("SpreaderTransmissionValue");
   spreader_trans->mutableE(0)[0] = getProperty("SpreaderTransmissionError");
