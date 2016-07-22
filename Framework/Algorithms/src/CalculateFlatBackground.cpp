@@ -233,45 +233,14 @@ void CalculateFlatBackground::exec() {
   // Assign the output workspace to its property
   setProperty("OutputWorkspace", outputWS);
 }
-/** Converts only if the workspace requires it: workspaces that are
-* distributions or have constant width bins
-*  aren't affected. A flag is set if there was a change allowing the workspace
-* to be converted back
+/** A flag is set if there was a change allowing the workspace to be converted
+* back
 *  @param workspace the workspace to check and possibly convert
 */
 void CalculateFlatBackground::convertToDistribution(
     API::MatrixWorkspace_sptr workspace) {
-  if (workspace->isDistribution()) {
-    return;
-  }
-
-  bool variationFound(false);
-  // the number of spectra we need to check to assess if the bin widths are all
-  // the same
-  const size_t total = WorkspaceHelpers::commonBoundaries(workspace)
-                           ? 1
-                           : workspace->getNumberHistograms();
-
-  MantidVec adjacents(workspace->x(0).size() - 1);
-  for (std::size_t i = 0; i < total; ++i) {
-    auto &X = workspace->x(i);
-    // Calculate bin widths
-    std::adjacent_difference(X.begin() + 1, X.end(), adjacents.begin());
-    // the first entry from adjacent difference is just a copy of the first
-    // entry in the input vector, ignore this. The histogram validator for this
-    // algorithm ensures that X.size() > 1
-    MantidVec widths(adjacents.begin() + 1, adjacents.end());
-    if (!VectorHelper::isConstantValue(widths)) {
-      variationFound = true;
-      break;
-    }
-  }
-
-  if (variationFound) {
-    // after all the above checks the conclusion is we need the conversion
-    WorkspaceHelpers::makeDistribution(workspace, true);
-    m_convertedFromRawCounts = true;
-  }
+  m_convertedFromRawCounts = !workspace->isDistribution();
+  WorkspaceHelpers::makeDistribution(workspace, true);
 }
 /** Converts the workspace to a raw counts workspace if the flag
 * m_convertedFromRawCounts

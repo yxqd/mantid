@@ -142,7 +142,7 @@ void LoadDaveGrp::exec() {
 
   // Create workspace
   API::MatrixWorkspace_sptr outputWorkspace =
-      createWorkspace<DataObjects::Workspace2D>(
+      API::createWorkspace<DataObjects::Workspace2D>(
           HistogramData::Histogram::YMode::Frequencies, this->nGroups,
           this->xLength, this->xLength);
 
