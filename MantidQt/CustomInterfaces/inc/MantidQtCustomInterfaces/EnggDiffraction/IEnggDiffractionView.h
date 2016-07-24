@@ -180,6 +180,13 @@ public:
   virtual std::vector<std::string> newCeriaNo() const = 0;
 
   /**
+   * Detector grouping file used when calibrating in "texture" mode.
+   *
+   * @return name of the grouping file with texture bank definitions
+   */
+  virtual std::string calibTextureGroupingFile() const = 0;
+
+  /**
    * A new calibration is calculated or loaded => update display and
    * widgets. This becomes the new 'current' calibration.
    *

@@ -108,6 +108,8 @@ public:
 
   std::vector<std::string> newCeriaNo() const override;
 
+  std::string calibTextureGroupingFile() const override;
+
   int currentCropCalibBankName() const override {
     return m_currentCropCalibBankName;
   }

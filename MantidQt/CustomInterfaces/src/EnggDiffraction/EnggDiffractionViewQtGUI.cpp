@@ -594,6 +594,10 @@ std::vector<std::string> EnggDiffractionViewQtGUI::newCeriaNo() const {
                        m_uiTabCalib.MWRunFiles_new_ceria_num->isValid());
 }
 
+std::string EnggDiffractionViewQtGUI::calibTextureGroupingFile() const {
+  return m_uiTabCalib.lineEdit_texture_grouping_file->text().toStdString();
+}
+
 std::string EnggDiffractionViewQtGUI::currentCalibFile() const {
   return m_uiTabCalib.lineEdit_current_calib_filename->text().toStdString();
 }

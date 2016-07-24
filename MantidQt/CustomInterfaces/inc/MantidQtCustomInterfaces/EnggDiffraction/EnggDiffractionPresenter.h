@@ -59,6 +59,7 @@ class MANTIDQT_CUSTOMINTERFACES_DLL EnggDiffractionPresenter
 
 public:
   EnggDiffractionPresenter(IEnggDiffractionView *view);
+
   ~EnggDiffractionPresenter() override;
 
   void notify(IEnggDiffractionPresenter::Notification notif) override;
@@ -98,7 +99,8 @@ protected:
   void processStart();
   void processLoadExistingCalib();
   void processCalcCalib();
-  void ProcessCropCalib();
+  void processCropCalib();
+  void processTextureCalib();
   void processFocusBasic();
   void processFocusCropped();
   void processFocusTexture();
@@ -123,6 +125,10 @@ private:
   //@{
   void inputChecksBeforeCalibrate(const std::string &newVanNo,
                                   const std::string &newCeriaNo);
+
+  void inputChecksBeforeCalibrateTexture(const std::string &newVanNo,
+                                         const std::string &newCeriaNo,
+                                         const std::string &dgFile);
 
   std::string outputCalibFilename(const std::string &vanNo,
                                   const std::string &ceriaNo,

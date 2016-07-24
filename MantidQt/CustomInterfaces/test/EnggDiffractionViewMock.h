@@ -87,6 +87,9 @@ public:
   // virtual std::string outCalibFilename() const;
   MOCK_CONST_METHOD0(outCalibFilename, std::string());
 
+  // virtual std::string calibTextureGroupingFile() const;
+  MOCK_CONST_METHOD0(calibTextureGroupingFile, std::string());
+
   // virtual void newCalibLoaded(const std::string &vanadiumNo, const
   // std::string &ceriaNo, std::string &fname);
   MOCK_METHOD3(newCalibLoaded, void(const std::string &, const std::string &,

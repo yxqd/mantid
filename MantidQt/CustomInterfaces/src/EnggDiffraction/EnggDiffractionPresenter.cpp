@@ -114,7 +114,11 @@ void EnggDiffractionPresenter::notify(
     break;
 
   case IEnggDiffractionPresenter::CropCalib:
-    ProcessCropCalib();
+    processCropCalib();
+    break;
+
+  case IEnggDiffractionPresenter::TextureCalib:
+    processTextureCalib();
     break;
 
   case IEnggDiffractionPresenter::FocusRun:
@@ -326,7 +330,7 @@ void EnggDiffractionPresenter::processCalcCalib() {
   startAsyncCalibWorker(outFilename, vanNo, ceriaNo, "");
 }
 
-void EnggDiffractionPresenter::ProcessCropCalib() {
+void EnggDiffractionPresenter::processCropCalib() {
   const std::string vanNo = isValidRunNumber(m_view->newVanadiumNo());
   const std::string ceriaNo = isValidRunNumber(m_view->newCeriaNo());
   int specNoNum = m_view->currentCropCalibBankName();
@@ -372,6 +376,33 @@ void EnggDiffractionPresenter::ProcessCropCalib() {
   // doNewCalibration(outFilename, vanNo, ceriaNo, specNo/bankName);
   // calibrationFinished()
   startAsyncCalibWorker(outFilename, vanNo, ceriaNo, specNo);
+}
+
+void EnggDiffractionPresenter::processTextureCalib() {
+  const std::string vanNo = isValidRunNumber(m_view->newVanadiumNo());
+  const std::string ceriaNo = isValidRunNumber(m_view->newCeriaNo());
+  const std::string dgFile = m_view->calibTextureGroupingFile();
+
+  try {
+    inputChecksBeforeCalibrateTexture(vanNo, ceriaNo, dgFile);
+  } catch (std::invalid_argument &ia) {
+    m_view->userWarning("Error in the inputs required for texture calibration",
+                        ia.what());
+    return;
+  }
+
+  g_log.notice()
+      << "EnggDiffraction GUI: starting texture calibration. This may "
+         "take a few seconds... \n";
+
+  const std::string outFilename = outputCalibFilename(vanNo, ceriaNo);
+
+  m_view->showStatus("Calculating texture calibration...");
+  m_view->enableCalibrateFocusFitUserActions(false);
+  // alternatively, this would be GUI-blocking:
+  // doNewCalibration(outFilename, vanNo, ceriaNo, specNo/bankName);
+  // calibrationFinished()
+  startAsyncCalibWorker(outFilename, vanNo, ceriaNo, "");
 }
 
 void EnggDiffractionPresenter::processFocusBasic() {
@@ -780,6 +811,20 @@ void EnggDiffractionPresenter::inputChecksBeforeCalibrate(
   if (templGSAS.empty()) {
     throw std::invalid_argument(
         "You need to set a template calibration file for GSAS in settings.");
+  }
+}
+
+void EnggDiffractionPresenter::inputChecksBeforeCalibrateTexture(
+    const std::string &newVanNo, const std::string &newCeriaNo,
+    const std::string &dgFile) {
+
+  inputChecksBeforeCalibrate(newVanNo, newCeriaNo);
+
+  Poco::File dgf(dgFile);
+  if (!dgf.exists()) {
+    throw std::invalid_argument("The detector grouping file for texture "
+                                "calibration  coult not be found: " +
+                                dgFile);
   }
 }
 
@@ -1660,13 +1705,11 @@ void EnggDiffractionPresenter::doFocusing(const EnggDiffCalibSettings &cs,
                                           const std::string &dgFile) {
   ITableWorkspace_sptr vanIntegWS;
   MatrixWorkspace_sptr vanCurvesWS;
-  MatrixWorkspace_sptr inWS;
 
   const std::string vanNo = m_view->currentVanadiumNo();
   loadOrCalcVanadiumWorkspaces(vanNo, cs.m_inputDirCalib, vanIntegWS,
                                vanCurvesWS, cs.m_forceRecalcOverwrite, "");
 
-  const std::string inWSName = "engggui_focusing_input_ws";
   const std::string instStr = m_view->currentInstrument();
   std::vector<std::string> multi_RunNo = sumOfFilesLoadVec();
   std::string loadInput = "";
@@ -1679,6 +1722,8 @@ void EnggDiffractionPresenter::doFocusing(const EnggDiffCalibSettings &cs,
       loadInput += instStr + multi_RunNo[i] + '+';
   }
 
+  const std::string inWSName = "engggui_focusing_input_ws";
+  MatrixWorkspace_sptr inWS;
   // if its not empty the global variable is set for sumOfFiles
   if (!g_sumOfFilesFocus.empty()) {
 
@@ -1709,7 +1754,7 @@ void EnggDiffractionPresenter::doFocusing(const EnggDiffCalibSettings &cs,
                         "cannot not be processed\n";
     } else {
       g_log.notice()
-          << "Load alogirthm has successfully merged the files provided\n";
+          << "Load algorithm has successfully merged the files provided\n";
     }
 
   } else {
