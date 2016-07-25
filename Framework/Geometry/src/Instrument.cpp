@@ -384,7 +384,7 @@ IComponent_const_sptr Instrument::getSample() const {
 *  @returns A unit vector denoting the direction of the beam
 */
 Kernel::V3D Instrument::getBeamDirection() const {
-  V3D retval = getSample()->getPos() - getSource()->getPos();
+  V3D retval = m_referenceFrame->vecPointingAlongBeam();
   retval.normalize();
   return retval;
 }

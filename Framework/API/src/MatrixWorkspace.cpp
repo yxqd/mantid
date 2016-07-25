@@ -791,7 +791,7 @@ MatrixWorkspace::detectorSignedTwoTheta(const Geometry::IDetector &det) const {
   }
 
   const Kernel::V3D samplePos = sample->getPos();
-  const Kernel::V3D beamLine = samplePos - source->getPos();
+  const Kernel::V3D beamLine = instrument->getBeamDirection();
 
   if (beamLine.nullVector()) {
     throw Kernel::Exception::InstrumentDefinitionError(
@@ -821,7 +821,7 @@ double MatrixWorkspace::detectorTwoTheta(const Geometry::IDetector &det) const {
   }
 
   const Kernel::V3D samplePos = sample->getPos();
-  const Kernel::V3D beamLine = samplePos - source->getPos();
+  const Kernel::V3D beamLine = instrument->getBeamDirection();
 
   if (beamLine.nullVector()) {
     throw Kernel::Exception::InstrumentDefinitionError(

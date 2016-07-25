@@ -18,7 +18,7 @@
     </reference-frame>
   </defaults>
   <component type="moderator">
-    <location z="-2" />
+    <location z="0" />
   </component>
   <type name="moderator" is="Source"></type>
   <!--MONITORS-->

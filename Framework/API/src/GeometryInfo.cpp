@@ -56,7 +56,7 @@ double GeometryInfo::getTwoTheta() const {
   // MatrixWorkspace::detectorTwoTheta(). The plan is to eventually remove the
   // latter, once GeometryInfo is in widespread use.
   const Kernel::V3D samplePos = m_factory.getSamplePos();
-  const Kernel::V3D beamLine = samplePos - m_factory.getSourcePos();
+  const Kernel::V3D beamLine = m_factory.getInstrument().getBeamDirection();
 
   if (beamLine.nullVector()) {
     throw Kernel::Exception::InstrumentDefinitionError(
@@ -71,7 +71,7 @@ double GeometryInfo::getSignedTwoTheta() const {
   // MatrixWorkspace::detectorSignedTwoTheta(). The plan is to eventually remove
   // the latter, once GeometryInfo is in widespread use.
   const Kernel::V3D samplePos = m_factory.getSamplePos();
-  const Kernel::V3D beamLine = samplePos - m_factory.getSourcePos();
+  const Kernel::V3D beamLine = m_factory.getInstrument().getBeamDirection();
 
   if (beamLine.nullVector()) {
     throw Kernel::Exception::InstrumentDefinitionError(
