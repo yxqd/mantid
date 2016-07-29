@@ -427,7 +427,6 @@ ReflectometryWorkflowBase::toLamDetector(const std::string &processingCommands,
 
   // Process the input workspace according to the processingCommands to get a
   // detector workspace
-
   auto performIndexAlg = this->createChildAlgorithm("GroupDetectors");
   performIndexAlg->initialize();
   performIndexAlg->setProperty("GroupingPattern", processingCommands);
@@ -444,13 +443,14 @@ ReflectometryWorkflowBase::toLamDetector(const std::string &processingCommands,
   cropWorkspaceAlg->execute();
   detectorWS = cropWorkspaceAlg->getProperty("OutputWorkspace");
 
+  /*
   auto rebinWorkspaceAlg = this->createChildAlgorithm("Rebin");
   rebinWorkspaceAlg->initialize();
   std::vector<double> params = {wavelengthStep};
   rebinWorkspaceAlg->setProperty("Params", params);
   rebinWorkspaceAlg->setProperty("InputWorkspace", detectorWS);
   rebinWorkspaceAlg->execute();
-  detectorWS = rebinWorkspaceAlg->getProperty("OutputWorkspace");
+  detectorWS = rebinWorkspaceAlg->getProperty("OutputWorkspace");*/
 
   return detectorWS;
 }
