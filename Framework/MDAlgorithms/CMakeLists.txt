@@ -55,6 +55,7 @@ set ( SRC_FILES
 	src/IntegrateEllipsoids.cpp
 	src/IntegrateFlux.cpp
 	src/IntegrateMDHistoWorkspace.cpp
+	src/IntegratePeaks3DFit.cpp
 	src/IntegratePeaksMD.cpp
 	src/IntegratePeaksMD2.cpp
 	src/IntegratePeaksMDHKL.cpp
@@ -184,6 +185,7 @@ set ( INC_FILES
 	inc/MantidMDAlgorithms/IntegrateEllipsoids.h
 	inc/MantidMDAlgorithms/IntegrateFlux.h
 	inc/MantidMDAlgorithms/IntegrateMDHistoWorkspace.h
+	inc/MantidMDAlgorithms/IntegratePeaks3DFit.h
 	inc/MantidMDAlgorithms/IntegratePeaksMD.h
 	inc/MantidMDAlgorithms/IntegratePeaksMD2.h
 	inc/MantidMDAlgorithms/IntegratePeaksMDHKL.h
