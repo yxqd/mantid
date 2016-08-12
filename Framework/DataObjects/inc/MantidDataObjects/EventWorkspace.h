@@ -43,6 +43,8 @@ public:
   // Initialize the pixels
   void init(const std::size_t &, const std::size_t &,
             const std::size_t &) override;
+  void init(const std::size_t &NVectors,
+            const HistogramData::Histogram &histogram) override;
 
   void copyDataFrom(const EventWorkspace &source,
                     std::size_t sourceStartWorkspaceIndex = 0,

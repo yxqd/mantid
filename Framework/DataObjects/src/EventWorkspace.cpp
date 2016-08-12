@@ -93,6 +93,26 @@ void EventWorkspace::init(const std::size_t &NVectors,
   m_axes[1] = new API::SpectraAxis(this);
 }
 
+void EventWorkspace::init(const std::size_t &NVectors,
+                          const HistogramData::Histogram &histogram) {
+  if(histogram.xMode() != HistogramData::Histogram::XMode::BinEdges)
+    throw std::runtime_error(
+        "EventWorkspace can only be initialized with XMode::BinEdges");
+
+  if(histogram.sharedY() || histogram.sharedE())
+    throw std::runtime_error(
+        "EventWorkspace cannot be initialized non-NULL Y or E data");
+
+  data.resize(NVectors, nullptr);
+  for (size_t i = 0; i < NVectors; i++)
+    data[i] = new EventList(mru, specnum_t(i));
+  this->setAllX(histogram.binEdges());
+
+  m_axes.resize(2);
+  m_axes[0] = new API::RefAxis(histogram.x().size(), this);
+  m_axes[1] = new API::SpectraAxis(this);
+}
+
 /**
  * Copy all of the data (event lists) from the source workspace to this
  *workspace.
