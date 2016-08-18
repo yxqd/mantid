@@ -119,6 +119,9 @@ void SaveMD2::doSaveHisto(Mantid::DataObjects::MDHistoWorkspace_sptr ws) {
   MDBoxFlatTree::saveAffineTransformMatricies(
       file, boost::dynamic_pointer_cast<const IMDWorkspace>(ws));
 
+  file->putAttr("title", ws->getTitle());
+  file->putAttr("comment", ws->getComment());
+
   // Check that the typedef has not been changed. The NeXus types would need
   // changing if it does!
   assert(sizeof(signal_t) == sizeof(double));

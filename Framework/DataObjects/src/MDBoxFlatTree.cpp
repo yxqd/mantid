@@ -766,6 +766,7 @@ void MDBoxFlatTree::saveWSGenericInfo(::NeXus::File *const file,
   // because those cannot be resized).
   file->putAttr("definition", ws->id());
   file->putAttr("title", ws->getTitle());
+  file->putAttr("comment", ws->getComment());
   // Save each dimension, as their XML representation
   size_t nDim = ws->getNumDims();
   for (size_t d = 0; d < nDim; d++) {
