@@ -93,6 +93,10 @@ endif()
 # Add the target for this directory
 add_library ( RemoteAlgorithms ${SRC_FILES} ${INC_FILES})
 
+set_target_properties ( RemoteAlgorithms PROPERTIES XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS YES
+XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
+)
+
 # Set the name of the generated library
 set_target_properties ( RemoteAlgorithms PROPERTIES OUTPUT_NAME MantidRemoteAlgorithms )
 

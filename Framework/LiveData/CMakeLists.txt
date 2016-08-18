@@ -77,6 +77,10 @@ endif ()
 # Add to the 'Framework' group in VS
 set_property ( TARGET LiveData PROPERTY FOLDER "MantidFramework" )
 
+set_target_properties ( LiveData PROPERTIES XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS YES
+XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
+)
+
 include_directories ( inc )
 
 # Have to link to winsock library on Windows

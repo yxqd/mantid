@@ -48,6 +48,10 @@ endif ()
 # Add to the 'Framework' group in VS
 set_property ( TARGET RemoteJobManagers PROPERTY FOLDER "MantidFramework" )
 
+set_target_properties ( RemoteJobManagers PROPERTIES XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS YES
+XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
+)
+
 target_include_directories ( RemoteJobManagers PUBLIC inc )
 target_include_directories ( RemoteJobManagers PRIVATE ${OPENSSL_INCLUDE_DIR} )
 

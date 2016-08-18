@@ -37,6 +37,10 @@ include_directories ( inc )
 
 target_link_libraries ( ISISLiveData LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME} ${MANTIDLIBS} )
 
+set_target_properties ( ISISLiveData PROPERTIES XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS YES
+XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
+)
+
 # Add the unit tests directory
 # add_subdirectory ( test )
 

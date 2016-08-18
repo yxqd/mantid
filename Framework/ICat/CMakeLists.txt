@@ -88,6 +88,10 @@ add_library ( ICat ${SRC_FILES} ${INC_FILES})
 set_target_properties ( ICat PROPERTIES OUTPUT_NAME MantidICat 
                                         COMPILE_DEFINITIONS IN_MANTID_ICAT )
 
+set_target_properties ( ICat PROPERTIES XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS YES
+XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
+)
+
 if (OSX_VERSION VERSION_GREATER 10.8)
   set_target_properties ( ICat PROPERTIES INSTALL_RPATH "@loader_path/../Contents/MacOS")
 endif () 

@@ -28,12 +28,17 @@ add_library ( Nexus ${SRC_FILES} ${INC_FILES})
 set_target_properties ( Nexus PROPERTIES OUTPUT_NAME MantidNexus 
                                          COMPILE_DEFINITIONS IN_MANTID_NEXUS )
 
+set_target_properties ( Nexus PROPERTIES XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS YES
+                        XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
+)
+
 if (OSX_VERSION VERSION_GREATER 10.8)
   set_target_properties ( Nexus PROPERTIES INSTALL_RPATH "@loader_path/../MacOS" )
 endif () 
 
 # Add to the 'Framework' group in VS
 set_property ( TARGET Nexus PROPERTY FOLDER "MantidFramework" )
+
 
 include_directories ( inc )
 

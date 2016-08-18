@@ -459,6 +459,10 @@ set_target_properties ( Kernel PROPERTIES OUTPUT_NAME MantidKernel
 
 target_include_directories ( Kernel PRIVATE ${GSL_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR})
 
+set_target_properties ( Kernel PROPERTIES XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS YES
+                                          XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
+)
+
 if (OSX_VERSION VERSION_GREATER 10.8)
   set_target_properties ( Kernel PROPERTIES INSTALL_RPATH "@loader_path/../MacOS")
 endif ()

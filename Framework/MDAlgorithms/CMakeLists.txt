@@ -400,6 +400,10 @@ add_library ( MDAlgorithms ${SRC_FILES} ${INC_FILES})
 set_target_properties ( MDAlgorithms PROPERTIES OUTPUT_NAME MantidMDAlgorithms 
                                                 COMPILE_DEFINITIONS IN_MANTID_MDALGORITHMS )
 
+set_target_properties ( MDAlgorithms PROPERTIES XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS YES
+XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
+)
+
 if (OSX_VERSION VERSION_GREATER 10.8)
   set_target_properties ( MDAlgorithms PROPERTIES INSTALL_RPATH "@loader_path/../Contents/MacOS")
 endif () 

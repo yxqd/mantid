@@ -206,6 +206,10 @@ add_library ( DataObjects ${SRC_FILES} ${INC_FILES})
 set_target_properties ( DataObjects PROPERTIES OUTPUT_NAME MantidDataObjects 
                                                COMPILE_DEFINITIONS IN_MANTID_DATAOBJECTS )
 
+set_target_properties ( DataObjects PROPERTIES XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS YES
+XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
+)
+
 if (OSX_VERSION VERSION_GREATER 10.8)
   set_target_properties ( DataObjects PROPERTIES INSTALL_RPATH "@loader_path/../MacOS")
 endif ()

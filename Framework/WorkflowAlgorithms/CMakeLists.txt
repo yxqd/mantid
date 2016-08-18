@@ -121,6 +121,10 @@ add_library ( WorkflowAlgorithms ${SRC_FILES} ${INC_FILES})
 # Set the name of the generated library
 set_target_properties ( WorkflowAlgorithms PROPERTIES OUTPUT_NAME MantidWorkflowAlgorithms )
 
+set_target_properties ( WorkflowAlgorithms PROPERTIES XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS YES
+XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
+)
+
 if (OSX_VERSION VERSION_GREATER 10.8)
   set_target_properties ( WorkflowAlgorithms PROPERTIES INSTALL_RPATH "@loader_path/../Contents/MacOS")
 endif ()

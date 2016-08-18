@@ -32,6 +32,10 @@ endif ()
 
 set_property (TARGET ScriptRepository PROPERTY FOLDER "MantidFramework")
 
+set_target_properties ( ScriptRepository PROPERTIES XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS YES
+XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
+)
+
 set ( LIBS ${MANTIDLIBS} )
 
 include_directories(inc)

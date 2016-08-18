@@ -430,6 +430,10 @@ add_library ( CurveFitting ${SRC_FILES} ${INC_FILES})
 set_target_properties ( CurveFitting PROPERTIES OUTPUT_NAME MantidCurveFitting 
                                      COMPILE_DEFINITIONS IN_MANTID_CURVEFITTING )
 
+set_target_properties ( CurveFitting PROPERTIES XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS YES
+XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
+)
+
 if (OSX_VERSION VERSION_GREATER 10.8)
   set_target_properties ( CurveFitting PROPERTIES INSTALL_RPATH "@loader_path/../Contents/MacOS")
 endif () 
