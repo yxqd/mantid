@@ -116,6 +116,25 @@ workspace indicies. This can be achieved with the following operators:
 One could combine these operations, for example :literal:`10+12,13:89` would
 list the sum of 10 and 12 followed by 13 to 89.
 
+Combination Lists
+#################
+
+To directly combine spectra into a single group, you can use SpectraList,
+DetectorList or WorkspaceIndexList. The differences are as follows:
+
+- SpectraList is an array of spectrum numbers to combine.
+- DetectorList is an array of detector IDs to combine.
+- WorkspaceIndexList is an array of workspace indicies to combine.
+
+In each case, the list consists of a number of comma-separated integers,
+which each map to a spectra to be included in the grouping. Just like in
+GroupingPattern, the spectra you wish to keep can be specified by selecting the
+appropriate workspace indicies. For example, :literal:`3,7,8` will keep indexes
+3, 7 and 8 only.
+
+One can also make use :literal:`-` or :literal:`:` to specify a range of
+numbers, e.g. :literal:`19:63` to combine all numbers from 19 to 63.
+
 Previous Versions
 -----------------
 
