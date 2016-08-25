@@ -1154,8 +1154,8 @@ void TomographyIfaceViewQtGUI::updateSystemSettings(
  * @param name Name of the (tomographic reconstruction) tool
  */
 void TomographyIfaceViewQtGUI::showToolConfig(const std::string &name) {
-  QString run = "/work/imat/phase_commissioning/scripts/Imaging/IMAT/"
-                "tomo_reconstruct.py"; // m_uiAstra.lineEdit_runnable->text();
+	QString run = m_uiTabSystemSettings.lineEdit_remote_scripts_base_dir->text() + "/scripts/Imaging/IMAT/"
+		"tomo_reconstruct.py"; // m_uiAstra.lineEdit_runnable->text();
   static size_t reconIdx = 1;
 
   const std::string localOutNameAppendix =
