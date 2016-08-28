@@ -12,6 +12,8 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/optional.hpp>
 
+#include <mutex>
+
 namespace Mantid {
 namespace DataObjects {
 
@@ -231,9 +233,9 @@ private:
 
   /// Static logger
   static Mantid::Kernel::Logger g_log;
-
+  static std::once_flag flag;
   // ki-kf for Inelastic convention; kf-ki for Crystallography convention
-  std::string convention;
+  static std::string convention;
 };
 
 } // namespace Mantid

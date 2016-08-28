@@ -21,6 +21,9 @@ using namespace Mantid::Geometry;
 namespace Mantid {
 namespace DataObjects {
 
+std::string Peak::convention;
+std::once_flag Peak::flag;
+
 //----------------------------------------------------------------------------------------------
 /** Default constructor */
 Peak::Peak()
@@ -30,7 +33,9 @@ Peak::Peak()
       m_InverseGoniometerMatrix(3, 3, true), m_runNumber(0), m_monitorCount(0),
       m_row(-1), m_col(-1), m_orig_H(0), m_orig_K(0), m_orig_L(0),
       m_peakShape(boost::make_shared<NoShape>()) {
-  convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  std::call_once(flag, []() {
+    convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  });
 }
 
 //----------------------------------------------------------------------------------------------
@@ -51,7 +56,9 @@ Peak::Peak(const Geometry::Instrument_const_sptr &m_inst,
       m_InverseGoniometerMatrix(3, 3, true), m_runNumber(0), m_monitorCount(0),
       m_orig_H(0), m_orig_K(0), m_orig_L(0),
       m_peakShape(boost::make_shared<NoShape>()) {
-  convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  std::call_once(flag, []() {
+    convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  });
   this->setInstrument(m_inst);
   this->setQLabFrame(QLabFrame, detectorDistance);
 }
@@ -78,7 +85,9 @@ Peak::Peak(const Geometry::Instrument_const_sptr &m_inst,
       m_InverseGoniometerMatrix(goniometer), m_runNumber(0), m_monitorCount(0),
       m_orig_H(0), m_orig_K(0), m_orig_L(0),
       m_peakShape(boost::make_shared<NoShape>()) {
-  convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  std::call_once(flag, []() {
+    convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  });
   if (fabs(m_InverseGoniometerMatrix.Invert()) < 1e-8)
     throw std::invalid_argument(
         "Peak::ctor(): Goniometer matrix must non-singular.");
@@ -101,7 +110,9 @@ Peak::Peak(const Geometry::Instrument_const_sptr &m_inst, int m_detectorID,
       m_InverseGoniometerMatrix(3, 3, true), m_runNumber(0), m_monitorCount(0),
       m_orig_H(0), m_orig_K(0), m_orig_L(0),
       m_peakShape(boost::make_shared<NoShape>()) {
-  convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  std::call_once(flag, []() {
+    convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  });
   this->setInstrument(m_inst);
   this->setDetectorID(m_detectorID);
   this->setWavelength(m_Wavelength);
@@ -123,7 +134,9 @@ Peak::Peak(const Geometry::Instrument_const_sptr &m_inst, int m_detectorID,
       m_InverseGoniometerMatrix(3, 3, true), m_runNumber(0), m_monitorCount(0),
       m_orig_H(0), m_orig_K(0), m_orig_L(0),
       m_peakShape(boost::make_shared<NoShape>()) {
-  convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  std::call_once(flag, []() {
+    convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  });
   this->setInstrument(m_inst);
   this->setDetectorID(m_detectorID);
   this->setWavelength(m_Wavelength);
@@ -147,7 +160,9 @@ Peak::Peak(const Geometry::Instrument_const_sptr &m_inst, int m_detectorID,
       m_InverseGoniometerMatrix(goniometer), m_runNumber(0), m_monitorCount(0),
       m_orig_H(0), m_orig_K(0), m_orig_L(0),
       m_peakShape(boost::make_shared<NoShape>()) {
-  convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  std::call_once(flag, []() {
+    convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  });
   if (fabs(m_InverseGoniometerMatrix.Invert()) < 1e-8)
     throw std::invalid_argument(
         "Peak::ctor(): Goniometer matrix must non-singular.");
@@ -170,7 +185,10 @@ Peak::Peak(const Geometry::Instrument_const_sptr &m_inst, double scattering,
       m_InverseGoniometerMatrix(3, 3, true), m_runNumber(0), m_monitorCount(0),
       m_row(-1), m_col(-1), m_orig_H(0), m_orig_K(0), m_orig_L(0),
       m_peakShape(boost::make_shared<NoShape>()) {
-  convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  std::call_once(flag, []() {
+    convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  });
+
   this->setInstrument(m_inst);
   this->setWavelength(m_Wavelength);
   m_detectorID = -1;
@@ -196,7 +214,8 @@ Peak::Peak(const Peak &other)
       samplePos(other.samplePos), detPos(other.detPos),
       m_orig_H(other.m_orig_H), m_orig_K(other.m_orig_K),
       m_orig_L(other.m_orig_L), m_detIDs(other.m_detIDs),
-      m_peakShape(other.m_peakShape->clone()), convention(other.convention) {}
+      m_peakShape(
+          other.m_peakShape->clone()) /*, convention(other.convention)*/ {}
 
 //----------------------------------------------------------------------------------------------
 /** Constructor making a Peak from IPeak interface
@@ -217,7 +236,10 @@ Peak::Peak(const Geometry::IPeak &ipeak)
       m_monitorCount(ipeak.getMonitorCount()), m_row(ipeak.getRow()),
       m_col(ipeak.getCol()), m_orig_H(0.), m_orig_K(0.), m_orig_L(0.),
       m_peakShape(boost::make_shared<NoShape>()) {
-  convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  std::call_once(flag, []() {
+    convention = Kernel::ConfigService::Instance().getString("Q.convention");
+  });
+
   if (fabs(m_InverseGoniometerMatrix.Invert()) < 1e-8)
     throw std::invalid_argument(
         "Peak::ctor(): Goniometer matrix must non-singular.");
@@ -595,10 +617,13 @@ void Peak::setQLabFrame(const Mantid::Kernel::V3D &QLabFrame,
     // Find the detector
     const bool found = findDetector(detectorDir);
     if (!found) {
-      // This is important, so we ought to log when this fails to happen.
-      g_log.debug("Could not find detector after setting qLab via setQLab with "
-                  "QLab : " +
-                  q.toString());
+      if (g_log.is(Poco::Message::PRIO_DEBUG)) {
+        // This is important, so we ought to log when this fails to happen.
+        g_log.debug(
+            "Could not find detector after setting qLab via setQLab with "
+            "QLab : " +
+            q.toString());
+      }
     }
   }
 }
