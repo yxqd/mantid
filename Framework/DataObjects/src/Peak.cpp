@@ -617,13 +617,10 @@ void Peak::setQLabFrame(const Mantid::Kernel::V3D &QLabFrame,
     // Find the detector
     const bool found = findDetector(detectorDir);
     if (!found) {
-      if (g_log.is(Poco::Message::PRIO_DEBUG)) {
-        // This is important, so we ought to log when this fails to happen.
-        g_log.debug(
-            "Could not find detector after setting qLab via setQLab with "
-            "QLab : " +
-            q.toString());
-      }
+      // This is important, so we ought to log when this fails to happen.
+      g_log.debug("Could not find detector after setting qLab via setQLab with "
+                  "QLab : " +
+                  q.toString());
     }
   }
 }
