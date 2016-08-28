@@ -214,8 +214,7 @@ Peak::Peak(const Peak &other)
       samplePos(other.samplePos), detPos(other.detPos),
       m_orig_H(other.m_orig_H), m_orig_K(other.m_orig_K),
       m_orig_L(other.m_orig_L), m_detIDs(other.m_detIDs),
-      m_peakShape(
-          other.m_peakShape->clone()) /*, convention(other.convention)*/ {}
+      m_peakShape(other.m_peakShape->clone()) {}
 
 //----------------------------------------------------------------------------------------------
 /** Constructor making a Peak from IPeak interface
