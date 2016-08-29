@@ -66,22 +66,23 @@ enum class DataServiceHidden { Auto, Include, Exclude };
     File change history is stored at: <https://github.com/mantidproject/mantid>.
     Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
-    
-    namespace impl {
-        // recommended in Meyers, Effective STL when internationalization and embedded
-        // NULLs aren't an issue.  Much faster than the STL or Boost lex versions.
-        // http://stackoverflow.com/questions/1801892/making-mapfind-operation-case-insensitive
-        struct ciLessLibC : public std::binary_function<std::string,std::string, bool> {
-            bool operator()(const std::string &lhs, const std::string &rhs) const {
-                return strcasecmp(lhs.c_str(), rhs.c_str()) < 0 ;
-            }
-        };
-    }
-    
+
+namespace impl {
+// recommended in Meyers, Effective STL when internationalization and embedded
+// NULLs aren't an issue.  Much faster than the STL or Boost lex versions.
+// http://stackoverflow.com/questions/1801892/making-mapfind-operation-case-insensitive
+struct ciLessLibC
+    : public std::binary_function<std::string, std::string, bool> {
+  bool operator()(const std::string &lhs, const std::string &rhs) const {
+    return strcasecmp(lhs.c_str(), rhs.c_str()) < 0;
+  }
+};
+}
+
 template <typename T> class DLLExport DataService {
 private:
   /// Typedef for the map holding the names of and pointers to the data objects
-  typedef std::map<std::string, boost::shared_ptr<T>,impl::ciLessLibC> svcmap;
+  typedef std::map<std::string, boost::shared_ptr<T>, impl::ciLessLibC> svcmap;
   /// Iterator for the data store map
   typedef typename svcmap::iterator svc_it;
   /// Const iterator for the data store map
@@ -258,10 +259,9 @@ public:
     m_mutex.lock();
 
     // find if the Tobject already exists
-    std::string foundName;
-    auto it = findNameWithCaseSearch(name, foundName);
+    auto it = datamap.find(name);
     if (it != datamap.end()) {
-      g_log.debug("Data Object '" + foundName +
+      g_log.debug("Data Object '" + name +
                   "' replaced in data service.\n");
       m_mutex.unlock();
 
@@ -269,7 +269,7 @@ public:
           new BeforeReplaceNotification(name, it->second, Tobject));
 
       m_mutex.lock();
-      datamap[foundName] = Tobject;
+      datamap[name] = Tobject;
       m_mutex.unlock();
 
       notificationCenter.postNotification(
@@ -288,8 +288,7 @@ public:
     // Make DataService access thread-safe
     m_mutex.lock();
 
-    std::string foundName;
-    auto it = findNameWithCaseSearch(name, foundName);
+    auto it = datamap.find(name);
     if (it == datamap.end()) {
       g_log.debug(" remove '" + name + "' cannot be found");
       m_mutex.unlock();
@@ -306,15 +305,15 @@ public:
     // map
     m_mutex.unlock();
     notificationCenter.postNotification(
-        new PreDeleteNotification(foundName, data));
+        new PreDeleteNotification(name, data));
     m_mutex.lock();
 
     data.reset(); // DataService now has no references to the object
-    g_log.information("Data Object '" + foundName +
+    g_log.information("Data Object '" + name +
                       "' deleted from data service.");
 
     m_mutex.unlock();
-    notificationCenter.postNotification(new PostDeleteNotification(foundName));
+    notificationCenter.postNotification(new PostDeleteNotification(name));
   }
 
   //--------------------------------------------------------------------------
@@ -329,7 +328,7 @@ public:
     m_mutex.lock();
 
     std::string foundName;
-    auto it = findNameWithCaseSearch(oldName, foundName);
+    auto it = datamap.find(oldName);
     if (it == datamap.end()) {
       g_log.warning(" rename '" + oldName + "' cannot be found");
       m_mutex.unlock();
@@ -386,8 +385,7 @@ public:
     // Make DataService access thread-safe
     std::lock_guard<std::recursive_mutex> _lock(m_mutex);
 
-    std::string foundName;
-    auto it = findNameWithCaseSearch(name, foundName);
+    auto it = datamap.find(name);
     if (it != datamap.end()) {
       return it->second;
     } else {
@@ -402,9 +400,7 @@ public:
   bool doesExist(const std::string &name) const {
     // Make DataService access thread-safe
     std::lock_guard<std::recursive_mutex> _lock(m_mutex);
-
-    std::string foundName;
-    auto it = findNameWithCaseSearch(name, foundName);
+    auto it = datamap.find(name);
     return it != datamap.end();
   }
 
@@ -536,33 +532,6 @@ private:
       g_log.debug() << error << '\n';
       throw std::runtime_error(error);
     }
-  }
-
-  /**
-   * Find a name in the map and return an iterator pointing to it. This takes
-   * the string and if it does not find it then it looks for a match
-   * disregarding
-   * the case (const version)
-   * @param name The string name to search for
-   * @param foundName [Output] Stores the name here if one was found. It will be
-   * empty if not
-   * @returns An iterator pointing at the element or the end iterator
-   */
-  svc_constit findNameWithCaseSearch(const std::string &name,
-                                std::string &foundName) const {
-    //const svcmap &constdata = datamap;
-    //svcmap &data = const_cast<svcmap &>(constdata);
-    if (name.empty())
-      return datamap.cend();
-
-    // Exact match
-    foundName = name;
-    auto match = datamap.find(name);
-    if (match != datamap.cend())
-      return match;
-    else
-      foundName = "";
-    return match;
   }
 
   /// DataService name. This is set only at construction. DataService name
