@@ -17,6 +17,12 @@
 
 #include <mutex>
 
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#else
+#include "strings.h"
+#endif
+
 namespace Mantid {
 namespace Kernel {
 
@@ -60,10 +66,22 @@ enum class DataServiceHidden { Auto, Include, Exclude };
     File change history is stored at: <https://github.com/mantidproject/mantid>.
     Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
+    
+    namespace impl {
+        // recommended in Meyers, Effective STL when internationalization and embedded
+        // NULLs aren't an issue.  Much faster than the STL or Boost lex versions.
+        // http://stackoverflow.com/questions/1801892/making-mapfind-operation-case-insensitive
+        struct ciLessLibC : public std::binary_function<std::string,std::string, bool> {
+            bool operator()(const std::string &lhs, const std::string &rhs) const {
+                return strcasecmp(lhs.c_str(), rhs.c_str()) < 0 ;
+            }
+        };
+    }
+    
 template <typename T> class DLLExport DataService {
 private:
   /// Typedef for the map holding the names of and pointers to the data objects
-  typedef std::map<std::string, boost::shared_ptr<T>> svcmap;
+  typedef std::map<std::string, boost::shared_ptr<T>,impl::ciLessLibC> svcmap;
   /// Iterator for the data store map
   typedef typename svcmap::iterator svc_it;
   /// Const iterator for the data store map
@@ -419,7 +437,6 @@ public:
       DataServiceHidden hiddenState = DataServiceHidden::Auto) const {
 
     std::vector<std::string> foundNames;
-
     // First test if auto flag is set whether to include hidden
     if (hiddenState == DataServiceHidden::Auto) {
       if (showingHiddenObjects()) {
@@ -531,40 +548,19 @@ private:
    * empty if not
    * @returns An iterator pointing at the element or the end iterator
    */
-  svc_it findNameWithCaseSearch(const std::string &name,
+  svc_constit findNameWithCaseSearch(const std::string &name,
                                 std::string &foundName) const {
-    const svcmap &constdata = datamap;
-    svcmap &data = const_cast<svcmap &>(constdata);
+    //const svcmap &constdata = datamap;
+    //svcmap &data = const_cast<svcmap &>(constdata);
     if (name.empty())
-      return data.end();
+      return datamap.cend();
 
     // Exact match
     foundName = name;
-    auto match = data.find(name);
-    if (match != data.end())
+    auto match = datamap.find(name);
+    if (match != datamap.cend())
       return match;
-
-    // Try UPPER case
-    std::transform(foundName.begin(), foundName.end(), foundName.begin(),
-                   toupper);
-    match = data.find(foundName);
-    if (match != data.end())
-      return match;
-
-    // Try lower case
-    std::transform(foundName.begin(), foundName.end(), foundName.begin(),
-                   tolower);
-    match = data.find(foundName);
-    if (match != data.end())
-      return match;
-
-    // Try Sentence case
-    foundName = name;
-    // Upper cases the first letter
-    std::transform(foundName.begin(), foundName.begin() + 1, foundName.begin(),
-                   toupper);
-    match = data.find(foundName);
-    if (match == data.end())
+    else
       foundName = "";
     return match;
   }
