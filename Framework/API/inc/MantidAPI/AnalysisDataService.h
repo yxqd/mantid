@@ -148,6 +148,23 @@ public:
     }
   }
 
+
+  /** Retrieve a workspace and cast it to the given WSTYPE
+  *
+  * @param name :: name of the workspace
+  * @tparam WSTYPE :: type of workspace to cast to. Should sub-class Workspace
+  * @return a shared pointer of WSTYPE
+  */
+  template <typename WSTYPE>
+  bool retrieveWS(const std::string &name, boost::shared_ptr<WSTYPE> & output) const {
+	  // Get as a bare workspace
+	  boost::shared_ptr<Mantid::API::Workspace> workspace;
+	  if (Kernel::DataService<API::Workspace>::retrieve(name, workspace)) {
+		  output = boost::dynamic_pointer_cast<WSTYPE>(workspace);
+		  return true;
+	  }
+	  return false;
+  }
   /** @name Methods to work with workspace groups */
   //@{
   void sortGroupByName(const std::string &groupName);

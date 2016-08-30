@@ -369,6 +369,26 @@ public:
     }
   }
 
+  //--------------------------------------------------------------------------
+  /** Get a shared pointer to a stored data object
+  * @param name :: name of the object */
+   bool retrieve(const std::string &name, boost::shared_ptr<T>& output) const {
+	  // Make DataService access thread-safe
+
+	  auto it = datamap.find(name);
+	  if (it != datamap.end()) {
+		  output = it->second;
+		  return true;
+	  }
+	  else {
+		  /*throw Kernel::Exception::NotFoundError(
+			  "Unable to find Data Object type with name '" + name +
+			  "': data service ",
+			  name);*/
+		  return false;
+	  }
+  }
+
   /// Check to see if a data object exists in the store
   bool doesExist(const std::string &name) const {
     // Make DataService access thread-safe
