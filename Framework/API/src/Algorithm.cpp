@@ -1121,11 +1121,10 @@ bool Algorithm::checkGroups() {
     // and WorkspaceGroup does not subclass <MatrixWorkspace>
     if (!wsGroup && prop && !prop->value().empty()) {
       // So try to use the name in the AnalysisDataService
-      try {
-        wsGroup = AnalysisDataService::Instance().retrieveWS<WorkspaceGroup>(
-            prop->value());
-      } catch (Exception::NotFoundError &) { /* Do nothing */
-      }
+      //try {
+      AnalysisDataService::Instance().retrieveWS<WorkspaceGroup>(prop->value(), wsGroup);
+      //} catch (Exception::NotFoundError &) { /* Do nothing */
+      //}
     }
 
     // Found the group either directly or by name?
