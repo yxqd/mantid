@@ -6,10 +6,10 @@ from SANS2.State.StateBuilder.SANSStateSliceEventBuilder import get_slice_event_
 from SANS2.State.StateBuilder.SANSStateMaskBuilder import get_mask_builder
 from SANS2.State.StateBuilder.SANSStateWavelengthBuilder import get_wavelength_builder
 from SANS2.State.StateBuilder.SANSStateSaveBuilder import get_save_builder
-
+from SANS2.State.StateBuilder.SANSStateScaleBuilder import get_scale_builder
 
 from SANS2.Common.SANSEnumerations import (SANSFacility, ISISReductionMode, ReductionDimensionality,
-                                           FitModeForMerge, RebinType, RangeStepType, SaveType)
+                                           FitModeForMerge, RebinType, RangeStepType, SaveType, SampleShape)
 
 
 class TestDirector(object):
@@ -23,9 +23,10 @@ class TestDirector(object):
         self.mask_state = None
         self.wavelength_state = None
         self.save_state = None
+        self.scale_state = None
 
     def set_states(self, data_state=None, move_state=None, reduction_state=None, slice_state=None,
-                   mask_state=None, wavelength_state=None, save_state=None):
+                   mask_state=None, wavelength_state=None, save_state=None, scale_state=None):
         self.data_state = data_state
         self.move_state = move_state
         self.reduction_state = reduction_state
@@ -33,6 +34,7 @@ class TestDirector(object):
         self.mask_state = mask_state
         self.wavelength_state = wavelength_state
         self.save_state = save_state
+        self.scale_state = scale_state
 
     def construct(self):
         facility = SANSFacility.ISIS
@@ -92,6 +94,16 @@ class TestDirector(object):
             save_builder.set_file_format([SaveType.Nexus])
             self.save_state = save_builder.build()
 
+        # Build the SANSStateScale
+        if self.scale_state is None:
+            scale_builder = get_scale_builder(self.data_state)
+            scale_builder.set_shape(SampleShape.Cuboid)
+            scale_builder.set_width(1.0)
+            scale_builder.set_height(2.0)
+            scale_builder.set_thickness(3.0)
+            scale_builder.set_scale(4.0)
+            self.scale_state = scale_builder.build()
+
         # Set the sub states on the SANSState
         state_builder = get_state_builder(self.data_state)
         state_builder.set_data(self.data_state)
@@ -101,4 +113,5 @@ class TestDirector(object):
         state_builder.set_mask(self.mask_state)
         state_builder.set_wavelength(self.wavelength_state)
         state_builder.set_save(self.save_state)
+        state_builder.set_scale(self.scale_state)
         return state_builder.build()

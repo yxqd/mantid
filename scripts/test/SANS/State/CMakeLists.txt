@@ -9,6 +9,8 @@ set ( TEST_PY_FILES
    SANSStateDataBuilderTest.py
    SANSStateReductionTest.py
    SANSStateReductionBuilderTest.py
+   SANSStateScaleTest.py
+   SANSStateScaleBuilderTest.py
    SANSStateSliceEventTest.py
    SANSStateSliceEventBuilderTest.py
    SANSStateMaskTest.py

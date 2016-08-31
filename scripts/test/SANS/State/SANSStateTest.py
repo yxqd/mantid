@@ -12,11 +12,12 @@ from SANS2.State.SANSStateSliceEvent import (SANSStateSliceEventISIS)
 from SANS2.State.SANSStateMask import (SANSStateMaskISIS)
 from SANS2.State.SANSStateWavelength import (SANSStateWavelengthISIS)
 from SANS2.State.SANSStateSave import (SANSStateSaveISIS)
+from SANS2.State.SANSStateScale import (SANSStateScaleISIS)
 
 
 from SANS2.Common.SANSConstants import SANSConstants
 from SANS2.Common.SANSEnumerations import (ISISReductionMode, ReductionDimensionality, FitModeForMerge,
-                                           RangeStepType, RebinType)
+                                           RangeStepType, RebinType, SampleShape)
 
 
 class SANSStateTest(unittest.TestCase):
@@ -75,6 +76,15 @@ class SANSStateTest(unittest.TestCase):
         save_state = SANSStateSaveISIS()
         save_state.file_name = "test_file_name"
         state.save = save_state
+
+        # Scale state
+        scale_state = SANSStateScaleISIS()
+        scale_state.shape = SampleShape.Cuboid
+        scale_state.thickness = 1.0
+        scale_state.width = 2.0
+        scale_state.height = 3.0
+        scale_state.scale = 4.0
+        state.scale = scale_state
 
         # Assert
         try:
@@ -197,6 +207,15 @@ class SANSStateTest(unittest.TestCase):
         save_state.file_name = "test_file_name"
         state.save = save_state
 
+        # Scale state
+        scale_state = SANSStateScaleISIS()
+        scale_state.shape = SampleShape.Cuboid
+        scale_state.thickness = 1.0
+        scale_state.width = 2.0
+        scale_state.height = 3.0
+        scale_state.scale = 4.0
+        state.scale = scale_state
+
         # Act
         serialized = state.property_manager
 
@@ -239,6 +258,13 @@ class SANSStateTest(unittest.TestCase):
         self.assertTrue(state_2.wavelength.rebin_type is RebinType.Rebin)
 
         self.assertTrue(state_2.save.file_name == "test_file_name")
+
+        self.assertTrue(state_2.scale.thickness == 1.0)
+        self.assertTrue(state_2.scale.width == 2.0)
+        self.assertTrue(state_2.scale.height == 3.0)
+        self.assertTrue(state_2.scale.scale == 4.0)
+        self.assertTrue(state_2.scale.shape is SampleShape.Cuboid)
+
 
 if __name__ == '__main__':
     unittest.main()
