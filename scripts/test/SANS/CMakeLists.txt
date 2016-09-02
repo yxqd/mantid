@@ -1,3 +1,5 @@
 add_subdirectory(Common)
 add_subdirectory(State)
 add_subdirectory(UserFileParser)
+add_subdirectory(WavelengthAndPixelAdjustment)
+
