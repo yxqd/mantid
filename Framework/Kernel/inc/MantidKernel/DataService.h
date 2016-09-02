@@ -224,7 +224,7 @@ public:
     // that's already in the map with a pointer to a different object).
     // Also, there's nothing to stop the same object from being added
     // more than once with different names.
-    if (!datamap.emplace(name, Tobject).second) {
+    if (!datamap.insert(std::make_pair(name, Tobject)).second) {
       std::string error =
           " add : Unable to insert Data Object : '" + name + "'";
       g_log.error(error);
@@ -326,7 +326,7 @@ public:
     }
 
     // insert the old object with the new name
-    if (!datamap.emplace(newName, object).second) {
+    if (!datamap.insert(std::make_pair(newName, object)).second) {
       std::string error =
           " add : Unable to insert Data Object : '" + newName + "'";
       g_log.error(error);

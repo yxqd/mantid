@@ -1118,12 +1118,17 @@ void Instrument::saveDetectorSetInfoToNexus(
   std::vector<double> p_angles(nDets);
   std::vector<double> distances(nDets);
 
+if(sample) {
+  #pragma omp parallel for
   for (size_t i = 0; i < nDets; i++) {
-    if (sample) {
       Kernel::V3D pos = detectors[i]->getPos() - sample_pos;
       pos.getSpherical(distances[i], p_angles[i], a_angles[i]);
-    } else {
-      a_angles[i] = detectors[i]->getPhi() * 180.0 / M_PI;
+  }
+} else {
+  #pragma omp parallel for
+  for (size_t i = 0; i < nDets; i++) {
+      constexpr double rad2deg = 180.0/M_PI;
+      a_angles[i] = detectors[i]->getPhi() * rad2deg;
     }
   }
   file->writeData("detector_number", detIDs);

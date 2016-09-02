@@ -170,6 +170,7 @@ void SCDPanelErrors::eval(double xshift, double yshift, double zshift,
   auto inst = inputP->getInstrument();
   Geometry::OrientedLattice lattice =
       inputP->mutableSample().getOrientedLattice();
+  PARALLEL_FOR1(inputP)
   for (int i = 0; i < inputP->getNumberPeaks(); i++) {
     const DataObjects::Peak &peak = inputP->getPeak(i);
     V3D hkl =
