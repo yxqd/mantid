@@ -165,6 +165,7 @@ void SCDCalibratePanels::exec() {
   if (changeL1)
     findL1(nPeaks, peaksWs);
   boost::container::flat_set<string> MyBankNames;
+  MyBankNames.reserve(nPeaks);
   for (int i = 0; i < nPeaks; ++i) {
     MyBankNames.insert(peaksWs->getPeak(i).getBankName());
   }
@@ -389,7 +390,7 @@ void SCDCalibratePanels::exec() {
     Mantid::MantidVec &TofY = TofWksp->dataY(i);
     int icount = 0;
     for (int j = 0; j < nPeaks; j++) {
-      Peak peak = peaksWs->getPeak(j);
+      const Peak &peak = peaksWs->getPeak(j);
       if (peak.getBankName() == bankName) {
         try {
           V3D q_lab =

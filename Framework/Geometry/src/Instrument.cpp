@@ -1110,23 +1110,21 @@ void Instrument::saveDetectorSetInfoToNexus(
   auto detectors = getDetectors(detIDs);
 
   Geometry::IComponent_const_sptr sample = getSample();
-  Kernel::V3D sample_pos;
-  if (sample)
-    sample_pos = sample->getPos();
-
+ 
   std::vector<double> a_angles(nDets);
   std::vector<double> p_angles(nDets);
   std::vector<double> distances(nDets);
 
 if(sample) {
+  Kernel::V3D sample_pos = sample->getPos();
   #pragma omp parallel for
-  for (size_t i = 0; i < nDets; i++) {
+  for (int64_t i = 0; i < nDets; i++) {
       Kernel::V3D pos = detectors[i]->getPos() - sample_pos;
       pos.getSpherical(distances[i], p_angles[i], a_angles[i]);
   }
 } else {
   #pragma omp parallel for
-  for (size_t i = 0; i < nDets; i++) {
+  for (int64_t i = 0; i < nDets; i++) {
       constexpr double rad2deg = 180.0/M_PI;
       a_angles[i] = detectors[i]->getPhi() * rad2deg;
     }

@@ -17,7 +17,6 @@
 #include <unordered_set>
 
 #include "tbb/concurrent_unordered_map.h"
-#include <boost/algorithm/string.hpp>
 
 #ifdef _WIN32
 #define strcasecmp _stricmp
@@ -76,10 +75,17 @@ enum class DataServiceHidden { Auto, Include, Exclude };
     File change history is stored at: <https://github.com/mantidproject/mantid>.
     Code Documentation is available at: <http://doxygen.mantidproject.org>*/
 
+// Case-insensitive comparison functor for std::map
+struct CaseInsensitiveCmp {
+  bool operator()(const std::string &lhs, const std::string &rhs) const {
+    return strcasecmp(lhs.c_str(), rhs.c_str()) == 0;
+  }
+};
+
 template <typename T> class DLLExport DataService {
 private:
   /// Typedef for the map holding the names of and pointers to the data objects
-  typedef tbb::concurrent_unordered_map<std::string, boost::shared_ptr<T>>
+  typedef tbb::concurrent_unordered_map<std::string, boost::shared_ptr<T>,MyHash,CaseInsensitiveCmp>
       svcmap;
   /// Iterator for the data store map
   typedef typename svcmap::iterator svc_it;
