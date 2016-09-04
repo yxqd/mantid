@@ -170,12 +170,10 @@ void SCDPanelErrors::eval(double xshift, double yshift, double zshift,
   auto inst = inputP->getInstrument();
   Geometry::OrientedLattice lattice =
       inputP->mutableSample().getOrientedLattice();
-  PARALLEL_FOR1(inputP)
   for (int i = 0; i < inputP->getNumberPeaks(); i++) {
     const DataObjects::Peak &peak = inputP->getPeak(i);
-    V3D hkl =
-        V3D(boost::math::iround(peak.getH()), boost::math::iround(peak.getK()),
-            boost::math::iround(peak.getL()));
+    V3D hkl = V3D(std::round(peak.getH()), std::round(peak.getK()),
+                  std::round(peak.getL()));
     V3D Q2 = lattice.qFromHKL(hkl);
     DataObjects::Peak peak2(inst, peak.getDetectorID(), peak.getWavelength(),
                             hkl, peak.getGoniometerMatrix());

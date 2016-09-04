@@ -264,7 +264,7 @@ public:
       notificationCenter.postNotification(
           new BeforeReplaceNotification(name, it->second, Tobject));
 
-      datamap[name] = Tobject;
+      it->second = Tobject;
 
       notificationCenter.postNotification(
           new AfterReplaceNotification(name, Tobject));

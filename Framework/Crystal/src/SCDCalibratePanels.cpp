@@ -335,9 +335,8 @@ void SCDCalibratePanels::exec() {
   for (int i = 0; i < nPeaks; i++) {
     PARALLEL_START_INTERUPT_REGION
     DataObjects::Peak &peak = peaksWs->getPeak(i);
-    V3D hkl =
-        V3D(boost::math::iround(peak.getH()), boost::math::iround(peak.getK()),
-            boost::math::iround(peak.getL()));
+    V3D hkl = V3D(std::round(peak.getH()), std::round(peak.getK()),
+                  std::round(peak.getL()));
     V3D Q2 = lattice0.qFromHKL(hkl);
     peak.setInstrument(inst);
     peak.setQSampleFrame(Q2);
@@ -393,8 +392,7 @@ void SCDCalibratePanels::exec() {
       const Peak &peak = peaksWs->getPeak(j);
       if (peak.getBankName() == bankName) {
         try {
-          V3D q_lab =
-              (peak.getGoniometerMatrix() * UB) * peak.getHKL() * M_2_PI;
+          V3D q_lab = peak.getGoniometerMatrix() * UB * peak.getHKL() * M_2_PI;
           Peak theoretical(peak.getInstrument(), q_lab);
           ColX[icount] = peak.getCol();
           ColY[icount] = theoretical.getCol();

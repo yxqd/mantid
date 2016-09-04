@@ -112,9 +112,9 @@ void IntegratePeaksMDHKL::exec() {
 
     IPeak &p = peakWS->getPeak(i);
     // round to integer
-    int h = static_cast<int>(boost::math::iround(p.getH()));
-    int k = static_cast<int>(boost::math::iround(p.getK()));
-    int l = static_cast<int>(boost::math::iround(p.getL()));
+    int h = boost::math::iround(p.getH());
+    int k = boost::math::iround(p.getK());
+    int l = boost::math::iround(p.getL());
     MDHistoWorkspace_sptr histoBox;
     if (m_histoWS) {
       histoBox = cropHisto(h, k, l, box, m_histoWS);
