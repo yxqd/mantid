@@ -134,6 +134,7 @@ public:
   void getDetectors(detid2det_map &out_map) const;
 
   std::vector<detid_t> getDetectorIDs(bool skipMonitors = false) const;
+  std::pair<std::vector<detid_t>, std::vector<detid_t>> getMonitorDetectorIDs() const;
 
   std::size_t getNumberDetectors(bool skipMonitors = false) const;
 

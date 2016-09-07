@@ -73,7 +73,8 @@ void Workspace2D::init(const std::size_t &NVectors, const std::size_t &XLength,
       XLength, HistogramData::LinearGenerator(1.0, 1.0));
   HistogramData::Counts y(YLength);
   HistogramData::CountStandardDeviations e(YLength);
-  for (size_t i = 0; i < m_noVectors; i++) {
+  PARALLEL_FOR_NO_WSP_CHECK()
+  for (int64_t i = 0; i < m_noVectors; i++) {
     // Create the spectrum upon init
     auto spec =
         new Histogram1D(HistogramData::getHistogramXMode(XLength, YLength),

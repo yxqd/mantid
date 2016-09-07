@@ -214,6 +214,36 @@ std::vector<detid_t> Instrument::getDetectorIDs(bool skipMonitors) const {
   return out;
 }
 
+//------------------------------------------------------------------------------------------
+/** Return a vector of detector IDs in this instrument */
+std::pair<std::vector<detid_t>, std::vector<detid_t>> Instrument::getMonitorDetectorIDs() const {
+	std::pair<std::vector<detid_t>,std::vector<detid_t>> out;
+	if (m_map) {
+		const detid2det_map &in_dets =
+			static_cast<const Instrument *>(m_base)->m_detectorCache;
+		for (const auto &in_det : in_dets) {
+			if (in_det.second->isMonitor()) {
+				out.first.push_back(in_det.first);
+			}
+			else {
+				out.second.push_back(in_det.first);
+			}
+		}
+	}
+	else {
+		const detid2det_map &in_dets = m_detectorCache;
+		for (const auto &in_det : in_dets) {
+			if (in_det.second->isMonitor()) {
+				out.first.push_back(in_det.first);
+			}
+			else {
+				out.second.push_back(in_det.first);
+			}
+		}
+	}
+	return out;
+}
+
 /// @return The total number of detector IDs in the instrument */
 std::size_t Instrument::getNumberDetectors(bool skipMonitors) const {
   std::size_t numDetIDs(0);
@@ -588,12 +618,16 @@ Instrument::getDetectorG(const std::vector<detid_t> &det_ids) const {
  */
 std::vector<IDetector_const_sptr>
 Instrument::getDetectors(const std::vector<detid_t> &det_ids) const {
-  std::vector<IDetector_const_sptr> dets_ptr;
-  dets_ptr.reserve(det_ids.size());
+  std::vector<IDetector_const_sptr> dets_ptr(det_ids.size());
+ /* dets_ptr.reserve(det_ids.size());
   std::vector<detid_t>::const_iterator it;
   for (it = det_ids.begin(); it != det_ids.end(); ++it) {
     dets_ptr.push_back(this->getDetector(*it));
   }
+  */
+  PARALLEL_FOR_NO_WSP_CHECK()
+  for (int64_t i = 0; i < det_ids.size(); ++i)
+	  dets_ptr[i] = this->getDetector(det_ids[i]);
   return dets_ptr;
 }
 
@@ -1067,22 +1101,16 @@ void Instrument::saveNexus(::NeXus::File *file,
   }
 
   // Add physical detector and monitor data
-  auto detectorIDs = getDetectorIDs(true);
-  auto detmonIDs = getDetectorIDs(false);
-  if (!detmonIDs.empty()) {
+
+  auto mondetIDs = getMonitorDetectorIDs();
+  auto &detectorIDs = mondetIDs.second;
+  auto &monitorIDs = mondetIDs.first;
+  if (!detectorIDs.empty() || !monitorIDs.empty()) {
     // Add detectors group
     file->makeGroup("physical_detectors", "NXdetector", true);
     file->writeData("number_of_detectors", uint64_t(detectorIDs.size()));
     saveDetectorSetInfoToNexus(file, detectorIDs);
     file->closeGroup(); // detectors
-
-    // Create Monitor IDs vector
-    auto detmons = getDetectors(detmonIDs);
-    std::vector<detid_t> monitorIDs;
-    for (size_t i = 0; i < detmonIDs.size(); i++) {
-      if (detmons[i]->isMonitor())
-        monitorIDs.push_back(detmonIDs[i]);
-    }
 
     // Add Monitors group
     file->makeGroup("physical_monitors", "NXmonitor", true);

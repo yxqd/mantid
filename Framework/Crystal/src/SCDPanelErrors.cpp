@@ -170,7 +170,9 @@ void SCDPanelErrors::eval(double xshift, double yshift, double zshift,
   auto inst = inputP->getInstrument();
   Geometry::OrientedLattice lattice =
       inputP->mutableSample().getOrientedLattice();
-  for (int i = 0; i < inputP->getNumberPeaks(); i++) {
+  int npeaks = inputP->getNumberPeaks();
+  PARALLEL_FOR1(inputP)
+  for (int i = 0; i < npeaks; i++) {
     const DataObjects::Peak &peak = inputP->getPeak(i);
     V3D hkl = V3D(std::round(peak.getH()), std::round(peak.getK()),
                   std::round(peak.getL()));
