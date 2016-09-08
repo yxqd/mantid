@@ -38,6 +38,41 @@ public:
     m_tinyReflWS = create2DWorkspaceWithReflectometryInstrument();
   }
 
+  IAlgorithm_sptr construct_standard_algorithm() {
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setRethrows(true);
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_tinyReflWS);
+    alg->setProperty("WavelengthMin", 1.0);
+    alg->setProperty("WavelengthMax", 2.0);
+    alg->setProperty("I0MonitorIndex", 1);
+    alg->setProperty("MonitorBackgroundWavelengthMin", 1.0);
+    alg->setProperty("MonitorBackgroundWavelengthMax", 2.0);
+    alg->setProperty("MonitorIntegrationWavelengthMin", 1.2);
+    alg->setProperty("MonitorIntegrationWavelengthMax", 1.5);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setPropertyValue("ProcessingInstructions", "1");
+    alg->setPropertyValue("OutputWorkspace", "x");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "y");
+    alg->setRethrows(true);
+    return alg;
+  }
+
+  void test_execute() {
+    auto alg = construct_standard_algorithm();
+    TS_ASSERT_THROWS_NOTHING(alg->execute());
+    MatrixWorkspace_sptr workspaceInQ = alg->getProperty("OutputWorkspace");
+    MatrixWorkspace_sptr workspaceInLam =
+        alg->getProperty("OutputWorkspaceWavelength");
+    const double theta = alg->getProperty("ThetaOut");
+    UNUSED_ARG(theta)
+    UNUSED_ARG(workspaceInQ)
+    UNUSED_ARG(workspaceInLam)
+  }
+
+  /// Conversion to wavelength
+
   void test_tolam() {
     MatrixWorkspace_sptr toConvert = m_tinyReflWS;
     std::vector<int> detectorIndexRange;
@@ -104,38 +139,9 @@ public:
     TS_ASSERT_EQUALS(map[monitorSpecId], 0);
   }
 
-  IAlgorithm_sptr construct_standard_algorithm() {
-    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
-    alg->setRethrows(true);
-    alg->setChild(true);
-    alg->initialize();
-    alg->setProperty("InputWorkspace", m_tinyReflWS);
-    alg->setProperty("WavelengthMin", 1.0);
-    alg->setProperty("WavelengthMax", 2.0);
-    alg->setProperty("I0MonitorIndex", 1);
-    alg->setProperty("MonitorBackgroundWavelengthMin", 1.0);
-    alg->setProperty("MonitorBackgroundWavelengthMax", 2.0);
-    alg->setProperty("MonitorIntegrationWavelengthMin", 1.2);
-    alg->setProperty("MonitorIntegrationWavelengthMax", 1.5);
-    alg->setProperty("MomentumTransferStep", 0.1);
-    alg->setPropertyValue("ProcessingInstructions", "1");
-    alg->setPropertyValue("OutputWorkspace", "x");
-    alg->setPropertyValue("OutputWorkspaceWavelength", "y");
-    alg->setRethrows(true);
-    return alg;
-  }
+  /// Detector position correction
 
-  void test_execute() {
-    auto alg = construct_standard_algorithm();
-    TS_ASSERT_THROWS_NOTHING(alg->execute());
-    MatrixWorkspace_sptr workspaceInQ = alg->getProperty("OutputWorkspace");
-    MatrixWorkspace_sptr workspaceInLam =
-        alg->getProperty("OutputWorkspaceWavelength");
-    const double theta = alg->getProperty("ThetaOut");
-    UNUSED_ARG(theta)
-    UNUSED_ARG(workspaceInQ)
-    UNUSED_ARG(workspaceInLam)
-  }
+  /// Calculate theta
 
   void test_calculate_theta() {
 
@@ -147,6 +153,8 @@ public:
     const double outTwoTheta = alg->getProperty("ThetaOut");
     TS_ASSERT_DELTA(45.0, outTwoTheta, 0.00001);
   }
+
+  /// Conversion to momentum transfer
 
   void test_source_rotation_after_second_reduction() {
     // set up the axis for the instrument
@@ -206,7 +214,8 @@ public:
     TS_ASSERT_EQUALS(outLam->getInstrument()->getSource()->getPos(),
                      outQ->getInstrument()->getSource()->getPos());
   }
-  void test_post_processing_scale_step() {
+
+  void test_scale_step() {
     auto alg = construct_standard_algorithm();
     auto inWS =
         WorkspaceCreationHelper::create2DWorkspaceWithReflectometryInstrument(
@@ -234,7 +243,8 @@ public:
     AnalysisDataService::Instance().remove("Test");
     AnalysisDataService::Instance().remove("scaledTest");
   }
-  void test_post_processing_rebin_step_with_params_not_provided() {
+
+  void test_rebin_in_Q_params_not_provided() {
     auto alg = construct_standard_algorithm();
     auto inWS = Create2DWorkspace154(1, 10, true);
     // this instrument does not have a "slit-gap" property
@@ -247,7 +257,8 @@ public:
     alg->setProperty("OutputWorkspace", "rebinnedWS");
     TS_ASSERT_THROWS(alg->execute(), std::invalid_argument);
   }
-  void test_post_processing_rebin_step_with_partial_params_provided() {
+
+  void test_rebin_in_Q_partial_params_provided() {
     auto alg = construct_standard_algorithm();
     auto inWS = Create2DWorkspace154(1, 10, true);
     inWS->setInstrument(m_tinyReflWS->getInstrument());
@@ -265,7 +276,8 @@ public:
     TSM_ASSERT_DELTA("Qmax should be the same as last Params entry (5.0)",
                      xData.back(), 15.0, 1e-06);
   }
-  void test_post_processing_rebin_step_with_logarithmic_rebinning() {
+
+  void test_rebin_in_Q_logarithmic_rebinning() {
     auto alg = construct_standard_algorithm();
     auto inWS = Create2DWorkspace154(1, 10, true);
     inWS->setInstrument(m_tinyReflWS->getInstrument());
@@ -287,7 +299,8 @@ public:
     TSM_ASSERT_EQUALS("QMax should be the same as last Param entry",
                       xData.back(), 5.0);
   }
-  void test_post_processing_rebin_step_with_linear_rebinning() {
+
+  void test_rebin_in_Q_linear_rebinning() {
     auto alg = construct_standard_algorithm();
     auto inWS = Create2DWorkspace154(1, 10, true);
     inWS->setInstrument(m_tinyReflWS->getInstrument());
@@ -307,7 +320,8 @@ public:
     TSM_ASSERT_DELTA("QMax should be the same as the last Param entry (5.233)",
                      xData.back(), 5.233, 1e-06);
   }
-  void test_Qrange() {
+
+  void test_Q_range() {
     // set up the axis for the instrument
     Instrument_sptr instrument = boost::make_shared<Instrument>();
     instrument->setReferenceFrame(boost::make_shared<ReferenceFrame>(
