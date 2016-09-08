@@ -544,8 +544,8 @@ create2DWorkspaceWithReflectometryInstrumentMultiDetector(double startX) {
   instrument->markAsDetector(det4);
 
   const int nSpectra = 4;
-  const int nBins = 100;
-  const double deltaX = 2000; // TOF
+  const int nBins = 20;
+  const double deltaX = 5000; // TOF
   auto workspace = Create2DWorkspaceBinned(nSpectra, nBins, startX, deltaX);
 
   workspace->setTitle(

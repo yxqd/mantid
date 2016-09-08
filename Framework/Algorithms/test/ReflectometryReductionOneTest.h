@@ -180,17 +180,17 @@ public:
 
     TS_ASSERT(outLam);
     TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
-    TS_ASSERT_EQUALS(outLam->blocksize(), 23);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 8);
     TS_ASSERT(outLam->readX(0)[0] >= 1.5);
-    TS_ASSERT(outLam->readX(0)[22] <= 15.0);
-    TS_ASSERT_DELTA(outLam->readY(0)[0], 0.1370, 0.0001);
-    TS_ASSERT_DELTA(outLam->readY(0)[22], 0.1370, 0.0001);
+    TS_ASSERT(outLam->readX(0)[7] <= 15.0);
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 0.3941, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 0.3941, 0.0001);
   }
 
   void test_wavelength_conversion_2() {
     // Monitors : No
     // Direct beam normalization : No
-    // Processing instructions : 0+1
+    // Processing instructions : 1+2
     // Analysis mode : multi detector
 
     auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
@@ -200,7 +200,7 @@ public:
     alg->setProperty("WavelengthMin", 1.5);
     alg->setProperty("WavelengthMax", 15.0);
     alg->setProperty("MomentumTransferStep", 0.1);
-    alg->setPropertyValue("ProcessingInstructions", "0+1");
+    alg->setPropertyValue("ProcessingInstructions", "1+2");
     alg->setPropertyValue("OutputWorkspace", "IvsQ");
     alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
     alg->execute();
@@ -208,12 +208,67 @@ public:
     MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
 
     TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
-    TS_ASSERT_EQUALS(outLam->blocksize(), 23);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 8);
     TS_ASSERT(outLam->readX(0)[0] >= 1.5);
-    TS_ASSERT(outLam->readX(0)[22] <= 15.0);
-    // Y counts, should be 0.1370 * 2 (see test_wavelength_conversion_1())
-    TS_ASSERT_DELTA(outLam->readY(0)[0], 0.2740, 0.0001);
-    TS_ASSERT_DELTA(outLam->readY(0)[22], 0.2740, 0.0001);
+    TS_ASSERT(outLam->readX(0)[7] <= 15.0);
+    // Y counts, should be 0.3941 * 2 (see test_wavelength_conversion_1())
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 0.7882, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 0.7882, 0.0001);
+  }
+
+  void test_wavelength_conversion_3() {
+    // Monitors : No
+    // Direct beam normalization : No
+    // Processing instructions : 1-3 (i.e. all detectors)
+    // Analysis mode : multi detector
+
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_multiDetectorWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setPropertyValue("ProcessingInstructions", "1-3");
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+    alg->execute();
+    // We are only interested in workspace in wavelength
+    MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
+
+    TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 8);
+    TS_ASSERT(outLam->readX(0)[0] >= 1.5);
+    TS_ASSERT(outLam->readX(0)[7] <= 15.0);
+    // Y counts, should be 0.3941 * 3 (see test_wavelength_conversion_1())
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 1.1823, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 1.1823, 0.0001);
+  }
+
+  void test_wavelength_conversion_4() {
+    // Monitors : No
+    // Direct beam normalization : Yes
+    // Processing instructions : 1
+    // Region of direct beam : 2-3
+    // Analysis mode : multi detector
+
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_multiDetectorWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "MultiDetectorAnalysis");
+    alg->setPropertyValue("ProcessingInstructions", "1");
+    alg->setPropertyValue("RegionOfDirectBeam", "2-3");
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+    alg->execute();
+    // We are only interested in workspace in wavelength
+    MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
+
+    // TODO: test something here
   }
 
   /// Conversion to momentum transfer
