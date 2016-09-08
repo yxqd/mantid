@@ -21,7 +21,8 @@ using namespace WorkspaceCreationHelper;
 
 class ReflectometryReductionOneTest : public CxxTest::TestSuite {
 private:
-  MatrixWorkspace_sptr m_tinyReflWS;
+  MatrixWorkspace_sptr m_pointDetectorWS;
+  MatrixWorkspace_sptr m_multiDetectorWS;
 
 public:
   // This pair of boilerplate methods prevent the suite being created statically
@@ -35,7 +36,9 @@ public:
 
   ReflectometryReductionOneTest() {
     FrameworkManager::Instance();
-    m_tinyReflWS = create2DWorkspaceWithReflectometryInstrument();
+    m_pointDetectorWS = create2DWorkspaceWithReflectometryInstrument();
+    m_multiDetectorWS =
+        create2DWorkspaceWithReflectometryInstrumentMultiDetector();
   }
 
   IAlgorithm_sptr construct_standard_algorithm() {
@@ -43,7 +46,7 @@ public:
     alg->setRethrows(true);
     alg->setChild(true);
     alg->initialize();
-    alg->setProperty("InputWorkspace", m_tinyReflWS);
+    alg->setProperty("InputWorkspace", m_pointDetectorWS);
     alg->setProperty("WavelengthMin", 1.0);
     alg->setProperty("WavelengthMax", 2.0);
     alg->setProperty("I0MonitorIndex", 1);
@@ -74,7 +77,7 @@ public:
   /// Conversion to wavelength
 
   void test_tolam() {
-    MatrixWorkspace_sptr toConvert = m_tinyReflWS;
+    MatrixWorkspace_sptr toConvert = m_pointDetectorWS;
     std::vector<int> detectorIndexRange;
     size_t workspaceIndexToKeep1 = 1;
     const int monitorIndex = 0;
@@ -154,6 +157,65 @@ public:
     TS_ASSERT_DELTA(45.0, outTwoTheta, 0.00001);
   }
 
+  void test_wavelength_conversion_1() {
+    // Monitors : No
+    // Direct beam normalization : No
+    // Processing instructions : 1
+    // Analysis mode : multi detector
+
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_multiDetectorWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "MultiDetectorAnalysis");
+    alg->setPropertyValue("ProcessingInstructions", "1");
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+    alg->execute();
+    // We are only interested in workspace in wavelength
+    MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
+
+    TS_ASSERT(outLam);
+    TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 23);
+    TS_ASSERT(outLam->readX(0)[0] >= 1.5);
+    TS_ASSERT(outLam->readX(0)[22] <= 15.0);
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 0.1370, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[22], 0.1370, 0.0001);
+  }
+
+  void test_wavelength_conversion_2() {
+    // Monitors : No
+    // Direct beam normalization : No
+    // Processing instructions : 0+1
+    // Analysis mode : multi detector
+
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_multiDetectorWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setPropertyValue("ProcessingInstructions", "0+1");
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+    alg->execute();
+    // We are only interested in workspace in wavelength
+    MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
+
+    TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 23);
+    TS_ASSERT(outLam->readX(0)[0] >= 1.5);
+    TS_ASSERT(outLam->readX(0)[22] <= 15.0);
+    // Y counts, should be 0.1370 * 2 (see test_wavelength_conversion_1())
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 0.2740, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[22], 0.2740, 0.0001);
+  }
+
   /// Conversion to momentum transfer
 
   void test_source_rotation_after_second_reduction() {
@@ -181,15 +243,15 @@ public:
     instrument->markAsDetector(det);
 
     // set the instrument to this workspace
-    m_tinyReflWS->setInstrument(instrument);
+    m_pointDetectorWS->setInstrument(instrument);
     // set this detector ready for processing instructions
-    m_tinyReflWS->getSpectrum(0).setDetectorID(det->getID());
+    m_pointDetectorWS->getSpectrum(0).setDetectorID(det->getID());
 
     auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
     alg->setRethrows(true);
     alg->setChild(true);
     alg->initialize();
-    alg->setProperty("InputWorkspace", m_tinyReflWS);
+    alg->setProperty("InputWorkspace", m_pointDetectorWS);
     alg->setProperty("WavelengthMin", 1.0);
     alg->setProperty("WavelengthMax", 15.0);
     alg->setProperty("I0MonitorIndex", 0);
@@ -209,7 +271,7 @@ public:
     MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
     MatrixWorkspace_sptr outQ = alg->getProperty("OutputWorkspace");
 
-    TS_ASSERT_EQUALS(m_tinyReflWS->getInstrument()->getSource()->getPos(),
+    TS_ASSERT_EQUALS(m_pointDetectorWS->getInstrument()->getSource()->getPos(),
                      outLam->getInstrument()->getSource()->getPos());
     TS_ASSERT_EQUALS(outLam->getInstrument()->getSource()->getPos(),
                      outQ->getInstrument()->getSource()->getPos());
@@ -249,7 +311,7 @@ public:
     auto inWS = Create2DWorkspace154(1, 10, true);
     // this instrument does not have a "slit-gap" property
     // defined in the IPF, so CalculateResolution should throw.
-    inWS->setInstrument(m_tinyReflWS->getInstrument());
+    inWS->setInstrument(m_pointDetectorWS->getInstrument());
     inWS->getAxis(0)->setUnit("Wavelength");
     // Setup bad bin edges, Rebin will throw (not CalculateResolution?)
     inWS->dataX(0).assign(inWS->readX(0).size(), inWS->readX(0)[0]);
@@ -261,7 +323,7 @@ public:
   void test_rebin_in_Q_partial_params_provided() {
     auto alg = construct_standard_algorithm();
     auto inWS = Create2DWorkspace154(1, 10, true);
-    inWS->setInstrument(m_tinyReflWS->getInstrument());
+    inWS->setInstrument(m_pointDetectorWS->getInstrument());
     inWS->getAxis(0)->setUnit("Wavelength");
     alg->setProperty("InputWorkspace", inWS);
     alg->setProperty("MomentumTransferMaximum", 15.0);
@@ -280,7 +342,7 @@ public:
   void test_rebin_in_Q_logarithmic_rebinning() {
     auto alg = construct_standard_algorithm();
     auto inWS = Create2DWorkspace154(1, 10, true);
-    inWS->setInstrument(m_tinyReflWS->getInstrument());
+    inWS->setInstrument(m_pointDetectorWS->getInstrument());
     inWS->getAxis(0)->setUnit("Wavelength");
     alg->setProperty("InputWorkspace", inWS);
     alg->setProperty("MomentumTransferMinimum", 1.0);
@@ -303,7 +365,7 @@ public:
   void test_rebin_in_Q_linear_rebinning() {
     auto alg = construct_standard_algorithm();
     auto inWS = Create2DWorkspace154(1, 10, true);
-    inWS->setInstrument(m_tinyReflWS->getInstrument());
+    inWS->setInstrument(m_pointDetectorWS->getInstrument());
     inWS->getAxis(0)->setUnit("Wavelength");
     alg->setProperty("InputWorkspace", inWS);
     alg->setProperty("MomentumTransferMinimum", 1.577);
@@ -346,15 +408,15 @@ public:
     instrument->markAsDetector(det);
 
     // set the instrument to this workspace
-    m_tinyReflWS->setInstrument(instrument);
+    m_pointDetectorWS->setInstrument(instrument);
     // set this detector ready for processing instructions
-    m_tinyReflWS->getSpectrum(0).setDetectorID(det->getID());
+    m_pointDetectorWS->getSpectrum(0).setDetectorID(det->getID());
 
     auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
     alg->setRethrows(true);
     alg->setChild(true);
     alg->initialize();
-    alg->setProperty("InputWorkspace", m_tinyReflWS);
+    alg->setProperty("InputWorkspace", m_pointDetectorWS);
     alg->setProperty("WavelengthMin", 1.0);
     alg->setProperty("WavelengthMax", 15.0);
     alg->setProperty("I0MonitorIndex", 0);

@@ -497,6 +497,70 @@ create2DWorkspaceWithReflectometryInstrument(double startX) {
   return workspace;
 }
 
+/**
+* Create a very small 2D workspace for a virtual reflectometry instrument with multiple detectors
+* @return workspace with instrument attached.
+* @param startX : X Tof start value for the workspace.
+*/
+MatrixWorkspace_sptr
+create2DWorkspaceWithReflectometryInstrumentMultiDetector(double startX) {
+  Instrument_sptr instrument = boost::make_shared<Instrument>();
+  instrument->setReferenceFrame(
+      boost::make_shared<ReferenceFrame>(Y /*up*/, X /*along*/, Left, "0,0,0"));
+
+  ObjComponent *source = new ObjComponent("source");
+  source->setPos(V3D(0, 0, 0));
+  instrument->add(source);
+  instrument->markAsSource(source);
+
+  Detector *monitor = new Detector("Monitor", 1, nullptr);
+  monitor->setPos(14, 0, 0);
+  instrument->add(monitor);
+  instrument->markAsMonitor(monitor);
+
+  ObjComponent *sample = new ObjComponent("some-surface-holder");
+  sample->setPos(V3D(15, 0, 0));
+  instrument->add(sample);
+  instrument->markAsSamplePos(sample);
+
+  // Where 0.01 is half detector width etc.
+  Detector *det2 = new Detector(
+      "point-detector", 2,
+      ComponentCreationHelper::createCuboid(0.01, 0.02, 0.03), nullptr);
+  det2->setPos(20, (20 - sample->getPos().X()), 0);
+  instrument->add(det2);
+  instrument->markAsDetector(det2);
+  Detector *det3 = new Detector(
+      "point-detector", 3,
+      ComponentCreationHelper::createCuboid(0.01, 0.02, 0.03), nullptr);
+  det3->setPos(20, (20 - sample->getPos().X()), 0);
+  instrument->add(det3);
+  instrument->markAsDetector(det3);
+  Detector *det4 = new Detector(
+      "point-detector", 4,
+      ComponentCreationHelper::createCuboid(0.01, 0.02, 0.03), nullptr);
+  det4->setPos(20, (20 - sample->getPos().X()), 0);
+  instrument->add(det4);
+  instrument->markAsDetector(det4);
+
+  const int nSpectra = 4;
+  const int nBins = 100;
+  const double deltaX = 2000; // TOF
+  auto workspace = Create2DWorkspaceBinned(nSpectra, nBins, startX, deltaX);
+
+  workspace->setTitle(
+      "Test histogram"); // actually adds a property call run_title to the logs
+  workspace->getAxis(0)->setUnit("TOF");
+  workspace->setYUnit("Counts");
+
+  workspace->setInstrument(instrument);
+  workspace->getSpectrum(0).setDetectorID(monitor->getID());
+  workspace->getSpectrum(1).setDetectorID(det2->getID());
+  workspace->getSpectrum(2).setDetectorID(det2->getID());
+  workspace->getSpectrum(3).setDetectorID(det2->getID());
+  return workspace;
+}
+
 void createInstrumentForWorkspaceWithDistances(
     MatrixWorkspace_sptr workspace, const V3D &samplePosition,
     const V3D &sourcePosition, const std::vector<V3D> &detectorPositions) {

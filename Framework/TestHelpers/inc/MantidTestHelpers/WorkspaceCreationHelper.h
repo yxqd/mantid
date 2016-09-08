@@ -327,6 +327,10 @@ void create2DAngles(std::vector<double> &L2, std::vector<double> &polar,
 /// virtual reflectometry instrument.
 Mantid::API::MatrixWorkspace_sptr
 create2DWorkspaceWithReflectometryInstrument(double startX = 0);
+/// Create a 2D workspace with one detector and three monitors based around a
+/// virtual reflectometry instrument.
+Mantid::API::MatrixWorkspace_sptr
+create2DWorkspaceWithReflectometryInstrumentMultiDetector(double startX = 0);
 
 void createInstrumentForWorkspaceWithDistances(
     Mantid::API::MatrixWorkspace_sptr workspace,
