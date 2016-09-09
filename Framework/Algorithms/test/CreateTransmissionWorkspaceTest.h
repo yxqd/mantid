@@ -26,8 +26,7 @@ using namespace WorkspaceCreationHelper;
 
 class CreateTransmissionWorkspaceTest : public CxxTest::TestSuite {
 private:
-  MatrixWorkspace_sptr m_tinyReflWS;
-  MatrixWorkspace_sptr m_TOF;
+  MatrixWorkspace_sptr m_pointDetectorWS;
   MatrixWorkspace_sptr m_NotTOF;
 
 private:
@@ -36,7 +35,7 @@ private:
         AlgorithmManager::Instance().create("CreateTransmissionWorkspaceAuto");
     alg->initialize();
     alg->setChild(true);
-    alg->setProperty("FirstTransmissionRun", m_TOF);
+    alg->setProperty("FirstTransmissionRun", m_pointDetectorWS);
     alg->setProperty("WavelengthMin", 0.0);
     alg->setProperty("WavelengthMax", 1.0);
     alg->setProperty("I0MonitorIndex", 0);
@@ -61,30 +60,9 @@ public:
   }
 
   CreateTransmissionWorkspaceTest() {
-    m_tinyReflWS = create2DWorkspaceWithReflectometryInstrument();
-
-    FrameworkManager::Instance();
-    MantidVec xData = {0, 1, 2, 3};
-    MantidVec yData = {0, 0, 0};
-
-    auto createWorkspace =
-        AlgorithmManager::Instance().createUnmanaged("CreateWorkspace");
-    createWorkspace->setChild(true);
-    createWorkspace->initialize();
-    createWorkspace->setProperty("UnitX", "1/q");
-    createWorkspace->setProperty("DataX", xData);
-    createWorkspace->setProperty("DataY", yData);
-    createWorkspace->setProperty("NSpec", 1);
-    createWorkspace->setPropertyValue("OutputWorkspace", "UnitWS");
-    createWorkspace->execute();
-    m_NotTOF = createWorkspace->getProperty("OutputWorkspace");
-
-    createWorkspace->setProperty("UnitX", "TOF");
-    createWorkspace->setProperty("DataX", xData);
-    createWorkspace->setProperty("DataY", yData);
-    createWorkspace->setProperty("NSpec", 1);
-    createWorkspace->execute();
-    m_TOF = createWorkspace->getProperty("OutputWorkspace");
+    m_pointDetectorWS = create2DWorkspaceWithReflectometryInstrument();
+    m_NotTOF = m_pointDetectorWS;
+    m_NotTOF->getAxis(0)->setUnit("1/q");
   }
 
   void test_check_first_transmission_workspace_not_tof_or_wavelength_throws() {
@@ -101,8 +79,8 @@ public:
 
   void test_end_overlap_must_be_greater_than_start_overlap_or_throw() {
     auto alg = construct_standard_algorithm();
-    alg->setProperty("FirstTransmissionRun", m_TOF);
-    alg->setProperty("SecondTransmissionRun", m_TOF);
+    alg->setProperty("FirstTransmissionRun", m_pointDetectorWS);
+    alg->setProperty("SecondTransmissionRun", m_pointDetectorWS);
     MantidVec params = {0.0, 0.1, 1.0};
     alg->setProperty("Params", params);
     alg->setProperty("StartOverlap", 0.6);
@@ -115,14 +93,14 @@ public:
         AlgorithmManager::Instance().create("CreateTransmissionWorkspace");
     alg->initialize();
     alg->setChild(true);
-    alg->setProperty("FirstTransmissionRun", m_TOF);
-    alg->setProperty("SecondTransmissionRun", m_TOF);
+    alg->setProperty("FirstTransmissionRun", m_pointDetectorWS);
+    alg->setProperty("SecondTransmissionRun", m_pointDetectorWS);
     alg->setPropertyValue("OutputWorkspace", "demo_ws");
     alg->setRethrows(true);
     TS_ASSERT_THROWS(alg->execute(), std::runtime_error);
 
-    alg->setProperty("FirstTransmissionRun", m_TOF);
-    alg->setProperty("SecondTransmissionRun", m_TOF);
+    alg->setProperty("FirstTransmissionRun", m_pointDetectorWS);
+    alg->setProperty("SecondTransmissionRun", m_pointDetectorWS);
     alg->setProperty("WavelengthMin", 1.0);
     alg->setRethrows(true);
     TS_ASSERT_THROWS(alg->execute(), std::runtime_error);
@@ -151,7 +129,12 @@ public:
     TS_ASSERT_THROWS(alg->execute(), std::invalid_argument);
   }
 
-  void test_execute_one_tranmission() {
+  void test_execute_one_tranmission_1() {
+    // One transmission run
+    // Monitors : Yes
+    // Monitor background : Yes
+    // Monitor integration : Yes
+    // Processing instructions : 0
 
     IAlgorithm_sptr alg =
         AlgorithmManager::Instance().create("CreateTransmissionWorkspace");
@@ -159,7 +142,7 @@ public:
     alg->setChild(true);
     alg->initialize();
 
-    alg->setProperty("FirstTransmissionRun", m_tinyReflWS);
+    alg->setProperty("FirstTransmissionRun", m_pointDetectorWS);
     alg->setProperty("WavelengthMin", 1.0);
     alg->setProperty("WavelengthMax", 15.0);
     alg->setProperty("I0MonitorIndex", 1);
@@ -174,6 +157,50 @@ public:
     MatrixWorkspace_sptr outWS = alg->getProperty("OutputWorkspace");
     TS_ASSERT_EQUALS("Wavelength", outWS->getAxis(0)->unit()->unitID());
   }
+
+  void test_execute_one_tranmission_2() {
+    // One transmission run
+    // Monitors : No
+    // Monitor background : No
+    // Monitor integration : No
+    // Analysis mode : multi detector
+
+  }
+
+  void test_execute_one_transmission_3() {
+    // One transmission run
+    // Monitors : Yes
+    // Monitor background : No
+    // Monitor integration : No
+    // Analysis mode : multi detector
+
+  }
+
+  void test_execute_one_transmission_4() {
+    // One transmission run
+    // Monitors : Yes
+    // Monitor background : Yes
+    // Monitor integration : No
+    // Analysis mode : multi detector
+
+  }
+
+  void test_execute_one_transmission_5() {
+    // One transmission run
+    // Monitors : Yes
+    // Monitor background : Yes
+    // Monitor integration : Yes
+    // Analysis mode : multi detector
+
+  }
+
+  void test_execute_two_transmission_runs() {
+
+    // TODO: Use two transmission runs and test some values
+  }
+
+  // TODO: add more tests if needed
+
 };
 
 #endif /* ALGORITHMS_TEST_CREATETRANSMISSIONWORKSPACETEST_H_ */

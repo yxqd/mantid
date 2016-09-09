@@ -578,7 +578,14 @@ public:
 
   /// Detector position correction
 
-  void test_detector_position_correction() {
+  void test_detector_position_correction_point_detector() {
+    // Analysis mode: point detector
+
+    // TODO: test that detectors have been corrected in the output workspace
+  }
+
+  void test_detector_position_correction_multi_detector() {
+    // Analysis mode: multi detector
 
     // TODO: test that detectors have been corrected in the output workspace
   }
