@@ -24,6 +24,7 @@ class ReflectometryReductionOneTest : public CxxTest::TestSuite {
 private:
   MatrixWorkspace_sptr m_pointDetectorWS;
   MatrixWorkspace_sptr m_multiDetectorWS;
+  MatrixWorkspace_sptr m_wavelengthWS;
 
 public:
   // This pair of boilerplate methods prevent the suite being created statically
@@ -37,9 +38,16 @@ public:
 
   ReflectometryReductionOneTest() {
     FrameworkManager::Instance();
+    // A point detector ws 
     m_pointDetectorWS = create2DWorkspaceWithReflectometryInstrument();
+    // A multi detector ws
     m_multiDetectorWS =
         create2DWorkspaceWithReflectometryInstrumentMultiDetector();
+    // A workspace in wavelength
+    m_wavelengthWS = Create2DWorkspace154(1, 10, true);
+    m_wavelengthWS->setInstrument(m_pointDetectorWS->getInstrument());
+    m_wavelengthWS->getAxis(0)->setUnit("Wavelength");
+
   }
 
   IAlgorithm_sptr construct_standard_algorithm() {
@@ -531,7 +539,49 @@ public:
 
   /// Transmission correction
 
+  void test_transmission_correction_run() {
+    // CorrectDetectorPositions: False
+
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_wavelengthWS);
+    alg->setProperty("FirstTransmissionRun", m_wavelengthWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "PointDetectorAnalysis");
+    alg->setProperty("ProcessingInstructions", "100");
+    alg->setProperty("CorrectDetectorPositions", "0");
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+    alg->execute();
+    // We are only interested in workspace in wavelength
+    MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
+
+    TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 10);
+    // Expected values are 1 = m_wavelength / m_wavelength
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 1.0000, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 1.0000, 0.0001);
+  }
+
+  void test_transmission_correction_exponential() {
+
+    // TODO: test exponential correction using an input ws in wavelength
+  }
+
+  void test_transmission_correction_polynomial() {
+
+    // TODO: test polynomial correction using an input ws in wavelength
+  }
+
   /// Detector position correction
+
+  void test_detector_position_correction() {
+
+    // TODO: test that detectors have been corrected in the output workspace
+  }
 
   /// Calculate theta
 
