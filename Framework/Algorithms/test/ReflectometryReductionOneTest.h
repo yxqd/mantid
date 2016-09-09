@@ -171,6 +171,7 @@ public:
     alg->setProperty("WavelengthMax", 15.0);
     alg->setProperty("MomentumTransferStep", 0.1);
     alg->setProperty("AnalysisMode", "MultiDetectorAnalysis");
+    alg->setProperty("NormalizeByIntegratedMonitors", "0");
     alg->setPropertyValue("ProcessingInstructions", "1");
     alg->setPropertyValue("OutputWorkspace", "IvsQ");
     alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
@@ -183,8 +184,8 @@ public:
     TS_ASSERT_EQUALS(outLam->blocksize(), 8);
     TS_ASSERT(outLam->readX(0)[0] >= 1.5);
     TS_ASSERT(outLam->readX(0)[7] <= 15.0);
-    TS_ASSERT_DELTA(outLam->readY(0)[0], 0.3941, 0.0001);
-    TS_ASSERT_DELTA(outLam->readY(0)[7], 0.3941, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 3.1530, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 3.1530, 0.0001);
   }
 
   void test_wavelength_conversion_2() {
@@ -200,6 +201,8 @@ public:
     alg->setProperty("WavelengthMin", 1.5);
     alg->setProperty("WavelengthMax", 15.0);
     alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "MultiDetectorAnalysis");
+    alg->setProperty("NormalizeByIntegratedMonitors", "0");
     alg->setPropertyValue("ProcessingInstructions", "1+2");
     alg->setPropertyValue("OutputWorkspace", "IvsQ");
     alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
@@ -211,9 +214,9 @@ public:
     TS_ASSERT_EQUALS(outLam->blocksize(), 8);
     TS_ASSERT(outLam->readX(0)[0] >= 1.5);
     TS_ASSERT(outLam->readX(0)[7] <= 15.0);
-    // Y counts, should be 0.3941 * 2 (see test_wavelength_conversion_1())
-    TS_ASSERT_DELTA(outLam->readY(0)[0], 0.7882, 0.0001);
-    TS_ASSERT_DELTA(outLam->readY(0)[7], 0.7882, 0.0001);
+    // Y counts, should be 3.1530 * 2 (see test_wavelength_conversion_1())
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 6.3060, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 6.3060, 0.0001);
   }
 
   void test_wavelength_conversion_3() {
@@ -229,6 +232,8 @@ public:
     alg->setProperty("WavelengthMin", 1.5);
     alg->setProperty("WavelengthMax", 15.0);
     alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "MultiDetectorAnalysis");
+    alg->setProperty("NormalizeByIntegratedMonitors", "0");
     alg->setPropertyValue("ProcessingInstructions", "1-3");
     alg->setPropertyValue("OutputWorkspace", "IvsQ");
     alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
@@ -240,9 +245,9 @@ public:
     TS_ASSERT_EQUALS(outLam->blocksize(), 8);
     TS_ASSERT(outLam->readX(0)[0] >= 1.5);
     TS_ASSERT(outLam->readX(0)[7] <= 15.0);
-    // Y counts, should be 0.3941 * 3 (see test_wavelength_conversion_1())
-    TS_ASSERT_DELTA(outLam->readY(0)[0], 1.1823, 0.0001);
-    TS_ASSERT_DELTA(outLam->readY(0)[7], 1.1823, 0.0001);
+    // Y counts, should be 3.1530 * 3 (see test_wavelength_conversion_1())
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 9.4590, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 9.4590, 0.0001);
   }
 
   void test_wavelength_conversion_4() {
@@ -260,6 +265,7 @@ public:
     alg->setProperty("WavelengthMax", 15.0);
     alg->setProperty("MomentumTransferStep", 0.1);
     alg->setProperty("AnalysisMode", "MultiDetectorAnalysis");
+    alg->setProperty("NormalizeByIntegratedMonitors", "0");
     alg->setPropertyValue("ProcessingInstructions", "1");
     alg->setPropertyValue("RegionOfDirectBeam", "2-3");
     alg->setPropertyValue("OutputWorkspace", "IvsQ");
@@ -268,7 +274,13 @@ public:
     // We are only interested in workspace in wavelength
     MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
 
-    // TODO: test something here
+    TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 8);
+    TS_ASSERT(outLam->readX(0)[0] >= 1.5);
+    TS_ASSERT(outLam->readX(0)[7] <= 15.0);
+    // Y counts, should be 0.5 = 1 (from detector ws) / 2 (from direct beam)
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 0.5, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 0.5, 0.0001);
   }
 
   /// Conversion to momentum transfer
