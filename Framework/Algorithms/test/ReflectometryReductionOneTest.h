@@ -11,6 +11,7 @@
 #include "MantidTestHelpers/WorkspaceCreationHelper.h"
 #include "MantidGeometry/Instrument/ReferenceFrame.h"
 #include "MantidGeometry/Instrument.h"
+#include <algorithm>
 
 using namespace Mantid;
 using namespace Mantid::Kernel;
@@ -281,6 +282,213 @@ public:
     // Y counts, should be 0.5 = 1 (from detector ws) / 2 (from direct beam)
     TS_ASSERT_DELTA(outLam->readY(0)[0], 0.5, 0.0001);
     TS_ASSERT_DELTA(outLam->readY(0)[7], 0.5, 0.0001);
+  }
+
+  void test_wavelength_conversion_5() {
+    // Monitors : Yes (0)
+    // MonitorBackgroundWavelengthMin : Not given
+    // MonitorBackgroundWavelengthMax : Not given
+    // Normalize by integrated monitors : No
+    // Direct beam normalization : No
+    // Processing instructions : 1
+    // Region of direct beam : No
+    // Analysis mode : multi detector
+
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_multiDetectorWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "MultiDetectorAnalysis");
+    alg->setProperty("I0MonitorIndex", "0");
+    alg->setProperty("NormalizeByIntegratedMonitors", "0");
+    alg->setPropertyValue("ProcessingInstructions", "1");
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+    alg->execute();
+    // We are only interested in workspace in wavelength
+    MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
+
+    TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 8);
+    TS_ASSERT(outLam->readX(0)[0] >= 1.5);
+    TS_ASSERT(outLam->readX(0)[7] <= 15.0);
+    // No monitors considered because MonitorBackgroundWavelengthMin
+    // and MonitorBackgroundWavelengthMax were not set
+    // even if I0MonitorIndex was given
+    // Y counts must be 3.1530
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 3.1530, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 3.1530, 0.0001);
+  }
+
+  void test_wavelength_conversion_6() {
+    // Monitors : Yes (0)
+    // MonitorBackgroundWavelengthMin : Yes
+    // MonitorBackgroundWavelengthMax : Not given
+    // Normalize by integrated monitors : No
+    // Direct beam normalization : No
+    // Processing instructions : 1
+    // Region of direct beam : No
+    // Analysis mode : multi detector
+
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_multiDetectorWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "MultiDetectorAnalysis");
+    alg->setProperty("I0MonitorIndex", "0");
+    alg->setProperty("MonitorBackgroundWavelengthMin", 1.5);
+    alg->setProperty("NormalizeByIntegratedMonitors", "0");
+    alg->setPropertyValue("ProcessingInstructions", "1");
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+    alg->execute();
+    // We are only interested in workspace in wavelength
+    MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
+
+    TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 8);
+    TS_ASSERT(outLam->readX(0)[0] >= 1.5);
+    TS_ASSERT(outLam->readX(0)[7] <= 15.0);
+    // No monitors considered because MonitorBackgroundWavelengthMax
+    // was not set
+    // even if I0MonitorIndex was given
+    // Y counts must be 3.1530
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 3.1530, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 3.1530, 0.0001);
+  }
+
+  void test_wavelength_conversion_7() {
+    // Monitors : Yes (0)
+    // MonitorBackgroundWavelengthMin : Not given
+    // MonitorBackgroundWavelengthMax : 15.0
+    // Normalize by integrated monitors : No
+    // Direct beam normalization : No
+    // Processing instructions : 1
+    // Region of direct beam : No
+    // Analysis mode : multi detector
+
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_multiDetectorWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "MultiDetectorAnalysis");
+    alg->setProperty("I0MonitorIndex", "0");
+    alg->setProperty("MonitorBackgroundWavelengthMax", 15.0);
+    alg->setProperty("NormalizeByIntegratedMonitors", "0");
+    alg->setPropertyValue("ProcessingInstructions", "1");
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+    alg->execute();
+    // We are only interested in workspace in wavelength
+    MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
+
+    TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 8);
+    TS_ASSERT(outLam->readX(0)[0] >= 1.5);
+    TS_ASSERT(outLam->readX(0)[7] <= 15.0);
+    // No monitors considered because MonitorBackgroundWavelengthMin
+    // was not set
+    // even if I0MonitorIndex was given
+    // Y counts must be 3.1530
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 3.1530, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 3.1530, 0.0001);
+  }
+
+  void test_wavelength_conversion_8() {
+    // Monitors : Yes (0)
+    // MonitorBackgroundWavelengthMin : 0.5
+    // MonitorBackgroundWavelengthMax : 3.0
+    // Normalize by integrated monitors : No
+    // Direct beam normalization : No
+    // Processing instructions : 1
+    // Region of direct beam : No
+    // Analysis mode : multi detector
+
+    // Modify counts in monitor (only for this test)
+    // Modify counts only for range that will be fitted
+    auto inputWS = m_multiDetectorWS;
+    MantidVec &Y = inputWS->dataY(0);
+    std::fill(Y.begin(), Y.begin()+2, 1.0);
+
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", inputWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "MultiDetectorAnalysis");
+    alg->setProperty("I0MonitorIndex", "0");
+    alg->setProperty("MonitorBackgroundWavelengthMin", 0.5);
+    alg->setProperty("MonitorBackgroundWavelengthMax", 3.0);
+    alg->setProperty("NormalizeByIntegratedMonitors", "0");
+    alg->setPropertyValue("ProcessingInstructions", "1");
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+    alg->execute();
+    // We are only interested in workspace in wavelength
+    MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
+
+    TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 8);
+    TS_ASSERT(outLam->readX(0)[0] >= 1.5);
+    TS_ASSERT(outLam->readX(0)[7] <= 15.0);
+    // Expected values are 2.4996 = 3.15301 (detectors) / 1.26139 (monitors)
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 2.4996, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 2.4996, 0.0001);
+  }
+
+  void test_wavelength_conversion_9() {
+    // Monitors : Yes (0)
+    // MonitorBackgroundWavelengthMin : 0.5
+    // MonitorBackgroundWavelengthMax : 3.0
+    // Normalize by integrated monitors : Yes
+    // Direct beam normalization : No
+    // Processing instructions : 1
+    // Region of direct beam : No
+    // Analysis mode : multi detector
+
+    // Modify counts in monitor (only for this test)
+    // Modify counts only for range that will be fitted
+    auto inputWS = m_multiDetectorWS;
+    MantidVec &Y = inputWS->dataY(0);
+    std::fill(Y.begin(), Y.begin()+2, 1.0);
+
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", inputWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "MultiDetectorAnalysis");
+    alg->setProperty("I0MonitorIndex", "0");
+    alg->setProperty("MonitorBackgroundWavelengthMin", 0.5);
+    alg->setProperty("MonitorBackgroundWavelengthMax", 3.0);
+    alg->setProperty("NormalizeByIntegratedMonitors", "1");
+    alg->setPropertyValue("ProcessingInstructions", "1");
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+    alg->execute();
+    // We are only interested in workspace in wavelength
+    MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
+
+    TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 8);
+    TS_ASSERT(outLam->readX(0)[0] >= 1.5);
+    TS_ASSERT(outLam->readX(0)[7] <= 15.0);
+    // Expected values are 0.3124 = 3.15301 (detectors) / (1.26139*8) (monitors)
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 0.3124, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 0.3124, 0.0001);
   }
 
   /// Conversion to momentum transfer
