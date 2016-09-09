@@ -688,11 +688,9 @@ public:
 
   void test_rebin_in_Q_params_not_provided() {
     auto alg = construct_standard_algorithm();
-    auto inWS = Create2DWorkspace154(1, 10, true);
+    auto inWS = m_wavelengthWS;
     // this instrument does not have a "slit-gap" property
     // defined in the IPF, so CalculateResolution should throw.
-    inWS->setInstrument(m_pointDetectorWS->getInstrument());
-    inWS->getAxis(0)->setUnit("Wavelength");
     // Setup bad bin edges, Rebin will throw (not CalculateResolution?)
     inWS->dataX(0).assign(inWS->readX(0).size(), inWS->readX(0)[0]);
     alg->setProperty("InputWorkspace", inWS);
@@ -702,10 +700,7 @@ public:
 
   void test_rebin_in_Q_partial_params_provided() {
     auto alg = construct_standard_algorithm();
-    auto inWS = Create2DWorkspace154(1, 10, true);
-    inWS->setInstrument(m_pointDetectorWS->getInstrument());
-    inWS->getAxis(0)->setUnit("Wavelength");
-    alg->setProperty("InputWorkspace", inWS);
+    alg->setProperty("InputWorkspace", m_wavelengthWS);
     alg->setProperty("MomentumTransferMaximum", 15.0);
     alg->setProperty("OutputWorkspace", "rebinnedWS");
     TS_ASSERT_THROWS_NOTHING(alg->execute());
@@ -721,10 +716,7 @@ public:
 
   void test_rebin_in_Q_logarithmic_rebinning() {
     auto alg = construct_standard_algorithm();
-    auto inWS = Create2DWorkspace154(1, 10, true);
-    inWS->setInstrument(m_pointDetectorWS->getInstrument());
-    inWS->getAxis(0)->setUnit("Wavelength");
-    alg->setProperty("InputWorkspace", inWS);
+    alg->setProperty("InputWorkspace", m_wavelengthWS);
     alg->setProperty("MomentumTransferMinimum", 1.0);
     alg->setProperty("MomentumTransferStep", 0.2);
     alg->setProperty("MomentumTransferMaximum", 5.0);
@@ -744,10 +736,7 @@ public:
 
   void test_rebin_in_Q_linear_rebinning() {
     auto alg = construct_standard_algorithm();
-    auto inWS = Create2DWorkspace154(1, 10, true);
-    inWS->setInstrument(m_pointDetectorWS->getInstrument());
-    inWS->getAxis(0)->setUnit("Wavelength");
-    alg->setProperty("InputWorkspace", inWS);
+    alg->setProperty("InputWorkspace", m_wavelengthWS);
     alg->setProperty("MomentumTransferMinimum", 1.577);
     alg->setProperty("MomentumTransferStep", -0.2);
     alg->setProperty("MomentumTransferMaximum", 5.233);
