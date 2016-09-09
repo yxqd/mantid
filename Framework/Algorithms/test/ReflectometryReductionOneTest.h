@@ -143,21 +143,6 @@ public:
     TS_ASSERT_EQUALS(map[monitorSpecId], 0);
   }
 
-  /// Detector position correction
-
-  /// Calculate theta
-
-  void test_calculate_theta() {
-
-    auto alg = construct_standard_algorithm();
-
-    alg->execute();
-    // Should not throw
-
-    const double outTwoTheta = alg->getProperty("ThetaOut");
-    TS_ASSERT_DELTA(45.0, outTwoTheta, 0.00001);
-  }
-
   void test_wavelength_conversion_1() {
     // Monitors : No
     // Direct beam normalization : No
@@ -489,6 +474,76 @@ public:
     // Expected values are 0.3124 = 3.15301 (detectors) / (1.26139*8) (monitors)
     TS_ASSERT_DELTA(outLam->readY(0)[0], 0.3124, 0.0001);
     TS_ASSERT_DELTA(outLam->readY(0)[7], 0.3124, 0.0001);
+  }
+
+  void test_wavelength_conversion_10() {
+    // Analysis mode : point
+    // Monitors : No
+    // Direct beam normalization : No
+    // Processing instructions : 1+2 and 1
+
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_pointDetectorWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "PointDetectorAnalysis");
+    alg->setProperty("NormalizeByIntegratedMonitors", "0");
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+
+    // Must throw as spectrum 2 is not defined
+    alg->setPropertyValue("ProcessingInstructions", "1+2");
+    TS_ASSERT_THROWS_ANYTHING(alg->execute());
+    // Fine, we are summing first spectrum twice
+    alg->setPropertyValue("ProcessingInstructions", "1+1");
+    TS_ASSERT_THROWS_NOTHING(alg->execute());
+  }
+
+  void test_wavelength_conversion_11() {
+    // Analysis mode : point
+    // Monitors : No
+    // Direct beam normalization : 1-1, 1-2
+    // Processing instructions : 1
+
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_pointDetectorWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "PointDetectorAnalysis");
+    alg->setProperty("NormalizeByIntegratedMonitors", "0");
+    alg->setPropertyValue("ProcessingInstructions", "1");
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+
+    // Must throw region of interest is incompatible with point detector
+    alg->setPropertyValue("RegionOfDirectBeam", "1-2");
+    TS_ASSERT_THROWS_ANYTHING(alg->execute());
+    // Even if we set only the existing spectrum
+    alg->setPropertyValue("RegionOfDirectBeam", "1-1");
+    TS_ASSERT_THROWS_ANYTHING(alg->execute());
+  }
+
+  /// Transmission correction
+
+  /// Detector position correction
+
+  /// Calculate theta
+
+  void test_calculate_theta() {
+
+    auto alg = construct_standard_algorithm();
+
+    alg->execute();
+    // Should not throw
+
+    const double outTwoTheta = alg->getProperty("ThetaOut");
+    TS_ASSERT_DELTA(45.0, outTwoTheta, 0.00001);
   }
 
   /// Conversion to momentum transfer
