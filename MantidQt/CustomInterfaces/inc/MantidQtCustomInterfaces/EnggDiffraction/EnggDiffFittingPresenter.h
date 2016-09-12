@@ -162,6 +162,9 @@ private:
                            std::vector<std::string> &fittingRunNoDirVec,
                            std::vector<std::string> &foundRunNumber);
 
+  std::vector<std::string>
+  splitFittingDirectory(const std::string &selectedfPath);
+
   void enableMultiRun(std::string firstRun, std::string lastRun,
                       std::vector<std::string> &fittingRunNoDirVec);
 
@@ -199,6 +202,9 @@ private:
 
   // input run number - used for output file name
   std::vector<std::string> g_multi_run;
+
+  // Holds the previous user input so we can short circuit further checks
+  std::string m_previousInput;
 
   /// true if the last fitting completed successfully
   bool m_fittingFinishedOK;

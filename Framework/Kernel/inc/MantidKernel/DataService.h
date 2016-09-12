@@ -14,7 +14,6 @@
 #include "MantidKernel/MultiThreaded.h"
 #include <Poco/Notification.h>
 #include <Poco/NotificationCenter.h>
-#include <unordered_set>
 
 #include "tbb/concurrent_unordered_map.h"
 
@@ -32,6 +31,12 @@ struct MyHash {
   }
 };
 
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#else
+#include "Strings.h"
+#endif
+
 namespace Mantid {
 namespace Kernel {
 
@@ -42,6 +47,13 @@ enum class DataServiceSort { Sorted, Unsorted };
  * Auto queries the class to determine this behavior
  */
 enum class DataServiceHidden { Auto, Include, Exclude };
+
+// Case-insensitive comparison functor for std::map
+struct CaseInsensitiveCmp {
+  bool operator()(const std::string &lhs, const std::string &rhs) const {
+    return strcasecmp(lhs.c_str(), rhs.c_str()) < 0;
+  }
+};
 
 /** DataService stores instances of a given type.
     This is a templated class, designed to be implemented as a
@@ -226,11 +238,17 @@ public:
     checkForEmptyName(name);
     checkForNullPointer(Tobject);
 
-    // At the moment, you can't overwrite an object (i.e. pass in a name
-    // that's already in the map with a pointer to a different object).
-    // Also, there's nothing to stop the same object from being added
-    // more than once with different names.
-    if (!datamap.insert(std::make_pair(name, Tobject)).second) {
+    bool success = false;
+    {
+      // Make DataService access thread-safe
+      std::lock_guard<std::recursive_mutex> lock(m_mutex);
+      // At the moment, you can't overwrite an object (i.e. pass in a name
+      // that's already in the map with a pointer to a different object).
+      // Also, there's nothing to stop the same object from being added
+      // more than once with different names.
+      success = datamap.insert(std::make_pair(name, Tobject)).second;
+    }
+    if (!success) {
       std::string error =
           " add : Unable to insert Data Object : '" + name + "'";
       g_log.error(error);
@@ -253,14 +271,11 @@ public:
                             const boost::shared_ptr<T> &Tobject) {
     checkForNullPointer(Tobject);
 
-    // Make DataService access thread-safe
-
     // find if the Tobject already exists
     auto it = datamap.find(name);
     if (it != datamap.end()) {
       g_log.debug("Data Object '" + name +
                   "' replaced in data service.\n");
-
       notificationCenter.postNotification(
           new BeforeReplaceNotification(name, it->second, Tobject));
 
@@ -279,17 +294,16 @@ public:
    * @param name :: name of the object */
   void remove(const std::string &name) {
     // Make DataService access thread-safe
-
     auto it = datamap.find(name);
     if (it == datamap.end()) {
+      lock.unlock();
       g_log.debug(" remove '" + name + "' cannot be found");
       return;
     }
     // The map is shared across threads so the item is erased from the map
-    // before
-    // unlocking the mutex and is held in a local stack variable.
+    // before unlocking the mutex and is held in a local stack variable.
     // This protects it from being modified by another thread.
-    auto data = it->second;
+    auto data = std::move(it->second);
     PARALLEL_CRITICAL(datamap_unsafe_erase) { datamap.unsafe_erase(it); }
     // Do NOT use "it" iterator after this point. Other threads may modify the
     // map
@@ -299,6 +313,7 @@ public:
     data.reset(); // DataService now has no references to the object
     g_log.information("Data Object '" + name +
                       "' deleted from data service.");
+
 
     notificationCenter.postNotification(new PostDeleteNotification(name));
   }
@@ -312,33 +327,34 @@ public:
     checkForEmptyName(newName);
 
     // Make DataService access thread-safe
-
-    std::string foundName;
     auto it = datamap.find(oldName);
     if (it == datamap.end()) {
+      lock.unlock();
       g_log.warning(" rename '" + oldName + "' cannot be found");
       return;
     }
 
     // delete the object with the old name
-    auto object = it->second;
+      auto object = std::move(it->second);
     PARALLEL_CRITICAL(datamap_unsafe_erase) { datamap.unsafe_erase(it); }
+
     // if there is another object which has newName delete it
-    it = datamap.find(newName);
-    if (it != datamap.end()) {
+    auto it2 = datamap.find(newName);
+    if (it2 != datamap.end()) {
       notificationCenter.postNotification(
           new AfterReplaceNotification(newName, object));
-      PARALLEL_CRITICAL(datamap_unsafe_erase) { datamap.unsafe_erase(it); }
+      it2->second = std::move(object);
+    } else {
+      if (!(datamap.emplace(newName, std::move(object)).second)) {
+        // should never happen
+        std::string error =
+            " add : Unable to insert Data Object : '" + newName + "'";
+        g_log.error(error);
+        throw std::runtime_error(error);
+      }
     }
-
-    // insert the old object with the new name
-    if (!datamap.insert(std::make_pair(newName, object)).second) {
-      std::string error =
-          " add : Unable to insert Data Object : '" + newName + "'";
-      g_log.error(error);
-      throw std::runtime_error(error);
-    }
-    g_log.information("Data Object '" + foundName + "' renamed to '" + newName +
+    lock.unlock();
+    g_log.information("Data Object '" + oldName + "' renamed to '" + newName +
                       "'");
 
     notificationCenter.postNotification(
@@ -442,11 +458,13 @@ public:
     // Use the scoping of an if to handle our lock for duration
     if (hiddenState == DataServiceHidden::Include) {
       // Getting hidden items
+      foundNames.reserve(datamap.size());
       for (const auto &item : datamap) {
         foundNames.push_back(item.first);
       }
       // Lock released at end of scope here
     } else {
+      foundNames.reserve(datamap.size());
       for (const auto &item : datamap) {
         if (!isHiddenDataServiceObject(item.first)) {
           // This item is not hidden add it
@@ -500,6 +518,10 @@ public:
   /// using Poco::NotificationCenter::addObserver(...)
   ///@return nothing
   Poco::NotificationCenter notificationCenter;
+  /// Deleted copy constructor
+  DataService(const DataService &) = delete;
+  /// Deleted copy assignment operator
+  DataService &operator=(const DataService &) = delete;
 
 protected:
   /// Protected constructor (singleton)
@@ -507,11 +529,6 @@ protected:
   virtual ~DataService() = default;
 
 private:
-  /// Private, unimplemented copy constructor
-  DataService(const DataService &);
-  /// Private, unimplemented copy assignment operator
-  DataService &operator=(const DataService &);
-
   void checkForEmptyName(const std::string &name) {
     if (name.empty()) {
       const std::string error = "Add Data Object with empty name";
