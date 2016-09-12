@@ -552,7 +552,7 @@ public:
     alg->setProperty("MomentumTransferStep", 0.1);
     alg->setProperty("AnalysisMode", "PointDetectorAnalysis");
     alg->setProperty("ProcessingInstructions", "100");
-    alg->setProperty("CorrectDetectorPositions", "0");
+    alg->setProperty("CorrectDetectorPositions", false);
     alg->setPropertyValue("OutputWorkspace", "IvsQ");
     alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
     alg->execute();
@@ -567,13 +567,59 @@ public:
   }
 
   void test_transmission_correction_exponential() {
+    // CorrectionAlgorithm: ExponentialCorrection
+    
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_wavelengthWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "PointDetectorAnalysis");
+    alg->setProperty("ProcessingInstructions", "100");
+    alg->setProperty("CorrectDetectorPositions", false);
+    alg->setProperty("CorrectionAlgorithm", "ExponentialCorrection");
+    alg->setProperty("C0", 0.2);
+    alg->setProperty("C1", 0.1);
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+    alg->execute();
+    MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
 
-    // TODO: test exponential correction using an input ws in wavelength
+    TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 10);
+    // Expected values are 29.0459 and 58.4912
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 29.0459, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 58.4912, 0.0001);
   }
 
   void test_transmission_correction_polynomial() {
+    // CorrectionAlgorithm: PolynomialCorrection
 
-    // TODO: test polynomial correction using an input ws in wavelength
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_wavelengthWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "PointDetectorAnalysis");
+    alg->setProperty("ProcessingInstructions", "100");
+    alg->setProperty("CorrectDetectorPositions", false);
+    alg->setProperty("CorrectionAlgorithm", "PolynomialCorrection");
+    alg->setProperty("Polynomial", "0.1,0.3,0.5");
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+    alg->execute();
+    // We are only interested in workspace in wavelength
+    MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
+
+    TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 10);
+    // Expected values are 2.9851 and 0.1289
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 2.9851, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 0.1289, 0.0001);
   }
 
   /// Detector position correction
@@ -581,13 +627,55 @@ public:
   void test_detector_position_correction_point_detector() {
     // Analysis mode: point detector
 
-    // TODO: test that detectors have been corrected in the output workspace
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_pointDetectorWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "PointDetectorAnalysis");
+    alg->setProperty("NormalizeByIntegratedMonitors", "0");
+    alg->setProperty("ProcessingInstructions", "1");
+    alg->setProperty("CorrectDetectorPositions", true);
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+    alg->execute();
+    // We are only interested in workspace in wavelength
+    MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
+
+    TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 23);
+    // Expected values are 2.0000 = 2.0000 (detectors) / 1.0000 (monitors)
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 2.0000, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 2.0000, 0.0001);
   }
 
   void test_detector_position_correction_multi_detector() {
     // Analysis mode: multi detector
 
-    // TODO: test that detectors have been corrected in the output workspace
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_multiDetectorWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "MultiDetectorAnalysis");
+    alg->setProperty("NormalizeByIntegratedMonitors", "0");
+    alg->setProperty("ProcessingInstructions", "1");
+    alg->setProperty("CorrectDetectorPositions", true);
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+    alg->execute();
+    // We are only interested in workspace in wavelength
+    MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
+
+    TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 8);
+    // Expected values are 3.1530 = 3.15301 (detectors) / 1.0000 (monitors)
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 3.1530, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 3.1530, 0.0001);
   }
 
   /// Calculate theta
