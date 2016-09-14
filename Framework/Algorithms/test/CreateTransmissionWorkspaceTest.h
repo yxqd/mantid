@@ -60,9 +60,11 @@ public:
   }
 
   CreateTransmissionWorkspaceTest() {
+    FrameworkManager::Instance();
+    // Workspace in TOF with Reflectometry instrument
     m_pointDetectorWS = create2DWorkspaceWithReflectometryInstrument();
-    m_NotTOF = m_pointDetectorWS;
-    m_NotTOF->getAxis(0)->setUnit("1/q");
+    // Workspace in 'dSpacing'
+    m_NotTOF = create2DWorkspaceWithRectangularInstrument(1, 1, 1);
   }
 
   void test_check_first_transmission_workspace_not_tof_or_wavelength_throws() {
