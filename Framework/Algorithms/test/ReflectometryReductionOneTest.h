@@ -638,6 +638,7 @@ public:
     alg->setProperty("NormalizeByIntegratedMonitors", "0");
     alg->setProperty("ProcessingInstructions", "1");
     alg->setProperty("CorrectDetectorPositions", true);
+    alg->setProperty("ThetaIn", 1.5);
     alg->setPropertyValue("OutputWorkspace", "IvsQ");
     alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
     alg->execute();
@@ -646,6 +647,9 @@ public:
 
     TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
     TS_ASSERT_EQUALS(outLam->blocksize(), 23);
+    // Check detector positions have changed from original and are correct
+    TS_ASSERT_DIFFERS(outLam->getDetector(0)->getPos(), m_pointDetectorWS->getDetector(0)->getPos());
+    TS_ASSERT_EQUALS(outLam->getDetector(0)->getPos(), V3D(14, 0, 0));
     // Expected values are 2.0000 = 2.0000 (detectors) / 1.0000 (monitors)
     TS_ASSERT_DELTA(outLam->readY(0)[0], 2.0000, 0.0001);
     TS_ASSERT_DELTA(outLam->readY(0)[7], 2.0000, 0.0001);
@@ -665,6 +669,7 @@ public:
     alg->setProperty("NormalizeByIntegratedMonitors", "0");
     alg->setProperty("ProcessingInstructions", "1");
     alg->setProperty("CorrectDetectorPositions", true);
+    alg->setProperty("ThetaIn", 1.5);
     alg->setPropertyValue("OutputWorkspace", "IvsQ");
     alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
     alg->execute();
@@ -673,6 +678,10 @@ public:
 
     TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
     TS_ASSERT_EQUALS(outLam->blocksize(), 8);
+    // Check detector positions have changed from original and are correct
+    TS_ASSERT_DIFFERS(outLam->getDetector(0)->getPos(),
+                      m_multiDetectorWS->getDetector(0)->getPos());
+    TS_ASSERT_EQUALS(outLam->getDetector(0)->getPos(), V3D(20, 0.13093, 0));
     // Expected values are 3.1530 = 3.15301 (detectors) / 1.0000 (monitors)
     TS_ASSERT_DELTA(outLam->readY(0)[0], 3.1530, 0.0001);
     TS_ASSERT_DELTA(outLam->readY(0)[7], 3.1530, 0.0001);
