@@ -636,7 +636,7 @@ public:
     alg->setProperty("MomentumTransferStep", 0.1);
     alg->setProperty("AnalysisMode", "PointDetectorAnalysis");
     alg->setProperty("NormalizeByIntegratedMonitors", "0");
-    alg->setProperty("ProcessingInstructions", "1");
+    alg->setProperty("ProcessingInstructions", "0");
     alg->setProperty("CorrectDetectorPositions", true);
     alg->setProperty("ThetaIn", 1.5);
     alg->setPropertyValue("OutputWorkspace", "IvsQ");
@@ -647,16 +647,18 @@ public:
 
     TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
     TS_ASSERT_EQUALS(outLam->blocksize(), 23);
-    // Check detector positions have changed from original and are correct
-    TS_ASSERT_DIFFERS(outLam->getDetector(0)->getPos(), m_pointDetectorWS->getDetector(0)->getPos());
-    TS_ASSERT_EQUALS(outLam->getDetector(0)->getPos(), V3D(14, 0, 0));
+    // Check detector position have changed from original and is correct
+    TS_ASSERT_DIFFERS(outLam->getDetector(0)->getPos(), 
+                      m_pointDetectorWS->getDetector(0)->getPos());
+    TS_ASSERT_EQUALS(outLam->getDetector(0)->getPos(), V3D(20, 0.13093, 0));
     // Expected values are 2.0000 = 2.0000 (detectors) / 1.0000 (monitors)
-    TS_ASSERT_DELTA(outLam->readY(0)[0], 2.0000, 0.0001);
-    TS_ASSERT_DELTA(outLam->readY(0)[7], 2.0000, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 3.1530, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 3.1530, 0.0001);
   }
 
-  void test_detector_position_correction_multi_detector() {
+  void test_detector_position_correction_multi_detector_1() {
     // Analysis mode: multi detector
+    // Detectors corrected = 1
 
     auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
     alg->setChild(true);
@@ -667,7 +669,7 @@ public:
     alg->setProperty("MomentumTransferStep", 0.1);
     alg->setProperty("AnalysisMode", "MultiDetectorAnalysis");
     alg->setProperty("NormalizeByIntegratedMonitors", "0");
-    alg->setProperty("ProcessingInstructions", "1");
+    alg->setProperty("ProcessingInstructions", "2");
     alg->setProperty("CorrectDetectorPositions", true);
     alg->setProperty("ThetaIn", 1.5);
     alg->setPropertyValue("OutputWorkspace", "IvsQ");
@@ -678,10 +680,49 @@ public:
 
     TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 1);
     TS_ASSERT_EQUALS(outLam->blocksize(), 8);
-    // Check detector positions have changed from original and are correct
+    // Check detector position has changed from original and is correct
+    TS_ASSERT_DIFFERS(outLam->getDetector(0)->getPos(),
+                     m_multiDetectorWS->getDetector(0)->getPos());
+    TS_ASSERT_EQUALS(outLam->getDetector(0)->getPos(), V3D(20, 0.13093, 0));
+    // Expected values are 3.1530 = 3.15301 (detectors) / 1.0000 (monitors)
+    TS_ASSERT_DELTA(outLam->readY(0)[0], 3.1530, 0.0001);
+    TS_ASSERT_DELTA(outLam->readY(0)[7], 3.1530, 0.0001);
+  }
+
+  void test_detector_position_correction_multi_detector_2() {
+    // Analysis mode: multi detector
+    // Detectors corrected = 3
+
+    auto alg = AlgorithmManager::Instance().create("ReflectometryReductionOne");
+    alg->setChild(true);
+    alg->initialize();
+    alg->setProperty("InputWorkspace", m_multiDetectorWS);
+    alg->setProperty("WavelengthMin", 1.5);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("MomentumTransferStep", 0.1);
+    alg->setProperty("AnalysisMode", "MultiDetectorAnalysis");
+    alg->setProperty("NormalizeByIntegratedMonitors", "0");
+    alg->setProperty("ProcessingInstructions", "1:3");
+    alg->setProperty("CorrectDetectorPositions", true);
+    alg->setProperty("ThetaIn", 1.5);
+    alg->setPropertyValue("OutputWorkspace", "IvsQ");
+    alg->setPropertyValue("OutputWorkspaceWavelength", "IvsLam");
+    alg->execute();
+    // We are only interested in workspace in wavelength
+    MatrixWorkspace_sptr outLam = alg->getProperty("OutputWorkspaceWavelength");
+
+    TS_ASSERT_EQUALS(outLam->getNumberHistograms(), 3);
+    TS_ASSERT_EQUALS(outLam->blocksize(), 8);
+    // Check all detector positions have changed from originals and are correct
     TS_ASSERT_DIFFERS(outLam->getDetector(0)->getPos(),
                       m_multiDetectorWS->getDetector(0)->getPos());
+    TS_ASSERT_DIFFERS(outLam->getDetector(1)->getPos(),
+                      m_multiDetectorWS->getDetector(1)->getPos());
+    TS_ASSERT_DIFFERS(outLam->getDetector(2)->getPos(),
+                      m_multiDetectorWS->getDetector(2)->getPos());
     TS_ASSERT_EQUALS(outLam->getDetector(0)->getPos(), V3D(20, 0.13093, 0));
+    TS_ASSERT_EQUALS(outLam->getDetector(1)->getPos(), V3D(20, 0.13093, 0));
+    TS_ASSERT_EQUALS(outLam->getDetector(2)->getPos(), V3D(20, 0.13093, 0));
     // Expected values are 3.1530 = 3.15301 (detectors) / 1.0000 (monitors)
     TS_ASSERT_DELTA(outLam->readY(0)[0], 3.1530, 0.0001);
     TS_ASSERT_DELTA(outLam->readY(0)[7], 3.1530, 0.0001);
