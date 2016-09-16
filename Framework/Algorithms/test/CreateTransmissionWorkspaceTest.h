@@ -27,6 +27,7 @@ using namespace WorkspaceCreationHelper;
 class CreateTransmissionWorkspaceTest : public CxxTest::TestSuite {
 private:
   MatrixWorkspace_sptr m_pointDetectorWS;
+  MatrixWorkspace_sptr m_multiDetectorWS;
   MatrixWorkspace_sptr m_TOF;
   MatrixWorkspace_sptr m_NotTOF;
 
@@ -64,6 +65,9 @@ public:
     FrameworkManager::Instance();
     // Workspace in TOF with Reflectometry instrument
     m_pointDetectorWS = create2DWorkspaceWithReflectometryInstrument();
+    // Workspace in TOF with Reflectometry instrument and multiple detectors
+    m_multiDetectorWS = 
+      create2DWorkspaceWithReflectometryInstrumentMultiDetector();
     // Workspace in 'dSpacing'
     m_NotTOF = create2DWorkspaceWithRectangularInstrument(1, 1, 1);
   }
@@ -137,10 +141,10 @@ public:
     // Monitors : Yes
     // Monitor background : Yes
     // Monitor integration : Yes
-    // Processing instructions : 0
+    // Workspace type : point detector
 
     IAlgorithm_sptr alg =
-        AlgorithmManager::Instance().create("CreateTransmissionWorkspace");
+      AlgorithmManager::Instance().create("CreateTransmissionWorkspace");
 
     alg->setChild(true);
     alg->initialize();
@@ -158,21 +162,12 @@ public:
     alg->execute();
     MatrixWorkspace_sptr outWS = alg->getProperty("OutputWorkspace");
 
-    std::cout << "outWS->getNumberHistograms() = " << outWS->getNumberHistograms() << "\n";
-    std::cout << "outWS->blocksize() = "           << outWS->blocksize()           << "\n";
-    std::cout << "outWS->readX(0)[0] = "           << outWS->readX(0)[0]           << "\n";
-    std::cout << "outWS->readX(0)[7] = "           << outWS->readX(0)[7]           << "\n";
-    std::cout << "outWS->readY(0)[0] = "           << outWS->readY(0)[0]           << "\n";
-    std::cout << "outWS->readY(0)[7] = "           << outWS->readY(0)[7]           << "\n";
-
-    /*
     TS_ASSERT_EQUALS(outWS->getNumberHistograms(), 1);
-    TS_ASSERT_EQUALS(outWS->blocksize(), 8);
-    TS_ASSERT(outWS->readX(0)[0] >= 1.5);
-    TS_ASSERT(outWS->readX(0)[7] <= 15.0);
-    TS_ASSERT_DELTA(outWS->readY(0)[0], 9.4590, 0.0001);
-    TS_ASSERT_DELTA(outWS->readY(0)[7], 9.4590, 0.0001);*/
-    TS_ASSERT_EQUALS("Wavelength", outWS->getAxis(0)->unit()->unitID());
+    TS_ASSERT_EQUALS(outWS->blocksize(), 24);
+    TS_ASSERT_DELTA(outWS->readX(0)[0], 1.1303, 0.0001);
+    TS_ASSERT_DELTA(outWS->readX(0)[5], 3.9560, 0.0001);
+    TS_ASSERT_DELTA(outWS->readY(0)[0], 1.5704e+14, 1e+10);
+    TS_ASSERT_DELTA(outWS->readY(0)[5], 1.5704e+14, 1e+10);
   }
 
   void test_execute_one_tranmission_2() {
@@ -180,8 +175,28 @@ public:
     // Monitors : No
     // Monitor background : No
     // Monitor integration : No
-    // Analysis mode : multi detector
+    // Workspace type : point detector
 
+    IAlgorithm_sptr alg =
+      AlgorithmManager::Instance().create("CreateTransmissionWorkspace");
+
+    alg->setChild(true);
+    alg->initialize();
+
+    alg->setProperty("FirstTransmissionRun", m_pointDetectorWS);
+    alg->setProperty("WavelengthMin", 1.0);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setPropertyValue("ProcessingInstructions", "0");
+    alg->setPropertyValue("OutputWorkspace", "demo_ws");
+    alg->execute();
+    MatrixWorkspace_sptr outWS = alg->getProperty("OutputWorkspace");
+
+    TS_ASSERT_EQUALS(outWS->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outWS->blocksize(), 24);
+    TS_ASSERT_DELTA(outWS->readX(0)[0], 1.1303, 0.0001);
+    TS_ASSERT_DELTA(outWS->readX(0)[5], 3.9560, 0.0001);
+    TS_ASSERT_DELTA(outWS->readY(0)[0], 3.1530, 0.0001);
+    TS_ASSERT_DELTA(outWS->readY(0)[5], 3.1530, 0.0001);
   }
 
   void test_execute_one_transmission_3() {
@@ -189,8 +204,29 @@ public:
     // Monitors : Yes
     // Monitor background : No
     // Monitor integration : No
-    // Analysis mode : multi detector
+    // Workspace type : point detector
 
+    IAlgorithm_sptr alg =
+      AlgorithmManager::Instance().create("CreateTransmissionWorkspace");
+
+    alg->setChild(true);
+    alg->initialize();
+
+    alg->setProperty("FirstTransmissionRun", m_pointDetectorWS);
+    alg->setProperty("WavelengthMin", 1.0);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("I0MonitorIndex", 1);
+    alg->setPropertyValue("ProcessingInstructions", "0");
+    alg->setPropertyValue("OutputWorkspace", "demo_ws");
+    alg->execute();
+    MatrixWorkspace_sptr outWS = alg->getProperty("OutputWorkspace");
+
+    TS_ASSERT_EQUALS(outWS->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outWS->blocksize(), 24);
+    TS_ASSERT_DELTA(outWS->readX(0)[0], 1.1303, 0.0001);
+    TS_ASSERT_DELTA(outWS->readX(0)[5], 3.9560, 0.0001);
+    TS_ASSERT_DELTA(outWS->readY(0)[0], 3.1530, 0.0001);
+    TS_ASSERT_DELTA(outWS->readY(0)[5], 3.1530, 0.0001);
   }
 
   void test_execute_one_transmission_4() {
@@ -198,17 +234,156 @@ public:
     // Monitors : Yes
     // Monitor background : Yes
     // Monitor integration : No
-    // Analysis mode : multi detector
+    // Workspace type : point detector
 
+    IAlgorithm_sptr alg =
+      AlgorithmManager::Instance().create("CreateTransmissionWorkspace");
+
+    alg->setChild(true);
+    alg->initialize();
+
+    alg->setProperty("FirstTransmissionRun", m_pointDetectorWS);
+    alg->setProperty("WavelengthMin", 1.0);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("I0MonitorIndex", 1);
+    alg->setProperty("MonitorBackgroundWavelengthMin", 1.0);
+    alg->setProperty("MonitorBackgroundWavelengthMax", 2.0);
+    alg->setPropertyValue("ProcessingInstructions", "0");
+    alg->setPropertyValue("OutputWorkspace", "demo_ws");
+    alg->execute();
+    MatrixWorkspace_sptr outWS = alg->getProperty("OutputWorkspace");
+
+    TS_ASSERT_EQUALS(outWS->getNumberHistograms(), 1);
+    TS_ASSERT_EQUALS(outWS->blocksize(), 24);
+    TS_ASSERT_DELTA(outWS->readX(0)[0], 1.1303, 0.0001);
+    TS_ASSERT_DELTA(outWS->readX(0)[5], 3.9560, 0.0001);
+    TS_ASSERT_DELTA(outWS->readY(0)[0], 2.0938e+15, 1e+11);
+    TS_ASSERT_DELTA(outWS->readY(0)[5], 1.2563e+15, 1e+11);
   }
 
-  void test_execute_one_transmission_5() {
+  void test_execute_one_tranmission_5() {
     // One transmission run
     // Monitors : Yes
     // Monitor background : Yes
     // Monitor integration : Yes
-    // Analysis mode : multi detector
+    // Workspace type : multi detector
 
+    IAlgorithm_sptr alg =
+        AlgorithmManager::Instance().create("CreateTransmissionWorkspace");
+
+    alg->setChild(true);
+    alg->initialize();
+
+    alg->setProperty("FirstTransmissionRun", m_multiDetectorWS);
+    alg->setProperty("WavelengthMin", 1.0);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("I0MonitorIndex", 0);
+    alg->setProperty("MonitorBackgroundWavelengthMin", 1.0);
+    alg->setProperty("MonitorBackgroundWavelengthMax", 2.0);
+    alg->setProperty("MonitorIntegrationWavelengthMin", 4.0);
+    alg->setProperty("MonitorIntegrationWavelengthMax", 10.0);
+    alg->setPropertyValue("ProcessingInstructions", "1:3");
+    alg->setPropertyValue("OutputWorkspace", "demo_ws");
+    alg->execute();
+    MatrixWorkspace_sptr outWS = alg->getProperty("OutputWorkspace");
+
+    TS_ASSERT_EQUALS(outWS->getNumberHistograms(), 3);
+    TS_ASSERT_EQUALS(outWS->blocksize(), 9);
+    TS_ASSERT_DELTA(outWS->readX(0)[0], 1.4129, 0.0001);
+    TS_ASSERT_DELTA(outWS->readX(0)[7], 11.303, 0.001);
+    TS_ASSERT_DELTA(outWS->readY(0)[0], 1.9851, 0.0001);
+    TS_ASSERT_DELTA(outWS->readY(0)[7], 1.9851, 0.0001);
+  }
+
+  void test_execute_one_tranmission_6() {
+    // One transmission run
+    // Monitors : No
+    // Monitor background : No
+    // Monitor integration : No
+    // Workspace type : multi detector
+
+    IAlgorithm_sptr alg =
+      AlgorithmManager::Instance().create("CreateTransmissionWorkspace");
+
+    alg->setChild(true);
+    alg->initialize();
+
+    alg->setProperty("FirstTransmissionRun", m_multiDetectorWS);
+    alg->setProperty("WavelengthMin", 1.0);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setPropertyValue("ProcessingInstructions", "1:3");
+    alg->setPropertyValue("OutputWorkspace", "demo_ws");
+    alg->execute();
+    MatrixWorkspace_sptr outWS = alg->getProperty("OutputWorkspace");
+
+    TS_ASSERT_EQUALS(outWS->getNumberHistograms(), 3);
+    TS_ASSERT_EQUALS(outWS->blocksize(), 9);
+    TS_ASSERT_DELTA(outWS->readX(0)[0], 1.4129, 0.0001);
+    TS_ASSERT_DELTA(outWS->readX(0)[7], 11.303, 0.001);
+    TS_ASSERT_DELTA(outWS->readY(0)[0], 3.1530, 0.0001);
+    TS_ASSERT_DELTA(outWS->readY(0)[7], 3.1530, 0.0001);
+  }
+
+  void test_execute_one_transmission_7() {
+    // One transmission run
+    // Monitors : Yes
+    // Monitor background : No
+    // Monitor integration : No
+    // Workspace type : multi detector
+
+    IAlgorithm_sptr alg =
+      AlgorithmManager::Instance().create("CreateTransmissionWorkspace");
+
+    alg->setChild(true);
+    alg->initialize();
+
+    alg->setProperty("FirstTransmissionRun", m_multiDetectorWS);
+    alg->setProperty("WavelengthMin", 1.0);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("I0MonitorIndex", 0);
+    alg->setPropertyValue("ProcessingInstructions", "1:3");
+    alg->setPropertyValue("OutputWorkspace", "demo_ws");
+    alg->execute();
+    MatrixWorkspace_sptr outWS = alg->getProperty("OutputWorkspace");
+
+    TS_ASSERT_EQUALS(outWS->getNumberHistograms(), 3);
+    TS_ASSERT_EQUALS(outWS->blocksize(), 9);
+    TS_ASSERT_DELTA(outWS->readX(0)[0], 1.4129, 0.0001);
+    TS_ASSERT_DELTA(outWS->readX(0)[7], 11.303, 0.001);
+    TS_ASSERT_DELTA(outWS->readY(0)[0], 3.1530, 0.0001);
+    TS_ASSERT_DELTA(outWS->readY(0)[7], 3.1530, 0.0001);
+  }
+
+  void test_execute_one_transmission_8() {
+    // One transmission run
+    // Monitors : Yes
+    // Monitor background : Yes
+    // Monitor integration : No
+    // Workspace type : multi detector
+
+    IAlgorithm_sptr alg =
+      AlgorithmManager::Instance().create("CreateTransmissionWorkspace");
+
+    alg->setChild(true);
+    alg->initialize();
+
+    alg->setProperty("FirstTransmissionRun", m_multiDetectorWS);
+    alg->setProperty("WavelengthMin", 1.0);
+    alg->setProperty("WavelengthMax", 15.0);
+    alg->setProperty("I0MonitorIndex", 0);
+    alg->setProperty("MonitorBackgroundWavelengthMin", 1.0);
+    alg->setProperty("MonitorBackgroundWavelengthMax", 2.0);
+    alg->setPropertyValue("ProcessingInstructions", "1:3");
+    alg->setPropertyValue("OutputWorkspace", "demo_ws");
+    alg->execute();
+    MatrixWorkspace_sptr outWS = alg->getProperty("OutputWorkspace");
+
+    TS_ASSERT_EQUALS(outWS->getNumberHistograms(), 3);
+    TS_ASSERT_EQUALS(outWS->blocksize(), 9);
+    TS_ASSERT_DELTA(outWS->readX(0)[0], 1.4129, 0.0001);
+    TS_ASSERT_DELTA(outWS->readX(0)[7], 11.303, 0.001);
+    TS_ASSERT_DELTA(outWS->readY(0)[0], 7.9405, 0.0001);
+    TS_ASSERT_DELTA(outWS->readY(0)[7], 7.9405, 0.0001);
   }
 
   void test_execute_two_transmission_runs() {
