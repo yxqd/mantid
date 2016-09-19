@@ -128,7 +128,7 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
         # Fitting
         # ---------------------------
         allowed_fit_method = StringListValidator(["Log", "Linear", "Polynomial"])
-        self.declareProperty('FitMethod', "LIN", validator=allowed_fit_method, direction=Direction.Input,
+        self.declareProperty('FitMethod', "Linear", validator=allowed_fit_method, direction=Direction.Input,
                              doc='The fit method for the transmission calculation.')
         self.declareProperty('PolynomialOrder', defaultValue=Property.EMPTY_INT, direction=Direction.Input,
                              doc='The polynomial order of a polynomial fit.  It is considered only '
