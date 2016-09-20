@@ -62,7 +62,7 @@ public:
   // Get transformation between the Niggli cell and the conventional cell
   Kernel::DblMatrix GetTransformation();
 
-  enum { NUM_CELL_TYPES = 44 };
+  enum { NUM_CELL_TYPES = 45 };
 
   // String constants for cell types
   static const std::string NONE() { return "None"; }

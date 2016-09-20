@@ -11,8 +11,8 @@ using Mantid::Kernel::DblMatrix;
 
 /**
  *  Array of basic transformations from reduced cell to conventional cell
- *  for rows 1 to 44 of Table 2.  This array is indexed by the row number
- *  1 to 44.  Entry 0 is the identity matrix.
+ *  for rows 1 to 45 of Table 2.  This array is indexed by the row number
+ *  1 to 45.  Entry 0 is the identity matrix.
  */
 static const double transforms[ReducedCell::NUM_CELL_TYPES + 1][3][3] = // row
     {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}},                                 //  0
@@ -68,7 +68,9 @@ static const double transforms[ReducedCell::NUM_CELL_TYPES + 1][3][3] = // row
      {{0, -1, -2}, {0, -1, 0}, {-1, 0, 0}},  // 41
      {{-1, 0, 0}, {0, -1, 0}, {1, 1, 2}},    // 42
      {{-1, 0, 0}, {-1, -1, -2}, {0, -1, 0}}, // 43
-     {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};     // 44
+     {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}},      // 44
+     // not in paper but needed for scolecite
+     {{1, 0, 0}, {-1, 0, 2}, {0, -1, 0}}};   // 45
 
 /**
  *  These transforms pre-multiply the basic transforms in certain cases,
@@ -80,7 +82,7 @@ static const double transform_modifier[2][3][3] = {
 
 /**
  *  Array of Strings specifying the cell type for reduced cells for rows
- *  1 to 44 of Table 2.  This array is indexed by the row number 1 to 44.
+ *  1 to 45 of Table 2.  This array is indexed by the row number 1 to 45.
  *  Entry 0 is the String "None".
  */
 static const std::string lattice_types[ReducedCell::NUM_CELL_TYPES + 1] = {
@@ -137,11 +139,12 @@ static const std::string lattice_types[ReducedCell::NUM_CELL_TYPES + 1] = {
     ReducedCell::MONOCLINIC(),   // 41
     ReducedCell::ORTHORHOMBIC(), // 42
     ReducedCell::MONOCLINIC(),   // 43
-    ReducedCell::TRICLINIC()};   // 44
+    ReducedCell::TRICLINIC(),    // 44
+    ReducedCell::MONOCLINIC()};  // 45
 
 /**
  *  Array of Strings specifying the centering for reduced cells for rows
- *  1 to 44 of Table 2.  This array is indexed by the row number 1 to 44.
+ *  1 to 45 of Table 2.  This array is indexed by the row number 1 to 45.
  *  Entry 0 is the String "None".
  */
 static const std::string center_types[ReducedCell::NUM_CELL_TYPES + 1] = {
@@ -198,12 +201,13 @@ static const std::string center_types[ReducedCell::NUM_CELL_TYPES + 1] = {
     ReducedCell::C_CENTERED(),  // 41
     ReducedCell::I_CENTERED(),  // 42
     ReducedCell::I_CENTERED(),  // 43
-    ReducedCell::P_CENTERED()}; // 44
+    ReducedCell::P_CENTERED(),  // 44
+    ReducedCell::C_CENTERED()}; // 45
 
 /**
  *  Construct a ReducedCell object representing the specified row of
  *  Table 2 for a reduced cell with the specified lattice parameters,
- *  if the form number is between 1 and 44 inclusive.  If the form number
+ *  if the form number is between 1 and 45 inclusive.  If the form number
  *  is specified to be zero, the scalar values will be calculated according
  *  to the column headers for Table 2, for comparison purposes.
  *
@@ -238,14 +242,14 @@ ReducedCell::ReducedCell(size_t form_num, double a, double b, double c,
 /**
  *  Initialize all private data to represent one row of Table 2, for the
  *  row specified by the form number and for the given lattice parameters.
- *  The form number must be between 1 and 44 to represent an actual row of
+ *  The form number must be between 1 and 45 to represent an actual row of
  *  the table and must be 0 to represent the column header scalars, for
  *  comparison purposes.
  */
 void ReducedCell::init(size_t f_num, double a_a, double b_b, double c_c,
                        double b_c, double a_c, double a_b) {
   if (f_num > NUM_CELL_TYPES) {
-    throw std::invalid_argument("Reduced form number must be no more than 44");
+    throw std::invalid_argument("Reduced form number must be no more than 45");
   }
   // The mixed dot products should be > 0 for + cell
   // types and always appear inside absolute value
@@ -531,6 +535,10 @@ void ReducedCell::init(size_t f_num, double a_a, double b_b, double c_c,
     scalars[3] = -fabs(b_c);
     scalars[4] = -fabs(a_c);
     scalars[5] = -fabs(a_b);
+  case 45:
+    scalars[3] = a_b / 2;
+    scalars[4] = a_a / 2;
+    scalars[5] = a_b;
     break;
   }
 }
@@ -676,7 +684,7 @@ std::vector<double> ReducedCell::norm_vals(const ReducedCell &info) const {
 
 /**
  *  Return the transformation to map the reduced cell to the conventional
- *  cell, as listed in Table 2, if the form number is between 1 and 44.
+ *  cell, as listed in Table 2, if the form number is between 1 and 45.
  *  If the form number is 0, this returns the identity transformation.
  *
  *  @return The transformation.
