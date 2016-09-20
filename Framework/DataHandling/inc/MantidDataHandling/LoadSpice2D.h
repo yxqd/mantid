@@ -55,10 +55,6 @@ namespace DataHandling {
  */
 class DLLExport LoadSpice2D : public API::IFileLoader<Kernel::FileDescriptor> {
 public:
-  /// default constructor
-  LoadSpice2D();
-  /// destructor
-  ~LoadSpice2D() override;
   /// Algorithm's name for identification overriding a virtual method
   const std::string name() const override { return "LoadSpice2D"; }
   /// Summary of algorithms purpose
@@ -116,14 +112,17 @@ private:
   double detectorTranslation(std::map<std::string, std::string> &metadata);
   void setMetadataAsRunProperties(std::map<std::string, std::string> &metadata);
   void rotateDetector(const double &);
+  void setTimes();
 
   // Member variables:
   DataObjects::Workspace2D_sptr m_workspace;
-  double m_wavelength_input;
-  double m_wavelength_spread_input;
+  double m_wavelength_input{0.0};
+  double m_wavelength_spread_input{0.0};
   Mantid::DataHandling::XmlHandler m_xmlHandler;
-  double m_wavelength;
-  double m_dwavelength;
+  double m_wavelength{0.0};
+  double m_dwavelength{0.0};
+  Mantid::Kernel::DateAndTime m_startTime;
+  Mantid::Kernel::DateAndTime m_endTime;
 };
 } // namespace DataHandling
 } // namespace Mantid

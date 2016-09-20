@@ -6,6 +6,7 @@
 //----------------------------------
 #include "../ApplicationWindow.h"
 #include "../Graph.h"
+#include "MantidQtAPI/IProjectSerialisable.h"
 
 #include "MantidAPI/FrameworkManager.h"
 #include "MantidAPI/Algorithm.h"
@@ -23,6 +24,7 @@
 
 #include <Poco/NObserver.h>
 
+#include <QApplication>
 #include <QDockWidget>
 #include <QTreeWidget>
 #include <QProgressDialog>
@@ -215,6 +217,17 @@ public:
                          const bool showError, MultiLayer *plotWindow = NULL,
                          bool clearWindow = false);
 
+  /// Plot a "tiled" plot (with subplots)
+  MultiLayer *
+  plotSubplots(const QMultiMap<QString, std::set<int>> &toPlot,
+               MantidQt::DistributionFlag distr = MantidQt::DistributionDefault,
+               bool errs = false);
+
+  MultiLayer *
+  plotSubplots(const QMultiMap<QString, int> &toPlot,
+               MantidQt::DistributionFlag distr = MantidQt::DistributionDefault,
+               bool errs = false);
+
 public slots:
   // Create a 1d graph form specified MatrixWorkspace and index
   MultiLayer *
@@ -339,9 +352,6 @@ public:
                              const std::string &wsName);
 
   void loadWSFromFile(const std::string &wsname, const std::string &fileName);
-
-  MantidMatrix *openMatrixWorkspace(const std::string &wsName, int lower,
-                                    int upper);
 
   void saveProject(bool save);
   void enableSaveNexus(const QString &wsName);
@@ -488,7 +498,8 @@ public slots:
 
   // Plot a spectrum in response from a InstrumentWindow signal
   MultiLayer *plotInstrumentSpectrum(const QString &, int);
-  MultiLayer *plotInstrumentSpectrumList(const QString &, std::set<int>);
+  MultiLayer *plotInstrumentSpectrumList(const QString &,
+                                         const std::set<int> &);
 
   void importString(const QString &logName, const QString &data);
   void importString(const QString &logName, const QString &data,
@@ -502,7 +513,6 @@ public slots:
   void clearAllMemory(const bool prompt = true);
   // Ticket #672
   void saveNexusWorkspace();
-  QString saveToString(const std::string &workingDir);
 
 #ifdef _WIN32
 public:
@@ -599,6 +609,18 @@ private:
   // of the workspaces dock window
   bool workspacesDockPlot1To1();
 
+  /// Get the title to use for a plot - name of selected group
+  QString getSelectedGroupName() const;
+
+  /// Set initial autoscale for graph, then reset user autoscale option
+  void setInitialAutoscale(Graph *graph);
+
+  /// Plot a layer in a multilayer plot
+  void plotLayerOfMultilayer(MultiLayer *multi, const bool plotErrors,
+                             const bool plotDist, int &row, int &col,
+                             const QString &wsName,
+                             const std::set<int> &spectra);
+
   // Private variables
 
   ApplicationWindow *m_appWindow;    // QtiPlot main ApplicationWindow
@@ -651,6 +673,18 @@ private:
 
   // prevents some repeated code realtating to log names
   void formatLogName(QString &label, const QString &wsName);
+};
+
+/**
+ * This object sets the "busy" cursor while it is in scope, then restores the
+ * original cursor when destroyed.
+ */
+class ScopedOverrideCursor {
+public:
+  /// Constructor sets wait cursor
+  ScopedOverrideCursor() { QApplication::setOverrideCursor(Qt::WaitCursor); }
+  /// Destructor restores original cursor
+  virtual ~ScopedOverrideCursor() { QApplication::restoreOverrideCursor(); }
 };
 
 #endif

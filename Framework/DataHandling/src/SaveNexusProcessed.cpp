@@ -299,7 +299,6 @@ void SaveNexusProcessed::doExec(Workspace_sptr inputWorkspace,
 
   inputWorkspace->history().saveNexus(cppFile);
   nexusFile->closeGroup();
-  return;
 }
 
 //-----------------------------------------------------------------------------------------------
@@ -519,10 +518,6 @@ bool SaveNexusProcessed::processGroups() {
   }
 
   nexusFile->closeNexusFile();
-  // We finished successfully.
-  setExecuted(true);
-  notificationCenter().postNotification(
-      new FinishedNotification(this, isExecuted()));
 
   return true;
 }

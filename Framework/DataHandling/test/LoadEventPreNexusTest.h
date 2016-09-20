@@ -30,6 +30,7 @@ using namespace Mantid::Kernel;
 using namespace Mantid::Kernel::Exception;
 using namespace Mantid::API;
 using namespace Mantid::Geometry;
+using Mantid::HistogramData::HistogramX;
 
 using std::runtime_error;
 using std::size_t;
@@ -180,17 +181,7 @@ public:
     TS_ASSERT_EQUALS(inputWS->getInstrument()->getName(), "CNCS");
 
     // Create a new one
-    EventWorkspace_sptr outputWS = boost::dynamic_pointer_cast<EventWorkspace>(
-        API::WorkspaceFactory::Instance().create(
-            "EventWorkspace", inputWS->getNumberHistograms(), 2, 1));
-    TS_ASSERT(outputWS); // non-null pointer
-
-    // Copy geometry over.
-    API::WorkspaceFactory::Instance().initializeFromParent(inputWS, outputWS,
-                                                           false);
-
-    // You need to copy over the data as well.
-    outputWS->copyDataFrom(*inputWS);
+    auto outputWS = inputWS->clone();
 
     // Bunch of checks
     TS_ASSERT_EQUALS(outputWS->getNumberEvents(), inputWS->getNumberEvents());
@@ -212,11 +203,10 @@ public:
                       inputWS->getSpectrum(wkspIndex).getEvents()[0].tof());
 
     // Setting X should still be possible
-    Kernel::cow_ptr<MantidVec> x;
+    Kernel::cow_ptr<HistogramX> x;
     TS_ASSERT_THROWS_NOTHING(outputWS->setX(0, x));
     // Accessing Y is still possible
-    const MantidVec Y =
-        boost::dynamic_pointer_cast<const EventWorkspace>(outputWS)->dataY(0);
+    static_cast<void>(outputWS->y(0));
 
     // Check the run_start property exists and is right.
     Property *p = NULL;

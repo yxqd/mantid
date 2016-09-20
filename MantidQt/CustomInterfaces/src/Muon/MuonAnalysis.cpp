@@ -21,6 +21,7 @@
 #include "MantidKernel/Logger.h"
 #include "MantidKernel/cow_ptr.h"
 #include "MantidQtAPI/FileDialogHandler.h"
+#include "MantidQtAPI/HelpWindow.h"
 #include "MantidQtAPI/ManageUserDirectories.h"
 #include "MantidQtCustomInterfaces/Muon/MuonAnalysis.h"
 #include "MantidQtCustomInterfaces/Muon/MuonAnalysisFitDataTab.h"
@@ -52,8 +53,6 @@
 #include <QHeaderView>
 #include <QApplication>
 #include <QTemporaryFile>
-#include <QDesktopServices>
-#include <QUrl>
 
 #include <fstream>
 
@@ -62,12 +61,14 @@ namespace MantidQt {
 namespace CustomInterfaces {
 DECLARE_SUBWINDOW(MuonAnalysis)
 
+using namespace Mantid;
 using namespace Mantid::API;
 using namespace Mantid::Kernel;
 using namespace MantidQt::MantidWidgets;
 using namespace MantidQt::CustomInterfaces;
 using namespace MantidQt::CustomInterfaces::Muon;
 using namespace Mantid::Geometry;
+using namespace MuonAnalysisHelper;
 using Mantid::API::Workspace_sptr;
 using Mantid::API::Grouping;
 
@@ -80,6 +81,7 @@ Mantid::Kernel::Logger g_log("MuonAnalysis");
 const QString MuonAnalysis::NOT_AVAILABLE("N/A");
 const QString MuonAnalysis::TIME_ZERO_DEFAULT("0.2");
 const QString MuonAnalysis::FIRST_GOOD_BIN_DEFAULT("0.3");
+const std::string MuonAnalysis::PEAK_RADIUS_CONFIG("curvefitting.peakRadius");
 
 //----------------------
 // Public member functions
@@ -297,10 +299,6 @@ void MuonAnalysis::initLayout() {
 
   connectAutoSave();
 
-  // Muon scientists never fits peaks, hence they want the following parameter,
-  // set to a high number
-  ConfigService::Instance().setString("curvefitting.peakRadius", "99");
-
   connect(m_uiForm.deadTimeType, SIGNAL(currentIndexChanged(int)), this,
           SLOT(onDeadTimeTypeChanged(int)));
 
@@ -323,16 +321,16 @@ void MuonAnalysis::initLayout() {
 * Muon Analysis help (slot)
 */
 void MuonAnalysis::muonAnalysisHelpClicked() {
-  QDesktopServices::openUrl(
-      QUrl(QString("http://www.mantidproject.org/") + "MuonAnalysis"));
+  MantidQt::API::HelpWindow::showCustomInterface(nullptr,
+                                                 QString("Muon_Analysis"));
 }
 
 /**
 * Muon Analysis Grouping help (slot)
 */
 void MuonAnalysis::muonAnalysisHelpGroupingClicked() {
-  QDesktopServices::openUrl(
-      QUrl(QString("http://www.mantidproject.org/") + "MuonAnalysisGrouping"));
+  MantidQt::API::HelpWindow::showCustomInterface(
+      nullptr, QString("Muon_Analysis"), QString("grouping-options"));
 }
 
 /**
@@ -754,27 +752,6 @@ void MuonAnalysis::runLoadGroupButton() {
 void MuonAnalysis::runClearGroupingButton() { clearTablesAndCombo(); }
 
 /**
- * Group table plot button (slot)
- */
-void MuonAnalysis::runGroupTablePlotButton() {
-  if (m_updating)
-    return;
-
-  if (m_deadTimesChanged) {
-    inputFileChanged(m_previousFilenames);
-    return;
-  }
-
-  int groupNumber = getGroupNumberFromRow(m_groupTableRowInFocus);
-  if (groupNumber != -1) {
-    setGroupOrPairAndReplot(groupNumber);
-    // Update the combo box on the home tab
-    m_uiForm.frontPlotFuncs->setCurrentIndex(
-        m_uiForm.groupTablePlotChoice->currentIndex());
-  }
-}
-
-/**
  * Load current (slot)
  */
 void MuonAnalysis::runLoadCurrent() {
@@ -840,22 +817,55 @@ void MuonAnalysis::runLoadCurrent() {
 }
 
 /**
+ * Group table plot button (slot)
+ */
+void MuonAnalysis::runGroupTablePlotButton() {
+  runTablePlotButton(ItemType::Group);
+}
+
+/**
  * Pair table plot button (slot)
  */
 void MuonAnalysis::runPairTablePlotButton() {
-  if (m_updating)
+  runTablePlotButton(ItemType::Pair);
+}
+
+/**
+ * Called when one of the "Plot" buttons on the "Grouping Options" tab is
+ * pressed
+ * Update front tab and plot
+ * @param itemType :: [input] Group or pair
+ */
+void MuonAnalysis::runTablePlotButton(MuonAnalysis::ItemType itemType) {
+  if (m_updating) {
     return;
+  }
 
   if (m_deadTimesChanged) {
     inputFileChanged(m_previousFilenames);
     return;
   }
 
-  if (getPairNumberFromRow(m_pairTableRowInFocus) != -1) {
-    setGroupOrPairAndReplot(numGroups() + m_pairTableRowInFocus);
-    // Sync with selectors on the front
-    m_uiForm.frontPlotFuncs->setCurrentIndex(
-        m_uiForm.pairTablePlotChoice->currentIndex());
+  int plotChoiceIndex(-1), groupPairNumber(-1);
+  switch (itemType) {
+  case MantidQt::CustomInterfaces::MuonAnalysis::Pair:
+    plotChoiceIndex = m_uiForm.pairTablePlotChoice->currentIndex();
+    if (getPairNumberFromRow(m_pairTableRowInFocus) != -1) {
+      groupPairNumber = numGroups() + m_pairTableRowInFocus;
+    }
+    break;
+  case MantidQt::CustomInterfaces::MuonAnalysis::Group:
+  default:
+    plotChoiceIndex = m_uiForm.groupTablePlotChoice->currentIndex();
+    groupPairNumber = getGroupNumberFromRow(m_groupTableRowInFocus);
+    break;
+  }
+
+  if (groupPairNumber != -1 && plotChoiceIndex != -1) {
+    // Synchronise with selectors on the front
+    m_uiForm.frontGroupGroupPairComboBox->setCurrentIndex(groupPairNumber);
+    m_uiForm.frontPlotFuncs->setCurrentIndex(plotChoiceIndex);
+    runFrontPlotButton();
   }
 }
 
@@ -1604,7 +1614,7 @@ void MuonAnalysis::guessAlphaClicked() {
   m_updating = false;
 
   // See if auto-update is on and if so update the plot
-  groupTabUpdatePlot();
+  groupTabUpdatePlotPair();
 }
 
 /**
@@ -1632,15 +1642,18 @@ int MuonAnalysis::numPairs() {
  * now is
  */
 void MuonAnalysis::updateFront() {
-  // get current index
-  int index = getGroupOrPairToPlot();
+  // get current group/pair index
+  const int gpIndex = getGroupOrPairToPlot();
+
+  // Cache current selection of plot type
+  const int plotType = m_uiForm.frontPlotFuncs->currentIndex();
 
   m_uiForm.frontPlotFuncs->clear();
 
   int numG = numGroups();
 
-  if (index >= 0 && numG) {
-    if (index >= numG && numG >= 2) {
+  if (gpIndex >= 0 && numG) {
+    if (gpIndex >= numG && numG >= 2) {
       // i.e. index points to a pair
       m_uiForm.frontPlotFuncs->addItems(m_pairPlotFunc);
 
@@ -1648,7 +1661,7 @@ void MuonAnalysis::updateFront() {
       m_uiForm.frontAlphaNumber->setVisible(true);
 
       m_uiForm.frontAlphaNumber->setText(
-          m_uiForm.pairTable->item(m_pairToRow[index - numG], 3)->text());
+          m_uiForm.pairTable->item(m_pairToRow[gpIndex - numG], 3)->text());
 
       m_uiForm.frontAlphaNumber->setCursorPosition(0);
     } else {
@@ -1657,6 +1670,10 @@ void MuonAnalysis::updateFront() {
 
       m_uiForm.frontAlphaLabel->setVisible(false);
       m_uiForm.frontAlphaNumber->setVisible(false);
+    }
+    // Replace cached value
+    if (plotType != -1 && plotType < m_uiForm.frontPlotFuncs->count()) {
+      m_uiForm.frontPlotFuncs->setCurrentIndex(plotType);
     }
   }
 }
@@ -1844,16 +1861,23 @@ void MuonAnalysis::plotSpectrum(const QString &wsName, bool logScale) {
   s << "";
 
   // Remove data and difference from given plot (keep fit and guess)
-  s << "def remove_data(window):";
+  // num_to_keep: number of previous fits to keep
+  s << "def remove_data(window, num_to_keep):";
   s << "  if window is None:";
   s << "    raise ValueError('No plot to remove data from')";
-  s << "  to_keep = ['Workspace-Calc', 'CompositeFunction']";
+  // Need to keep the last "num_to_keep" curves with
+  // "Workspace-Calc" in their name, plus guesses
   s << "  layer = window.activeLayer()";
   s << "  if layer is not None:";
-  s << "    for i in range(0, layer.numCurves()):";
-  s << "      if not any (x in layer.curveTitle(i) for x in to_keep):";
-  s << "        layer.removeCurve(i)";
-  s << "";
+  s << "    kept_fits = 0";
+  s << "    for i in range(layer.numCurves() - 1, -1, -1):"; // reversed
+  s << "      title = layer.curveTitle(i)";
+  s << "      if title == \"CompositeFunction\":";
+  s << "        continue"; // keep all guesses
+  s << "      if \"Workspace-Calc\" in title and kept_fits < num_to_keep:";
+  s << "        kept_fits = kept_fits + 1";
+  s << "        continue";           // keep last n fits
+  s << "      layer.removeCurve(i)"; // remove everything else
 
   // Plot data in the given window with given options
   s << "def plot_data(ws_name, errors, connect, window_to_use):";
@@ -1878,6 +1902,8 @@ void MuonAnalysis::plotSpectrum(const QString &wsName, bool logScale) {
   s << "    layer.setCurveLineColor(i, color)";
   s << "  if log_scale:";
   s << "    layer.logYlinX()";
+  s << "  else:";
+  s << "    layer.linearAxes()";
   s << "  if y_auto:";
   s << "    layer.setAutoScale()";
   s << "  else:";
@@ -1889,7 +1915,8 @@ void MuonAnalysis::plotSpectrum(const QString &wsName, bool logScale) {
 
   // Plot the data!
   s << "win = get_window('%WSNAME%', '%PREV%', %USEPREV%)";
-  s << "remove_data(win)";
+  s << "if %FITSTOKEEP% != -1:";
+  s << "  remove_data(win, %FITSTOKEEP%)";
   s << "g = plot_data('%WSNAME%', %ERRORS%, %CONNECT%, win)";
   s << "format_graph(g, '%WSNAME%', %LOGSCALE%, %YAUTO%, '%YMIN%', '%YMAX%')";
 
@@ -1915,6 +1942,11 @@ void MuonAnalysis::plotSpectrum(const QString &wsName, bool logScale) {
   pyS.replace("%YAUTO%", params["YAxisAuto"]);
   pyS.replace("%YMIN%", params["YAxisMin"]);
   pyS.replace("%YMAX%", params["YAxisMax"]);
+  if (policy == MuonAnalysisOptionTab::PreviousWindow) {
+    pyS.replace("%FITSTOKEEP%", m_uiForm.spinBoxNPlotsToKeep->text());
+  } else {
+    pyS.replace("%FITSTOKEEP%", "-1");
+  }
 
   runPythonCode(pyS);
 }
@@ -2466,6 +2498,9 @@ void MuonAnalysis::changeTab(int newTabIndex) {
     // Say MantidPlot to use default fit prop. browser
     emit setFitPropertyBrowser(NULL);
 
+    // Reset cached config option
+    ConfigService::Instance().setString(PEAK_RADIUS_CONFIG, m_cachedPeakRadius);
+
     // Remove PP tool from any plots it was attached to
     disableAllTools();
 
@@ -2484,6 +2519,12 @@ void MuonAnalysis::changeTab(int newTabIndex) {
 
     // Say MantidPlot to use Muon Analysis fit prop. browser
     emit setFitPropertyBrowser(m_uiForm.fitBrowser);
+
+    // Muon scientists never fit peaks, hence they want the following
+    // parameter set to a high number
+    m_cachedPeakRadius =
+        ConfigService::Instance().getString(PEAK_RADIUS_CONFIG);
+    ConfigService::Instance().setString(PEAK_RADIUS_CONFIG, "99");
 
     // Show connected plot and attach PP tool to it (if has been assigned)
     if (m_currentDataName != NOT_AVAILABLE)
@@ -2546,9 +2587,9 @@ void MuonAnalysis::connectAutoUpdate() {
 
   // Grouping tab Auto Updates
   connect(m_uiForm.groupTablePlotChoice, SIGNAL(activated(int)), this,
-          SLOT(groupTabUpdatePlot()));
+          SLOT(groupTabUpdatePlotGroup()));
   connect(m_uiForm.pairTablePlotChoice, SIGNAL(activated(int)), this,
-          SLOT(groupTabUpdatePlot()));
+          SLOT(groupTabUpdatePlotPair()));
 
   // Settings tab Auto Updates
   connect(m_optionTab, SIGNAL(settingsTabUpdatePlot()), this,
@@ -2653,10 +2694,30 @@ void MuonAnalysis::homeTabUpdatePlot() {
     runFrontPlotButton();
 }
 
-void MuonAnalysis::groupTabUpdatePlot() {
+/**
+ * Update plot based on changes made in "Grouping Options" tab
+ * (e.g. plot type combo box changed)
+ * For group selected
+ */
+void MuonAnalysis::groupTabUpdatePlotGroup() {
   if (isAutoUpdateEnabled() && m_currentTab == m_uiForm.GroupingOptions &&
-      m_loaded)
-    runFrontPlotButton();
+      m_loaded) {
+    updateFront();
+    runTablePlotButton(ItemType::Group);
+  }
+}
+
+/**
+ * Update plot based on changes made in "Grouping Options" tab
+ * (e.g. plot type combo box changed)
+ * For pair selected
+ */
+void MuonAnalysis::groupTabUpdatePlotPair() {
+  if (isAutoUpdateEnabled() && m_currentTab == m_uiForm.GroupingOptions &&
+      m_loaded) {
+    updateFront();
+    runTablePlotButton(ItemType::Pair);
+  }
 }
 
 void MuonAnalysis::settingsTabUpdatePlot() {

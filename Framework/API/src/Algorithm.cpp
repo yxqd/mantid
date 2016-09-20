@@ -428,7 +428,7 @@ bool Algorithm::execute() {
   }
 
   notificationCenter().postNotification(new StartedNotification(this));
-  Mantid::Kernel::DateAndTime start_time;
+  Mantid::Kernel::DateAndTime startTime;
 
   // Return a failure if the algorithm hasn't been initialized
   if (!isInitialized()) {
@@ -527,23 +527,7 @@ bool Algorithm::execute() {
   // If checkGroups() threw an exception but there ARE group workspaces
   // (means that the group sizes were incompatible)
   if (callProcessGroups) {
-    // This calls this->execute() again on each member of the group.
-    start_time = Mantid::Kernel::DateAndTime::getCurrentTime();
-    // Start a timer
-    Timer timer;
-    // Call the concrete algorithm's exec method
-    const bool completed = processGroups();
-    // Check for a cancellation request in case the concrete algorithm doesn't
-    interruption_point();
-    // Get how long this algorithm took to run
-    const float duration = timer.elapsed();
-
-    if (completed) {
-      // Log that execution has completed.
-      reportCompleted(duration,
-                      true /*indicat that this is for group processing*/);
-    }
-    return completed;
+    return doCallProcessGroups(startTime);
   }
 
   // Read or write locks every input/output workspace
@@ -556,7 +540,7 @@ bool Algorithm::execute() {
         m_running = true;
       }
 
-      start_time = Mantid::Kernel::DateAndTime::getCurrentTime();
+      startTime = Mantid::Kernel::DateAndTime::getCurrentTime();
       // Start a timer
       Timer timer;
       // Call the concrete algorithm's exec method
@@ -569,7 +553,7 @@ bool Algorithm::execute() {
       // need it to throw before trying to run fillhistory() on an algorithm
       // which has failed
       if (trackingHistory() && m_history) {
-        m_history->fillAlgorithmHistory(this, start_time, duration,
+        m_history->fillAlgorithmHistory(this, startTime, duration,
                                         Algorithm::g_execCount);
         fillHistory();
         linkHistoryWithLastChild();
@@ -1198,6 +1182,46 @@ bool Algorithm::checkGroups() {
   return processGroups;
 }
 
+/**
+ * Calls process groups with the required timing checks and algorithm
+ * execution finalization steps.
+ *
+ * @param startTime to record the algorithm execution start
+ *
+ * @return whether processGroups succeeds.
+ */
+bool Algorithm::doCallProcessGroups(Mantid::Kernel::DateAndTime &startTime) {
+  // In the base implementation of processGroups, this normally calls
+  // this->execute() again on each member of the group. Other algorithms may
+  // choose to override that behavior (examples: CompareWorkspaces,
+  // CheckWorkspacesMatch, RenameWorkspace)
+
+  startTime = Mantid::Kernel::DateAndTime::getCurrentTime();
+  // Start a timer
+  Timer timer;
+  // Call the concrete algorithm's processGroups method
+  const bool completed = processGroups();
+  // Check for a cancellation request in case the concrete algorithm doesn't
+  interruption_point();
+
+  if (completed) {
+    // in the base processGroups each individual exec stores its outputs
+    if (!m_usingBaseProcessGroups && (!isChild() || m_alwaysStoreInADS))
+      this->store();
+
+    // Get how long this algorithm took to run
+    const float duration = timer.elapsed();
+    // Log that execution has completed.
+    reportCompleted(duration, true /* this is for group processing*/);
+  }
+
+  setExecuted(completed);
+  notificationCenter().postNotification(
+      new FinishedNotification(this, isExecuted()));
+
+  return completed;
+}
+
 //--------------------------------------------------------------------------------------------
 /** Process WorkspaceGroup inputs.
  *
@@ -1211,6 +1235,8 @@ bool Algorithm::checkGroups() {
  * @return true - if all the workspace members are executed.
  */
 bool Algorithm::processGroups() {
+  m_usingBaseProcessGroups = true;
+
   std::vector<WorkspaceGroup_sptr> outGroups;
 
   // ---------- Create all the output workspaces ----------------------------
@@ -1225,11 +1251,14 @@ bool Algorithm::processGroups() {
     }
   }
 
+  double progress_proportion = 1.0 / static_cast<double>(m_groupSize);
   // Go through each entry in the input group(s)
   for (size_t entry = 0; entry < m_groupSize; entry++) {
     // use create Child Algorithm that look like this one
     Algorithm_sptr alg_sptr = this->createChildAlgorithm(
-        this->name(), -1, -1, this->isLogging(), this->version());
+        this->name(), progress_proportion * static_cast<double>(entry),
+        progress_proportion * (1 + static_cast<double>(entry)),
+        this->isLogging(), this->version());
     // Don't make the new algorithm a child so that it's workspaces are stored
     // correctly
     alg_sptr->setChild(false);
@@ -1240,7 +1269,7 @@ bool Algorithm::processGroups() {
     // Set all non-workspace properties
     this->copyNonWorkspaceProperties(alg, int(entry) + 1);
 
-    std::string outputBaseName = "";
+    std::string outputBaseName;
 
     // ---------- Set all the input workspaces ----------------------------
     for (size_t iwp = 0; iwp < m_groups.size(); iwp++) {
@@ -1335,11 +1364,6 @@ bool Algorithm::processGroups() {
   for (auto &outGroup : outGroups) {
     outGroup->observeADSNotifications(true);
   }
-
-  // We finished successfully.
-  setExecuted(true);
-  notificationCenter().postNotification(
-      new FinishedNotification(this, isExecuted()));
 
   return true;
 }

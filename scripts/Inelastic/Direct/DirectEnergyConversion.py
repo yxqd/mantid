@@ -1,7 +1,8 @@
 ﻿#pylint: disable=too-many-lines
 #pylint: disable=invalid-name
+#pylind: disable=attribute-defined-outside-init
 from mantid.simpleapi import *
-from mantid.kernel import funcreturns
+from mantid.kernel import funcinspect
 from mantid import geometry,api
 
 import os.path
@@ -30,7 +31,7 @@ def setup_reducer(inst_name,reload_instrument=False):
         raise RuntimeError('Unknown instrument "%s" or wrong IDF file for this instrument, cannot continue' % inst_name)
 
 #How could it be that abstract class is not referenced R0921? What it means?
-#pylint: disable=too-many-instance-attributes,R0921
+#pylint: disable=too-many-instance-attributes
 class DirectEnergyConversion(object):
     """
     Performs a convert to energy assuming the provided instrument is
@@ -189,7 +190,7 @@ class DirectEnergyConversion(object):
         # output workspace name.
         try:
 #pylint: disable=unused-variable
-            n,r = funcreturns.lhs_info('both')
+            n,r = funcinspect.lhs_info('both')
             out_ws_name = r[0]
 #pylint: disable=bare-except
         except:
@@ -212,9 +213,14 @@ class DirectEnergyConversion(object):
                 # data file.  SNS or 1 to 1 maps may probably avoid this
                 # stuff and can load masks directly
                 white_data = white.get_ws_clone('white_ws_clone')
+                if self.prop_man.mapmask_ref_ws is None:
+                    ref_ws = white.get_workspace()
+                else:
+                    ref_ws = self.prop_man.mapmask_ref_ws
                 idf_file = api.ExperimentInfo.getInstrumentFilename(self.instr_name)
                 diag_mask = LoadMask(Instrument=idf_file,InputFile=self.hard_mask_file,\
-                                 OutputWorkspace='hard_mask_ws')
+                                 OutputWorkspace='hard_mask_ws',RefWorkspace = ref_ws)
+                #
                 MaskDetectors(Workspace=white_data, MaskedWorkspace=diag_mask)
                 white.add_masked_ws(white_data)
                 DeleteWorkspace(Workspace='white_ws_clone')
@@ -343,6 +349,7 @@ class DirectEnergyConversion(object):
 #pylint: disable=too-many-arguments
 #pylint: disable=too-many-branches
 #pylint: disable=too-many-locals
+#pylint: disable=W0621
     def convert_to_energy(self,wb_run=None,sample_run=None,ei_guess=None,rebin=None,map_file=None,
                           monovan_run=None,wb_for_monovan_run=None,**kwargs):
         """ One step conversion of run into workspace containing information about energy transfer
@@ -357,7 +364,7 @@ class DirectEnergyConversion(object):
 
         # output workspace name.
         try:
-            _,r = funcreturns.lhs_info('both')
+            _,r = funcinspect.lhs_info('both')
             out_ws_name = r[0]
 #pylint: disable=bare-except
         except:

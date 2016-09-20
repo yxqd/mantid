@@ -319,8 +319,6 @@ void LoadEventPreNexus2::init() {
   setPropertyGroup("DBOutputBlockNumber", dbgrp);
   setPropertyGroup("DBNumberOutputEvents", dbgrp);
   setPropertyGroup("DBNumberOutputPulses", dbgrp);
-
-  return;
 }
 
 //----------------------------------------------------------------------------------------------
@@ -396,8 +394,6 @@ void LoadEventPreNexus2::exec() {
 
   // Cleanup
   delete prog;
-
-  return;
 } // exec()
 
 //------------------------------------------------------------------------------------------------
@@ -448,7 +444,14 @@ void LoadEventPreNexus2::createOutputWorkspace(
   }
   this->loadPixelMap(mapping_filename);
 
-  return;
+  // Replace workspace by workspace of correct size
+  // Number of non-monitors in instrument
+  size_t nSpec = localWorkspace->getInstrument()->getDetectorIDs(true).size();
+  if (!this->spectra_list.empty())
+    nSpec = this->spectra_list.size();
+  auto tmp = createWorkspace<EventWorkspace>(nSpec, 2, 1);
+  WorkspaceFactory::Instance().initializeFromParent(localWorkspace, tmp, true);
+  localWorkspace = std::move(tmp);
 }
 
 //------------------------------------------------------------------------------------------------
@@ -478,8 +481,6 @@ void LoadEventPreNexus2::unmaskVetoEventIndex() {
     PARALLEL_END_INTERUPT_REGION
   }
   PARALLEL_CHECK_INTERUPT_REGION
-
-  return;
 }
 
 //------------------------------------------------------------------------------------------------
@@ -553,8 +554,6 @@ void LoadEventPreNexus2::processImbedLogs() {
     g_log.notice() << "Processed imbedded log " << logname << "\n";
 
   } // ENDFOR pit
-
-  return;
 }
 
 //----------------------------------------------------------------------------------------------
@@ -586,8 +585,6 @@ void LoadEventPreNexus2::addToWorkspaceLog(std::string logtitle,
   g_log.information() << "Size of Property " << property->name() << " = "
                       << property->size() << " vs Original Log Size = " << nbins
                       << "\n";
-
-  return;
 }
 
 //----------------------------------------------------------------------------------------------
@@ -700,6 +697,13 @@ void LoadEventPreNexus2::procEvents(
     if (it->first > detid_max)
       detid_max = it->first;
 
+  // For slight speed up
+  loadOnlySomeSpectra = (!this->spectra_list.empty());
+
+  // Turn the spectra list into a map, for speed of access
+  for (auto &spectrum : spectra_list)
+    spectraLoadMap[spectrum] = true;
+
   // Pad all the pixels
   prog->report("Padding Pixels");
   this->pixel_to_wkspindex.reserve(
@@ -707,23 +711,22 @@ void LoadEventPreNexus2::procEvents(
   // Set to zero
   this->pixel_to_wkspindex.assign(detid_max + 1, 0);
   size_t workspaceIndex = 0;
+  specnum_t spectrumNumber = 1;
   for (it = detector_map.begin(); it != detector_map.end(); it++) {
     if (!it->second->isMonitor()) {
-      this->pixel_to_wkspindex[it->first] = workspaceIndex;
-      EventList &spec = workspace->getOrAddEventList(workspaceIndex);
-      spec.addDetectorID(it->first);
-      // Start the spectrum number at 1
-      spec.setSpectrumNo(specnum_t(workspaceIndex + 1));
-      workspaceIndex += 1;
+      if (!loadOnlySomeSpectra ||
+          (spectraLoadMap.find(it->first) != spectraLoadMap.end())) {
+        this->pixel_to_wkspindex[it->first] = workspaceIndex;
+        EventList &spec = workspace->getSpectrum(workspaceIndex);
+        spec.setDetectorID(it->first);
+        spec.setSpectrumNo(spectrumNumber);
+        ++workspaceIndex;
+      } else {
+        this->pixel_to_wkspindex[it->first] = -1;
+      }
+      ++spectrumNumber;
     }
   }
-
-  // For slight speed up
-  loadOnlySomeSpectra = (!this->spectra_list.empty());
-
-  // Turn the spectra list into a map, for speed of access
-  for (auto &spectrum : spectra_list)
-    spectraLoadMap[spectrum] = true;
 
   CPUTimer tim;
 
@@ -755,13 +758,9 @@ void LoadEventPreNexus2::procEvents(
       EventWorkspace_sptr partWS;
       if (parallelProcessing) {
         prog->report("Creating Partial Workspace");
-        // Create a partial workspace
-        partWS = EventWorkspace_sptr(new EventWorkspace());
-        // Make sure to initialize.
-        partWS->initialize(1, 1, 1);
-        // Copy all the spectra numbers and stuff (no actual events to copy
-        // though).
-        partWS->copyDataFrom(*workspace);
+        // Create a partial workspace, copy all the spectra numbers and stuff
+        // (no actual events to copy though).
+        partWS = workspace->clone();
         // Push it in the array
         partWorkspaces[i] = partWS;
       } else
@@ -777,7 +776,10 @@ void LoadEventPreNexus2::procEvents(
       for (detid_t j = 0; j < detid_max + 1; j++) {
         size_t wi = pixel_to_wkspindex[j];
         // Save a POINTER to the vector<tofEvent>
-        theseEventVectors[j] = &partWS->getSpectrum(wi).getEvents();
+        if (wi != static_cast<size_t>(-1))
+          theseEventVectors[j] = &partWS->getSpectrum(wi).getEvents();
+        else
+          theseEventVectors[j] = nullptr;
       }
     }
 
@@ -894,11 +896,6 @@ void LoadEventPreNexus2::procEvents(
     //-------------------------------------------------------------------------
     // Finalize loading
     //-------------------------------------------------------------------------
-    prog->report("Deleting Empty Lists");
-
-    if (loadOnlySomeSpectra)
-      workspace->deleteEmptyLists();
-
     prog->report("Setting proton charge");
     this->setProtonCharge(workspace);
     g_log.debug() << tim << " to set the proton charge log."
@@ -908,11 +905,7 @@ void LoadEventPreNexus2::procEvents(
     workspace->clearMRU();
 
     // Now, create a default X-vector for histogramming, with just 2 bins.
-    Kernel::cow_ptr<MantidVec> axis;
-    MantidVec &xRef = axis.access();
-    xRef.resize(2);
-    xRef[0] = shortest_tof - 1; // Just to make sure the bins hold it all
-    xRef[1] = longest_tof + 1;
+    auto axis = HistogramData::BinEdges{shortest_tof - 1, longest_tof + 1};
     workspace->setAllX(axis);
     this->pixel_to_wkspindex.clear();
 
@@ -950,9 +943,6 @@ void LoadEventPreNexus2::procEvents(
       g_log.notice() << "Pixel " << tmpid << ":  Total number of events = "
                      << this->wrongdetid_pulsetimes[vindex].size() << '\n';
     }
-
-    return;
-
 } // End of procEvents
 
 //----------------------------------------------------------------------------------------------
@@ -1075,17 +1065,10 @@ void LoadEventPreNexus2::procEventsLinear(
       if (tof > local_longest_tof)
         local_longest_tof = tof;
 
-// This is equivalent to
-// workspace->getSpectrum(this->pixel_to_wkspindex[pid]).addEventQuickly(event);
-// But should be faster as a bunch of these calls were cached.
-#if defined(__GNUC__) && !(defined(__INTEL_COMPILER)) && !(defined(__clang__))
-      // This avoids a copy constructor call but is only available with GCC
-      // (requires variadic templates)
+      // This is equivalent to
+      // workspace->getSpectrum(this->pixel_to_wkspindex[pid]).addEventQuickly(event);
+      // But should be faster as a bunch of these calls were cached.
       arrayOfVectors[pid]->emplace_back(tof, pulsetime);
-#else
-      arrayOfVectors[pid]->push_back(TofEvent(tof, pulsetime));
-#endif
-
       ++local_num_good_events;
     } else {
       // Special events/Wrong detector id
@@ -1175,8 +1158,6 @@ void LoadEventPreNexus2::procEventsLinear(
     if (local_longest_tof > longest_tof)
       longest_tof = local_longest_tof;
   } // END_CRITICAL
-
-  return;
 }
 
 //----------------------------------------------------------------------------------------------
@@ -1218,8 +1199,6 @@ void LoadEventPreNexus2::setProtonCharge(
 
   g_log.information() << "Total proton charge of " << integ
                       << " microAmp*hours found by integrating.\n";
-
-  return;
 }
 
 //-----------------------------------------------------------------------------
@@ -1290,8 +1269,6 @@ void LoadEventPreNexus2::openEventFile(const std::string &filename) {
   }
 
   g_log.information() << "Reading " << max_events << " event records\n";
-
-  return;
 }
 
 //-----------------------------------------------------------------------------
@@ -1391,8 +1368,6 @@ void LoadEventPreNexus2::processInvestigationInputs() {
     m_dbOpNumPulses = static_cast<size_t>(dbnumpulses);
   else
     m_dbOpNumPulses = 0;
-
-  return;
 }
 
 } // namespace DataHandling

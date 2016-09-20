@@ -1,11 +1,11 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
+#include "MantidHistogramData/LinearGenerator.h"
+#include "MantidAlgorithms/GravitySANSHelper.h"
 #include "MantidAlgorithms/Qxy.h"
 #include "MantidAlgorithms/Qhelper.h"
 #include "MantidAPI/BinEdgeAxis.h"
 #include "MantidAPI/HistogramValidator.h"
 #include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/SpectrumInfo.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidGeometry/Instrument.h"
@@ -109,10 +109,8 @@ void Qxy::exec() {
   MatrixWorkspace_sptr weights =
       WorkspaceFactory::Instance().create(outputWorkspace);
   // Copy the X values from the output workspace to the solidAngles one
-  cow_ptr<MantidVec> axis;
-  axis.access() = outputWorkspace->readX(0);
   for (size_t i = 0; i < weights->getNumberHistograms(); ++i)
-    weights->setX(i, axis);
+    weights->setX(i, outputWorkspace->refX(0));
 
   const size_t numSpec = inputWorkspace->getNumberHistograms();
   const size_t numBins = inputWorkspace->blocksize();
@@ -194,7 +192,8 @@ void Qxy::exec() {
     // constructed once per spectrum
     GravitySANSHelper grav;
     if (doGravity) {
-      grav = GravitySANSHelper(inputWorkspace, det, getProperty("ExtraLength"));
+      grav = GravitySANSHelper(inputWorkspace->spectrumInfo(), i,
+                               getProperty("ExtraLength"));
     }
 
     for (int j = static_cast<int>(numBins) - 1; j >= static_cast<int>(wavStart);
@@ -371,20 +370,17 @@ Qxy::setUpOutputWorkspace(API::MatrixWorkspace_const_sptr inputWorkspace) {
   outputWorkspace->replaceAxis(1, verticalAxis);
 
   // Build up the X values
-  Kernel::cow_ptr<MantidVec> axis;
-  MantidVec &horizontalAxisRef = axis.access();
-  horizontalAxisRef.resize(bins);
+  HistogramData::BinEdges axis(bins,
+                               HistogramData::LinearGenerator(startVal, delta));
   for (int i = 0; i < bins; ++i) {
     const double currentVal = startVal + i * delta;
-    // Set the X value
-    horizontalAxisRef[i] = currentVal;
     // Set the Y value on the axis
     verticalAxis->setValue(i, currentVal);
   }
 
   // Fill the X vectors in the output workspace
   for (int i = 0; i < bins - 1; ++i) {
-    outputWorkspace->setX(i, axis);
+    outputWorkspace->setBinEdges(i, axis);
     for (int j = 0; j < bins - j; ++j) {
       outputWorkspace->dataY(i)[j] = std::numeric_limits<double>::quiet_NaN();
       outputWorkspace->dataE(i)[j] = std::numeric_limits<double>::quiet_NaN();

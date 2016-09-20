@@ -206,10 +206,7 @@ void SetupHFIRReduction::init() {
 
   // Transmission
   std::string trans_grp = "Transmission";
-  std::vector<std::string> transOptions;
-  transOptions.emplace_back("Value");
-  transOptions.emplace_back("DirectBeam");
-  transOptions.emplace_back("BeamSpreader");
+  std::vector<std::string> transOptions{"Value", "DirectBeam", "BeamSpreader"};
   declareProperty("TransmissionMethod", "Value",
                   boost::make_shared<StringListValidator>(transOptions),
                   "Transmission determination method");
@@ -903,6 +900,24 @@ void SetupHFIRReduction::setupSensitivity(
     const double maxEff = getProperty("MaxEfficiency");
     const double sensitivityBeamCenterX = getProperty("SensitivityBeamCenterX");
     const double sensitivityBeamCenterY = getProperty("SensitivityBeamCenterY");
+    const std::string maskFullComponent =
+        getPropertyValue("MaskedFullComponent");
+    const std::string maskComponent = getPropertyValue("MaskedComponent");
+
+    // nx_low=0, nx_high=0, ny_low=0, ny_high=0
+    std::vector<int> maskEdges = getProperty("MaskedEdges");
+    // it only make sense masking edges for sensitivity if there are a lot of
+    // pixels masked
+    // Let'a assume more than 10:
+    std::stringstream maskEdgesStringStream;
+    for (size_t i = 0; i < maskEdges.size(); i++) {
+      if (i != 0)
+        maskEdgesStringStream << ",";
+      if (maskEdges[i] <= 10)
+        maskEdgesStringStream << 0;
+      else
+        maskEdgesStringStream << maskEdges[i];
+    }
 
     IAlgorithm_sptr effAlg = createChildAlgorithm("SANSSensitivityCorrection");
     effAlg->setProperty("Filename", sensitivityFile);
@@ -910,6 +925,9 @@ void SetupHFIRReduction::setupSensitivity(
     effAlg->setProperty("DarkCurrentFile", sensitivityDarkCurrentFile);
     effAlg->setProperty("MinEfficiency", minEff);
     effAlg->setProperty("MaxEfficiency", maxEff);
+    effAlg->setProperty("MaskedFullComponent", maskFullComponent);
+    effAlg->setProperty("MaskedComponent", maskComponent);
+    effAlg->setPropertyValue("MaskedEdges", maskEdgesStringStream.str());
 
     // Beam center option for sensitivity data
     const std::string centerMethod =

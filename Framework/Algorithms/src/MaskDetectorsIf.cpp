@@ -70,7 +70,7 @@ void MaskDetectorsIf::exec() {
     if (dets.empty())
       continue;
     else {
-      double val = inputW->readY(i)[0];
+      double val = inputW->y(i)[0];
       if (compar_f(val, value)) {
         for (auto det : dets) {
           umap.emplace(det, select_on);
@@ -84,7 +84,6 @@ void MaskDetectorsIf::exec() {
   std::string newf = getProperty("OutputCalFile");
   progress(0.99, "Creating new cal file");
   createNewCalFile(oldf, newf);
-  return;
 }
 
 /**
@@ -126,8 +125,6 @@ void MaskDetectorsIf::retrieveProperties() {
   if (newf.empty()) {
     throw std::runtime_error("OutputCalFile is empty. Enter a filename");
   }
-
-  return;
 }
 
 /**
@@ -173,7 +170,6 @@ void MaskDetectorsIf::createNewCalFile(const std::string &oldfile,
   }
   oldf.close();
   newf.close();
-  return;
 }
 
 std::string

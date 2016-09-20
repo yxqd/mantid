@@ -69,7 +69,6 @@ stresstesting.MantidStressTest
 
 import stresstesting
 import os
-import platform
 from abc import ABCMeta, abstractmethod
 
 from mantid.simpleapi import *
@@ -328,106 +327,6 @@ class IRISMultiFileSummedReduction(ISISIndirectInelasticReduction):
 
 #==============================================================================
 
-class ISISIndirectInelasticReductionOutput(stresstesting.MantidStressTest):
-
-    def runTest(self):
-        self.file_formats = ['nxs', 'spe', 'nxspe', 'ascii', 'aclimax']
-        self.file_extensions = ['.nxs', '.spe', '.nxspe', '.dat', '_aclimax.dat']
-
-        self.instr_name = 'TOSCA'
-        self.detector_range = [1, 140]
-        self.data_files = ['TSC15352.raw']
-        self.rebin_string = '-2.5,0.015,3,-0.005,1000'
-
-        reductions = ISISIndirectEnergyTransfer(Instrument=self.instr_name,
-                                                Analyser='graphite',
-                                                Reflection='002',
-                                                InputFiles=self.data_files,
-                                                SpectraRange=self.detector_range,
-                                                RebinString=self.rebin_string,
-                                                SaveFormats=self.file_formats)
-
-        self.result_name = reductions[0].getName()
-
-    def validate(self):
-        self.output_file_names = self._get_file_names()
-        self.assert_reduction_output_exists(self.output_file_names)
-        self.assert_ascii_file_matches()
-        self.assert_aclimax_file_matches()
-        self.assert_spe_file_matches()
-
-    def cleanup(self):
-        mtd.clear()
-
-        for file_path in self.output_file_names.itervalues():
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-
-    def assert_ascii_file_matches(self):
-        expected_result = [
-            'X , Y0 , E0 , Y1 , E1 , Y2 , E2',
-            '-2.4925,0,0,0.617579,0.362534,0.270868,0.159006',
-            '-2.4775,0.375037,0.273017,0,0,0.210547,0.153272'
-        ]
-        self.assert_file_format_matches_expected(expected_result, self.output_file_names['ascii'],
-                                                 "Output of ASCII format did not match expected result.")
-
-    def assert_aclimax_file_matches(self):
-        expected_result = [
-            '# X \t Y \t E',
-            '0',
-            '3.0075\t0.175435\t0.115017'
-        ]
-        self.assert_file_format_matches_expected(expected_result, self.output_file_names['aclimax'],
-                                                 "Output of aclimax format did not match expected result.")
-
-    def assert_spe_file_matches(self):
-        #Old SPE format:
-        #   '       3    1532',
-        #   '### Phi Grid',
-        #   ' 5.000E-01 1.500E+00 2.500E+00 3.500E+00',
-        #   '### Energy Grid',
-        #   '-2.500E+00-2.485E+00-2.470E+00-2.455E+00-2.440E+00-2.425E+00-2.410E+00-2.395E+00'
-        #
-        # New SPE format:
-        expected_result = [
-            '       3    1532',
-            '### Phi Grid',
-            '0.5       1.5       2.5       3.5',
-            '### Energy Grid',
-            '-2.5      -2.485    -2.47     -2.455    -2.44     -2.425    -2.41     -2.395'
-        ]
-        self.assert_file_format_matches_expected(expected_result, self.output_file_names['spe'],
-                                                 "Output of SPE format did not match expected result.")
-
-    def assert_reduction_output_exists(self, output_file_names):
-        for file_path in output_file_names.itervalues():
-            self.assertTrue(os.path.exists(file_path), "File does not exist in the default save directory")
-            self.assertTrue(os.path.isfile(file_path), "Output file of reduction output is not a file.")
-
-    def assert_file_format_matches_expected(self, expected_result, file_path, msg=""):
-        num_lines = len(expected_result)
-        actual_result = self._read_ascii_file(file_path, num_lines)
-        self.assertTrue(actual_result == expected_result, msg + " (%s != %s)" % (actual_result, expected_result))
-
-    def _read_ascii_file(self, path, num_lines):
-        with open(path,'rb') as file_handle:
-            lines = [file_handle.readline().rstrip() for _ in xrange(num_lines)]
-            return lines
-
-    def _get_file_names(self):
-        working_directory = config['defaultsave.directory']
-
-        output_names = {}
-        for file_format, ext in zip(self.file_formats, self.file_extensions):
-            output_file_name = self.result_name + ext
-            output_file_name = os.path.join(working_directory, output_file_name)
-            output_names[file_format] = output_file_name
-
-        return output_names
-
-#==============================================================================
-
 class ISISIndirectInelasticCalibration(ISISIndirectInelasticBase):
     '''A base class for the ISIS indirect inelastic calibration tests
 
@@ -675,7 +574,7 @@ class ISISIndirectInelasticMoments(ISISIndirectInelasticBase):
 
         SofQWMoments(Sample=self.input_workspace, EnergyMin=self.e_min,
                      EnergyMax=self.e_max, Scale=self.scale,
-                     Plot=False, Save=False, OutputWorkspace=self.input_workspace + '_Moments')
+                     OutputWorkspace=self.input_workspace + '_Moments')
 
         self.result_names = [self.input_workspace + '_Moments']
 
@@ -742,7 +641,7 @@ class ISISIndirectInelasticElwinAndMSDFit(ISISIndirectInelasticBase):
             Load(Filename=filename, OutputWorkspace=filename)
         GroupWorkspaces(InputWorkspaces=self.files, OutputWorkspace=elwin_input)
 
-        ElasticWindowMultiple(InputWorkspaces=elwin_input, Plot=False,
+        ElasticWindowMultiple(InputWorkspaces=elwin_input,
                               IntegrationRangeStart=self.eRange[0], IntegrationRangeEnd=self.eRange[1],
                               OutputInQ=elwin_results[0], OutputInQSquared=elwin_results[1],
                               OutputELF=elwin_results[2])
@@ -759,8 +658,7 @@ class ISISIndirectInelasticElwinAndMSDFit(ISISIndirectInelasticBase):
         msdfit_result = MSDFit(InputWorkspace=eq2_file,
                                XStart=self.startX,
                                XEnd=self.endX,
-                               SpecMax=1,
-                               Plot=False)
+                               SpecMax=1)
 
         # Clean up the intermediate files.
         for filename in int_files:
@@ -1012,38 +910,29 @@ class ISISIndirectInelasticIqtAndIqtFitMulti(ISISIndirectInelasticBase):
 
 class OSIRISIqtAndIqtFitMulti(ISISIndirectInelasticIqtAndIqtFitMulti):
 
-    def skipTests(self):
-        operating_sys = platform.system()
-        # Skip Test on Windows and OSX
-        if operating_sys == "Darwin" or operating_sys == "Windows":
-            return True
-
     def __init__(self):
         ISISIndirectInelasticIqtAndIqtFitMulti.__init__(self)
 
         # TransformToIqt
-        self.samples = ['osi97935_graphite002_red.nxs']
+        self.samples = ['osiris97944_graphite002_red.nxs']
         self.resolution = 'osi97935_graphite002_res.nxs'
         self.e_min = -0.4
         self.e_max = 0.4
         self.num_bins = 4
 
         # Iqt Fit
-        self.func = r'name=LinearBackground,A0=0.510595,A1=0,ties=(A1=0);name=UserFunction,Formula=Intensity*exp( -(x/Tau)^Beta),'\
-                     'Intensity=0.489405,Tau=0.105559,Beta=1.61112e-14;ties=(f1.Intensity=1-f0.A0)'
+        self.func = r'name=LinearBackground,A0=0.213439,A1=0,ties=(A1=0);name=UserFunction,'\
+                    'Formula=Intensity*exp(-(x/Tau)^Beta),Intensity=0.786561,Tau=0.0247894,'\
+                    'Beta=1;ties=(f1.Intensity=1-f0.A0)'
         self.ftype = '1E_s'
         self.startx = 0.0
-        self.endx = 0.119681
+        self.endx = 0.12
         self.spec_min = 0
         self.spec_max = 41
 
     def get_reference_files(self):
-        ref_files = ['II.OSIRISFury.nxs']
-        if platform.system() == "Windows":
-            ref_files += ['II.OSIRISFuryFitMulti_win.nxs']
-        else:
-            ref_files += ['II.OSIRISFuryFitMulti_lin.nxs']
-        return ref_files
+        return ['II.OSIRISIqt.nxs',
+                'II.OSIRISIqtFitMulti.nxs']
 
 #------------------------- IRIS tests -----------------------------------------
 
@@ -1097,7 +986,8 @@ class ISISIndirectInelasticConvFit(ISISIndirectInelasticBase):
             EndX=self.endx,
             BackgroundType=self.bg,
             SpecMin=self.spectra_min,
-            SpecMax=self.spectra_max)
+            SpecMax=self.spectra_max,
+            OutputWorkspace='result')
 
     def _validate_properties(self):
         '''Check the object properties are in an expected state to continue'''

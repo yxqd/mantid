@@ -2,15 +2,17 @@
 // Includes
 //-------------------------------------------
 #include "ScriptingWindow.h"
+#include "ApplicationWindow.h"
 #include "MultiTabScriptInterpreter.h"
 #include "ScriptingEnv.h"
 #include "ScriptFileInterpreter.h"
+#include "MantidQtAPI/TSVSerialiser.h"
 #include "pixmaps.h"
 
 // Mantid
 #include "MantidKernel/ConfigService.h"
 #include "MantidKernel/Logger.h"
-#include "ApplicationWindow.h"
+#include "MantidQtAPI/IProjectSerialisable.h"
 
 // MantidQt
 #include "MantidQtAPI/HelpWindow.h"
@@ -32,6 +34,8 @@
 #include <QTextStream>
 #include <QList>
 #include <QUrl>
+
+using namespace Mantid;
 
 namespace {
 /// static logger
@@ -65,6 +69,18 @@ ScriptingWindow::ScriptingWindow(ScriptingEnv *env, bool capturePrint,
 
   setWindowIcon(QIcon(":/MantidPlot_Icon_32offset.png"));
   setWindowTitle("MantidPlot: " + env->languageName() + " Window");
+
+#ifdef Q_OS_MAC
+  // Work around to ensure that floating windows remain on top of the main
+  // application window, but below other applications on Mac.
+  // Note: Qt::Tool cannot have both a max and min button on OSX
+  flags |= Qt::Tool;
+  flags |= Qt::Dialog;
+  flags |= Qt::CustomizeWindowHint;
+  flags |= Qt::WindowMinimizeButtonHint;
+  flags |= Qt::WindowCloseButtonHint;
+  setWindowFlags(flags);
+#endif
 }
 
 /**
@@ -300,6 +316,16 @@ void ScriptingWindow::updateWindowFlags() {
   if (m_alwaysOnTop->isChecked()) {
     flags |= Qt::WindowStaysOnTopHint;
   }
+#ifdef Q_OS_MAC
+  // Work around to ensure that floating windows remain on top of the main
+  // application window, but below other applications on Mac.
+  // Note: Qt::Tool cannot have both a max and min button on OSX
+  flags |= Qt::Tool;
+  flags |= Qt::CustomizeWindowHint;
+  flags |= Qt::WindowMinimizeButtonHint;
+  flags |= Qt::WindowCloseButtonHint;
+  setWindowFlags(flags);
+#endif
   setWindowFlags(flags);
   // This is necessary due to the setWindowFlags function reparenting the window
   // and causing is
@@ -408,10 +434,55 @@ void ScriptingWindow::showPythonHelp() {
 }
 
 /**
- * calls MultiTabScriptInterpreter saveToString and
- *  saves the currently opened script file names to a string
+  * Calls MultiTabScriptInterpreter to save the currently opened
+  * script file names to a string.
+  *
+  * @param app :: the current application window instance
+  * @return script file names in the matid project format
+  */
+std::string ScriptingWindow::saveToProject(ApplicationWindow *app) {
+  (void)app; // suppress unused variable warnings
+  return m_manager->saveToString().toStdString();
+}
+
+/**
+ * Load script files from the project file
+ *
+ * @param lines :: raw lines from the project file
+ * @param app :: the current application window instance
+ * @param fileVersion :: the file version used when saved
  */
-QString ScriptingWindow::saveToString() { return m_manager->saveToString(); }
+void ScriptingWindow::loadFromProject(const std::string &lines,
+                                      ApplicationWindow *app,
+                                      const int fileVersion) {
+  Q_UNUSED(fileVersion);
+
+  MantidQt::API::TSVSerialiser sTSV(lines);
+  QStringList files;
+
+  setWindowTitle("MantidPlot: " + app->scriptingEnv()->languageName() +
+                 " Window");
+
+  auto scriptNames = sTSV.values("ScriptNames");
+
+  // Iterate, ignoring scriptNames[0] which is just "ScriptNames"
+  for (size_t i = 1; i < scriptNames.size(); ++i)
+    files.append(QString::fromStdString(scriptNames[i]));
+
+  loadFromFileList(files);
+}
+
+/**
+ * Load script files from a list of file names
+ * @param files :: List of file names to oepn
+ */
+void ScriptingWindow::loadFromFileList(const QStringList &files) {
+  for (auto file = files.begin(); file != files.end(); ++file) {
+    if (file->isEmpty())
+      continue;
+    openUnique(*file);
+  }
+}
 
 /**
  * Saves scripts file names to a string

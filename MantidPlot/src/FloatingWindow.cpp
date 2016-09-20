@@ -29,7 +29,6 @@ FloatingWindow::FloatingWindow(ApplicationWindow *appWindow, Qt::WindowFlags f)
       m_isInsideTiledWindow(false), m_dragMouseDown(false) {
   setFocusPolicy(Qt::StrongFocus);
   setWindowIcon(QIcon(":/MantidPlot_Icon_32offset.png"));
-  connect(appWindow, SIGNAL(shutting_down()), this, SLOT(close()));
 #ifdef Q_OS_WIN
   // remember the flags
   m_flags = windowFlags();
@@ -39,11 +38,21 @@ FloatingWindow::FloatingWindow(ApplicationWindow *appWindow, Qt::WindowFlags f)
   // Instead, the ApplicationWindow->removeFloatingWindow() call takes care of
   // calling deleteLater().
   setAttribute(Qt::WA_DeleteOnClose, false);
+
+#ifdef Q_OS_MAC
+  // Work around to ensure that floating windows remain on top of the main
+  // application window, but below other applications on Mac
+  // Note: Qt::Tool cannot have both a max and min button on OSX
+  auto flags = windowFlags();
+  flags |= Qt::Tool;
+  flags |= Qt::CustomizeWindowHint;
+  flags |= Qt::WindowMinimizeButtonHint;
+  flags |= Qt::WindowCloseButtonHint;
+  setWindowFlags(flags);
+#endif
 }
 
-FloatingWindow::~FloatingWindow() {
-  // std::cerr << "Deleted FloatingWindow\n";
-}
+FloatingWindow::~FloatingWindow() {}
 
 /**
   * Returns the inner MdiSubWindow.
