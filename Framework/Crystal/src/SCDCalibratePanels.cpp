@@ -161,8 +161,6 @@ void SCDCalibratePanels::exec() {
   int nPeaks = static_cast<int>(peaksWs->getNumberPeaks());
   bool changeL1 = getProperty("ChangeL1");
   bool changeSize = getProperty("ChangePanelSize");
-  std::vector<std::string> fit_workspaces;
-  std::vector<std::string> parameter_workspaces;
 
   if (changeL1)
     findL1(nPeaks, peaksWs);
@@ -170,6 +168,9 @@ void SCDCalibratePanels::exec() {
   for (int i = 0; i < nPeaks; ++i) {
     MyBankNames.insert(peaksWs->getPeak(i).getBankName());
   }
+
+  std::vector<std::string> fit_workspaces(MyBankNames.size(), "fit_");
+  std::vector<std::string> parameter_workspaces(MyBankNames.size(), "params_");
 
   PARALLEL_FOR1(peaksWs)
   for (int i = 0; i < static_cast<int>(MyBankNames.size()); ++i) {
@@ -285,16 +286,23 @@ void SCDCalibratePanels::exec() {
       scaleHeight = paramsWS->getRef<double>("Value", 7);
     }
     AnalysisDataService::Instance().remove(bankName);
-    PARALLEL_CRITICAL(afterFit2) {
-      SCDPanelErrors det;
-      det.moveDetector(xShift, yShift, zShift, xRotate, yRotate, zRotate,
-                       scaleWidth, scaleHeight, iBank, peaksWs);
-      parameter_workspaces.push_back("params_" + iBank);
-      fit_workspaces.push_back("fit_" + iBank);
-    }
+    SCDPanelErrors det;
+    det.moveDetector(xShift, yShift, zShift, xRotate, yRotate, zRotate,
+                     scaleWidth, scaleHeight, iBank, peaksWs);
+    parameter_workspaces[i] += iBank;
+    fit_workspaces[i] += iBank;
     PARALLEL_END_INTERUPT_REGION
   }
   PARALLEL_CHECK_INTERUPT_REGION
+
+  // remove skipped banks
+  fit_workspaces.erase(
+      std::remove(fit_workspaces.begin(), fit_workspaces.end(), "fit_"),
+      fit_workspaces.end());
+  parameter_workspaces.erase(std::remove(parameter_workspaces.begin(),
+                                         parameter_workspaces.end(), "params_"),
+                             parameter_workspaces.end());
+
   // Try again to optimize L1
   if (changeL1)
     findL1(nPeaks, peaksWs);
@@ -342,7 +350,7 @@ void SCDCalibratePanels::exec() {
   string DetCalFileName = getProperty("DetCalFilename");
   saveIsawDetCal(inst, MyBankNames, 0.0, DetCalFileName);
   string XmlFileName = getProperty("XmlFilename");
-  saveXmlFile(XmlFileName, MyBankNames, inst);
+  saveXmlFile(XmlFileName, MyBankNames, *inst);
   // create table of theoretical vs calculated
   //----------------- Calculate & Create Calculated vs Theoretical
   // workspaces------------------,);
@@ -365,9 +373,7 @@ void SCDCalibratePanels::exec() {
   PARALLEL_FOR3(ColWksp, RowWksp, TofWksp)
   for (int i = 0; i < static_cast<int>(MyBankNames.size()); ++i) {
     PARALLEL_START_INTERUPT_REGION
-    boost::container::flat_set<string>::iterator it = MyBankNames.begin();
-    advance(it, i);
-    std::string bankName = *it;
+    const std::string &bankName = *std::next(MyBankNames.begin(), i);
     size_t k = bankName.find_last_not_of("0123456789");
     int bank = 0;
     if (k < bankName.length())
@@ -446,7 +452,7 @@ void SCDCalibratePanels::findL1(int nPeaks,
       weight = 1.0 / peak.getBinCount();
     for (int j = 0; j < 3; j++) {
       int k = i * 3 + j;
-      xVec[k] = i * 3 + j;
+      xVec[k] = k;
       eVec[k] = weight;
     }
   }
@@ -1011,9 +1017,9 @@ void writeXmlParameter(ofstream &ostream, const string &name,
 }
 
 void SCDCalibratePanels::saveXmlFile(
-    string const FileName,
-    boost::container::flat_set<string> const AllBankNames,
-    Instrument_const_sptr const instrument) const {
+    const string &FileName,
+    const boost::container::flat_set<string> &AllBankNames,
+    const Instrument &instrument) const {
   if (FileName.empty())
     return;
 
@@ -1022,19 +1028,18 @@ void SCDCalibratePanels::saveXmlFile(
   // create the file and add the header
   ofstream oss3(FileName.c_str());
   oss3 << "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n";
-  oss3 << " <parameter-file instrument=\"" << instrument->getName()
-       << "\" valid-from=\"" << instrument->getValidFromDate().toISO8601String()
+  oss3 << " <parameter-file instrument=\"" << instrument.getName()
+       << "\" valid-from=\"" << instrument.getValidFromDate().toISO8601String()
        << "\">\n";
-  ParameterMap_sptr pmap = instrument->getParameterMap();
+  ParameterMap_sptr pmap = instrument.getParameterMap();
 
   // write out the detector banks
-  for (auto it = AllBankNames.rbegin(); it != AllBankNames.rend(); ++it) {
-    std::string bankName = *it;
-    if (instrument->getName().compare("CORELLI") == 0.0)
+  for (auto bankName : AllBankNames) {
+    if (instrument.getName().compare("CORELLI") == 0.0)
       bankName.append("/sixteenpack");
     oss3 << "<component-link name=\"" << bankName << "\">\n";
     boost::shared_ptr<const IComponent> bank =
-        instrument->getComponentByName(bankName);
+        instrument.getComponentByName(bankName);
 
     Quat RelRot = bank->getRelativeRot();
 
@@ -1074,10 +1079,10 @@ void SCDCalibratePanels::saveXmlFile(
   } // for each bank in the group
 
   // write out the source
-  IComponent_const_sptr source = instrument->getSource();
+  IComponent_const_sptr source = instrument.getSource();
 
   oss3 << "<component-link name=\"" << source->getName() << "\">\n";
-  IComponent_const_sptr sample = instrument->getSample();
+  IComponent_const_sptr sample = instrument.getSample();
   V3D sourceRelPos = source->getRelativePos();
 
   writeXmlParameter(oss3, "x", sourceRelPos.X());
