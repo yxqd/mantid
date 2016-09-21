@@ -1,6 +1,8 @@
 #ifndef MANTIDQTCUSTOMINTERFACES_DATACOMPARISONVIEW_H_
 #define MANTIDQTCUSTOMINTERFACES_DATACOMPARISONVIEW_H_
 
+#include "MantidQtCustomInterfaces/DataComparison/IDataComparisonView.h"
+
 //----------------------
 // Includes
 //----------------------
@@ -8,6 +10,8 @@
 #include "MantidQtAPI/UserSubWindow.h"
 #include "MantidQtAPI/WorkspaceObserver.h"
 #include "MantidAPI/MatrixWorkspace_fwd.h"
+
+#include <memory>
 
 #include <qwt_plot.h>
 #include <qwt_plot_curve.h>
@@ -17,8 +21,39 @@
 
 namespace MantidQt {
 namespace CustomInterfaces {
-class DataComparisonView : public MantidQt::API::UserSubWindow,
-                       public MantidQt::API::WorkspaceObserver {
+
+/**
+Concrete implementation of the view as in the MVP pattern. Methods defined here
+will be used by the presenter to act on the view.
+
+Copyright &copy; 2016 ISIS Rutherford Appleton Laboratory, NScD
+Oak Ridge National Laboratory & European Spallation Source
+
+This file is part of Mantid.
+
+Mantid is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3 of the License, or
+(at your option) any later version.
+
+Mantid is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+File change history is stored at: <https://github.com/mantidproject/mantid>
+Code Documentation is available at: <http://doxygen.mantidproject.org>
+*/
+
+class IDataComparisonPresenter;
+
+class DataComparisonView
+    : public MantidQt::API::UserSubWindow,
+      public MantidQt::API::WorkspaceObserver,
+      public MantidQt::CustomInterfaces::IDataComparisonView {
   Q_OBJECT
 
 public:
@@ -28,8 +63,16 @@ public:
   static QString categoryInfo() { return "General"; }
 
 public:
-  /// Default Constructor
+  /// Constructor
   DataComparisonView(QWidget *parent = 0);
+
+  /// Methods inherited from IDataComparisonView
+  /// Print error message
+  void printError(const std::string &message) override;
+  /// Print information message
+  void printInformation(const std::string &message) override;
+  /// Pring debug message
+  void printDebug(const std::string &message) override;
 
   /// Tests if a workspace is shown in the UI
   bool containsWorkspace(Mantid::API::MatrixWorkspace_const_sptr ws);
@@ -72,6 +115,8 @@ private:
   void normaliseSpectraOffsets();
   /// Gets an initial curve colour for a new workspace
   int getInitialColourIndex();
+  /// The presenter
+  std::unique_ptr<IDataComparisonPresenter> m_presenter;
 
 private:
   // Handlers for ADS events

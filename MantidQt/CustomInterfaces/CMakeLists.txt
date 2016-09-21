@@ -1,4 +1,5 @@
 set ( SRC_FILES
+	src/DataComparison/DataComparisonPresenter.cpp
 	src/DataComparison/DataComparisonView.cpp
 	src/DirectConvertToEnergy.cpp
 	src/DynamicPDF/DPDFBackgroundRemover.cpp
@@ -137,7 +138,10 @@ set ( SRC_FILES
 # IMPORTANT: Include files are required in the MOC_FILES set. Scroll down to find it.
 set ( INC_FILES
 	inc/MantidQtCustomInterfaces/Background.h
+	inc/MantidQtCustomInterfaces/DataComparison/DataComparisonPresenter.h
 	inc/MantidQtCustomInterfaces/DataComparison/DataComparisonView.h
+	inc/MantidQtCustomInterfaces/DataComparison/IDataComparisonPresenter.h
+	inc/MantidQtCustomInterfaces/DataComparison/IDataComparisonView.h
 	inc/MantidQtCustomInterfaces/DirectConvertToEnergy.h
 	inc/MantidQtCustomInterfaces/DllConfig.h
 	inc/MantidQtCustomInterfaces/DynamicPDF/DPDFBackgroundRemover.h

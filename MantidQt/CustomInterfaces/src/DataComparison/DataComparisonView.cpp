@@ -2,6 +2,7 @@
 // Includes
 //----------------------
 #include "MantidQtCustomInterfaces/DataComparison/DataComparisonView.h"
+#include "MantidQtCustomInterfaces/DataComparison/DataComparisonPresenter.h"
 
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/MatrixWorkspace.h"
@@ -32,6 +33,9 @@ DataComparisonView::DataComparisonView(QWidget *parent)
   observeAfterReplace();
   observeRename();
   observePreDelete();
+
+  // Create the presenter
+  m_presenter.reset(new DataComparisonPresenter(this));
 }
 
 /// Set up the dialog layout
@@ -697,7 +701,7 @@ void DataComparisonView::preDeleteHandle(
  * @param newName New name for the workspace
  */
 void DataComparisonView::renameHandle(const std::string &oldName,
-                                  const std::string &newName) {
+                                      const std::string &newName) {
   QString oldWsName = QString::fromStdString(oldName);
 
   // Find the row in the data table for the workspace
@@ -735,4 +739,34 @@ void DataComparisonView::afterReplaceHandle(
 
   // Update the plot
   plotWorkspaces();
+}
+
+/**
+* Print error message
+*
+* @param messge :: the message to be printed
+*/
+void DataComparisonView::printError(const std::string &message) {
+
+  // Do something here
+}
+
+/**
+* Print information message
+*
+* @param messge :: the message to be printed
+*/
+void DataComparisonView::printInformation(const std::string &message) {
+
+  // Do something here
+}
+
+/**
+* Print debug message
+*
+* @param messge :: the message to be printed
+*/
+void DataComparisonView::printDebug(const std::string &message) {
+
+  // Do something here
 }
