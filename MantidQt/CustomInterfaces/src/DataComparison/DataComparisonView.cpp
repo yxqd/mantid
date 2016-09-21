@@ -1,7 +1,7 @@
 //----------------------
 // Includes
 //----------------------
-#include "MantidQtCustomInterfaces/DataComparisonView.h"
+#include "MantidQtCustomInterfaces/DataComparison/DataComparisonView.h"
 
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/MatrixWorkspace.h"

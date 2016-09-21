@@ -1,5 +1,5 @@
 set ( SRC_FILES
-	src/DataComparisonView.cpp
+	src/DataComparison/DataComparisonView.cpp
 	src/DirectConvertToEnergy.cpp
 	src/DynamicPDF/DPDFBackgroundRemover.cpp
 	src/DynamicPDF/DPDFDisplayControl.cpp
@@ -137,7 +137,7 @@ set ( SRC_FILES
 # IMPORTANT: Include files are required in the MOC_FILES set. Scroll down to find it.
 set ( INC_FILES
 	inc/MantidQtCustomInterfaces/Background.h
-	inc/MantidQtCustomInterfaces/DataComparisonView.h
+	inc/MantidQtCustomInterfaces/DataComparison/DataComparisonView.h
 	inc/MantidQtCustomInterfaces/DirectConvertToEnergy.h
 	inc/MantidQtCustomInterfaces/DllConfig.h
 	inc/MantidQtCustomInterfaces/DynamicPDF/DPDFBackgroundRemover.h
@@ -301,7 +301,7 @@ set ( INC_FILES
 set ( SRC_UNITY_IGNORE_FILES )
 
 set ( MOC_FILES inc/MantidQtCustomInterfaces/Background.h
-                inc/MantidQtCustomInterfaces/DataComparisonView.h
+                inc/MantidQtCustomInterfaces/DataComparison/DataComparisonView.h
                 inc/MantidQtCustomInterfaces/DirectConvertToEnergy.h
                 inc/MantidQtCustomInterfaces/DynamicPDF/DisplayCurveFitTest.h
                 inc/MantidQtCustomInterfaces/DynamicPDF/DPDFBackgroundRemover.h
@@ -401,7 +401,7 @@ set ( MOC_FILES inc/MantidQtCustomInterfaces/Background.h
                 inc/MantidQtCustomInterfaces/Tomography/TomoToolConfigDialog.h
 )
 
-set ( UI_FILES inc/MantidQtCustomInterfaces/DataComparisonView.ui
+set ( UI_FILES inc/MantidQtCustomInterfaces/DataComparison/DataComparisonView.ui
                inc/MantidQtCustomInterfaces/DirectConvertToEnergy.ui
                inc/MantidQtCustomInterfaces/DynamicPDF/DisplayCurveFitTest.ui
                inc/MantidQtCustomInterfaces/DynamicPDF/DPDFBackgroundRemover.ui
