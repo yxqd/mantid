@@ -1,20 +1,20 @@
 //----------------------
 // Includes
 //----------------------
-#include "MantidQtCustomInterfaces/DataComparison.h"
+#include "MantidQtCustomInterfaces/DataComparisonView.h"
 
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidQtAPI/QwtWorkspaceSpectrumData.h"
 
 namespace {
-Mantid::Kernel::Logger g_log("DataComparison");
+Mantid::Kernel::Logger g_log("DataComparisonView");
 }
 
 // Add this class to the list of specialised dialogs in this namespace
 namespace MantidQt {
 namespace CustomInterfaces {
-DECLARE_SUBWINDOW(DataComparison)
+DECLARE_SUBWINDOW(DataComparisonView)
 }
 }
 
@@ -25,7 +25,7 @@ using namespace Mantid::API;
 // Public member functions
 //----------------------
 /// Constructor
-DataComparison::DataComparison(QWidget *parent)
+DataComparisonView::DataComparisonView(QWidget *parent)
     : UserSubWindow(parent), WorkspaceObserver(), m_plot(new QwtPlot(parent)),
       m_zoomTool(NULL), m_panTool(NULL), m_magnifyTool(NULL),
       m_diffWorkspaceNames(qMakePair(QString(), QString())) {
@@ -35,7 +35,7 @@ DataComparison::DataComparison(QWidget *parent)
 }
 
 /// Set up the dialog layout
-void DataComparison::initLayout() {
+void DataComparisonView::initLayout() {
   m_uiForm.setupUi(this);
 
   m_zoomTool =
@@ -93,7 +93,7 @@ void DataComparison::initLayout() {
 /**
  * Adds the data currently selected by the data selector to the plot.
  */
-void DataComparison::addData() {
+void DataComparisonView::addData() {
   const QString dataName = m_uiForm.dsData->getCurrentDataName();
 
   // Do nothing if the data is not found
@@ -135,7 +135,7 @@ void DataComparison::addData() {
  *
  * @param ws Pointer to workspace to add.
  */
-void DataComparison::addDataItem(Workspace_const_sptr ws) {
+void DataComparisonView::addDataItem(Workspace_const_sptr ws) {
   // Check that the workspace is the correct type
   MatrixWorkspace_const_sptr matrixWs =
       boost::dynamic_pointer_cast<const MatrixWorkspace>(ws);
@@ -208,7 +208,7 @@ void DataComparison::addDataItem(Workspace_const_sptr ws) {
  *
  * @param ws Pointer to the workspace
  */
-bool DataComparison::containsWorkspace(MatrixWorkspace_const_sptr ws) {
+bool DataComparisonView::containsWorkspace(MatrixWorkspace_const_sptr ws) {
   QString testWsName = QString::fromStdString(ws->name());
 
   int numRows = m_uiForm.twCurrentData->rowCount();
@@ -228,7 +228,7 @@ bool DataComparison::containsWorkspace(MatrixWorkspace_const_sptr ws) {
  *
  * @return An index to set for the conbo box
  */
-int DataComparison::getInitialColourIndex() {
+int DataComparisonView::getInitialColourIndex() {
   int numRows = m_uiForm.twCurrentData->rowCount();
 
   // Just use the first colour if this is the first row
@@ -258,7 +258,7 @@ int DataComparison::getInitialColourIndex() {
 /**
  * Removes the data currently selected in the table from the plot.
  */
-void DataComparison::removeSelectedData() {
+void DataComparisonView::removeSelectedData() {
   QList<QTableWidgetItem *> selectedItems =
       m_uiForm.twCurrentData->selectedItems();
 
@@ -292,7 +292,7 @@ void DataComparison::removeSelectedData() {
 /**
  * Removed all loaded data from the plot.
  */
-void DataComparison::removeAllData() {
+void DataComparisonView::removeAllData() {
   clearDiff();
 
   int numRows = m_uiForm.twCurrentData->rowCount();
@@ -316,7 +316,7 @@ void DataComparison::removeAllData() {
 /**
  * Replots the currently loaded workspaces.
  */
-void DataComparison::plotWorkspaces() {
+void DataComparisonView::plotWorkspaces() {
   int globalWsIndex = m_uiForm.sbSpectrum->value();
   int maxGlobalWsIndex = 0;
 
@@ -401,7 +401,7 @@ void DataComparison::plotWorkspaces() {
 /**
  * Normalises the workspace index offsets in the data table to zero.
  */
-void DataComparison::normaliseSpectraOffsets() {
+void DataComparisonView::normaliseSpectraOffsets() {
   m_uiForm.twCurrentData->blockSignals(true);
 
   int numRows = m_uiForm.twCurrentData->rowCount();
@@ -432,7 +432,7 @@ void DataComparison::normaliseSpectraOffsets() {
 /**
  * Handles updating the plot, i.e. normalising offsets and replotting spectra.
  */
-void DataComparison::updatePlot() {
+void DataComparisonView::updatePlot() {
   normaliseSpectraOffsets();
   plotWorkspaces();
 }
@@ -440,7 +440,7 @@ void DataComparison::updatePlot() {
 /**
  * Handles a workspace index or offset being modified.
  */
-void DataComparison::workspaceIndexChanged() {
+void DataComparisonView::workspaceIndexChanged() {
   normaliseSpectraOffsets();
   plotWorkspaces();
 
@@ -452,7 +452,7 @@ void DataComparison::workspaceIndexChanged() {
 /**
  * Handles creating a diff of two workspaces and plotting it.
  */
-void DataComparison::plotDiffWorkspace() {
+void DataComparisonView::plotDiffWorkspace() {
   // Detach old curve
   if (m_diffCurve != NULL)
     m_diffCurve->attach(NULL);
@@ -569,7 +569,7 @@ void DataComparison::plotDiffWorkspace() {
  *
  * Does nothing if there are not 2 workspaces selected.
  */
-void DataComparison::diffSelected() {
+void DataComparisonView::diffSelected() {
   QList<QTableWidgetItem *> selectedItems =
       m_uiForm.twCurrentData->selectedItems();
   QList<int> selectedRows;
@@ -601,7 +601,7 @@ void DataComparison::diffSelected() {
 /**
  * Removes the configured diff.
  */
-void DataComparison::clearDiff() {
+void DataComparisonView::clearDiff() {
   // Clear the info message
   m_uiForm.lbDiffInfo->setText("No current diff.");
 
@@ -617,7 +617,7 @@ void DataComparison::clearDiff() {
  *
  * @param enabled If the tool should be enabled
  */
-void DataComparison::togglePan(bool enabled) {
+void DataComparisonView::togglePan(bool enabled) {
   // First disbale the zoom tool
   if (enabled && m_uiForm.pbZoom->isChecked())
     m_uiForm.pbZoom->setChecked(false);
@@ -633,7 +633,7 @@ void DataComparison::togglePan(bool enabled) {
  *
  * @param enabled If the tool should be enabled
  */
-void DataComparison::toggleZoom(bool enabled) {
+void DataComparisonView::toggleZoom(bool enabled) {
   // First disbale the pan tool
   if (enabled && m_uiForm.pbPan->isChecked())
     m_uiForm.pbPan->setChecked(false);
@@ -647,7 +647,7 @@ void DataComparison::toggleZoom(bool enabled) {
 /**
  * Rests the zoom level to fit all curves on the plot.
  */
-void DataComparison::resetView() {
+void DataComparisonView::resetView() {
   g_log.debug("Reset plot view");
 
   // Auto scale the axis
@@ -664,7 +664,7 @@ void DataComparison::resetView() {
  * @param wsName Name of the workspace being deleted
  * @param ws Pointer to the workspace
  */
-void DataComparison::preDeleteHandle(
+void DataComparisonView::preDeleteHandle(
     const std::string &wsName,
     const boost::shared_ptr<Mantid::API::Workspace> ws) {
   UNUSED_ARG(ws);
@@ -696,7 +696,7 @@ void DataComparison::preDeleteHandle(
  * @param oldName Old name for the workspace
  * @param newName New name for the workspace
  */
-void DataComparison::renameHandle(const std::string &oldName,
+void DataComparisonView::renameHandle(const std::string &oldName,
                                   const std::string &newName) {
   QString oldWsName = QString::fromStdString(oldName);
 
@@ -727,7 +727,7 @@ void DataComparison::renameHandle(const std::string &oldName,
  * @param wsName Name of changed workspace
  * @param ws Pointer to changed workspace
  */
-void DataComparison::afterReplaceHandle(
+void DataComparisonView::afterReplaceHandle(
     const std::string &wsName,
     const boost::shared_ptr<Mantid::API::Workspace> ws) {
   UNUSED_ARG(wsName);
