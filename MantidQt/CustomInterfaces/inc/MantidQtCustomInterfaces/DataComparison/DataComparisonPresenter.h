@@ -1,6 +1,7 @@
 #ifndef MANTIDQTCUSTOMINTERFACES_DATACOMPARISONPRESENTER_H_
 #define MANTIDQTCUSTOMINTERFACES_DATACOMPARISONPRESENTER_H_
 
+#include "MantidQtCustomInterfaces/DllConfig.h"
 #include "MantidQtCustomInterfaces/DataComparison/IDataComparisonPresenter.h"
 #include "MantidQtAPI/WorkspaceObserver.h"
 
@@ -33,8 +34,9 @@ File change history is stored at: <https://github.com/mantidproject/mantid>
 Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
 
-class DataComparisonPresenter : public IDataComparisonPresenter,
-                                public MantidQt::API::WorkspaceObserver {
+class MANTIDQT_CUSTOMINTERFACES_DLL DataComparisonPresenter
+    : public IDataComparisonPresenter,
+      public MantidQt::API::WorkspaceObserver {
 
 public:
   /// Constructor
@@ -44,14 +46,17 @@ public:
   /// Notifications
   void notify(IDataComparisonPresenter::Notification notification) override;
 
+  /// Public methods (only for testing purposes)
+
+  /// Add workspace to table
+  void addWorkspace(Mantid::API::Workspace_const_sptr ws);
+
 private:
   /// The view
   IDataComparisonView *m_view;
   /// The diff workspace
   std::string m_diffWsName;
 
-  /// Add workspace to table
-  void addWorkspace(Mantid::API::Workspace_const_sptr ws);
   /// Add workspace to interface
   void addWorkspace();
   /// Plot workspaces

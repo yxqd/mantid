@@ -494,6 +494,7 @@ set ( TEST_FILES
 	ALCLatestFileFinderTest.h
 	ALCPeakFittingModelTest.h
 	ALCPeakFittingPresenterTest.h
+	DataComparisonPresenterTest.h
 	EnggDiffFittingPresenterTest.h
 	EnggDiffractionPresenterTest.h
 	IO_MuonGroupingTest.h

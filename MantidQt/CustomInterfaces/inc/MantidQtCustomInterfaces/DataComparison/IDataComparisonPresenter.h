@@ -39,7 +39,7 @@ public:
   enum Notification {
     AddWorkspace,
     PlotWorkspaces,
-    PlotDiffWorkspaces,
+    PlotDiffWorkspace,
     RemoveAllWorkspaces,
     RemoveSelectedWorkspaces,
     RemoveDiffWorkspace,

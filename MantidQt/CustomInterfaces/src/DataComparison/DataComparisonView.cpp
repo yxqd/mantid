@@ -116,7 +116,7 @@ void DataComparisonView::removeAllDataClicked() {
 */
 void DataComparisonView::diffSelectedClicked() {
 
-	m_presenter->notify(IDataComparisonPresenter::PlotDiffWorkspaces);
+	m_presenter->notify(IDataComparisonPresenter::PlotDiffWorkspace);
 }
 
 /** Slot triggered when 'Clear Diff' is clicked

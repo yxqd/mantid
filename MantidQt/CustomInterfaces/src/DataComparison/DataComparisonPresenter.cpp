@@ -41,7 +41,7 @@ void DataComparisonPresenter::notify(
   case IDataComparisonPresenter::PlotWorkspaces:
     plotWorkspaces();
     break;
-  case IDataComparisonPresenter::PlotDiffWorkspaces:
+  case IDataComparisonPresenter::PlotDiffWorkspace:
     plotDiffWorkspace();
     break;
   case IDataComparisonPresenter::RemoveAllWorkspaces:
@@ -71,7 +71,9 @@ void DataComparisonPresenter::addWorkspace() {
   auto dataName = m_view->getSelectedWorkspaceName();
 
   // Check if the ws exists in the ADS
+  // (TEST) Comment out to illustrate unexpected exception
   if (!AnalysisDataService::Instance().doesExist(dataName)) {
+    m_view->printError("Cannot add workspace " + dataName);
     return;
   }
 
@@ -98,9 +100,6 @@ void DataComparisonPresenter::addWorkspace() {
 
   // Tell the view to unblock signals
   m_view->blockTableSignals(false);
-
-  // Replot the workspaces
-  plotWorkspaces();
 }
 
 /** Add a workspace to the data table
@@ -118,18 +117,33 @@ void DataComparisonPresenter::addWorkspace(Workspace_const_sptr ws) {
     return;
   }
 
-  // Then check that the workspace does not already exist in the data table
+  const auto wsName = matrixWs->name();
 
-  if (m_view->containsWorkspace(matrixWs->name())) {
+  // Then check that the workspace does not already exist in the data table
+  // (TEST) Without this we may end up with duplicate workspaces in the UI
+  if (m_view->containsWorkspace(wsName)) {
     m_view->printInformation("Workspace already shown in comparison");
     return;
   }
 
+  // Check that ws index is not out of range
+  // (TEST) Without this we may get an unexpected exception
+  int wsIndex = m_view->getSelectedWorkspaceIndex();
+  if (matrixWs->getNumberHistograms() <= wsIndex) {
+    m_view->printError("Workspace " + wsName +
+                       ": workspace index out of range.");
+    return;
+  }
+
   // Update the table
-  m_view->addWorkspace(matrixWs->name(), getInitialColourIndex());
+  int colorIndex = getInitialColourIndex();
+  m_view->addWorkspace(wsName, colorIndex);
+
   // Plot the data
-  m_view->plotCurve(matrixWs->name(),
-                    DataComparisonHelper::curveDataFromWs(matrixWs, 0));
+  auto colors = m_view->getAvailableColors();
+  m_view->plotCurve(wsName,
+                    DataComparisonHelper::curveDataFromWs(matrixWs, wsIndex),
+                    colors[colorIndex]);
 }
 
 /** Plot workspaces loaded into the interface
@@ -177,9 +191,6 @@ void DataComparisonPresenter::plotWorkspaces() {
 *
 */
 void DataComparisonPresenter::plotDiffWorkspace() {
-
-  // Detach old curve
-  m_view->detachCurve("__diff");
 
   auto wsNames = m_view->getSelectedWorkspaceNames();
   auto wsIndex = m_view->getSelectedWorkspaceIndex();
@@ -255,6 +266,9 @@ void DataComparisonPresenter::plotDiffWorkspace() {
 
   // Add diff workspace to plot window
   m_diffWsName = wsNames[0] + wsNames[1];
+  // Detach old curve
+  m_view->detachCurve(m_diffWsName);
+  // Plot
   m_view->plotCurve(m_diffWsName,
                     DataComparisonHelper::curveDataFromWs(diffWorkspace, 0));
 }
@@ -393,6 +407,13 @@ void DataComparisonPresenter::afterReplaceHandle(
   auto colors = m_view->getAvailableColors();
 
   m_view->detachCurve(wsName);
+
+  // (TEST) Unexpected exception if ws index out of range
+  // A check condition is missing here
+  // if (index >= matrixWs->getHistogramNumber())
+  //   print error message and return
+  // Again this is something we could test in unit tests
+
   m_view->plotCurve(wsName,
                     DataComparisonHelper::curveDataFromWs(matrixWs, index),
                     colors[getInitialColourIndex()]);
