@@ -138,6 +138,7 @@ set ( SRC_FILES
 # IMPORTANT: Include files are required in the MOC_FILES set. Scroll down to find it.
 set ( INC_FILES
 	inc/MantidQtCustomInterfaces/Background.h
+	inc/MantidQtCustomInterfaces/DataComparison/DataComparisonHelper.h
 	inc/MantidQtCustomInterfaces/DataComparison/DataComparisonPresenter.h
 	inc/MantidQtCustomInterfaces/DataComparison/DataComparisonView.h
 	inc/MantidQtCustomInterfaces/DataComparison/IDataComparisonPresenter.h

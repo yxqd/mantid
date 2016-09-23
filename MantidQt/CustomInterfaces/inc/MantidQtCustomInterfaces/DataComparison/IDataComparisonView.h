@@ -3,6 +3,8 @@
 
 #include "MantidQtCustomInterfaces/DllConfig.h"
 #include <string>
+#include <vector>
+#include <qwt_data.h>
 
 namespace MantidQt {
 namespace CustomInterfaces {
@@ -39,6 +41,47 @@ public:
   IDataComparisonView(){};
   /// Destructor
   virtual ~IDataComparisonView(){};
+
+  /// 'Add Data' group
+
+  /// Return selected workspace name
+  virtual std::string getSelectedWorkspaceName() const = 0;
+
+  /// 'Data' group
+
+  /// Return all the workspace names
+  virtual std::vector<std::string> getWorkspaceNames() const = 0;
+  /// Return names of selected workspaces
+  virtual std::vector<std::string> getSelectedWorkspaceNames() const = 0;
+  /// Return all the workspace colors
+  virtual std::vector<std::string> getWorkspaceColors() const = 0;
+  /// Return available colors
+  virtual std::vector<std::string> getAvailableColors() const = 0;
+
+  /// Add a workspace name to the data table
+  virtual void addWorkspace(const std::string &wsName, int colorIndex) = 0;
+  /// Remove a workspace (by name) from the table
+  virtual void removeWorkspace(const std::string &wsName) = 0;
+  /// Test if a workspace is shown in the UI
+  virtual bool containsWorkspace(const std::string &wsName) const = 0;
+
+  /// Block/unblock signals emitted by the table
+  virtual void blockTableSignals(bool block) = 0;
+
+  /// QwtPlot
+
+  /// Detach a curve (workspace) from plot
+  virtual void detachCurve(const std::string &wsName) = 0;
+  /// Plot a curve
+  virtual void plotCurve(const std::string &wsName, const QwtArrayData &curve,
+                         const std::string &color = "") = 0;
+
+  /// 'View' group
+
+  /// Return selected workspace index
+  virtual int getSelectedWorkspaceIndex() const = 0;
+
+  /// Print
 
   /// Print error message
   virtual void printError(const std::string &message) = 0;

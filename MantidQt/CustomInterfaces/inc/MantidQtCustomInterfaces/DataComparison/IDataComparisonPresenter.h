@@ -33,6 +33,21 @@ Code Documentation is available at: <http://doxygen.mantidproject.org>
 class IDataComparisonPresenter {
 public:
   virtual ~IDataComparisonPresenter(){};
+
+  /// User actions triggered from the (passive) view that need handling by the
+  /// presenter
+  enum Notification {
+    AddWorkspace,
+    PlotWorkspaces,
+    PlotDiffWorkspaces,
+    RemoveAllWorkspaces,
+    RemoveSelectedWorkspaces,
+    RemoveDiffWorkspace,
+	WorkspaceIndexChanged,
+	ColorChanged
+  };
+
+  virtual void notify(IDataComparisonPresenter::Notification notification) = 0;
 };
 }
 }

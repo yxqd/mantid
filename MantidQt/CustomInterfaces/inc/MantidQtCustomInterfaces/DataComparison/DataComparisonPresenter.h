@@ -2,6 +2,7 @@
 #define MANTIDQTCUSTOMINTERFACES_DATACOMPARISONPRESENTER_H_
 
 #include "MantidQtCustomInterfaces/DataComparison/IDataComparisonPresenter.h"
+#include "MantidQtAPI/WorkspaceObserver.h"
 
 namespace MantidQt {
 namespace CustomInterfaces {
@@ -32,17 +33,49 @@ File change history is stored at: <https://github.com/mantidproject/mantid>
 Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
 
-class DataComparisonPresenter : public IDataComparisonPresenter {
+class DataComparisonPresenter : public IDataComparisonPresenter,
+                                public MantidQt::API::WorkspaceObserver {
 
 public:
   /// Constructor
   DataComparisonPresenter(IDataComparisonView *view);
   /// Destructor
   ~DataComparisonPresenter() override;
+  /// Notifications
+  void notify(IDataComparisonPresenter::Notification notification) override;
 
 private:
   /// The view
   IDataComparisonView *m_view;
+  /// The diff workspace
+  std::string m_diffWsName;
+
+  /// Add workspace to table
+  void addWorkspace(Mantid::API::Workspace_const_sptr ws);
+  /// Add workspace to interface
+  void addWorkspace();
+  /// Plot workspaces
+  void plotWorkspaces();
+  /// Plot diff workspace
+  void plotDiffWorkspace();
+  /// Remove all workspaces
+  void removeAllWorkspaces();
+  /// Remove selected workspaces
+  void removeSelectedWorkspaces();
+  /// Remove diff workspace
+  void removeDiffWorkspace();
+  /// Get initial color for new ws
+  int getInitialColourIndex();
+
+  // Handlers for ADS events
+  void
+  preDeleteHandle(const std::string &wsName,
+                  const boost::shared_ptr<Mantid::API::Workspace> ws) override;
+  void renameHandle(const std::string &oldName,
+                    const std::string &newName) override;
+  void afterReplaceHandle(
+      const std::string &wsName,
+      const boost::shared_ptr<Mantid::API::Workspace> ws) override;
 };
 }
 }
