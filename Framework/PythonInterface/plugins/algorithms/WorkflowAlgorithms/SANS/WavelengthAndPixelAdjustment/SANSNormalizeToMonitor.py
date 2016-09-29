@@ -3,8 +3,7 @@
 """ SANSNormalizeToMonitor algorithm calculates the normalization to the monitor."""
 
 from mantid.kernel import (Direction, IntBoundedValidator, FloatBoundedValidator, StringListValidator, Property)
-from mantid.api import (DataProcessorAlgorithm, MatrixWorkspaceProperty, AlgorithmFactory, PropertyMode,
-                        FileProperty, FileAction, Progress)
+from mantid.api import (DataProcessorAlgorithm, MatrixWorkspaceProperty, AlgorithmFactory, PropertyMode, Progress)
 from SANS2.Common.SANSConstants import SANSConstants
 from SANS2.Common.SANSFunctions import create_unmanaged_algorithm
 

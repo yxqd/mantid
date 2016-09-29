@@ -4,8 +4,7 @@
 
 from mantid.kernel import (Direction, StringArrayProperty, StringListValidator, Property,
                            PropertyManagerProperty, FloatBoundedValidator)
-from mantid.api import (DataProcessorAlgorithm, MatrixWorkspaceProperty, AlgorithmFactory, PropertyMode,
-                        FileProperty, FileAction, Progress)
+from mantid.api import (DataProcessorAlgorithm, MatrixWorkspaceProperty, AlgorithmFactory, PropertyMode, Progress)
 from SANS2.Common.SANSConstants import SANSConstants
 from SANS2.Common.SANSFunctions import create_unmanaged_algorithm
 from SANS2.WavelengthAndPixelAdjustment.CalculateTransmissionHelper import (get_detector_id_for_spectrum_number,
