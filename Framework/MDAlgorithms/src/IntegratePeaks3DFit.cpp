@@ -9,7 +9,6 @@
 #include "MantidGeometry/Instrument.h"
 #include "MantidKernel/CompositeValidator.h"
 #include "MantidGeometry/Crystal/IPeak.h"
-#include "MantidCurveFitting/FortranDefs.h"
 #include <boost/math/special_functions/round.hpp>
 #include <gsl/gsl_sf_gamma.h> // for factorial
 #include <gsl/gsl_linalg.h> // for SVD
@@ -25,7 +24,6 @@ using namespace Mantid::DataObjects;
 using namespace Mantid::API;
 using namespace Mantid::Kernel;
 using namespace Mantid::Geometry;
-using namespace CurveFitting;
 
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(IntegratePeaks3DFit)
@@ -338,7 +336,7 @@ for (int j1 = 1; j1 <=  static_cast<int>(event_max); j1++) {
     full_box_density.push_back(static_cast<double>(num/static_cast<double>(num0)));
   } 
   std::vector<double> conditional_event_vals;
-  double conditional_event_vals_tot;
+  double conditional_event_vals_tot = 0.0;
   for (int j0 = 0; j0 <  N_ind; j0++) {
        if(full_box_mean[j0]>pp_lambda+1.96*sqrt(pp_lambda/std::pow((2*neigh_length_m+1),3)) &&
            std::max(fabs(z_vals[j0]-N2),std::max(fabs(x_vals[j0]-N2),fabs(y_vals[j0]-N2)))>max_mu+2*max_sigma) {  // Remove points outside of prescribed domain
@@ -348,153 +346,288 @@ for (int j1 = 1; j1 <=  static_cast<int>(event_max); j1++) {
        else conditional_event_vals.push_back(0.0);
   }
         // Estimate initial parameters for Gaussian distribution //
-        std::vector<double> mu_est_x;
-        std::vector<double> mu_est_y;
-        std::vector<double> mu_est_z;
+        std::vector<double> mu_est(3);
+
         double muMax= max_mu;
-        for (int j0 = 0; j0 <  N_ind; j0++) {
-          mu_est_x.push_back(x_vals[j0]*conditional_event_vals[j0]/conditional_event_vals_tot);
-          mu_est_y.push_back(y_vals[j0]*conditional_event_vals[j0]/conditional_event_vals_tot);
-          mu_est_z.push_back(z_vals[j0]*conditional_event_vals[j0]/conditional_event_vals_tot);
-          if (fabs(mu_est_x[j0]-N2 > muMax)) muMax = fabs(mu_est_x[j0]-N2);
-          if (fabs(mu_est_y[j0]-N2 > muMax)) muMax = fabs(mu_est_y[j0]-N2);
-          if (fabs(mu_est_z[j0]-N2 > muMax)) muMax = fabs(mu_est_z[j0]-N2);
+        for (int j0 = 0; j0 <  3; j0++) {
+          mu_est[j0] = 0.0;
         }
+        for (int j0 = 0; j0 <  N_ind; j0++) {
+          mu_est[0] += x_vals[j0]*conditional_event_vals[j0]/conditional_event_vals_tot;
+          mu_est[1] += y_vals[j0]*conditional_event_vals[j0]/conditional_event_vals_tot;
+          mu_est[2] += z_vals[j0]*conditional_event_vals[j0]/conditional_event_vals_tot;
+        }
+        if (fabs(mu_est[0]-N2 > muMax)) muMax = fabs(mu_est[0]-N2);
+        if (fabs(mu_est[1]-N2 > muMax)) muMax = fabs(mu_est[1]-N2);
+        if (fabs(mu_est[2]-N2 > muMax)) muMax = fabs(mu_est[2]-N2);
         if (muMax >max_mu) {
-          for (int j0 = 0; j0 <  N_ind; j0++) {
-            mu_est_x[j0] = 0.5;
-            mu_est_y[j0] = 0.5;
-            mu_est_z[j0] = 0.5;
+          for (int j0 = 0; j0 <  3; j0++) {
+            mu_est[j0] = N2;
           }
         }
         
-        DoubleFortranMatrix  covar_mat_est;
-        for (int j0 = 0; j0 <  N_ind; j0++) {
-            covar_mat_est[0][0] += (conditional_event_vals(jp))*(x_vals(jp)-mu_est_x(jp))*(x_vals(jp)-mu_est_x(jp));
-            covar_mat_est[1][0] += (conditional_event_vals(jp))*(x_vals(jp)-mu_est_y(jp))*(y_vals(jp)-mu_est_x(jp));
-            covar_mat_est[2][0] += (conditional_event_vals(jp))*(x_vals(jp)-mu_est_z(jp))*(z_vals(jp)-mu_est_x(jp));
-            covar_mat_est[0][1] += (conditional_event_vals(jp))*(y_vals(jp)-mu_est_x(jp))*(x_vals(jp)-mu_est_y(jp));
-            covar_mat_est[1][1] += (conditional_event_vals(jp))*(y_vals(jp)-mu_est_y(jp))*(y_vals(jp)-mu_est_y(jp));
-            covar_mat_est[2][1] += (conditional_event_vals(jp))*(y_vals(jp)-mu_est_z(jp))*(z_vals(jp)-mu_est_y(jp));
-            covar_mat_est[0][2] += (conditional_event_vals(jp))*(z_vals(jp)-mu_est_x(jp))*(x_vals(jp)-mu_est_z(jp));
-            covar_mat_est[1][2] += (conditional_event_vals(jp))*(z_vals(jp)-mu_est_y(jp))*(y_vals(jp)-mu_est_z(jp));
-            covar_mat_est[2][2] += (conditional_event_vals(jp))*(z_vals(jp)-mu_est_z(jp))*(z_vals(jp)-mu_est_z(jp));
+        DblMatrix  covar_mat_est(3, 3);
+        for (int jp = 0; jp <  N_ind; jp++) {
+            covar_mat_est[0][0] += (conditional_event_vals[jp])*(x_vals[jp]-mu_est[0])*(x_vals[jp]-mu_est[0]);
+            covar_mat_est[1][0] += (conditional_event_vals[jp])*(x_vals[jp]-mu_est[1])*(y_vals[jp]-mu_est[0]);
+            covar_mat_est[2][0] += (conditional_event_vals[jp])*(x_vals[jp]-mu_est[2])*(z_vals[jp]-mu_est[0]);
+            covar_mat_est[0][1] += (conditional_event_vals[jp])*(y_vals[jp]-mu_est[0])*(x_vals[jp]-mu_est[1]);
+            covar_mat_est[1][1] += (conditional_event_vals[jp])*(y_vals[jp]-mu_est[1])*(y_vals[jp]-mu_est[1]);
+            covar_mat_est[2][1] += (conditional_event_vals[jp])*(y_vals[jp]-mu_est[2])*(z_vals[jp]-mu_est[1]);
+            covar_mat_est[0][2] += (conditional_event_vals[jp])*(z_vals[jp]-mu_est[0])*(x_vals[jp]-mu_est[2]);
+            covar_mat_est[1][2] += (conditional_event_vals[jp])*(z_vals[jp]-mu_est[1])*(y_vals[jp]-mu_est[2]);
+            covar_mat_est[2][2] += (conditional_event_vals[jp])*(z_vals[jp]-mu_est[2])*(z_vals[jp]-mu_est[2]);
         }
         for (int j0 = 0; j0 <  3; j0++) {
           for (int j1 = 0; j1 <  3; j1++)
           covar_mat_est[j0][j1] = covar_mat_est[j0][j1]/conditional_event_vals_tot;
         }
-        auto n = 3;
-        DoubleFortranMatrix u_est = covar_mat_est;
-        DoubleFortranMatrix v_est(n, n);
-        DoubleFortranVector d_est(n);
-        DoubleFortranVector work(n);
-        gsl_linalg_SV_decomp(u_est.gsl(), v_est.gsl(), d_est.gsl(), work.gsl());
-        
-        theta_x_est = atan2(u_est(3,2),u_est(3,3));
-        theta_y_est = atan2(-u_est(3,1),sqrt(std::pow(u_est(3,2),2)+std::pow(u_est(3,3),2)));
-        theta_z_est = atan2(u_est(2,1),u_est(1,1));
-        sigma = d_est;
-        
-       /* for (int jp = 0; jp <  3; jp++) {
-            if sqrt(sigma(jp)/2)<min_sigma
-                sigma(jp) = 2.1*std::pow((min_sigma),2);
-            elseif sqrt(sigma(jp)/2)>max_sigma
-                sigma(jp) = 1.9*std::pow((max_sigma),2);
-            end
-        end
 
-        gp_parm = [mu_est(:);[theta_x_est;theta_y_est;theta_z_est];sigma];
-        c_gp_parm = gp_parm;
+        gsl_matrix *u_est = gsl_matrix_alloc(3, 3);
+        gsl_matrix *v_est = gsl_matrix_alloc(3, 3);
+        gsl_vector *d_est = gsl_vector_alloc(3);
+        gsl_vector *work = gsl_vector_alloc(3);
+
+        // Need to copy from DblMatrix to gsl matrix
+
+        for (size_t k = 0; k < 3; k++)
+          for (size_t l = 0; l < 3; l++)
+            gsl_matrix_set(u_est, k, l, covar_mat_est[k][l]);
+
+        gsl_linalg_SV_decomp(u_est, v_est, d_est, work);
         
-        X_est = [[1 0 0]; [0 cos(c_gp_parm(4)) -sin(c_gp_parm(4))]; [0 sin(c_gp_parm(4)) cos(c_gp_parm(4))]];
-        Y_est = [[cos(c_gp_parm(5)) 0 sin(c_gp_parm(5))]; [0 1 0]; [-sin(c_gp_parm(5)) 0 cos(c_gp_parm(5))]];
-        Z_est = [[cos(c_gp_parm(6)) -sin(c_gp_parm(6)) 0]; [sin(c_gp_parm(6)) cos(c_gp_parm(6)) 0]; [0 0 1]];
-        rot_cord = (xyz_vals-repmat(c_gp_parm(1:3)',N_ind,1))*Z_est*Y_est*X_est;
+        double theta_x_est = atan2(gsl_matrix_get(u_est,3,2),gsl_matrix_get(u_est,3,3));
+        double theta_y_est = atan2(-gsl_matrix_get(u_est,3,1),sqrt(std::pow(gsl_matrix_get(u_est,3,2),2)+std::pow(gsl_matrix_get(u_est,3,3),2)));
+        double theta_z_est = atan2(gsl_matrix_get(u_est,2,1),gsl_matrix_get(u_est,1,1));
+
+        std::vector<double>sigma(3);
+        for (size_t jp = 0; jp < 3; jp++) sigma[jp] = gsl_vector_get(d_est, jp);
         
+        for (int jp = 0; jp <  3; jp++) {
+            if (sqrt(sigma[jp]/2.)<min_sigma)
+                sigma[jp] = 2.1*std::pow((min_sigma),2);
+            else if (sqrt(sigma[jp]/2)>max_sigma)
+                sigma[jp] = 1.9*std::pow((max_sigma),2);
+        }
+
+        std::vector<double>gp_par;
+        for (int jp = 0; jp <  3; jp++) {
+          gp_par.push_back(mu_est[jp]);
+        }
+        gp_par.push_back(theta_x_est);
+        gp_par.push_back(theta_y_est);
+        gp_par.push_back(theta_z_est);
+        for (int jp = 0; jp <  3; jp++) {
+          gp_par.push_back(sigma[jp]);
+        }
+
+        std::vector<double>c_gp_parm = gp_par;
         
-        f_x = exp(std::pow(-rot_cord(:,1),2)/c_gp_parm(7));
-        f_y = exp(std::pow(-rot_cord(:,2),2)/c_gp_parm(8));
-        f_z = exp(std::pow(-rot_cord(:,3),2)/c_gp_parm(9));
+        DblMatrix  X_est(3, 3);
+        X_est[0][0] = 1.0;
+        X_est[1][0] = 0.0;
+        X_est[2][0] = 0.0;
+        X_est[0][1] = 0.0;
+        X_est[1][1] = std::cos(c_gp_parm[4]);
+        X_est[2][1] = -std::sin(c_gp_parm[4]);
+        X_est[0][2] = 0.0;
+        X_est[1][2] = std::sin(c_gp_parm[4]);
+        X_est[2][2] = std::cos(c_gp_parm[4]);
+
+        DblMatrix  Y_est(3, 3);
+        Y_est[0][0] = std::cos(c_gp_parm[5]);
+        Y_est[1][0] = 0.0;
+        Y_est[2][0] = std::sin(c_gp_parm[5]);
+        Y_est[0][1] = 0.0;
+        Y_est[1][1] = 1.0;
+        Y_est[2][1] = 0.0;
+        Y_est[0][2] = -std::sin(c_gp_parm[5]);
+        Y_est[1][2] = 0.0;
+        Y_est[2][2] = std::cos(c_gp_parm[5]);
+
+
+        DblMatrix  Z_est(3, 3);
+        Z_est[0][0] = std::cos(c_gp_parm[6]);
+        Z_est[1][0] = -std::sin(c_gp_parm[6]);
+        Z_est[2][0] = 0.0;
+        Z_est[0][1] = std::sin(c_gp_parm[6]);
+        Z_est[1][1] = std::cos(c_gp_parm[6]);
+        Z_est[2][1] = 0.0;
+        Z_est[0][2] = 0.0;
+        Z_est[1][2] = 0.0;
+        Z_est[2][2] = 1.0;
+
+        DblMatrix XYZ_est = Z_est*Y_est*X_est;
+
+        std::vector<double> rot_cord_x;
+        std::vector<double> rot_cord_y;
+        std::vector<double> rot_cord_z;
+        for (int j0 = 0; j0 <  N_ind; j0++) {
+          std::vector<double> tmp;
+          tmp.push_back(x_vals[j0]-c_gp_parm[0]);
+          tmp.push_back(y_vals[j0]-c_gp_parm[1]);
+          tmp.push_back(z_vals[j0]-c_gp_parm[2]);
+          tmp = XYZ_est * tmp;
+          rot_cord_x.push_back(tmp[0]);
+          rot_cord_y.push_back(tmp[1]);
+          rot_cord_z.push_back(tmp[2]);
+        }
         
-        gp_dist = f_x.*f_y.*f_z;
-        gp_dist = gp_dist/sum(gp_dist(:));
-        best_norm = (transpose(gp_dist)*conditional_event_vals)/(transpose(gp_dist)*gp_dist);
-        gp_events = round(best_norm*gp_dist);
-        best_err = sqrt(sum(std::pow((conditional_event_vals-best_norm*gp_dist),2)))/event_tot;
+        std::vector<double> gp_dist;
+        for (int j0 = 0; j0 <  N_ind; j0++) {
+          gp_dist.push_back(exp(std::pow(-rot_cord_x[j0],2)/c_gp_parm[7])
+          * exp(std::pow(-rot_cord_y[j0],2)/c_gp_parm[8])
+          * exp(std::pow(-rot_cord_y[j0],2)/c_gp_parm[9]));
+        }
+        double gp_dist_sum = std::accumulate(gp_dist.begin(),gp_dist.end(),0);
+        for (int j0 = 0; j0 <  N_ind; j0++) {
+          gp_dist[j0] /= gp_dist_sum;
+        }
+        
+        double best_norm = 0;
+        double best_norm0 = 0;
+        for (int j0 = 0; j0 <  N_ind; j0++) {
+          best_norm += gp_dist[j0] * conditional_event_vals[j0];
+          best_norm0 += gp_dist[j0] * gp_dist[j0];
+        }
+        best_norm /= best_norm0;
+
+        std::vector<double> gp_events;
+        double sum = 0.0;
+        for (int j0 = 0; j0 <  N_ind; j0++) {
+          gp_events.push_back(static_cast<int>(best_norm * gp_dist[j0]+0.5));
+          sum += std::pow((conditional_event_vals[j0]-best_norm*gp_dist[j0]),2);
+        }
+        double best_err = sqrt(sum)/event_tot;
         
         // Estimate Gaussian distribution given Poisson distribution and Extreme Value Distribution //
-        hfg = figure;
-        trackbest_err = best_err;
-        d_gp_parm = .01*fabs(gp_parm);
-        d_gp_parm = max(d_gp_parm,.1);      // Minimal starting search distance of optimization parameters.
+        //double trackbest_err = best_err;
+        for (int j0 = 0; j0 <  N_ind; j0++) {
+          d_gp_parm[j0] = .01*fabs(gp_parm[j0]);
+          d_gp_parm[j0] = max(d_gp_parm[j0],.1);      // Minimal starting search distance of optimization parameters.
+        }
         
-        for jpit = 1:n_break_its
+        for (int jpit = 0; jpit <  n_break_its; jpit++) {
+            std::vector<double> did_mv_vec;
             did_mv_vec = zeros(length(gp_parm),1);
-            for jp = 1:length(gp_parm)
-                for js = 1:2
+            for (int jp = 0; jp <  9; jp++) {
+                for (int js = 0; js <  2; js++) {
                     c_gp_parm = gp_parm;
-                    c_gp_parm(jp) = c_gp_parm(jp)+(std::pow((-1),js))*d_gp_parm(jp);
+                    c_gp_parm[jp] = c_gp_parm[jp]+(std::pow((-1),js))*d_gp_parm[jp];
                     do_opt = 1;
                     // Enforce paramameter maximum domains %
-                    if jp<4
-                        if fabs(c_gp_parm(jp)-N2)>max_mu
+                    if (jp<4) {
+                        if (fabs(c_gp_parm[jp]-N2)>max_mu) {
                             do_opt = 0;
-                        end
-                    end
-                    if jp>6
-                        if (sqrt(c_gp_parm(jp)/2)<min_sigma | sqrt(c_gp_parm(jp)/2)>max_sigma)
+                        }  
+                    }  
+                    if (jp>6) {
+                        if (sqrt(c_gp_parm[jp]/2)<min_sigma | sqrt(c_gp_parm[jp]/2)>max_sigma) {
                             do_opt = 0;
-                        end
-                    end
+                        }  
+                    }  
                     
-                    if do_opt == 1
-                        X_est = [[1 0 0]; [0 cos(c_gp_parm(4)) -sin(c_gp_parm(4))]; [0 sin(c_gp_parm(4)) cos(c_gp_parm(4))]];
-                        Y_est = [[cos(c_gp_parm(5)) 0 sin(c_gp_parm(5))]; [0 1 0]; [-sin(c_gp_parm(5)) 0 cos(c_gp_parm(5))]];
-                        Z_est = [[cos(c_gp_parm(6)) -sin(c_gp_parm(6)) 0]; [sin(c_gp_parm(6)) cos(c_gp_parm(6)) 0]; [0 0 1]];
-                        rot_cord = (xyz_vals-repmat(c_gp_parm(1:3)',N_ind,1))*Z_est*Y_est*X_est;
-                        
-                        f_x = exp(std::pow(-rot_cord(:,1),2)/c_gp_parm(7));
-                        f_y = exp(std::pow(-rot_cord(:,2),2)/c_gp_parm(8));
-                        f_z = exp(std::pow(-rot_cord(:,3),2)/c_gp_parm(9));
-                        c_gp_dist = f_x.*f_y.*f_z;
-                        c_gp_dist = c_gp_dist/sum(c_gp_dist(:));
-                        best_norm = (transpose(c_gp_dist)*conditional_event_vals)/(transpose(c_gp_dist)*c_gp_dist);
-                        c_gp_events = round(best_norm.*c_gp_dist);
-                        c_best_err = sqrt(sum(std::pow((conditional_event_vals-best_norm*c_gp_dist),2)))/event_tot;
-                        if c_best_err<best_err
+                    if (do_opt == 1) {
+        DblMatrix  X_est(3, 3);
+        X_est[0][0] = 1.0;
+        X_est[1][0] = 0.0;
+        X_est[2][0] = 0.0;
+        X_est[0][1] = 0.0;
+        X_est[1][1] = std::cos(c_gp_parm[4]);
+        X_est[2][1] = -std::sin(c_gp_parm[4]);
+        X_est[0][2] = 0.0;
+        X_est[1][2] = std::sin(c_gp_parm[4]);
+        X_est[2][2] = std::cos(c_gp_parm[4]);
+
+        DblMatrix  Y_est(3, 3);
+        Y_est[0][0] = std::cos(c_gp_parm[5]);
+        Y_est[1][0] = 0.0;
+        Y_est[2][0] = std::sin(c_gp_parm[5]);
+        Y_est[0][1] = 0.0;
+        Y_est[1][1] = 1.0;
+        Y_est[2][1] = 0.0;
+        Y_est[0][2] = -std::sin(c_gp_parm[5]);
+        Y_est[1][2] = 0.0;
+        Y_est[2][2] = std::cos(c_gp_parm[5]);
+
+
+        DblMatrix  Z_est(3, 3);
+        Z_est[0][0] = std::cos(c_gp_parm[6]);
+        Z_est[1][0] = -std::sin(c_gp_parm[6]);
+        Z_est[2][0] = 0.0;
+        Z_est[0][1] = std::sin(c_gp_parm[6]);
+        Z_est[1][1] = std::cos(c_gp_parm[6]);
+        Z_est[2][1] = 0.0;
+        DblMatrix XYZ_est = Z_est*Y_est*X_est;
+
+        //  ??? rot_cord = (xyz_vals-repmat(c_gp_parm(1:3)',N_ind,1))*Z_est*Y_est*X_est;
+        std::vector<double> rot_cord_x;
+        std::vector<double> rot_cord_y;
+        std::vector<double> rot_cord_z;
+        for (int j0 = 0; j0 <  N_ind; j0++) {
+          std::vector<double> tmp;
+          tmp.push_back(x_vals[j0]-c_gp_parm[0]);
+          tmp.push_back(y_vals[j0]-c_gp_parm[1]);
+          tmp.push_back(z_vals[j0]-c_gp_parm[2]);
+          tmp = XYZ_est * tmp;
+          rot_cord_x.push_back(tmp[0]);
+          rot_cord_y.push_back(tmp[1]);
+          rot_cord_z.push_back(tmp[2]);
+        }
+        
+        std::vector<double> c_gp_dist;
+        for (int j0 = 0; j0 <  N_ind; j0++) {
+          c_gp_dist.push_back(exp(std::pow(-rot_cord_x[j0],2)/c_gp_parm[7])
+          * exp(std::pow(-rot_cord_y[j0],2)/c_gp_parm[8])
+          * exp(std::pow(-rot_cord_y[j0],2)/c_gp_parm[9]));
+        }
+        double c_gp_dist_sum = std::accumulate(c_gp_dist.begin(),c_gp_dist.end(),0);
+        for (int j0 = 0; j0 <  N_ind; j0++) {
+          c_gp_dist[j0] /= c_gp_dist_sum;
+        }
+        
+        double best_norm = 0;
+        double best_norm0 = 0;
+        for (int j0 = 0; j0 <  N_ind; j0++) {
+          best_norm += c_gp_dist[j0] * conditional_event_vals[j0];
+          best_norm0 += c_gp_dist[j0] * c_gp_dist[j0];
+        }
+        best_norm /= best_norm0;
+
+        std::vector<double> c_gp_events;
+        double sum = 0.0;
+        for (int j0 = 0; j0 <  N_ind; j0++) {
+          c_gp_events.push_back(static_cast<int>(best_norm * c_gp_dist[j0]+0.5));
+          sum += std::pow((conditional_event_vals[j0]-best_norm*c_gp_dist[j0]),2);
+        }
+        double c_best_err = sqrt(sum)/event_tot;
+        
+                        if (c_best_err<best_err) {
                             best_err = c_best_err;
                             gp_parm = c_gp_parm;
                             gp_dist = c_gp_dist;
                             gp_events = c_gp_events;
-                            did_mv_vec(jp) = 1;
-                        end
-                    end
-                end
-                if did_mv_vec(jp) ==0
-                    d_gp_parm(jp) = d_gp_parm(jp)/2;
-                else
-                    d_gp_parm(jp) = 1.2*d_gp_parm(jp);
-                end
-            end
+                            did_mv_vec[jp] = 1;
+                        }
+                    }  
+                }  
+                if (did_mv_vec[jp] ==0) {
+                    d_gp_parm[jp] = d_gp_parm[jp]/2.0;
+                }
+                else {
+                    d_gp_parm[jp] = 1.2*d_gp_parm[jp];
+                }  
+            }  
             
-            figure(hfg);
-            trackbest_err = [trackbest_err;best_err];
-            semilogy(trackbest_err)
-            set(gca,'FontSize',16);
-            //title(['Error for Multivariate (',num2str(best_err,'%10.3e\n'),') -- Gaussian, Slice ',num2str(jtarg)],'FontSize',16)
-            drawnow
-            
-            if max(d_gp_parm/fabs(gp_parm))<1e-3
+            if (max(d_gp_parm/fabs(gp_parm))<1e-3) {
                 break
-            end
-        end
+            }
+        }
         
-        close(hfg);
         
         // Estimate Poisson distribution given Gaussian distribution //
         
-        conditional_event_vals = max(event_vals-gp_events,0);
+        /*conditional_event_vals = max(event_vals-gp_events,0);
         pp_ind = find(round(gp_events)<1);
         gp_ind = find(round(gp_events)>0);
         event_hist = accumarray(event_vals(pp_ind),1);
@@ -549,9 +682,9 @@ for (int j1 = 1; j1 <=  static_cast<int>(event_max); j1++) {
         connection_map(gp_ind) = 0;
 
         for jp = 1:length(rp_ind);
-            ind_box = num_events_ref(max(xyz_vals(rp_ind(jp),1)-neigh_length_c,1):min(xyz_vals(rp_ind(jp),1)+neigh_length_c,N),...
-                max(xyz_vals(rp_ind(jp),2)-neigh_length_c,1):min(xyz_vals(rp_ind(jp),2)+neigh_length_c,N),...
-                max(xyz_vals(rp_ind(jp),3)-neigh_length_c,1):min(xyz_vals(rp_ind(jp),3)+neigh_length_c,N));
+            ind_box = num_events_ref(max(xyz_vals(rp_ind[jp],1)-neigh_length_c,1):min(xyz_vals(rp_ind[jp],1)+neigh_length_c,N),...
+                max(xyz_vals(rp_ind[jp],2)-neigh_length_c,1):min(xyz_vals(rp_ind[jp],2)+neigh_length_c,N),...
+                max(xyz_vals(rp_ind[jp],3)-neigh_length_c,1):min(xyz_vals(rp_ind[jp],3)+neigh_length_c,N));
             cind = ind_box(find(ind_box~=0));
             cind = cind(find(full_box_mean(cind)>pp_lambda+1.96*sqrt(pp_lambda/std::pow((2*neigh_length_m+1),3))));
             
@@ -565,9 +698,9 @@ for (int j1 = 1; j1 <=  static_cast<int>(event_max); j1++) {
         neig_ind = [];
         connection_map = zeros(N_ind,1);
         for jp = 1:length(rp_ind);
-            ind_box = num_events_ref(max(xyz_vals(rp_ind(jp),1)-neigh_length_c,1):min(xyz_vals(rp_ind(jp),1)+neigh_length_c,N),...
-                max(xyz_vals(rp_ind(jp),2)-neigh_length_c,1):min(xyz_vals(rp_ind(jp),2)+neigh_length_c,N),...
-                max(xyz_vals(rp_ind(jp),3)-neigh_length_c,1):min(xyz_vals(rp_ind(jp),3)+neigh_length_c,N));
+            ind_box = num_events_ref(max(xyz_vals(rp_ind[jp],1)-neigh_length_c,1):min(xyz_vals(rp_ind[jp],1)+neigh_length_c,N),...
+                max(xyz_vals(rp_ind[jp],2)-neigh_length_c,1):min(xyz_vals(rp_ind[jp],2)+neigh_length_c,N),...
+                max(xyz_vals(rp_ind[jp],3)-neigh_length_c,1):min(xyz_vals(rp_ind[jp],3)+neigh_length_c,N));
             cind = ind_box(find(ind_box~=0));
             cind = cind(find(full_box_mean(cind)>pp_lambda-1.96*sqrt(pp_lambda/std::pow((2*neigh_length_m+1),3))));
             connection_map(cind(:)) = 1;
@@ -594,109 +727,7 @@ for (int j1 = 1; j1 <=  static_cast<int>(event_max); j1++) {
         Background_in_Signal = ns_count;
         Background_Signal = sum(event_vals(pp_ind));
         
-        //////////////////////////////
-        //// Code Below is only for //%
-        ////       vis purpose      //%
-        //////////////////////////////
-        gp_events = zeros(N_ind,1);
-        gp_events(gp_ind) = event_vals(gp_ind);
-        pp_events = zeros(N_ind,1);
-        pp_events(pp_ind) = event_vals(pp_ind);
-        rp_events = zeros(N_ind,1);
-        rp_events(rp_ind) = event_vals(rp_ind);
-        
-        ns_events = zeros(N_ind,1);
-        ns_inds = [];
-        for jp = length(ns_hist):-1:1
-            cind = setdiff(find(gp_events+rp_events-ns_events >= jp),ns_inds);
-            cind = cind(randperm(length(cind)));
-            cind = cind(1:min(ns_hist(jp),length(cind)));
-            ns_inds = union(ns_inds,cind);
-            ns_events(cind) = jp;
-        end
-        
-        
-        
-        close all
-        h_fig = figure('Position', [0, 0, 1400, 900]);
-        cmax = max(num_events(:));
-        vis_event(event_vals,num_events,use_ind,Q1,Q2,Q3,h_fig,1,cmax)
-        title(['Box, Total Count: ',num2str(sum(event_vals))],'FontSize',12);
-        
-        vis_event(gp_events(:),num_events,use_ind,Q1,Q2,Q3,h_fig,2,cmax)
-        title(['Gaussian Process Signal, Count: ',num2str(sum(gp_events(:)))],'FontSize',12);
-        
-        vis_event(gp_events+rp_events-ns_events,num_events,use_ind,Q1,Q2,Q3,h_fig,3,cmax)
-        title(['Full Signal, Count: ',num2str(sum(gp_events(:)+rp_events(:)-ns_events(:)))],'FontSize',12);
-        
-        vis_event(pp_events+ns_events,num_events,use_ind,Q1,Q2,Q3,h_fig,4,cmax)
-        if do_ref == 1
-            title(['Background, Count: ',num2str(sum(pp_events(:)+ns_events(:))),'; BG in Sig: ',num2str(sum(ns_events(:))), '; Reference Signal ',num2str(intensities(jtarg+1)),' ; New Alg ',num2str(sum(gp_events(:)+rp_events(:)-ns_events(:)))],'FontSize',12);
-        else
-            title(['Background, Count: ',num2str(sum(pp_events(:)+ns_events(:))),'; BG in Sig: ',num2str(sum(ns_events(:)))],'FontSize',12);
-        end
 
-        drawnow
-//         p=mtit(['Box ',num2str(jtarg),', Signal Decomposition'],'FontSize',14);
-//         set(gcf,'PaperUnits','centimeters','PaperPosition',[0 0 30 30])
-//         print(h_fig,'-depsc', ['EVE',num2str(jtarg),'.eps'], '-r300');
-    end
-end
-
-
-
-  double minIntensity = Fmin + 0.01 * (Fmax - Fmin);
-  int measuredPoints = 0;
-  int peakPoints = 0;
-  double peakSum = 0.0;
-  double measuredSum = 0.0;
-  double errSqSum = 0.0;
-  double measuredErrSqSum = 0.0;
-  for (int Hindex = 0; Hindex < gridPts[0]; Hindex++) {
-    for (int Kindex = 0; Kindex < gridPts[1]; Kindex++) {
-      for (int Lindex = 0; Lindex < gridPts[2]; Lindex++) {
-        int iPts = Hindex + gridPts[0] * (Kindex + gridPts[1] * Lindex);
-        if (std::isfinite(F[iPts])) {
-          measuredPoints = measuredPoints + 1;
-          measuredSum = measuredSum + F[iPts];
-          measuredErrSqSum = measuredErrSqSum + SqError[iPts];
-          if (F[iPts] > minIntensity) {
-            int neighborPoints = 0;
-            for (int Hj = -2; Hj < 3; Hj++) {
-              for (int Kj = -2; Kj < 3; Kj++) {
-                for (int Lj = -2; Lj < 3; Lj++) {
-                  int jPts =
-                      Hindex + Hj +
-                      gridPts[0] * (Kindex + Kj + gridPts[1] * (Lindex + Lj));
-                  if (Lindex + Lj >= 0 && Lindex + Lj < gridPts[2] &&
-                      Kindex + Kj >= 0 && Kindex + Kj < gridPts[1] &&
-                      Hindex + Hj >= 0 && Hindex + Hj < gridPts[0] &&
-                      F[jPts] > minIntensity) {
-                    neighborPoints = neighborPoints + 1;
-                  }
-                }
-              }
-            }
-            if (neighborPoints >= neighborPts) {
-              peakPoints = peakPoints + 1;
-              peakSum = peakSum + F[iPts];
-              errSqSum = errSqSum + SqError[iPts];
-            }
-          }
-        } else {
-          double minR =
-              sqrt(std::pow(float(Hindex) / float(gridPts[0]) - 0.5, 2) +
-                   std::pow(float(Kindex) / float(gridPts[1]) - 0.5, 2) +
-                   std::pow(float(Lindex) / float(gridPts[0]) - 0.5, 2));
-          if (minR < 0.05) {
-            intensity = 0.0;
-            errorSquared = 0.0;
-            return;
-          }
-        }
-      }
-    }
-  }
   double ratio = float(peakPoints) / float(measuredPoints - peakPoints);
   intensity = peakSum - ratio * (measuredSum - peakSum);
   errorSquared = errSqSum + ratio * ratio * (measuredErrSqSum - errSqSum);
