@@ -10,8 +10,8 @@
 #include "MantidKernel/CompositeValidator.h"
 #include "MantidGeometry/Crystal/IPeak.h"
 #include <boost/math/special_functions/round.hpp>
-#include <gsl/gsl_sf_gamma.h>  // for factorial
-#include <gsl/gsl_linalg.h>    // for SVD
+#include <gsl/gsl_sf_gamma.h> // for factorial
+#include <gsl/gsl_linalg.h>   // for SVD
 #include <algorithm>
 #include <limits>
 
@@ -33,16 +33,15 @@ DECLARE_ALGORITHM(IntegratePeaks3DFit)
   * Initialize the algorithm's properties.
   */
 void IntegratePeaks3DFit::init() {
-  declareProperty(make_unique<WorkspaceProperty<IMDWorkspace>>(
+  declareProperty(make_unique<WorkspaceProperty<IMDWorkspace> >(
                       "InputWorkspace", "", Direction::Input),
                   "An input Sample MDHistoWorkspace or MDEventWorkspace.");
   declareProperty("Delta", 0.5, "Distance from center to edge of box.");
   declareProperty("GridPoints", 201,
                   "Number of grid points for each dimension of box.");
-  declareProperty("NeighborPoints", 10,
-                  "Number of points in 5^3 surrounding "
-                  "points above intensity threshold for "
-                  "point to be part of peak.");
+  declareProperty("NeighborPoints", 10, "Number of points in 5^3 surrounding "
+                                        "points above intensity threshold for "
+                                        "point to be part of peak.");
   auto fluxValidator = boost::make_shared<CompositeValidator>();
   fluxValidator->add<WorkspaceUnitValidator>("Momentum");
   fluxValidator->add<InstrumentValidator>();
@@ -50,24 +49,24 @@ void IntegratePeaks3DFit::init() {
   auto solidAngleValidator = fluxValidator->clone();
 
   declareProperty(
-      make_unique<WorkspaceProperty<>>("FluxWorkspace", "", Direction::Input,
-                                       PropertyMode::Optional, fluxValidator),
+      make_unique<WorkspaceProperty<> >("FluxWorkspace", "", Direction::Input,
+                                        PropertyMode::Optional, fluxValidator),
       "An optional input workspace containing momentum dependent flux for "
       "normalization.");
-  declareProperty(make_unique<WorkspaceProperty<>>(
+  declareProperty(make_unique<WorkspaceProperty<> >(
                       "SolidAngleWorkspace", "", Direction::Input,
                       PropertyMode::Optional, solidAngleValidator),
                   "An optional input workspace containing momentum integrated "
                   "vanadium for normalization "
                   "(a measure of the solid angle).");
 
-  declareProperty(make_unique<WorkspaceProperty<PeaksWorkspace>>(
+  declareProperty(make_unique<WorkspaceProperty<PeaksWorkspace> >(
                       "PeaksWorkspace", "", Direction::Input),
                   "A PeaksWorkspace containing the peaks to integrate.");
 
   declareProperty(
-      make_unique<WorkspaceProperty<PeaksWorkspace>>("OutputWorkspace", "",
-                                                     Direction::Output),
+      make_unique<WorkspaceProperty<PeaksWorkspace> >("OutputWorkspace", "",
+                                                      Direction::Output),
       "The output PeaksWorkspace will be a copy of the input PeaksWorkspace "
       "with the peaks' integrated intensities.");
 }
@@ -88,7 +87,8 @@ void IntegratePeaks3DFit::exec() {
   const int neighborPts = getProperty("NeighborPoints");
   /// Output peaks workspace, create if needed
   PeaksWorkspace_sptr peakWS = getProperty("OutputWorkspace");
-  if (peakWS != inPeakWS) peakWS = inPeakWS->clone();
+  if (peakWS != inPeakWS)
+    peakWS = inPeakWS->clone();
 
   MatrixWorkspace_sptr flux = getProperty("FluxWorkspace");
   MatrixWorkspace_sptr sa = getProperty("SolidAngleWorkspace");
@@ -107,11 +107,11 @@ void IntegratePeaks3DFit::exec() {
     IPeak &p = peakWS->getPeak(i);
     // Get the peak center as a position in the dimensions of the workspace
     V3D pos;
-    if (CoordinatesToUse == Mantid::Kernel::QLab)  //"Q (lab frame)"
+    if (CoordinatesToUse == Mantid::Kernel::QLab) //"Q (lab frame)"
       pos = p.getQLabFrame();
-    else if (CoordinatesToUse == Mantid::Kernel::QSample)  //"Q (sample frame)"
+    else if (CoordinatesToUse == Mantid::Kernel::QSample) //"Q (sample frame)"
       pos = p.getQSampleFrame();
-    else if (CoordinatesToUse == Mantid::Kernel::HKL)  //"HKL"
+    else if (CoordinatesToUse == Mantid::Kernel::HKL) //"HKL"
       pos = p.getHKL();
 
     MDHistoWorkspace_sptr histoBox;
@@ -136,10 +136,11 @@ void IntegratePeaks3DFit::exec() {
   setProperty("OutputWorkspace", peakWS);
 }
 
-MDHistoWorkspace_sptr IntegratePeaks3DFit::normalize(
-    double h, double k, double l, double box, int gridPts,
-    const MatrixWorkspace_sptr &flux, const MatrixWorkspace_sptr &sa,
-    const IMDEventWorkspace_sptr &ws) {
+MDHistoWorkspace_sptr
+IntegratePeaks3DFit::normalize(double h, double k, double l, double box,
+                               int gridPts, const MatrixWorkspace_sptr &flux,
+                               const MatrixWorkspace_sptr &sa,
+                               const IMDEventWorkspace_sptr &ws) {
   IAlgorithm_sptr normAlg = createChildAlgorithm("MDNormSCD");
   normAlg->setProperty("InputWorkspace", ws);
   normAlg->setProperty("AlignedDim0",
@@ -183,15 +184,15 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
 
   // Parameters for Distribution Analysis //
 
-  double eps = 2.2204e-16;  // Floating-point relative accuracy
-  int do_material = 2;      // Flag to set material files to analyis
-                            // do_material = 1 > Silicon
-                            // do_material = 2 > Sc
-  int n_break_its = 100;    // Max number of iterations for each optimization
-  int max_sigma = 30;       // Max STD in Pixels
-  int min_sigma = 1;        // Min STD in Pixels
-  int max_mu = 10;          // Max deviation from Center in Pixels
-  int N_event_thres = 20;   // Minimum number of events to determine signal
+  double eps = 2.2204e-16; // Floating-point relative accuracy
+  int do_material = 2;     // Flag to set material files to analyis
+                           // do_material = 1 > Silicon
+                           // do_material = 2 > Sc
+  int n_break_its = 100;   // Max number of iterations for each optimization
+  int max_sigma = 30;      // Max STD in Pixels
+  int min_sigma = 1;       // Min STD in Pixels
+  int max_mu = 10;         // Max deviation from Center in Pixels
+  int N_event_thres = 20;  // Minimum number of events to determine signal
 
   // Begin Program
   int neigh_length_c = 0;
@@ -200,15 +201,15 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
   if (do_material == 1) {
     // Silicon file info//
     neigh_length_c =
-        3;  // Neighborhood size for connection map is 2*neigh_length_c+1
+        3; // Neighborhood size for connection map is 2*neigh_length_c+1
     neigh_length_m =
-        3;  // Neighborhood size for mean calculation is 2*neigh_length_m+1
+        3; // Neighborhood size for mean calculation is 2*neigh_length_m+1
   } else if (do_material == 2) {
     // Uncomment for Sc //
     neigh_length_c =
-        1;  // Neighborhood size for connection map is 2*neigh_length_c+1
+        1; // Neighborhood size for connection map is 2*neigh_length_c+1
     neigh_length_m =
-        3;  // Neighborhood size for mean calculation is 2*neigh_length_m+1
+        3; // Neighborhood size for mean calculation is 2*neigh_length_m+1
   } else {
     std::cout << "Material Flag not defined\n";
   }
@@ -253,11 +254,13 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
   for (int j1 = 1; j1 <= static_cast<int>(event_max); j1++) {
     int match;
     for (int j2 = 0; j2 < N_ind; j2++) {
-      if (static_cast<int>(event_vals[j2]) == j1) match++;
+      if (static_cast<int>(event_vals[j2]) == j1)
+        match++;
     }
     event_counts.push_back(j1);
     event_hist.push_back(match);
-    if (match > 0) N_non_zeros++;
+    if (match > 0)
+      N_non_zeros++;
   }
   double pp_lambda = 0.;
 
@@ -317,7 +320,8 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
           d_pp_lambda = d_pp_lambda / 2;
         else
           d_pp_lambda = 1.2 * d_pp_lambda;
-        if (d_pp_lambda / pp_lambda < 1e-4) break;
+        if (d_pp_lambda / pp_lambda < 1e-4)
+          break;
       }
     }
   }
@@ -330,17 +334,21 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
     int num = 0;
     for (int j1 = x_vals[j0] - neigh_length_m;
          j1 <= x_vals[j0] + neigh_length_m; j1++) {
-      if (j1 < 0 || j1 >= gridPts[0]) continue;
+      if (j1 < 0 || j1 >= gridPts[0])
+        continue;
       for (int j2 = y_vals[j0] - neigh_length_m;
            j2 <= y_vals[j0] + neigh_length_m; j2++) {
-        if (j2 < 0 || j2 >= gridPts[1]) continue;
+        if (j2 < 0 || j2 >= gridPts[1])
+          continue;
         for (int j3 = z_vals[j0] - neigh_length_m;
              j3 <= z_vals[j0] + neigh_length_m; j3++) {
-          if (j3 < 0 || j3 >= gridPts[2]) continue;
+          if (j3 < 0 || j3 >= gridPts[2])
+            continue;
           int iPts = j1 + gridPts[0] * (j2 + gridPts[1] * j3);
           meanB += num_events[iPts];
           num0++;
-          if (num_events[iPts] > 0.) num++;
+          if (num_events[iPts] > 0.)
+            num++;
         }
       }
     }
@@ -357,7 +365,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
         std::max(fabs(z_vals[j0] - N2),
                  std::max(fabs(x_vals[j0] - N2), fabs(y_vals[j0] - N2))) >
             max_mu +
-                2 * max_sigma) {  // Remove points outside of prescribed domain
+                2 * max_sigma) { // Remove points outside of prescribed domain
       conditional_event_vals.push_back(event_vals[j0]);
       conditional_event_vals_tot += event_vals[j0];
     } else
@@ -378,9 +386,12 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
     mu_est[2] +=
         z_vals[j0] * conditional_event_vals[j0] / conditional_event_vals_tot;
   }
-  if (fabs(mu_est[0] - N2 > muMax)) muMax = fabs(mu_est[0] - N2);
-  if (fabs(mu_est[1] - N2 > muMax)) muMax = fabs(mu_est[1] - N2);
-  if (fabs(mu_est[2] - N2 > muMax)) muMax = fabs(mu_est[2] - N2);
+  if (fabs(mu_est[0] - N2 > muMax))
+    muMax = fabs(mu_est[0] - N2);
+  if (fabs(mu_est[1] - N2 > muMax))
+    muMax = fabs(mu_est[1] - N2);
+  if (fabs(mu_est[2] - N2 > muMax))
+    muMax = fabs(mu_est[2] - N2);
   if (muMax > max_mu) {
     for (int j0 = 0; j0 < 3; j0++) {
       mu_est[j0] = N2;
@@ -436,7 +447,8 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
       atan2(gsl_matrix_get(u_est, 2, 1), gsl_matrix_get(u_est, 1, 1));
 
   std::vector<double> sigma(3);
-  for (size_t jp = 0; jp < 3; jp++) sigma[jp] = gsl_vector_get(d_est, jp);
+  for (size_t jp = 0; jp < 3; jp++)
+    sigma[jp] = gsl_vector_get(d_est, jp);
 
   for (int jp = 0; jp < 3; jp++) {
     if (sqrt(sigma[jp] / 2.) < min_sigma)
@@ -541,8 +553,8 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
   for (int j0 = 0; j0 < 9; j0++) {
     d_gp_parm[j0] = .01 * fabs(gp_parm[j0]);
     d_gp_parm[j0] =
-        std::max(d_gp_parm[j0], .1);  // Minimal starting search distance
-                                      // of optimization parameters.
+        std::max(d_gp_parm[j0], .1); // Minimal starting search distance
+                                     // of optimization parameters.
   }
 
   for (int jpit = 0; jpit < n_break_its; jpit++) {
@@ -664,7 +676,8 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
     for (int j0 = 0; j0 < 9; j0++) {
       max_parm = std::max(d_gp_parm[j0] / fabs(gp_parm[j0]), max_parm);
     }
-    if (max_parm < 1.e-3) break;
+    if (max_parm < 1.e-3)
+      break;
   }
 
   // Estimate Poisson distribution given Gaussian distribution //
@@ -687,11 +700,13 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
   for (int j1 = 1; j1 <= static_cast<int>(event_max); j1++) {
     int match;
     for (int j2 = 0; j2 < N_ind; j2++) {
-      if (static_cast<int>(event_vals[j2]) == j1) match++;
+      if (static_cast<int>(event_vals[j2]) == j1)
+        match++;
     }
     event_counts.push_back(j1);
     event_hist.push_back(match);
-    if (match > 0) N_non_zeros++;
+    if (match > 0)
+      N_non_zeros++;
   }
   pp_lambda = 0.;
 
@@ -746,7 +761,8 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
         d_pp_lambda = d_pp_lambda / 2;
       else
         d_pp_lambda = 1.2 * d_pp_lambda;
-      if (d_pp_lambda / pp_lambda < 1e-4) break;
+      if (d_pp_lambda / pp_lambda < 1e-4)
+        break;
     }
   }
 
@@ -762,61 +778,105 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
 
   std::vector<double> rp_ind;
   for (int j0 = 0; j0 < N_ind; j0++) {
-      if (full_box_mean[j0] >
-              pp_lambda + 1.96 * sqrt(pp_lambda /
-                                      std::pow((2 * neigh_length_m + 1), 3)) && find(pp_ind.begin(),pp_ind.end(), j0) {
-        rp_ind.push_back(full_box_mean[j0]);
-      } else
-        pp_lambda = 0;
-        rp_ind.clear();
+    if (full_box_mean[j0] >
+            pp_lambda + 1.96 * sqrt(pp_lambda /
+                                    std::pow((2 * neigh_length_m + 1), 3)) &&
+        find(pp_ind.begin(), pp_ind.end(), j0) != pp_ind.end()) {
+      rp_ind.push_back(full_box_mean[j0]);
+    } else
+      pp_lambda = 0;
+    rp_ind.clear();
   }
 
   // Estimate Residual Distribution given Poisson distribution and Gaussian
   // distribution //
 
-  std::vector<int> connection_map;
+  /*std::vector<int> connection_map;
   for (int j1 = 0; j1 < N_ind; j1++) {
-    if( find(gp_ind.begin(),gp_ind.end(), j1))
-    connection_map.push_back(0);
+    if (find(gp_ind.begin(), gp_ind.end(), j1))
+      connection_map.push_back(0);
     else
-    connection_map.push_back(j1);
+      connection_map.push_back(j1);
   }
 
+  std::vector<double> ind_box;
+  for (size_t j0 = 0; j0 < rp_ind.size(); j0++) {
+    ind_box.clear();
+    for (int j1 = x_vals[rp_inp[j0]] - neigh_length_c;
+         j1 <= x_vals[rp_inp[j0]] + neigh_length_c; j1++) {
+      if (j1 < 0 || j1 >= gridPts[0])
+        continue;
+      for (int j2 = y_vals[rp_inp[j0]] - neigh_length_c;
+           j2 <= y_vals[rp_inp[j0]] + neigh_length_c; j2++) {
+        if (j2 < 0 || j2 >= gridPts[1])
+          continue;
+        for (int j3 = z_vals[rp_inp[j0]] - neigh_length_c;
+             j3 <= z_vals[j0] + neigh_length_c; j3++) {
+          if (j3 < 0 || j3 >= gridPts[2])
+            continue;
+          int iPts = j1 + gridPts[0] * (j2 + gridPts[1] * j3);
+          ind_box.push_back(num_events_ref[iPts]);
+        }
+      }
+    }
+  }
+  std::vector<double> rp_ind;
+  for (int j0 = 0; j0 < N_ind; j0++) {
+      if (full_box_mean[j0] >
+              pp_lambda + 1.96 * sqrt(pp_lambda /
+                                      std::pow((2 * neigh_length_m + 1), 3)) &&
+find(pp_ind.begin(),pp_ind.end(), j0) {
+        rp_ind.push_back(full_box_mean[j0]);
+      } else
+        pp_lambda = 0;
+        rp_ind.clear();
+  }
   for (size_t jp = 1; jp <= rp_ind.size(); jp++) {
-      ind_box =
-num_events_ref(max(xyz_vals(rp_ind[jp],1)-neigh_length_c,1):min(xyz_vals(rp_ind[jp],1)+neigh_length_c,N),...
-          max(xyz_vals(rp_ind[jp],2)-neigh_length_c,1):min(xyz_vals(rp_ind[jp],2)+neigh_length_c,N),...
-          fmmax(xyz_vals(rp_ind[jp],3)-neigh_length_c,1):min(xyz_vals(rp_ind[jp],3)+neigh_length_c,N));
-      cind = ind_box(ax(xyz_vals(rp_ind[jp],3)-neigh_length_c,1):min(xyz_vals(rp_ind[jp],3)+neigh_length_c,N));
-      cind = ind_box(ind(ind_box~=0));
-      cind =
-cind(find(full_box_mean(cind)>pp_lambda+1.96*sqrt(pp_lambda/std::pow((2*neigh_length_m+1),3))));
+    ind_box =
+        num_events_ref(max(xyz_vals(rp_ind[jp], 1) - neigh_length_c, 1)
+                       : min(xyz_vals(rp_ind[jp], 1) + neigh_length_c, N),
+                         max(xyz_vals(rp_ind[jp], 2) - neigh_length_c, 1)
+                       : min(xyz_vals(rp_ind[jp], 2) + neigh_length_c, N),
+                         max(xyz_vals(rp_ind[jp], 3) - neigh_length_c, 1)
+                       : min(xyz_vals(rp_ind[jp], 3) + neigh_length_c, N));
+    cind = ind_box(max(xyz_vals(rp_ind[jp], 3) - neigh_length_c, 1)
+                   : min(xyz_vals(rp_ind[jp], 3) + neigh_length_c, N));
+    cind = ind_box(ind(ind_box ~ = 0));
+    cind = cind(find(
+        full_box_mean(cind) >
+        pp_lambda +
+            1.96 * sqrt(pp_lambda / std::pow((2 * neigh_length_m + 1), 3))));
 
-      connection_map(cind(:)) = min(connection_map(cind(:)));
-  end
+    connection_map(cind( :)) = min(connection_map(cind( :)));
+    end
 
-  // Set of points only in the Tail of distribution.  //
-  rp_ind = setdiff(find(connection_map==0),gp_ind);
+        // Set of points only in the Tail of distribution.  //
+        rp_ind = setdiff(find(connection_map == 0), gp_ind);
 
-  // Add points at 5// level of pd //
-  neig_ind = [];
-  connection_map = zeros(N_ind,1);
-  for jp = 1:length(rp_ind);
-      ind_box =
-num_events_ref(max(xyz_vals(rp_ind[jp],1)-neigh_length_c,1):min(xyz_vals(rp_ind[jp],1)+neigh_length_c,N),...
-          max(xyz_vals(rp_ind[jp],2)-neigh_length_c,1):min(xyz_vals(rp_ind[jp],2)+neigh_length_c,N),...
-          max(xyz_vals(rp_ind[jp],3)-neigh_length_c,1):min(xyz_vals(rp_ind[jp],3)+neigh_length_c,N));
-      cind = ind_box(find(ind_box~=0));
-      cind =
-cind(find(full_box_mean(cind)>pp_lambda-1.96*sqrt(pp_lambda/std::pow((2*neigh_length_m+1),3))));
-      connection_map(cind(:)) = 1;
-  end
-  connection_map(rp_ind) = 0;
+    // Add points at 5// level of pd //
+    neig_ind = [];
+    connection_map = zeros(N_ind, 1);
+  for
+    jp = 1 : length(rp_ind);
+  ind_box =
+      num_events_ref(max(xyz_vals(rp_ind[jp], 1) - neigh_length_c, 1)
+                     : min(xyz_vals(rp_ind[jp], 1) + neigh_length_c, N),
+                       ... max(xyz_vals(rp_ind[jp], 2) - neigh_length_c, 1)
+                     : min(xyz_vals(rp_ind[jp], 2) + neigh_length_c, N),
+                       ... max(xyz_vals(rp_ind[jp], 3) - neigh_length_c, 1)
+                     : min(xyz_vals(rp_ind[jp], 3) + neigh_length_c, N));
+  cind = ind_box(find(ind_box ~ = 0));
+  cind = cind(
+      find(full_box_mean(cind) >
+           pp_lambda -
+               1.96 * sqrt(pp_lambda / std::pow((2 * neigh_length_m + 1), 3))));
+  connection_map(cind( :)) = 1;
+  end connection_map(rp_ind) = 0;
   connection_map(gp_ind) = 0;
-  rp_ind = union(rp_ind,find(connection_map==1));
+  rp_ind = union(rp_ind, find(connection_map == 1));
   // This last set of Possion Process index includes all points not in total
-signal //
-  gp_rp_ind = union(gp_ind,rp_ind);
+  // signal //
+  gp_rp_ind = union(gp_ind, rp_ind);
   pp_ind = setdiff((1:N_ind)',gp_rp_ind);
 
 
@@ -841,16 +901,27 @@ round(mean(full_box_density(pp_ind))*accumarray(event_vals(gp_rp_ind),1)/mean(fu
 (std::pow((pp_lambda),event_counts))*exp(-pp_lambda)/gsl_sf_fact(event_counts);
   double ns_N = (transpose(ns_dist)*ref_hist)/(transpose(ns_dist)*ns_dist);
   double ns_hist = round(ns_dist.*ns_N);
-  double ns_count = sum(ns_hist.*event_counts);
+  double ns_count = sum(ns_hist.*event_counts);*/
+  double ns_count = 0.0;
+  double gpSum = 0.0;
+  double rpSum = 0.0;
+  double ppSum = 0.0;
+  for (int j1 = 0; j1 < N_ind; j1++) {
+    if (find(gp_ind.begin(), gp_ind.end(), j1) != gp_ind.end())
+      gpSum += event_vals[j1];
+    if (find(rp_ind.begin(), rp_ind.end(), j1) != rp_ind.end())
+      rpSum += event_vals[j1];
+    if (find(pp_ind.begin(), pp_ind.end(), j1) != pp_ind.end())
+      ppSum += event_vals[j1];
+  }
 
-  double Full_Signal = sum(event_vals(gp_ind))+sum(event_vals(rp_ind));
+  double Full_Signal = gpSum + rpSum;
   double Background_in_Signal = ns_count;
-  double Background_Signal = sum(event_vals(pp_ind));
+  double Background_Signal = ppSum;
 
-
-intensity = Full_Signal - Background_in_Signal;
-errorSquared = Full_Signal + Background_in_Signal;
-return;
+  intensity = Full_Signal - Background_in_Signal;
+  errorSquared = Full_Signal + Background_in_Signal;
+  return;
 }
 
 /**
@@ -858,9 +929,9 @@ return;
  * All slicing algorithm properties are passed along
  * @return MDHistoWorkspace as a result of the binning
  */
-MDHistoWorkspace_sptr IntegratePeaks3DFit::binEvent(
-    double Qx, double Qy, double Qz, double box, int gridPts,
-    const IMDWorkspace_sptr &ws) {
+MDHistoWorkspace_sptr
+IntegratePeaks3DFit::binEvent(double Qx, double Qy, double Qz, double box,
+                              int gridPts, const IMDWorkspace_sptr &ws) {
   IAlgorithm_sptr binMD = createChildAlgorithm("BinMD", 0.0, 0.3);
   binMD->setProperty("InputWorkspace", ws);
   binMD->setProperty("AlignedDim0",
@@ -890,8 +961,9 @@ MDHistoWorkspace_sptr IntegratePeaks3DFit::binEvent(
  * All slicing algorithm properties are passed along
  * @return MDHistoWorkspace as a result of the binning
  */
-MDHistoWorkspace_sptr IntegratePeaks3DFit::cropHisto(
-    double Qx, double Qy, double Qz, double box, const IMDWorkspace_sptr &ws) {
+MDHistoWorkspace_sptr
+IntegratePeaks3DFit::cropHisto(double Qx, double Qy, double Qz, double box,
+                               const IMDWorkspace_sptr &ws) {
   IAlgorithm_sptr cropMD =
       createChildAlgorithm("IntegrateMDHistoWorkspace", 0.0, 0.3);
   cropMD->setProperty("InputWorkspace", ws);
@@ -912,5 +984,5 @@ MDHistoWorkspace_sptr IntegratePeaks3DFit::cropHisto(
   return boost::dynamic_pointer_cast<MDHistoWorkspace>(outputWS);
 }
 
-}  // namespace MDAlgorithms
-}  // namespace Mantid
+} // namespace MDAlgorithms
+} // namespace Mantid
