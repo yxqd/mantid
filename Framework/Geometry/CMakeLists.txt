@@ -450,6 +450,9 @@ if ( APPLE )
   add_definitions ( -DHAVE_IOSTREAM -DHAVE_LIMITS -DHAVE_IOMANIP )
 endif ()
 
+message("OPENGL_INCLUDE_DIR: ${OPENGL_INCLUDE_DIR}")
+message("OPENGL_LIBRARIES: ${OPENGL_LIBRARIES}")
+
 include_directories ( ${OPENGL_INCLUDE_DIR} ${TBB_INCLUDE_DIRS} )
 include_directories ( ${GSL_INCLUDE_DIR} )
 
