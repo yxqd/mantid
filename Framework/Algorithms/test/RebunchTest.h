@@ -235,4 +235,37 @@ private:
     return retVal;
   }
 };
+
+class RebunchTestPerformance : public CxxTest::TestSuite {
+public:
+  static RebunchTestPerformance *createSuite() {
+    return new RebunchTestPerformance();
+  }
+
+  static void destroySuite(RebunchTestPerformance *suite) { delete suite; }
+
+  void setUp() override {
+    input = boost::make_shared<Workspace2D>();
+    input->initialize(100000, 3000, 2999);
+    input->setDistribution(true);
+    AnalysisDataService::Instance().add("input", input);
+  }
+
+  void tearDown() override {
+    AnalysisDataService::Instance().remove("input");
+    AnalysisDataService::Instance().remove("test_out");
+  }
+
+  void testExec() {
+    Rebunch rebunch;
+    rebunch.initialize();
+    rebunch.setPropertyValue("InputWorkspace", "input");
+    rebunch.setPropertyValue("OutputWorkspace", "test_out");
+    rebunch.setPropertyValue("NBunch", "5");
+    rebunch.execute();
+  }
+
+private:
+  Workspace2D_sptr input;
+};
 #endif /* REBUNCHTEST */

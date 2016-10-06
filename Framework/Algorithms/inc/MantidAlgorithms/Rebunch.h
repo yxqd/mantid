@@ -7,6 +7,9 @@
 #include "MantidAPI/Algorithm.h"
 
 namespace Mantid {
+namespace HistogramData {
+class Histogram;
+}
 namespace Algorithms {
 /**
 
@@ -74,6 +77,9 @@ private:
                     const std::vector<double> &eold, std::vector<double> &xnew,
                     std::vector<double> &ynew, std::vector<double> &enew,
                     const size_t n_bunch, const bool distribution);
+  HistogramData::Histogram
+  rebunchHist(const HistogramData::Histogram &histogram, const size_t n_bunch,
+              const bool distribution);
   void rebunch_point(const std::vector<double> &xold,
                      const std::vector<double> &yold,
                      const std::vector<double> &eold, std::vector<double> &xnew,

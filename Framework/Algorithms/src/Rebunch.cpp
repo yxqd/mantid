@@ -19,6 +19,7 @@ namespace Algorithms {
 DECLARE_ALGORITHM(Rebunch)
 
 using namespace Kernel;
+using namespace HistogramData;
 using API::WorkspaceProperty;
 using API::MatrixWorkspace_const_sptr;
 using API::MatrixWorkspace;
@@ -83,23 +84,38 @@ void Rebunch::exec() {
   for (int hist = 0; hist < histnumber; hist++) {
     PARALLEL_START_INTERUPT_REGION
 
-    // get const references to input Workspace arrays (no copying)
-    const MantidVec &XValues = inputW->readX(hist);
-    const MantidVec &YValues = inputW->readY(hist);
-    const MantidVec &YErrors = inputW->readE(hist);
-
-    // get references to output workspace data (no copying)
-    MantidVec &XValues_new = outputW->dataX(hist);
-    MantidVec &YValues_new = outputW->dataY(hist);
-    MantidVec &YErrors_new = outputW->dataE(hist);
-
     // output data arrays are implicitly filled by function
     if (point) {
+      // get const references to input Workspace arrays (no copying)
+      const MantidVec &XValues = inputW->readX(hist);
+      const MantidVec &YValues = inputW->readY(hist);
+      const MantidVec &YErrors = inputW->readE(hist);
+
+      // get references to output workspace data (no copying)
+      MantidVec &XValues_new = outputW->dataX(hist);
+      MantidVec &YValues_new = outputW->dataY(hist);
+      MantidVec &YErrors_new = outputW->dataE(hist);
+
       rebunch_point(XValues, YValues, YErrors, XValues_new, YValues_new,
                     YErrors_new, n_bunch);
     } else {
+#if 0
+      // get const references to input Workspace arrays (no copying)
+      const MantidVec &XValues = inputW->readX(hist);
+      const MantidVec &YValues = inputW->readY(hist);
+      const MantidVec &YErrors = inputW->readE(hist);
+
+      // get references to output workspace data (no copying)
+      MantidVec &XValues_new = outputW->dataX(hist);
+      MantidVec &YValues_new = outputW->dataY(hist);
+      MantidVec &YErrors_new = outputW->dataE(hist);
+
       rebunch_hist(XValues, YValues, YErrors, XValues_new, YValues_new,
                    YErrors_new, n_bunch, dist);
+#else
+      outputW->setHistogram(
+          hist, rebunchHist(inputW->histogram(hist), n_bunch, dist));
+#endif
     }
 
     if (hist % progress_step == 0) {
@@ -209,6 +225,89 @@ void Rebunch::rebunch_hist(const std::vector<double> &xold,
       ynew[i] = ynew[i] / width;
       enew[i] = enew[i] / width;
     }
+}
+
+Histogram Rebunch::rebunchHist(const Histogram &histogram, const size_t n_bunch,
+                               const bool distribution) {
+  const auto &xold = histogram.x();
+  const auto &yold = histogram.y();
+  const auto &eold = histogram.e();
+  size_t i, j;
+  double width;
+  size_t size_x = xold.size();
+  size_t size_y = yold.size();
+  double ysum, esum;
+  size_t hi_index = size_x - 1;
+  size_t wbins = size_y / n_bunch;
+  size_t rem = size_y % n_bunch;
+  size_t size_y_new = wbins + (1 ? rem > 0 : 0);
+
+  std::vector<double> ynew(size_y_new);
+  std::vector<double> enew(size_y_new);
+
+  int i_in = 0;
+  j = 0;
+  while (j < wbins) {
+    ysum = 0.0;
+    esum = 0.0;
+    for (i = 1; i <= n_bunch; i++) {
+      if (distribution) {
+        width = xold[i_in + 1] - xold[i_in];
+        ysum += yold[i_in] * width;
+        esum += eold[i_in] * eold[i_in] * width * width;
+        i_in++;
+      } else {
+        ysum += yold[i_in];
+        esum += eold[i_in] * eold[i_in];
+        i_in++;
+      }
+    }
+    // average contributing x values
+    ynew[j] = ysum;
+    enew[j] = sqrt(esum);
+    j++;
+  }
+  if (rem != 0) {
+    ysum = 0.0;
+    esum = 0.0;
+    for (i = 1; i <= rem; i++) {
+      if (distribution) {
+        width = xold[i_in + 1] - xold[i_in];
+        ysum += yold[i_in] * width;
+        esum += eold[i_in] * eold[i_in] * width * width;
+        i_in++;
+      } else {
+        ysum += yold[i_in];
+        esum += eold[i_in] * eold[i_in];
+        i_in++;
+      }
+    }
+    ynew[j] = ysum;
+    enew[j] = sqrt(esum);
+  }
+
+  j = 0;
+  std::vector<double> xnew(size_y_new + 1);
+  xnew[j] = xold[0];
+  j++;
+  for (i = n_bunch; i < hi_index; i += n_bunch) {
+    xnew[j] = xold[i];
+    j++;
+  }
+  xnew[j] = xold[hi_index];
+
+  if (distribution) {
+    for (i = 0; i < ynew.size(); i++) {
+      width = xnew[i + 1] - xnew[i];
+      ynew[i] = ynew[i] / width;
+      enew[i] = enew[i] / width;
+    }
+    return Histogram(BinEdges(std::move(xnew)), Frequencies(std::move(ynew)),
+                     FrequencyStandardDeviations(std::move(enew)));
+  } else {
+    return Histogram(BinEdges(std::move(xnew)), Counts(std::move(ynew)),
+                     CountStandardDeviations(std::move(enew)));
+  }
 }
 
 /** Rebunches point data data according to n_bunch input
