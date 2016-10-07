@@ -62,7 +62,7 @@ endif ()
 # Find OpenGL
 ###########################################################################
 set ( saved_prefix ${CMAKE_PREFIX_PATH} )
-set ( CMAKE_PREFIX_PATH /usr }
+set ( CMAKE_PREFIX_PATH /usr )
 find_package ( OpenGL REQUIRED )
 set ( CMAKE_PREFIX_PATH ${saved_prefix} )
 # FindOpenGL does not (as of CMake 2.6.4) take notice of the REQUIRED
