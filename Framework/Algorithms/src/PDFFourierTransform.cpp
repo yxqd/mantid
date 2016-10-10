@@ -52,9 +52,6 @@ const std::string PDFFourierTransform::category() const {
   return "Diffraction\\Utility";
 }
 
-//----------------------------------------------------------------------------------------------
-
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
 */
 void PDFFourierTransform::init() {
@@ -142,9 +139,8 @@ std::map<string, string> PDFFourierTransform::validateInputs() {
   return result;
 }
 
-size_t
-PDFFourierTransform::determineQminIndex(const std::vector<double> &Q,
-                                        const std::vector<double> &FofQ) {
+size_t PDFFourierTransform::determineQminIndex(const HistogramX &Q,
+                                               const HistogramY &FofQ) {
   double qmin = getProperty("Qmin");
 
   // check against available Q-range
@@ -175,9 +171,8 @@ PDFFourierTransform::determineQminIndex(const std::vector<double> &Q,
   return qmin_index;
 }
 
-size_t
-PDFFourierTransform::determineQmaxIndex(const std::vector<double> &Q,
-                                        const std::vector<double> &FofQ) {
+size_t PDFFourierTransform::determineQmaxIndex(const HistogramX &Q,
+                                               const HistogramY &FofQ) {
   double qmax = getProperty("Qmax");
 
   // check against available Q-range
@@ -225,18 +220,17 @@ double PDFFourierTransform::determineRho0() {
   return rho0;
 }
 
-//----------------------------------------------------------------------------------------------
 /** Execute the algorithm.
 */
 void PDFFourierTransform::exec() {
   // get input data
   API::MatrixWorkspace_const_sptr inputWS = getProperty("InputWorkspace");
-  auto inputQ = inputWS->x(0).rawData();                  //  x for input
+  auto inputQ = inputWS->x(0);                            //  x for input
   HistogramData::HistogramDx inputDQ(inputQ.size(), 0.0); // dx for input
   if (inputWS->sharedDx(0))
     inputDQ = inputWS->dx(0);
-  auto inputFOfQ = inputWS->y(0).rawData();  //  y for input
-  auto inputDfOfQ = inputWS->e(0).rawData(); // dy for input
+  auto inputFOfQ = inputWS->y(0);  //  y for input
+  auto inputDfOfQ = inputWS->e(0); // dy for input
 
   // transform input data into Q/MomentumTransfer
   const std::string inputXunit = inputWS->getAxis(0)->unit()->unitID();
@@ -365,9 +359,6 @@ void PDFFourierTransform::exec() {
       }
       fs += sinus * inputFOfQ[q_index];
       error += (sinus * inputDfOfQ[q_index]) * (sinus * inputDfOfQ[q_index]);
-      // g_log.debug() << "q[" << i << "] = " << q << "  dq = " << deltaq << "
-      // S(q) =" << s;
-      // g_log.debug() << "  d(gr) = " << temp << "  gr = " << gr << '\n';
     }
 
     // put the information into the output
