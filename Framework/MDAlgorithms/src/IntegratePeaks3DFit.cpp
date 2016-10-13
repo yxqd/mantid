@@ -223,7 +223,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
   double *SqError = out->getErrorSquaredArray();
 
   // Vectorize Non-zero data and record location //
-  std::vector<int> x_vals, y_vals, z_vals;
+  std::vector<int> x_vals, y_vals, z_vals, num_events_ref;
   std::vector<double> event_vals, sigma_events;
   double event_tot = 0;
   double event_max = 0;
@@ -243,18 +243,20 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
           sigma_events.push_back(SqError[iPts]);
           event_tot += num_events[iPts];
           event_max = std::max(event_max, num_events[iPts]);
+          num_events_ref.push_back(N_ind);
           N_ind++;
         }
       }
     }
   }
+
   std::vector<int> event_hist;
   std::vector<int> event_counts;
   int N_non_zeros = 0;
   for (int j1 = 1; j1 <= static_cast<int>(event_max); j1++) {
-    int match;
+    int match = 0;
     for (int j2 = 0; j2 < N_ind; j2++) {
-      if (static_cast<int>(event_vals[j2]) == j1)
+      if (static_cast<int>(event_vals[j2] + 0.5) == j1)
         match++;
     }
     event_counts.push_back(j1);
@@ -262,6 +264,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
     if (match > 0)
       N_non_zeros++;
   }
+
   double pp_lambda = 0.;
 
   if (N_ind < N_event_thres) {
@@ -270,11 +273,11 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
     // Initialize Estimate of Poisson Distribution //
     if (N_non_zeros > 1) {
       pp_lambda = std::max(
-          eps, (std::pow((event_hist[2] / gsl_sf_fact(event_counts[2])) /
-                             (event_hist[1] / gsl_sf_fact(event_counts[1])),
-                         (1.0 / (event_counts[2] - event_counts[1])))));
+          eps, (std::pow((event_hist[1] / gsl_sf_fact(event_counts[1])) /
+                             (event_hist[0] / gsl_sf_fact(event_counts[0])),
+                         (1.0 / (event_counts[1] - event_counts[0])))));
       std::vector<double> pp_dist;
-      for (int j1 = 0; j1 < N_ind; j1++) {
+      for (size_t j1 = 0; j1 < event_hist.size(); j1++) {
         pp_dist.push_back((std::pow((pp_lambda), event_counts[j1])) *
                           exp(-pp_lambda) / gsl_sf_fact(event_counts[j1]));
       }
@@ -283,7 +286,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
                     std::inner_product(pp_dist.begin(), pp_dist.end(),
                                        pp_dist.begin(), 0.0);
       double best_pp_err = 0.;
-      for (int j1 = 0; j1 < N_ind; j1++) {
+      for (size_t j1 = 0; j1 < event_hist.size(); j1++) {
         best_pp_err += std::pow((pp_N * pp_dist[j1] - event_hist[j1]), 2);
       }
       best_pp_err /= event_tot;
@@ -292,11 +295,11 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
 
       for (int jpit = 1; jpit < n_break_its; jpit++) {
         double did_mv = 0;
-        for (int js = 1; js < 2; js++) {
+        for (int js = 1; js < 3; js++) {
           double c_pp_lambda = pp_lambda;
           c_pp_lambda += (std::pow((-1), js)) * d_pp_lambda;
           std::vector<double> pp_dist;
-          for (int j1 = 0; j1 < N_ind; j1++) {
+          for (size_t j1 = 0; j1 < event_hist.size(); j1++) {
             pp_dist.push_back((std::pow((c_pp_lambda), event_counts[j1])) *
                               exp(-c_pp_lambda) /
                               gsl_sf_fact(event_counts[j1]));
@@ -306,7 +309,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
                         std::inner_product(pp_dist.begin(), pp_dist.end(),
                                            pp_dist.begin(), 0.0);
           double c_best_pp_err = 0.;
-          for (int j1 = 0; j1 < N_ind; j1++) {
+          for (size_t j1 = 0; j1 < event_hist.size(); j1++) {
             c_best_pp_err += std::pow((pp_N * pp_dist[j1] - event_hist[j1]), 2);
           }
           c_best_pp_err /= event_tot;
@@ -363,7 +366,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
             pp_lambda + 1.96 * sqrt(pp_lambda /
                                     std::pow((2 * neigh_length_m + 1), 3)) &&
         std::max(fabs(z_vals[j0] - N2),
-                 std::max(fabs(x_vals[j0] - N2), fabs(y_vals[j0] - N2))) >
+                 std::max(fabs(x_vals[j0] - N2), fabs(y_vals[j0] - N2))) <=
             max_mu +
                 2 * max_sigma) { // Remove points outside of prescribed domain
       conditional_event_vals.push_back(event_vals[j0]);
@@ -371,6 +374,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
     } else
       conditional_event_vals.push_back(0.0);
   }
+
   // Estimate initial parameters for Gaussian distribution //
   std::vector<double> mu_est(3);
 
@@ -437,14 +441,14 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
       gsl_matrix_set(u_est, k, l, covar_mat_est[k][l]);
 
   gsl_linalg_SV_decomp(u_est, v_est, d_est, work);
-
+  // 2nd column has sign change in gsl from matlab
   double theta_x_est =
-      atan2(gsl_matrix_get(u_est, 3, 2), gsl_matrix_get(u_est, 3, 3));
-  double theta_y_est = atan2(-gsl_matrix_get(u_est, 3, 1),
-                             sqrt(std::pow(gsl_matrix_get(u_est, 3, 2), 2) +
-                                  std::pow(gsl_matrix_get(u_est, 3, 3), 2)));
+      atan2(-gsl_matrix_get(u_est, 2, 1), gsl_matrix_get(u_est, 2, 2));
+  double theta_y_est = atan2(-gsl_matrix_get(u_est, 2, 0),
+                             sqrt(std::pow(gsl_matrix_get(u_est, 2, 1), 2) +
+                                  std::pow(gsl_matrix_get(u_est, 2, 2), 2)));
   double theta_z_est =
-      atan2(gsl_matrix_get(u_est, 2, 1), gsl_matrix_get(u_est, 1, 1));
+      atan2(gsl_matrix_get(u_est, 1, 0), gsl_matrix_get(u_est, 0, 0));
 
   std::vector<double> sigma(3);
   for (size_t jp = 0; jp < 3; jp++)
@@ -475,29 +479,29 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
   X_est[1][0] = 0.0;
   X_est[2][0] = 0.0;
   X_est[0][1] = 0.0;
-  X_est[1][1] = std::cos(c_gp_parm[4]);
-  X_est[2][1] = -std::sin(c_gp_parm[4]);
+  X_est[1][1] = std::cos(c_gp_parm[3]);
+  X_est[2][1] = -std::sin(c_gp_parm[3]);
   X_est[0][2] = 0.0;
-  X_est[1][2] = std::sin(c_gp_parm[4]);
-  X_est[2][2] = std::cos(c_gp_parm[4]);
+  X_est[1][2] = std::sin(c_gp_parm[3]);
+  X_est[2][2] = std::cos(c_gp_parm[3]);
 
   DblMatrix Y_est(3, 3);
-  Y_est[0][0] = std::cos(c_gp_parm[5]);
+  Y_est[0][0] = std::cos(c_gp_parm[4]);
   Y_est[1][0] = 0.0;
-  Y_est[2][0] = std::sin(c_gp_parm[5]);
+  Y_est[2][0] = std::sin(c_gp_parm[4]);
   Y_est[0][1] = 0.0;
   Y_est[1][1] = 1.0;
   Y_est[2][1] = 0.0;
-  Y_est[0][2] = -std::sin(c_gp_parm[5]);
+  Y_est[0][2] = -std::sin(c_gp_parm[4]);
   Y_est[1][2] = 0.0;
-  Y_est[2][2] = std::cos(c_gp_parm[5]);
+  Y_est[2][2] = std::cos(c_gp_parm[4]);
 
   DblMatrix Z_est(3, 3);
-  Z_est[0][0] = std::cos(c_gp_parm[6]);
-  Z_est[1][0] = -std::sin(c_gp_parm[6]);
+  Z_est[0][0] = std::cos(c_gp_parm[5]);
+  Z_est[1][0] = -std::sin(c_gp_parm[5]);
   Z_est[2][0] = 0.0;
-  Z_est[0][1] = std::sin(c_gp_parm[6]);
-  Z_est[1][1] = std::cos(c_gp_parm[6]);
+  Z_est[0][1] = std::sin(c_gp_parm[5]);
+  Z_est[1][1] = std::cos(c_gp_parm[5]);
   Z_est[2][1] = 0.0;
   Z_est[0][2] = 0.0;
   Z_est[1][2] = 0.0;
@@ -521,11 +525,15 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
 
   std::vector<double> gp_dist;
   for (int j0 = 0; j0 < N_ind; j0++) {
-    gp_dist.push_back(exp(std::pow(-rot_cord_x[j0], 2) / c_gp_parm[7]) *
-                      exp(std::pow(-rot_cord_y[j0], 2) / c_gp_parm[8]) *
-                      exp(std::pow(-rot_cord_y[j0], 2) / c_gp_parm[9]));
+    gp_dist.push_back(exp(-std::pow(rot_cord_x[j0], 2) / c_gp_parm[6]) *
+                      exp(-std::pow(rot_cord_y[j0], 2) / c_gp_parm[7]) *
+                      exp(-std::pow(rot_cord_z[j0], 2) / c_gp_parm[8]));
   }
-  double gp_dist_sum = std::accumulate(gp_dist.begin(), gp_dist.end(), 0);
+  double gp_dist_sum = 0.0;
+  for (int j0 = 0; j0 < N_ind; j0++) {
+    gp_dist_sum += gp_dist[j0];
+  }
+
   for (int j0 = 0; j0 < N_ind; j0++) {
     gp_dist[j0] /= gp_dist_sum;
   }
@@ -538,17 +546,18 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
   }
   best_norm /= best_norm0;
 
-  std::vector<double> gp_events;
+  std::vector<int> gp_events;
   double sum = 0.0;
+  double sum3D = 0.0;
   for (int j0 = 0; j0 < N_ind; j0++) {
     gp_events.push_back(static_cast<int>(best_norm * gp_dist[j0] + 0.5));
     sum += std::pow((conditional_event_vals[j0] - best_norm * gp_dist[j0]), 2);
+    sum3D += best_norm * gp_dist[j0];
   }
   double best_err = sqrt(sum) / event_tot;
 
   // Estimate Gaussian distribution given Poisson distribution and Extreme Value
   // Distribution //
-  // double trackbest_err = best_err;
   std::vector<double> d_gp_parm = gp_parm;
   for (int j0 = 0; j0 < 9; j0++) {
     d_gp_parm[j0] = .01 * fabs(gp_parm[j0]);
@@ -559,19 +568,22 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
 
   for (int jpit = 0; jpit < n_break_its; jpit++) {
     std::vector<double> did_mv_vec(9);
+    for (int jp = 0; jp < 9; jp++)
+      did_mv_vec[jp] = 0.0;
 
     for (int jp = 0; jp < 9; jp++) {
-      for (int js = 0; js < 2; js++) {
+      for (int js = 1; js < 3; js++) {
         c_gp_parm = gp_parm;
         c_gp_parm[jp] = c_gp_parm[jp] + (std::pow((-1), js)) * d_gp_parm[jp];
+
         int do_opt = 1;
-        // Enforce paramameter maximum domains %
-        if (jp < 4) {
+        // Enforce parameter maximum domains %
+        if (jp < 3) {
           if (fabs(c_gp_parm[jp] - N2) > max_mu) {
             do_opt = 0;
           }
         }
-        if (jp > 6) {
+        if (jp > 5) {
           if (sqrt(c_gp_parm[jp] / 2) < min_sigma ||
               sqrt(c_gp_parm[jp] / 2) > max_sigma) {
             do_opt = 0;
@@ -579,42 +591,40 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
         }
 
         if (do_opt == 1) {
-          DblMatrix X_est(3, 3);
           X_est[0][0] = 1.0;
           X_est[1][0] = 0.0;
           X_est[2][0] = 0.0;
           X_est[0][1] = 0.0;
-          X_est[1][1] = std::cos(c_gp_parm[4]);
-          X_est[2][1] = -std::sin(c_gp_parm[4]);
+          X_est[1][1] = std::cos(c_gp_parm[3]);
+          X_est[2][1] = -std::sin(c_gp_parm[3]);
           X_est[0][2] = 0.0;
-          X_est[1][2] = std::sin(c_gp_parm[4]);
-          X_est[2][2] = std::cos(c_gp_parm[4]);
+          X_est[1][2] = std::sin(c_gp_parm[3]);
+          X_est[2][2] = std::cos(c_gp_parm[3]);
 
-          DblMatrix Y_est(3, 3);
-          Y_est[0][0] = std::cos(c_gp_parm[5]);
+          Y_est[0][0] = std::cos(c_gp_parm[4]);
           Y_est[1][0] = 0.0;
-          Y_est[2][0] = std::sin(c_gp_parm[5]);
+          Y_est[2][0] = std::sin(c_gp_parm[4]);
           Y_est[0][1] = 0.0;
           Y_est[1][1] = 1.0;
           Y_est[2][1] = 0.0;
-          Y_est[0][2] = -std::sin(c_gp_parm[5]);
+          Y_est[0][2] = -std::sin(c_gp_parm[4]);
           Y_est[1][2] = 0.0;
-          Y_est[2][2] = std::cos(c_gp_parm[5]);
+          Y_est[2][2] = std::cos(c_gp_parm[4]);
 
-          DblMatrix Z_est(3, 3);
-          Z_est[0][0] = std::cos(c_gp_parm[6]);
-          Z_est[1][0] = -std::sin(c_gp_parm[6]);
+          Z_est[0][0] = std::cos(c_gp_parm[5]);
+          Z_est[1][0] = -std::sin(c_gp_parm[5]);
           Z_est[2][0] = 0.0;
-          Z_est[0][1] = std::sin(c_gp_parm[6]);
-          Z_est[1][1] = std::cos(c_gp_parm[6]);
+          Z_est[0][1] = std::sin(c_gp_parm[5]);
+          Z_est[1][1] = std::cos(c_gp_parm[5]);
           Z_est[2][1] = 0.0;
-          DblMatrix XYZ_est = Z_est * Y_est * X_est;
+          Z_est[0][2] = 0.0;
+          Z_est[1][2] = 0.0;
+          Z_est[2][2] = 1.0;
+          XYZ_est = Z_est * Y_est * X_est;
 
-          //  ??? rot_cord =
-          // (xyz_vals-repmat(c_gp_parm(1:3)',N_ind,1))*Z_est*Y_est*X_est;
-          std::vector<double> rot_cord_x;
-          std::vector<double> rot_cord_y;
-          std::vector<double> rot_cord_z;
+          rot_cord_x.clear();
+          rot_cord_y.clear();
+          rot_cord_z.clear();
           for (int j0 = 0; j0 < N_ind; j0++) {
             std::vector<double> tmp;
             tmp.push_back(x_vals[j0] - c_gp_parm[0]);
@@ -629,12 +639,15 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
           std::vector<double> c_gp_dist;
           for (int j0 = 0; j0 < N_ind; j0++) {
             c_gp_dist.push_back(
-                exp(std::pow(-rot_cord_x[j0], 2) / c_gp_parm[7]) *
-                exp(std::pow(-rot_cord_y[j0], 2) / c_gp_parm[8]) *
-                exp(std::pow(-rot_cord_y[j0], 2) / c_gp_parm[9]));
+                exp(-std::pow(rot_cord_x[j0], 2) / c_gp_parm[6]) *
+                exp(-std::pow(rot_cord_y[j0], 2) / c_gp_parm[7]) *
+                exp(-std::pow(rot_cord_z[j0], 2) / c_gp_parm[8]));
           }
-          double c_gp_dist_sum =
-              std::accumulate(c_gp_dist.begin(), c_gp_dist.end(), 0);
+          double c_gp_dist_sum = 0.0;
+          for (int j0 = 0; j0 < N_ind; j0++) {
+            c_gp_dist_sum += c_gp_dist[j0];
+          }
+
           for (int j0 = 0; j0 < N_ind; j0++) {
             c_gp_dist[j0] /= c_gp_dist_sum;
           }
@@ -647,16 +660,17 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
           }
           best_norm /= best_norm0;
 
-          std::vector<double> c_gp_events;
+          std::vector<int> c_gp_events;
           double sum = 0.0;
+          sum3D = 0.0;
           for (int j0 = 0; j0 < N_ind; j0++) {
             c_gp_events.push_back(
                 static_cast<int>(best_norm * c_gp_dist[j0] + 0.5));
             sum += std::pow(
                 (conditional_event_vals[j0] - best_norm * c_gp_dist[j0]), 2);
+            sum3D += best_norm * c_gp_dist[j0];
           }
           double c_best_err = sqrt(sum) / event_tot;
-
           if (c_best_err < best_err) {
             best_err = c_best_err;
             gp_parm = c_gp_parm;
@@ -672,6 +686,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
         d_gp_parm[jp] = 1.2 * d_gp_parm[jp];
       }
     }
+
     double max_parm = 0;
     for (int j0 = 0; j0 < 9; j0++) {
       max_parm = std::max(d_gp_parm[j0] / fabs(gp_parm[j0]), max_parm);
@@ -681,16 +696,11 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
   }
 
   // Estimate Poisson distribution given Gaussian distribution //
-  // double conditional_event_vals = 0.0;
   std::vector<int> pp_ind, gp_ind;
   for (int j0 = 0; j0 < N_ind; j0++) {
-    // conditional_event_vals =
-    // std::max(event_vals[j0]-gp_events[j0],conditional_event_vals);
-    int event = static_cast<int>(gp_events[j0] + 0.5);
-    if (event < 1) {
+    if (gp_events[j0] == 0) {
       pp_ind.push_back(j0);
-    }
-    if (event > 0) {
+    } else {
       gp_ind.push_back(j0);
     }
   }
@@ -712,9 +722,9 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
 
   if (N_non_zeros > 1) {
     pp_lambda = std::max(
-        eps, (std::pow((event_hist[2] / gsl_sf_fact(event_counts[2])) /
-                           (event_hist[1] / gsl_sf_fact(event_counts[1])),
-                       (1.0 / (event_counts[2] - event_counts[1])))));
+        eps, (std::pow((event_hist[1] / gsl_sf_fact(event_counts[1])) /
+                           (event_hist[0] / gsl_sf_fact(event_counts[0])),
+                       (1.0 / (event_counts[1] - event_counts[0])))));
     std::vector<double> pp_dist;
     for (int j1 = 0; j1 < N_ind; j1++) {
       pp_dist.push_back((std::pow((pp_lambda), event_counts[j1])) *
@@ -734,7 +744,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
 
     for (int jpit = 1; jpit < n_break_its; jpit++) {
       double did_mv = 0;
-      for (int js = 1; js < 2; js++) {
+      for (int js = 1; js < 3; js++) {
         double c_pp_lambda = pp_lambda;
         c_pp_lambda += (std::pow((-1), js)) * d_pp_lambda;
         std::vector<double> pp_dist;
@@ -776,16 +786,17 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
                          0.0) /
       std::inner_product(pp_dist.begin(), pp_dist.end(), pp_dist.begin(), 0.0);
 
-  std::vector<double> rp_ind;
+  std::vector<int> rp_ind;
   for (int j0 = 0; j0 < N_ind; j0++) {
     if (full_box_mean[j0] >
             pp_lambda + 1.96 * sqrt(pp_lambda /
                                     std::pow((2 * neigh_length_m + 1), 3)) &&
         find(pp_ind.begin(), pp_ind.end(), j0) != pp_ind.end()) {
-      rp_ind.push_back(full_box_mean[j0]);
-    } else
+      rp_ind.push_back(j0);
+    } else {
       pp_lambda = 0;
-    rp_ind.clear();
+      rp_ind.clear();
+    }
   }
 
   // Estimate Residual Distribution given Poisson distribution and Gaussian
@@ -793,7 +804,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
 
   /*std::vector<int> connection_map;
   for (int j1 = 0; j1 < N_ind; j1++) {
-    if (find(gp_ind.begin(), gp_ind.end(), j1))
+    if (find(gp_ind.begin(), gp_ind.end(), j1) != gp_ind.end())
       connection_map.push_back(0);
     else
       connection_map.push_back(j1);
@@ -801,16 +812,15 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
 
   std::vector<double> ind_box;
   for (size_t j0 = 0; j0 < rp_ind.size(); j0++) {
-    ind_box.clear();
-    for (int j1 = x_vals[rp_inp[j0]] - neigh_length_c;
-         j1 <= x_vals[rp_inp[j0]] + neigh_length_c; j1++) {
+    for (int j1 = x_vals[rp_ind[j0]] - neigh_length_c;
+         j1 <= x_vals[rp_ind[j0]] + neigh_length_c; j1++) {
       if (j1 < 0 || j1 >= gridPts[0])
         continue;
-      for (int j2 = y_vals[rp_inp[j0]] - neigh_length_c;
-           j2 <= y_vals[rp_inp[j0]] + neigh_length_c; j2++) {
+      for (int j2 = y_vals[rp_ind[j0]] - neigh_length_c;
+           j2 <= y_vals[rp_ind[j0]] + neigh_length_c; j2++) {
         if (j2 < 0 || j2 >= gridPts[1])
           continue;
-        for (int j3 = z_vals[rp_inp[j0]] - neigh_length_c;
+        for (int j3 = z_vals[rp_ind[j0]] - neigh_length_c;
              j3 <= z_vals[j0] + neigh_length_c; j3++) {
           if (j3 < 0 || j3 >= gridPts[2])
             continue;
@@ -820,42 +830,38 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
       }
     }
   }
-  std::vector<double> rp_ind;
+  std::vector<double> cind;
   for (int j0 = 0; j0 < N_ind; j0++) {
-      if (full_box_mean[j0] >
-              pp_lambda + 1.96 * sqrt(pp_lambda /
-                                      std::pow((2 * neigh_length_m + 1), 3)) &&
-find(pp_ind.begin(),pp_ind.end(), j0) {
-        rp_ind.push_back(full_box_mean[j0]);
-      } else
-        pp_lambda = 0;
-        rp_ind.clear();
-  }
-  for (size_t jp = 1; jp <= rp_ind.size(); jp++) {
-    ind_box =
-        num_events_ref(max(xyz_vals(rp_ind[jp], 1) - neigh_length_c, 1)
-                       : min(xyz_vals(rp_ind[jp], 1) + neigh_length_c, N),
-                         max(xyz_vals(rp_ind[jp], 2) - neigh_length_c, 1)
-                       : min(xyz_vals(rp_ind[jp], 2) + neigh_length_c, N),
-                         max(xyz_vals(rp_ind[jp], 3) - neigh_length_c, 1)
-                       : min(xyz_vals(rp_ind[jp], 3) + neigh_length_c, N));
-    cind = ind_box(max(xyz_vals(rp_ind[jp], 3) - neigh_length_c, 1)
-                   : min(xyz_vals(rp_ind[jp], 3) + neigh_length_c, N));
-    cind = ind_box(ind(ind_box ~ = 0));
-    cind = cind(find(
-        full_box_mean(cind) >
+    if (full_box_mean[j0] >
         pp_lambda +
-            1.96 * sqrt(pp_lambda / std::pow((2 * neigh_length_m + 1), 3))));
+            1.96 * sqrt(pp_lambda / std::pow((2 * neigh_length_m + 1), 3))) {
+      cind.push_back(static_cast<int>(full_box_mean[j0]));
+    }
+    for (size_t jp = 1; jp <= rp_ind.size(); jp++) {
+      ind_box =
+          num_events_ref(max(xyz_vals(rp_ind[jp], 1) - neigh_length_c, 1)
+                         : min(xyz_vals(rp_ind[jp], 1) + neigh_length_c, N),
+                           max(xyz_vals(rp_ind[jp], 2) - neigh_length_c, 1)
+                         : min(xyz_vals(rp_ind[jp], 2) + neigh_length_c, N),
+                           max(xyz_vals(rp_ind[jp], 3) - neigh_length_c, 1)
+                         : min(xyz_vals(rp_ind[jp], 3) + neigh_length_c, N));
+      cind = ind_box(max(xyz_vals(rp_ind[jp], 3) - neigh_length_c, 1)
+                     : min(xyz_vals(rp_ind[jp], 3) + neigh_length_c, N));
+      cind = ind_box(ind(ind_box ~ = 0));
+      cind = cind(find(
+          full_box_mean(cind) >
+          pp_lambda +
+              1.96 * sqrt(pp_lambda / std::pow((2 * neigh_length_m + 1), 3))));
 
-    connection_map(cind( :)) = min(connection_map(cind( :)));
-    end
+      connection_map(cind( :)) = min(connection_map(cind( :)));
+      end
 
-        // Set of points only in the Tail of distribution.  //
-        rp_ind = setdiff(find(connection_map == 0), gp_ind);
+          // Set of points only in the Tail of distribution.  //
+          rp_ind = setdiff(find(connection_map == 0), gp_ind);
 
-    // Add points at 5// level of pd //
-    neig_ind = [];
-    connection_map = zeros(N_ind, 1);
+      // Add points at 5// level of pd //
+      neig_ind = [];
+      connection_map = zeros(N_ind, 1);
   for
     jp = 1 : length(rp_ind);
   ind_box =
@@ -914,8 +920,8 @@ round(mean(full_box_density(pp_ind))*accumarray(event_vals(gp_rp_ind),1)/mean(fu
     if (find(pp_ind.begin(), pp_ind.end(), j1) != pp_ind.end())
       ppSum += event_vals[j1];
   }
-
-  double Full_Signal = gpSum + rpSum;
+  std::cout << sum3D << "  " << gpSum << "  " << rpSum << "  " << ppSum << "\n";
+  double Full_Signal = sum3D + rpSum;
   double Background_in_Signal = ns_count;
   double Background_Signal = ppSum;
 
