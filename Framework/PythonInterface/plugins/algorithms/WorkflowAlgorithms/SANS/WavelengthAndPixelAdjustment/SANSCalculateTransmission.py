@@ -7,6 +7,7 @@ from mantid.kernel import (Direction, StringArrayProperty, StringListValidator, 
 from mantid.api import (DataProcessorAlgorithm, MatrixWorkspaceProperty, AlgorithmFactory, PropertyMode, Progress)
 from SANS2.Common.SANSConstants import SANSConstants
 from SANS2.Common.SANSFunctions import create_unmanaged_algorithm
+from SANS2.State.SANSStateBase import create_deserialized_sans_state_from_property_manager
 from SANS2.WavelengthAndPixelAdjustment.CalculateTransmissionHelper import (get_detector_id_for_spectrum_number,
                                                                             get_workspace_indices_for_monitors,
                                                                             apply_flat_background_correction_to_monitors,
@@ -25,6 +26,10 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
         # ---------------------------
         # Workspaces
         # ---------------------------
+        # State
+        self.declareProperty(PropertyManagerProperty('SANSState'),
+                             doc='A property manager which fulfills the SANSState contract.')
+
         # Input workspace in TOF
         self.declareProperty(MatrixWorkspaceProperty("TransmissionWorkspace", '',
                                                      optional=PropertyMode.Mandatory, direction=Direction.Input),
@@ -64,20 +69,6 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
         self.setPropertyGroup("TransmissionRadius", 'Transmission Settings')
         self.setPropertyGroup("TransmissionROIFiles", 'Transmission Settings')
         self.setPropertyGroup("TransmissionMaskFiles", 'Transmission Settings')
-
-        # ---------------------------
-        # Prompt Peak correction.
-        # ---------------------------
-        self.declareProperty('PromptPeakCorrectionStart', defaultValue=Property.EMPTY_DBL,
-                             direction=Direction.Input,
-                             validator=FloatBoundedValidator(0.0),
-                             doc='The start time of the prompt peak.')
-        self.declareProperty('PromptPeakCorrectionStop', defaultValue=Property.EMPTY_DBL,
-                             direction=Direction.Input,
-                             validator=FloatBoundedValidator(0.0),
-                             doc='The stop time of the prompt peak.')
-        self.setPropertyGroup("PromptPeakCorrectionStart", 'Prompt Peak Correction')
-        self.setPropertyGroup("PromptPeakCorrectionStop", 'Prompt Peak Correction')
 
         # ---------------------------
         # Flat background settings
@@ -153,6 +144,11 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
         self.setPropertyGroup("FitWavelengthStepType", 'Fit')
 
     def PyExec(self):
+        # Read the state
+        state_property_manager = self.getProperty("SANSState").value
+        state = create_deserialized_sans_state_from_property_manager(state_property_manager)
+        calculate_transmission_state = state.adjustment.calculate_transmission
+
         # The calculation of the transmission has the following steps:
         # 1. Get all spectrum numbers which take part in the transmission calculation
         # 2. Clean up the transmission and direct workspaces, ie peak prompt correction, flat background calculation,
@@ -160,13 +156,13 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
         # 3. Run the CalculateTransmission algorithm
         transmission_workspace = self.getProperty("TransmissionWorkspace").value
         direct_workspace = self.getProperty("DirectWorkspace").value
-        incident_monitor_spectrum_number = self.getProperty("IncidentMonitorSpectrumNumber").value
+        incident_monitor_spectrum_number = calculate_transmission_state.incident_monitor
 
         # 1. Get relevant spectra
         detector_id_incident_monitor = get_detector_id_for_spectrum_number(transmission_workspace,
                                                                            incident_monitor_spectrum_number)
         detector_ids_roi, detector_id_transmission_monitor = self._get_detector_ids_for_transmission_calculation(
-                                                                  transmission_workspace)
+                                                                  transmission_workspace, calculate_transmission_state)
         all_detector_ids = [detector_id_incident_monitor]
         if detector_ids_roi:
             all_detector_ids.extend(detector_ids_roi)
@@ -232,23 +228,24 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
             unfitted_transmission_workspace.setYUnitLabel(y_unit_label_transmission_ratio)
         return fitted_transmission_workspace, unfitted_transmission_workspace
 
-    def _get_detector_ids_for_transmission_calculation(self, transmission_workspace):
+    def _get_detector_ids_for_transmission_calculation(self, transmission_workspace, normalize_to_monitor_state):
         """
         Get the detector ids which participate in the transmission calculation.
 
         This can come either from a ROI/MASK/RADIUS selection or from a transmission monitor, not both.
         :param transmission_workspace: the transmission workspace.
+        :param normalize_to_monitor_state: a SANSStateNormalizationToMonitor object.
         :return: a list of detector ids for ROI and a detector id for the transmission monitor, either can be None
         """
-        transmission_radius = self.geProperty("TransmissionRadius").value
-        if transmission_radius == Property.EMPTY_DBL:
-            transmission_radius = None
-        transmission_roi = self.getProperty("TransmissionROIFiles").value
-        transmission_mask = self.getProperty("TransmissionMaskFiles").value
+        transmission_radius = normalize_to_monitor_state.transmission_radius_on_detector
+        transmission_roi = normalize_to_monitor_state.transmission_roi_files
+        transmission_mask = normalize_to_monitor_state.transmission_mas_files
         detector_ids_roi = get_region_of_interest(transmission_workspace, transmission_radius, transmission_roi,
                                                   transmission_mask)
 
-        transmission_monitor_spectrum_number = self.getProperty("TransmissionMonitor").value
+        transmission_monitor_spectrum_number = normalize_to_monitor_state.transmission_monitor
+        if transmission_monitor_spectrum_number is None:
+            transmission_monitor_spectrum_number = normalize_to_monitor_state.default_transmission_monitor
         detector_id_transmission_monitor = get_detector_id_for_spectrum_number(transmission_monitor_spectrum_number)
 
         return detector_ids_roi, detector_id_transmission_monitor

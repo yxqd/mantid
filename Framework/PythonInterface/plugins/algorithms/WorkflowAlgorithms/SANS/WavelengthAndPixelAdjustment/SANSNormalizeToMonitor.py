@@ -2,10 +2,12 @@
 
 """ SANSNormalizeToMonitor algorithm calculates the normalization to the monitor."""
 
-from mantid.kernel import (Direction, IntBoundedValidator, FloatBoundedValidator, StringListValidator, Property)
+from mantid.kernel import (Direction, IntBoundedValidator, FloatBoundedValidator, StringListValidator,
+                           Property, PropertyManagerProperty)
 from mantid.api import (DataProcessorAlgorithm, MatrixWorkspaceProperty, AlgorithmFactory, PropertyMode, Progress)
 from SANS2.Common.SANSConstants import SANSConstants
 from SANS2.Common.SANSFunctions import create_unmanaged_algorithm
+from SANS2.State.SANSStateBase import create_deserialized_sans_state_from_property_manager
 
 
 class SANSNormalizeToMonitor(DataProcessorAlgorithm):
@@ -16,19 +18,14 @@ class SANSNormalizeToMonitor(DataProcessorAlgorithm):
         return 'Calculates a monitor normalization workspace for a SANS reduction.'
 
     def PyInit(self):
+        # State
+        self.declareProperty(PropertyManagerProperty('SANSState'),
+                             doc='A property manager which fulfills the SANSState contract.')
+
         # Input workspace in TOF
         self.declareProperty(MatrixWorkspaceProperty(SANSConstants.input_workspace, '',
                                                      optional=PropertyMode.Mandatory, direction=Direction.Input),
                              doc='The monitor workspace in time-of-flight units.')
-
-        # Output workspace
-        self.declareProperty(MatrixWorkspaceProperty(SANSConstants.output_workspace, '', direction=Direction.Output),
-                             doc='A monitor normalization workspace in units of wavelength.')
-
-        # The incident monitor
-        self.declareProperty('IncidentMonitorSpectrumNumber', defaultValue=Property.EMPTY_INT,
-                             direction=Direction.Input,
-                             doc='The spectrum number of the input monitor')
 
         # A scale factor which could come from event workspace slicing. If the actual data workspace was sliced,
         # then one needs to scale the monitor measurement proportionally. This input is intended for this matter
@@ -36,48 +33,18 @@ class SANSNormalizeToMonitor(DataProcessorAlgorithm):
                              validator=FloatBoundedValidator(0.0),
                              doc='Optional scale factor for the input workspace.')
 
-        # Prompt Peak correction. This is a peak on the monitor data which comes from a burst of fast neutrons.
-        # This peak is normally removed and an interpolation is performed between the start and end value of that
-        # region.
-        self.declareProperty('PromptPeakCorrectionStart', defaultValue=Property.EMPTY_DBL,
-                             direction=Direction.Input,
-                             validator=FloatBoundedValidator(0.0),
-                             doc='The start time of the prompt peak.')
-        self.declareProperty('PromptPeakCorrectionStop', defaultValue=Property.EMPTY_DBL,
-                             direction=Direction.Input,
-                             validator=FloatBoundedValidator(0.0),
-                             doc='The stop time of the prompt peak.')
-
-        # Flat background settings
-        self.declareProperty('FlatBackgroundCorrectionStart', defaultValue=Property.EMPTY_DBL,
-                             direction=Direction.Input,
-                             validator=FloatBoundedValidator(0.0),
-                             doc='The start time of the flat background correction.')
-        self.declareProperty('FlatBackgroundCorrectionStop', defaultValue=Property.EMPTY_DBL,
-                             direction=Direction.Input,
-                             validator=FloatBoundedValidator(0.0),
-                             doc='The stop time of the flat background correction.')
-
-        # The output will be returned in wavelength units. These properties are for the wavelength rebinning.
-        self.declareProperty('WavelengthLow', defaultValue=Property.EMPTY_DBL, direction=Direction.Input,
-                             validator=FloatBoundedValidator(0.0),
-                             doc='The low value of the wavelength binning.')
-        self.declareProperty('WavelengthHigh', defaultValue=Property.EMPTY_DBL, direction=Direction.Input,
-                             validator=FloatBoundedValidator(0.0),
-                             doc='The high value of the wavelength binning.')
-        self.declareProperty('WavelengthStep', defaultValue=Property.EMPTY_DBL, direction=Direction.Input,
-                             validator=FloatBoundedValidator(0.0),
-                             doc='The step size of the wavelength binning.')
-        allowed_step_types = StringListValidator(["LOG", "LIN"])
-        self.declareProperty('WavelengthStepType', "LIN", validator=allowed_step_types, direction=Direction.Input,
-                             doc='The step type for rebinning.')
-        allowed_rebin_methods = StringListValidator(["Rebin", "InterpolatingRebin"])
-        self.declareProperty("RebinMode", "Rebin", validator=allowed_rebin_methods, direction=Direction.Input,
-                             doc="The method which is to be applied to the rebinning.")
+        # Output workspace
+        self.declareProperty(MatrixWorkspaceProperty(SANSConstants.output_workspace, '', direction=Direction.Output),
+                             doc='A monitor normalization workspace in units of wavelength.')
 
     def PyExec(self):
+        # Read the state
+        state_property_manager = self.getProperty("SANSState").value
+        state = create_deserialized_sans_state_from_property_manager(state_property_manager)
+        normalize_to_monitor_state = state.adjustment.normalize_to_monitor
+
         # 1. Extract the spectrum of the incident monitor
-        incident_monitor_spectrum_number = self.getProperty("IncidentMonitorSpectrumNumber").value
+        incident_monitor_spectrum_number = normalize_to_monitor_state.incident_monitor
         workspace = self._extract_monitor(incident_monitor_spectrum_number)
 
         # 2. Multiply the workspace by the specified scaling factor.
@@ -86,10 +53,10 @@ class SANSNormalizeToMonitor(DataProcessorAlgorithm):
             workspace = self._scale(workspace, scale_factor)
 
         # 3. Remove the prompt peak (if it exists)
-        workspace = self._perform_prompt_peak_correction(workspace)
+        workspace = self._perform_prompt_peak_correction(workspace, normalize_to_monitor_state)
 
         # 4. Perform a flat background correction
-        workspace = self._perform_flat_background_correction(workspace)
+        workspace = self._perform_flat_background_correction(workspace, normalize_to_monitor_state)
 
         # 5. Convert to wavelength with the specified bin settings.
         workspace = self._convert_to_wavelength(workspace)
@@ -133,7 +100,7 @@ class SANSNormalizeToMonitor(DataProcessorAlgorithm):
         extract_alg.execute()
         return extract_alg.getProperty(SANSConstants.output_workspace).value
 
-    def _perform_prompt_peak_correction(self, workspace):
+    def _perform_prompt_peak_correction(self, workspace, normalize_to_monitor_state):
         """
         Performs a prompt peak correction.
 
@@ -143,14 +110,15 @@ class SANSNormalizeToMonitor(DataProcessorAlgorithm):
         interpolating between the edge data points. If the user does not specify a start and stop time for the
         prompt peak, then this correction is not performed.
         :param workspace: the workspace which is to be corrected.
+        :param normalize_to_monitor_state: a SANSStateNormalizeToMonitor object.
         :return: the corrected workspace.
         """
-        prompt_peak_correction_start = self.getProperty("PromptPeakCorrectionStart").value
-        prompt_peak_correction_stop = self.getProperty("PromptPeakCorrectionStop").value
+        prompt_peak_correction_start = normalize_to_monitor_state.prompt_peak_correction_start
+        prompt_peak_correction_stop = normalize_to_monitor_state.prompt_peak_correction_stop
 
         # We perform only a prompt peak correction if the start and stop values of the bins we want to remove,
         # were explicitly set. Some instruments require it, others don't.
-        if prompt_peak_correction_start != Property.EMPTY_DBL and prompt_peak_correction_stop != Property.EMPTY_DBL:
+        if prompt_peak_correction_start is not None and prompt_peak_correction_stop is not None:
             remove_name = "RemoveBins"
             remove_options = {SANSConstants.input_workspace: workspace,
                               SANSConstants.output_workspace: SANSConstants.dummy,
@@ -162,17 +130,31 @@ class SANSNormalizeToMonitor(DataProcessorAlgorithm):
             workspace = remove_alg.getProperty(SANSConstants.output_workspace).value
         return workspace
 
-    def _perform_flat_background_correction(self, workspace):
+    def _perform_flat_background_correction(self, workspace, normalize_to_monitor_state):
         """
         Removes an offset from the monitor data.
 
         A certain region of the data set is selected which corresponds to only background data. This data is averaged
         which results in a mean background value which is subtracted from the data.
         :param workspace: the workspace which is to be corrected.
+        :param normalize_to_monitor_state: a SANSStateNormalizeToMonitor object.
         :return: the corrected workspace.
         """
-        start_tof = self.getProperty("FlatBackgroundCorrectionStart").value
-        stop_tof = self.getProperty("FlatBackgroundCorrectionStop").value
+        # Get the time range for the for the background calculation. First check if there is an entry for the
+        # incident monitor.
+        incident_monitor_spectrum_number = normalize_to_monitor_state.incident_monitor
+        incident_monitor_spectrum_as_string = str(incident_monitor_spectrum_number)
+        background_tof_monitor_start = normalize_to_monitor_state.background_TOF_monitor_start
+        background_tof_monitor_stop = normalize_to_monitor_state.background_TOF_monitor_stop
+
+        if incident_monitor_spectrum_number in background_tof_monitor_start and \
+                        incident_monitor_spectrum_number in background_tof_monitor_stop:
+            start_tof = background_tof_monitor_start[incident_monitor_spectrum_as_string]
+            stop_tof = background_tof_monitor_stop[incident_monitor_spectrum_as_string]
+        else:
+            start_tof = normalize_to_monitor_state.background_TOF_start
+            stop_tof = normalize_to_monitor_state.background_TOF_stop
+
         flat_name = "CalculateFlatBackground"
         flat_options = {SANSConstants.input_workspace: workspace,
                         SANSConstants.output_workspace: SANSConstants.dummy,
@@ -183,18 +165,19 @@ class SANSNormalizeToMonitor(DataProcessorAlgorithm):
         flat_alg.execute()
         return flat_alg.getProperty(SANSConstants.output_workspace).value
 
-    def _convert_to_wavelength(self, workspace):
+    def _convert_to_wavelength(self, workspace, normalize_to_monitor_state):
         """
         Converts the workspace from time-of-flight units to wavelength units
 
         :param workspace: a time-of-flight workspace.
+        :param normalize_to_monitor_state: a SANSStateNormalizeToMonitor object.
         :return: a wavelength workspace.
         """
-        wavelength_low = self.getProperty("WavelengthLow").value
-        wavelength_high = self.getProperty("WavelengthHigh").value
-        wavelength_step = self.getProperty("WavelengthStep").value
-        wavelength_step_type = self.getProperty("WavelengthStepType").value
-        wavelength_rebin_mode = self.getProperty("RebinMode").value
+        wavelength_low = normalize_to_monitor_state.wavelength_low
+        wavelength_high = normalize_to_monitor_state.wavelength_high
+        wavelength_step = normalize_to_monitor_state.wavelength_step
+        wavelength_step_type = normalize_to_monitor_state.wavelength_step_type
+        wavelength_rebin_mode = normalize_to_monitor_state.rebin_type
 
         convert_name = "SANSConvertToWavelength"
         convert_options = {SANSConstants.input_workspace: workspace,
@@ -211,93 +194,14 @@ class SANSNormalizeToMonitor(DataProcessorAlgorithm):
 
     def validateInputs(self):
         errors = dict()
-
-        # ----------------------
-        # Incident Monitor
-        # ----------------------
-        incident_monitor_spectrum_number= self.getProperty("IncidentMonitorSpectrumNumber").value
-
-        # Ensure that the spectrum_number exists on the input workspace
-        input_workspace = self.getProperty(SANSConstants.input_workspace).value
+        # Check that the input can be converted into the right state object
+        state_property_manager = self.getProperty("SANSState").value
         try:
-            input_workspace.getIndexFromSpectrumNumber(incident_monitor_spectrum_number)
-            spectrum_number_exists_on_workspace = True
-        except RuntimeError:
-            spectrum_number_exists_on_workspace = False
-        if not spectrum_number_exists_on_workspace:
-            errors.update({"IncidentMonitorSpectrumNumber": "The incident monitor spectrum number {0} does not seem to "
-                                                            "exist on the workspace."
-                          .format(incident_monitor_spectrum_number)})
-
-        # Ensure that the selected spectrum is actually a monitor
-        if spectrum_number_exists_on_workspace:
-            workspace_index = input_workspace.getIndexFromSpectrumNumber(incident_monitor_spectrum_number)
-            detector = input_workspace.getDetector(workspace_index)
-            if not detector.isMonitor():
-                errors.update({"IncidentMonitorSpectrumNumber": "The incident monitor spectrum number does "
-                                                                "not correspond to a monitor."})
-
-        # ----------------------
-        # Prompt Peak
-        # ----------------------
-        prompt_peak_correction_start = self.getProperty("PromptPeakCorrectionStart").value
-        prompt_peak_correction_stop = self.getProperty("PromptPeakCorrectionStop").value
-
-        # Either both prompt peak values are specified or they are not
-        if (prompt_peak_correction_start == Property.EMPTY_DBL and prompt_peak_correction_stop != Property.EMPTY_DBL) \
-                or (prompt_peak_correction_start != Property.EMPTY_DBL and
-                    prompt_peak_correction_stop == Property.EMPTY_DBL):
-            errors.update({"PromptPeakCorrectionStart": "Either both prompt peak correction entries "
-                                                        "are specified or none."})
-            errors.update({"PromptPeakCorrectionStop": "Either both prompt peak correction entries "
-                                                       "are specified or none."})
-
-        # The prompt peak start value needs to be smaller than the prompt peak stop value
-        if (prompt_peak_correction_start != Property.EMPTY_DBL) and (prompt_peak_correction_stop != Property.EMPTY_DBL)\
-                and prompt_peak_correction_start > prompt_peak_correction_stop:
-            errors.update({"PromptPeakCorrectionStart": "The prompt peak start value needs to be smaller "
-                                                        "than the stop value."})
-            errors.update({"PromptPeakCorrectionStop": "The prompt peak start value needs to be smaller "
-                                                       "than the stop value."})
-
-        # --------------------------
-        # Flat background correction
-        # --------------------------
-        flat_background_correction_start = self.getProperty("FlatBackgroundCorrectionStart").value
-        flat_background_correction_stop = self.getProperty("FlatBackgroundCorrectionStop").value
-        if (flat_background_correction_start == Property.EMPTY_DBL or
-                        flat_background_correction_stop == Property.EMPTY_DBL):
-            errors.update({"FlatBackgroundCorrectionStart": "The flat background correction start value needs "
-                                                            "to be specified."})
-            errors.update({"FlatBackgroundCorrectionStop": "The flat background correction stop value needs "
-                                                           "to be specified."})
-
-        if flat_background_correction_start > flat_background_correction_stop:
-            errors.update({"FlatBackgroundCorrectionStart": "The flat background correction start value needs "
-                                                            "to be smaller than the stop value."})
-            errors.update({"FlatBackgroundCorrectionStop": "The flat background correction start value needs "
-                                                           "to be smaller than the stop value."})
-
-        # --------------------------
-        # Rebin
-        # --------------------------
-        wavelength_low = self.getProperty("WavelengthLow").value
-        wavelength_high = self.getProperty("WavelengthHigh").value
-        wavelength_step = self.getProperty("WavelengthStep").value
-
-        # The values need to be set
-        if wavelength_low == Property.EMPTY_DBL:
-            errors.update({"WavelengthLow": "The lower wavelength value needs to be specified."})
-        if wavelength_high == Property.EMPTY_DBL:
-            errors.update({"WavelengthHigh": "The upper wavelength value needs to be specified."})
-        if wavelength_step == Property.EMPTY_DBL:
-            errors.update({"WavelengthStep": "The wavelength step value needs to be specified."})
-
-        if wavelength_low > wavelength_high:
-            errors.update({"WavelengthLow": "The lower wavelength value needs to smaller than the"
-                                            " upper wavelength value."})
-            errors.update({"WavelengthHigh": "The lower wavelength value needs to smaller than the"
-                                             " upper wavelength value."})
+            state = create_deserialized_sans_state_from_property_manager(state_property_manager)
+            state.property_manager = state_property_manager
+            state.validate()
+        except ValueError as err:
+            errors.update({"SANSSMove": str(err)})
         return errors
 
 

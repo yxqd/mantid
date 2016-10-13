@@ -266,6 +266,7 @@ class SaveType(object):
 
 
 def convert_save_type_to_string(save_type):
+    as_string = None
     if save_type is SaveType.Nexus:
         as_string = "Nexus"
     elif save_type is SaveType.NistQxy:
@@ -278,4 +279,26 @@ def convert_save_type_to_string(save_type):
         as_string = "CSV"
     elif save_type is SaveType.NXcanSAS:
         as_string = "NXcanSAS"
+    return as_string
+
+
+# --------------------
+# Fit
+# --------------------
+@inner_classes_with_name_space("Linear", "Log", "Polynomial")
+class FitType(object):
+    """
+    Defines possible fit types
+    """
+    pass
+
+
+def convert_fit_type_to_string(fit_type):
+    as_string = None
+    if fit_type is FitType.Linear:
+        as_string = "Linear"
+    elif fit_type is FitType.Log:
+        as_string = "Log"
+    elif fit_type is FitType.Polynomial:
+        as_string = "Polynomial"
     return as_string

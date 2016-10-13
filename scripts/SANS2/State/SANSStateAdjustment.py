@@ -6,8 +6,7 @@ import json
 from SANS2.State.SANSStateBase import (SANSStateBase, sans_parameters, PositiveIntegerParameter,
                                        BoolParameter, PositiveFloatParameter, ClassTypeParameter,
                                        FloatParameter, DictParameter, StringListParameter, StringParmeter)
-from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType)
-)
+from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType, FitType)
 
 
 # ------------------------------------------------
@@ -62,6 +61,9 @@ class SANSStateAdjustmentISIS(SANSStateBase, SANSStateAdjustment):
     default_transmission_monitor = PositiveIntegerParameter()
     transmission_monitor = PositiveIntegerParameter()
 
+    fit_type = ClassTypeParameter(FitType)
+    polynomial_order = PositiveIntegerParameter()
+
     # ---------------------------------------
     # Parameters for adjustments
     # ---------------------------------------
@@ -70,9 +72,45 @@ class SANSStateAdjustmentISIS(SANSStateBase, SANSStateAdjustment):
 
     def __init__(self):
         super(SANSStateAdjustmentISIS, self).__init__()
+        self.polynomial_order = 2
 
     def validate(self):
         is_invalid = {}
+
+        # -----------------
+        # Prompt peak
+        # -----------------
+        if self.use_prompt_peak_correction and \
+                (not self.prompt_peak_correction_min or not self.prompt_peak_correction_max):
+            is_invalid.update({"use_prompt_peak_correction": "If the prompt peak correction is "
+                                                             "to be used then the values for prompt_peak_correction_min"
+                                                             " and prompt_peak_correction_max need to be set."})
+        if self.use_prompt_peak_correction and self.prompt_peak_correction_min and self.prompt_peak_correction_max:
+            if self.prompt_peak_correction_min > self.prompt_peak_correction_max:
+                is_invalid.update({"prompt_peak_correction_min": "The start value for the prompt peak correction needs "
+                                                                 "to be smaller than the stop value. "
+                                                                 "The start value was {0} and the stop value "
+                                                                 "{1}.".format(self.prompt_peak_correction_min,
+                                                                               self.prompt_peak_correction_max)})
+
+        # -----------------
+        # Wavelength rebin
+        # -----------------
+
+
+        # ----------------------
+        # Background correction
+        # ----------------------
+
+        # ----------------------
+        # ROI
+        # ----------------------
+
+        # ----------------------
+        # ROI
+        # ----------------------
+
+
         if is_invalid:
             raise ValueError("SANSStateMoveDetectorISIS: The provided inputs are illegal. "
                              "Please see: {0}".format(json.dumps(is_invalid)))
