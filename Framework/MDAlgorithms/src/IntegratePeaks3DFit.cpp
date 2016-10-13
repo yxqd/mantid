@@ -548,11 +548,9 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
 
   std::vector<int> gp_events;
   double sum = 0.0;
-  double sum3D = 0.0;
   for (int j0 = 0; j0 < N_ind; j0++) {
     gp_events.push_back(static_cast<int>(best_norm * gp_dist[j0] + 0.5));
     sum += std::pow((conditional_event_vals[j0] - best_norm * gp_dist[j0]), 2);
-    sum3D += best_norm * gp_dist[j0];
   }
   double best_err = sqrt(sum) / event_tot;
 
@@ -652,8 +650,8 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
             c_gp_dist[j0] /= c_gp_dist_sum;
           }
 
-          double best_norm = 0;
-          double best_norm0 = 0;
+          best_norm = 0;
+          best_norm0 = 0;
           for (int j0 = 0; j0 < N_ind; j0++) {
             best_norm += c_gp_dist[j0] * conditional_event_vals[j0];
             best_norm0 += c_gp_dist[j0] * c_gp_dist[j0];
@@ -662,13 +660,11 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
 
           std::vector<int> c_gp_events;
           double sum = 0.0;
-          sum3D = 0.0;
           for (int j0 = 0; j0 < N_ind; j0++) {
             c_gp_events.push_back(
                 static_cast<int>(best_norm * c_gp_dist[j0] + 0.5));
             sum += std::pow(
                 (conditional_event_vals[j0] - best_norm * c_gp_dist[j0]), 2);
-            sum3D += best_norm * c_gp_dist[j0];
           }
           double c_best_err = sqrt(sum) / event_tot;
           if (c_best_err < best_err) {
@@ -793,9 +789,10 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
                                     std::pow((2 * neigh_length_m + 1), 3)) &&
         find(pp_ind.begin(), pp_ind.end(), j0) != pp_ind.end()) {
       rp_ind.push_back(j0);
-    } else {
-      pp_lambda = 0;
-      rp_ind.clear();
+      std::vector<int>::iterator position =
+          std::find(pp_ind.begin(), pp_ind.end(), j0);
+      if (position != pp_ind.end())
+        pp_ind.erase(position);
     }
   }
 
@@ -920,6 +917,30 @@ round(mean(full_box_density(pp_ind))*accumarray(event_vals(gp_rp_ind),1)/mean(fu
     if (find(pp_ind.begin(), pp_ind.end(), j1) != pp_ind.end())
       ppSum += event_vals[j1];
   }
+  double sum3D = 0.0;
+  double gp_max = 0.0;
+  for (int j1 = 0; j1 < gridPts[0]; j1++) {
+    for (int j2 = 0; j2 < gridPts[1]; j2++) {
+      for (int j3 = 0; j3 < gridPts[2]; j3++) {
+        std::vector<double> tmp;
+        tmp.push_back(j1 - c_gp_parm[0]);
+        tmp.push_back(j2 - c_gp_parm[1]);
+        tmp.push_back(j3 - c_gp_parm[2]);
+        tmp = XYZ_est * tmp;
+        double gp = best_norm * exp(-std::pow(tmp[0], 2) / c_gp_parm[6]) *
+                    exp(-std::pow(tmp[1], 2) / c_gp_parm[7]) *
+                    exp(-std::pow(tmp[2], 2) / c_gp_parm[8]);
+        if (gp > gp_max) {
+          gp_max = gp;
+          int iPts = j1 + gridPts[0] * (j2 + gridPts[1] * j3);
+          std::cout << j1 << "  " << j2 << "  " << j3 << "  "
+                    << num_events[iPts] << "  " << gp << "\n";
+        }
+        sum3D += gp;
+      }
+    }
+  }
+
   std::cout << sum3D << "  " << gpSum << "  " << rpSum << "  " << ppSum << "\n";
   double Full_Signal = sum3D + rpSum;
   double Background_in_Signal = ns_count;
