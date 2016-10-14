@@ -145,8 +145,7 @@ void LoadILLAscii::exec() {
     thisWorkspace->setYUnitLabel("Counts");
 
     // Set this workspace position
-    double currentPositionAngle =
-        illAsciiParser.getValue<double>("angles*1000", *iSpectraHeader) / 1000;
+    double currentPositionAngle = illAsciiParser.getValue<double>("anglesx1000", *iSpectraHeader) / 1000;
     setWorkspaceRotationAngle(thisWorkspace, currentPositionAngle);
 
     //
@@ -157,12 +156,9 @@ void LoadILLAscii::exec() {
 
     //		// just to see the list of WS in MantidPlot if needed for
     // debugging
-    //		std::stringstream outWorkspaceNameStream;
-    //		outWorkspaceNameStream << "test" <<
-    // std::distance(spectraList.begin(),
-    // iSpectra);
-    //		AnalysisDataService::Instance().addOrReplace(outWorkspaceNameStream.str(),
-    // thisWorkspace);
+    std::stringstream outWorkspaceNameStream;
+    outWorkspaceNameStream << "test" << std::distance(spectraList.begin(), iSpectra);
+    AnalysisDataService::Instance().addOrReplace(outWorkspaceNameStream.str(), thisWorkspace);
 
     progress.report("Loading scans...");
   }
