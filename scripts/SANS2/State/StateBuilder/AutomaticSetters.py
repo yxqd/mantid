@@ -66,12 +66,12 @@ def create_automatic_setters_for_state(attribute_value, builder_instance, attrib
             continue
 
         # There are two scenarios. The attribute can be:
-        # 1. A dictionary which is empty -> install a setter
+        # 1. A dictionary which is empty or None-> install a setter
         # 2. A dictionary containing elements -> for each element apply a recursion
         # 3. A regular attribute -> install the setter
         if isinstance(value, DictParameter):
             dict_parameter_value = getattr(attribute_value, name)
-            if len(dict_parameter_value) == 0:
+            if dict_parameter_value is None or len(dict_parameter_value) == 0:
                 update_the_method(builder_instance, new_methods, setter_name, name, attribute_name_list)
             else:
                 for dict_key, dict_value in dict_parameter_value.items():

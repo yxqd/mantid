@@ -12,9 +12,8 @@ from SANS2.State.StateBuilder.AutomaticSetters import (automatic_setters)
 # ---------------------------------------
 class SANSStateAdjustmentBuilderISIS(object):
     @automatic_setters(SANSStateAdjustmentISIS)
-    def __init__(self, data_info):
+    def __init__(self):
         super(SANSStateAdjustmentBuilderISIS, self).__init__()
-        self._data = data_info
         self.state = SANSStateAdjustmentISIS()
 
     def build(self):
@@ -25,7 +24,7 @@ class SANSStateAdjustmentBuilderISIS(object):
 # ------------------------------------------
 # Factory method for SANStateAdjustmentBuilder
 # ------------------------------------------
-def get_mask_builder(data_info):
+def get_adjustment_builder(data_info):
     # The data state has most of the information that we require to define the move. For the factory method, only
     # the instrument is of relevance.
     instrument = data_info.instrument

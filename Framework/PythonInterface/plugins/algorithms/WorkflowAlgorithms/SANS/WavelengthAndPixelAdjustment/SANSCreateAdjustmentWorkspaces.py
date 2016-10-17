@@ -16,7 +16,7 @@ from SANS2.State.SANSStateBase import create_deserialized_sans_state_from_proper
 
 class SANSCreateAdjustmentWorkspaces(DataProcessorAlgorithm):
     def category(self):
-        return 'SANS\\Normalize'
+        return 'SANS\\Adjust'
 
     def summary(self):
         return 'Calculates wavelength adjustment, pixel adjustment workspaces and wavelength-and-pixel ' \

@@ -1915,7 +1915,7 @@ class PrintParser(UserFileComponentParser):
 
 class SANS2DParser(UserFileComponentParser):
     """
-    The BackParser is a hollow parser to ensure backwards compatibility
+    The SANS2D is a hollow parser to ensure backwards compatibility
     """
     Type = "SANS2D"
 
@@ -1937,7 +1937,7 @@ class SANS2DParser(UserFileComponentParser):
 
 class LOQParser(UserFileComponentParser):
     """
-    The BackParser is a hollow parser to ensure backwards compatibility
+    The LOQParser is a hollow parser to ensure backwards compatibility
     """
     Type = "LOQ"
 

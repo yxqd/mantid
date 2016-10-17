@@ -23,6 +23,8 @@ set ( TEST_PY_FILES
    SANSStateSaveBuilderTest.py
    SANSStateWavelengthTest.py
    SANSStateWavelengthBuilderTest.py
+   SANSStateWavelengthAndPixelAdjustmentTest.py
+   SANSStateWavelengthAndPixelAdjustmentBuilderTest.py
    )
 
 check_tests_valid ( ${CMAKE_CURRENT_SOURCE_DIR} ${TEST_PY_FILES} )

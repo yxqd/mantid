@@ -3,7 +3,8 @@ import mantid
 from mantid.kernel import (PropertyManagerProperty, PropertyManager)
 from mantid.api import Algorithm
 from SANS2.State.SANSStateCalculateTransmission import (SANSStateCalculateTransmission,
-                                                        SANSStateCalculateTransmissionISIS)
+                                                        SANSStateCalculateTransmissionISIS,
+                                                        SANSStateCalculateTransmissionLOQ)
 from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType, FitType)
 
 
@@ -79,7 +80,6 @@ class SANSStateCalculateTransmissionTest(unittest.TestCase):
     def test_validate_method_raises_value_error_for_mismatching_monitor_start_and_stop_backgrounds(self):
         # Arrange
         state = SANSStateCalculateTransmissionISIS()
-
 
         state.prompt_peak_correction_min = 12.0
         state.prompt_peak_correction_max = 17.0
@@ -167,9 +167,7 @@ class SANSStateCalculateTransmissionTest(unittest.TestCase):
                 pass
 
         # Arrange
-        state = SANSStateCalculateTransmissionISIS()
-        state.prompt_peak_correction_min = 12.0
-        state.prompt_peak_correction_max = 17.0
+        state = SANSStateCalculateTransmissionLOQ()
 
         state.rebin_type = RebinType.Rebin
         state.wavelength_low = 1.5
@@ -209,8 +207,8 @@ class SANSStateCalculateTransmissionTest(unittest.TestCase):
         state_2 = SANSStateCalculateTransmissionISIS()
         state_2.property_manager = property_manager
 
-        self.assertTrue(state_2.prompt_peak_correction_min == 12.)
-        self.assertTrue(state_2.prompt_peak_correction_max == 17.0)
+        self.assertTrue(state_2.prompt_peak_correction_min == 19000.0)
+        self.assertTrue(state_2.prompt_peak_correction_max == 20500.0)
 
         self.assertTrue(state_2.rebin_type is RebinType.Rebin)
         self.assertTrue(state_2.wavelength_low == 1.5)

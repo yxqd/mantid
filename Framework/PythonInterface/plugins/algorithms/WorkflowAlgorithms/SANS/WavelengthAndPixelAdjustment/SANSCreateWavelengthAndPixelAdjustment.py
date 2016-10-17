@@ -6,21 +6,25 @@
 
 from mantid.kernel import (Direction, IntBoundedValidator, FloatBoundedValidator, StringListValidator, Property)
 from mantid.api import (DataProcessorAlgorithm, MatrixWorkspaceProperty, AlgorithmFactory, PropertyMode,
-                        FileProperty, FileAction, Progress)
+                        FileProperty, FileAction, Progress, PropertyManagerProperty)
+from SANS2.State.SANSStateBase import create_deserialized_sans_state_from_property_manager
 from mantid.dataobjects import EventWorkspace
-
+from SANS2.Common.SANSEnumerations import (RangeStepType)
 from SANS2.Common.SANSConstants import SANSConstants
 from SANS2.Common.SANSFunctions import create_unmanaged_algorithm
 
 
 class SANSCreateWavelengthAndPixelAdjustment(DataProcessorAlgorithm):
     def category(self):
-        return 'SANS\\Normalize'
+        return 'SANS\\Adjust'
 
     def summary(self):
         return 'Calculates wavelength adjustment and pixel adjustment workspaces.'
 
     def PyInit(self):
+        # State
+        self.declareProperty(PropertyManagerProperty('SANSState'),
+                             doc='A property manager which fulfills the SANSState contract.')
         # Input workspaces
         self.declareProperty(MatrixWorkspaceProperty("Transmission", '',
                                                      optional=PropertyMode.Mandatory, direction=Direction.Input),
@@ -37,31 +41,21 @@ class SANSCreateWavelengthAndPixelAdjustment(DataProcessorAlgorithm):
                                                      direction=Direction.Output),
                              doc='A pixel adjustment output workspace.')
 
-        # The adjustment files for wavelength adjustments and pixel adjustments
-        self.declareProperty(FileProperty("WavelengthAdjustmentFile", "", action=FileAction.Load, extensions=[".txt"]))
-        self.declareProperty(FileProperty("PixelAdjustmentFile", "", action=FileAction.Load, extensions=[".txt"]))
-
         # The component
         self.declareProperty('Component', '', direction=Direction.Input, doc='Component which is being investigated.')
 
-        # Wavelength rebin values
-        self.declareProperty('WavelengthLow', defaultValue=Property.EMPTY_DBL, direction=Direction.Input,
-                             doc='The low value of the wavelength binning.')
-        self.declareProperty('WavelengthHigh', defaultValue=Property.EMPTY_DBL, direction=Direction.Input,
-                             doc='The high value of the wavelength binning.')
-        self.declareProperty('WavelengthStep', defaultValue=Property.EMPTY_DBL, direction=Direction.Input,
-                             doc='The step size of the wavelength binning.')
-        allowed_step_types = StringListValidator(["LOG", "LIN"])
-        self.declareProperty('WavelengthStepType', "LIN", validator=allowed_step_types, direction=Direction.Input,
-                             doc='The step type for rebinning.')
-
     def PyExec(self):
+        # Read the state
+        state_property_manager = self.getProperty("SANSState").value
+        state = create_deserialized_sans_state_from_property_manager(state_property_manager)
+        wavelength_and_pixel_adjustment_state = state.adjustment.wavelength_and_pixel_adjustment
+
         # Get the wavelength adjustment workspace
-        wavelength_adjustment_file = self.getProperty("WavelengthAdjustmentFile").value
         transmission_workspace = self.getProperty("Transmission").value
         monitor_normalization_workspace = self.getProperty("MonitorNormalization").value
 
-        rebin_string = self._get_rebin_string()
+        wavelength_adjustment_file = wavelength_and_pixel_adjustment_state.wavelength_adjustment_file
+        rebin_string = self._get_rebin_string(wavelength_and_pixel_adjustment_state)
         wavelength_adjustment_workspace = self._get_wavelength_adjustment_workspace(wavelength_adjustment_file,
                                                                                     transmission_workspace,
                                                                                     monitor_normalization_workspace,
@@ -69,7 +63,7 @@ class SANSCreateWavelengthAndPixelAdjustment(DataProcessorAlgorithm):
 
         # Get the pixel adjustment workspace
         component = self.getProperty("Component").value
-        pixel_adjustment_file = self.getProperty("PixelAdjustmentFile").value
+        pixel_adjustment_file = wavelength_and_pixel_adjustment_state.pixel_adjustment_file
         pixel_adjustment_workspace = self._get_pixel_adjustment_workspace(pixel_adjustment_file, component)
 
         # Set the output
@@ -174,40 +168,27 @@ class SANSCreateWavelengthAndPixelAdjustment(DataProcessorAlgorithm):
             pixel_adjustment_workspace = None
         return pixel_adjustment_workspace
 
-    def _get_rebin_string(self):
-        wavelength_low = self.getProperty("WavelengthLow").value
-        wavelength_high = self.getProperty("WavelengthHigh").value
-        wavelength_step = self.getProperty("WavelengthStep").value
-        wavelength_step_type = self.getProperty("WavelengthStepType").value
+    def _get_rebin_string(self, wavelength_and_pixel_adjustment_state):
+        wavelength_low = wavelength_and_pixel_adjustment_state.wavelength_low
+        wavelength_high = wavelength_and_pixel_adjustment_state.wavelength_high
+        wavelength_step = wavelength_and_pixel_adjustment_state.wavelength_step
+        wavelength_step_type = -1.0 if wavelength_and_pixel_adjustment_state.wavelength_step_type \
+                                       is RangeStepType.Log else 1.0
 
         # Create a rebin string from the wavelength information
-        wavelength_step = -1*wavelength_step if wavelength_step_type == "LOG" else wavelength_step
+        wavelength_step *= wavelength_step_type
         return str(wavelength_low) + "," + str(wavelength_step) + "," + str(wavelength_high)
 
     def validateInputs(self):
         errors = dict()
-        # Check the wavelength
-        wavelength_low = self.getProperty("WavelengthLow").value
-        wavelength_high = self.getProperty("WavelengthHigh").value
-        if wavelength_low is not None and wavelength_high is not None and wavelength_low > wavelength_high:
-            errors.update({"WavelengthLow": "The lower wavelength setting needs to be smaller "
-                                            "than the higher wavelength setting."})
-
-        if wavelength_low is not None and wavelength_low < 0:
-            errors.update({"WavelengthLow": "The wavelength cannot be smaller than 0."})
-
-        if wavelength_high is not None and wavelength_high < 0:
-            errors.update({"WavelengthHigh": "The wavelength cannot be smaller than 0."})
-
-        wavelength_step = self.getProperty("WavelengthStep").value
-        if wavelength_step is not None and wavelength_step < 0:
-            errors.update({"WavelengthStep": "The wavelength step cannot be smaller than 0."})
-
-        # Check the workspace
-        workspace = self.getProperty(SANSConstants.input_workspace).value
-        rebin_mode = self.getProperty("RebinMode").value
-        if rebin_mode == "InterpolatingRebin" and isinstance(workspace, EventWorkspace):
-            errors.update({"RebinMode": "An interpolating rebin cannot be applied to an EventWorkspace."})
+        # Check that the input can be converted into the right state object
+        state_property_manager = self.getProperty("SANSState").value
+        try:
+            state = create_deserialized_sans_state_from_property_manager(state_property_manager)
+            state.property_manager = state_property_manager
+            state.validate()
+        except ValueError as err:
+            errors.update({"SANSSMove": str(err)})
         return errors
 
 # Register algorithm with Mantid

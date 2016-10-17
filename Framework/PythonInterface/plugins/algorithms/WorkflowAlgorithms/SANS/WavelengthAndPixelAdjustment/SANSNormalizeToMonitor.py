@@ -12,7 +12,7 @@ from SANS2.State.SANSStateBase import create_deserialized_sans_state_from_proper
 
 class SANSNormalizeToMonitor(DataProcessorAlgorithm):
     def category(self):
-        return 'SANS\\Normalize'
+        return 'SANS\\Adjust'
 
     def summary(self):
         return 'Calculates a monitor normalization workspace for a SANS reduction.'

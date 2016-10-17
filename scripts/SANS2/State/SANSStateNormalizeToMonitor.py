@@ -26,8 +26,8 @@ class SANSStateNormalizeToMonitorISIS(SANSStateBase, SANSStateNormalizeToMonitor
     wavelength_step = PositiveFloatParameter()
     wavelength_step_type = ClassTypeParameter(RangeStepType)
 
-    background_TOF_start = FloatParameter()
-    background_TOF_stop = FloatParameter()
+    background_TOF_general_start = FloatParameter()
+    background_TOF_general_stop = FloatParameter()
     background_TOF_monitor_start = DictParameter()
     background_TOF_monitor_stop = DictParameter()
 
@@ -122,6 +122,17 @@ class SANSStateNormalizeToMonitorISIS(SANSStateBase, SANSStateNormalizeToMonitor
             raise ValueError("SANSStateMoveDetectorISIS: The provided inputs are illegal. "
                              "Please see: {0}".format(json.dumps(is_invalid)))
 
+
+@sans_parameters
+class SANSStateNormalizeToMonitorLOQ(SANSStateNormalizeToMonitorISIS):
+    def __init__(self):
+        super(SANSStateNormalizeToMonitorLOQ, self).__init__()
+        # Set the LOQ default range for prompt peak correction
+        self.prompt_peak_correction_min = 19000.0
+        self.prompt_peak_correction_max = 20500.0
+
+    def validate(self):
+        super(SANSStateNormalizeToMonitorLOQ, self).validate()
 
 # -----------------------------------------------
 # SANSStateNormalizeMonitor setup for other facilities/techniques/scenarios.

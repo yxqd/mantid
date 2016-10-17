@@ -2,7 +2,8 @@ import unittest
 import mantid
 from mantid.kernel import (PropertyManagerProperty, PropertyManager)
 from mantid.api import Algorithm
-from SANS2.State.SANSStateNormalizeToMonitor import (SANSStateNormalizeToMonitor, SANSStateNormalizeToMonitorISIS)
+from SANS2.State.SANSStateNormalizeToMonitor import (SANSStateNormalizeToMonitor, SANSStateNormalizeToMonitorISIS,
+                                                     SANSStateNormalizeToMonitorLOQ)
 from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType)
 
 
@@ -102,21 +103,16 @@ class SANSStateNormalizeToMonitorTest(unittest.TestCase):
                 pass
 
         # Arrange
-        state = SANSStateNormalizeToMonitorISIS()
-        start_1 = {"1": 12, "2": 13}
-        stop_1 = {"1": 14, "2": 13}
-        state.background_TOF_monitor_start = start_1
-        state.background_TOF_monitor_stop = stop_1
-        rebin_type = RebinType.Rebin
-        wavelength_low = 1.5
-        wavelength_high = 2.7
-        wavelength_step = 0.5
-        wavelength_step_type = RangeStepType.Lin
-        state.rebin_type = rebin_type
-        state.wavelength_low = wavelength_low
-        state.wavelength_high = wavelength_high
-        state.wavelength_step = wavelength_step
-        state.wavelength_step_type = wavelength_step_type
+        state = SANSStateNormalizeToMonitorLOQ()
+
+        state.background_TOF_monitor_start = {"1": 12, "2": 13}
+        state.background_TOF_monitor_stop = {"1": 14, "2": 13}
+
+        state.rebin_type = RebinType.Rebin
+        state.wavelength_low = 1.5
+        state.wavelength_high = 2.7
+        state.wavelength_step = 0.5
+        state.wavelength_step_type = RangeStepType.Lin
         state.incident_monitor = 1
 
         # Act
@@ -139,14 +135,16 @@ class SANSStateNormalizeToMonitorTest(unittest.TestCase):
         self.assertTrue(state_2.wavelength_step == 0.5)
         self.assertTrue(state_2.wavelength_low == 1.5)
         self.assertTrue(state_2.incident_monitor == 1)
-        self.assertTrue(state_2.prompt_peak_correction_min is None)
-        self.assertTrue(state_2.prompt_peak_correction_max is None)
+
+        # Checking the default value settings of LOQ
+        self.assertTrue(state_2.prompt_peak_correction_min == 19000.0)
+        self.assertTrue(state_2.prompt_peak_correction_max == 20500.0)
 
         start_2 = state_2.background_TOF_monitor_start
         stop_2 = state_2.background_TOF_monitor_stop
 
-        self.assertTrue(len(set(start_1.items()) & set(start_2.items())) == 2)
-        self.assertTrue(len(set(stop_1.items()) & set(stop_2.items())) == 2)
+        self.assertTrue(len(set({"1": 12, "2": 13}.items()) & set(start_2.items())) == 2)
+        self.assertTrue(len(set({"1": 14, "2": 13}.items()) & set(stop_2.items())) == 2)
 
 
 if __name__ == '__main__':

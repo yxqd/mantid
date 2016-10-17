@@ -60,5 +60,6 @@ class XMLParsingTest(unittest.TestCase):
             self.assertTrue(value == ("monitor"+str(key)))
 
 
+
 if __name__ == '__main__':
     unittest.main()

@@ -1,7 +1,7 @@
 from mantid.kernel import logger
 
 from SANS2.Common.SANSConstants import SANSConstants
-from SANS2.Common.SANSEnumerations import (DetectorType, FitModeForMerge)
+from SANS2.Common.SANSEnumerations import (DetectorType, FitModeForMerge, RebinType)
 from SANS2.Common.SANSFileInformation import find_full_file_path
 from SANS2.UserFile.UserFileReader import UserFileReader
 from SANS2.UserFile.UserFileCommon import *
@@ -13,6 +13,9 @@ from SANS2.State.StateBuilder.SANSStateReductionBuilder import get_reduction_bui
 from SANS2.State.StateBuilder.SANSStateSliceEventBuilder import get_slice_event_builder
 from SANS2.State.StateBuilder.SANSStateWavelengthBuilder import get_wavelength_builder
 from SANS2.State.StateBuilder.SANSStateSaveBuilder import get_save_builder
+from SANS2.State.StateBuilder.SANSStateAdjustmentBuilder import get_adjustment_builder
+from SANS2.State.StateBuilder.SANSStateNormalizeToMonitorBuilder import get_normalize_to_monitor_builder
+from SANS2.State.StateBuilder.SANSStateCalculateTransmissionBuilder import get_calculate_transmission_builder
 
 
 def check_if_contains_only_one_element(to_check, element_name):
@@ -66,6 +69,76 @@ def convert_mm_to_m(value):
     return value/1000.
 
 
+def set_background_TOF_general_start(builder, user_file_items):
+    # The general background settings
+    if user_file_back_all_monitors in user_file_items:
+        back_all_monitors = user_file_items[user_file_back_all_monitors]
+        # Should the user have chosen several values, then the last element is selected
+        check_if_contains_only_one_element(back_all_monitors, user_file_back_all_monitors)
+        back_all_monitors = back_all_monitors[-1]
+        background_TOF_general_start = back_all_monitors.start
+        background_TOF_general_stop = back_all_monitors.stop
+        builder.set_background_TOF_general_start(background_TOF_general_start)
+        builder.set_background_TOF_general_stop(background_TOF_general_stop)
+
+
+def set_background_TOF_monitor_start(builder, user_file_items):
+    # The monitor off switches. Get all monitors which should not have an individual background setting
+    monitor_exclusion_list = []
+    if user_file_back_monitor_off in user_file_items:
+        back_monitor_off = user_file_items[user_file_back_monitor_off]
+        monitor_exclusion_list = back_monitor_off.values()
+
+    # Get all individual monitor background settings. But ignore those settings where there was an explicit
+    # off setting. Those monitors were collected in the monitor_exclusion_list collection
+    if user_file_back_single_monitors in user_file_items:
+        background_TOF_monitor_start = {}
+        background_TOF_monitor_stop = {}
+        back_single_monitors = user_file_items[user_file_back_single_monitors]
+        for element in back_single_monitors:
+            monitor = element.monitor
+            if monitor not in monitor_exclusion_list:
+                # We need to set it to string since Mantid's Property manager cannot handle integers as a key.
+                background_TOF_monitor_start.update({str(monitor): element.start})
+                background_TOF_monitor_stop.update({str(monitor): element.stop})
+        builder.set_background_TOF_monitor_start(background_TOF_monitor_start)
+        builder.set_background_TOF_monitor_stop(background_TOF_monitor_stop)
+
+
+def set_wavelength_limits(builder, user_file_items):
+    if user_file_limits_wavelength in user_file_items:
+        wavelength_limits = user_file_items[user_file_limits_wavelength]
+        check_if_contains_only_one_element(wavelength_limits, user_file_limits_wavelength)
+        wavelength_limits = wavelength_limits[-1]
+        builder.set_wavelength_low(wavelength_limits.start)
+        builder.set_wavelength_high(wavelength_limits.stop)
+        builder.set_wavelength_step(wavelength_limits.step)
+        builder.set_wavelength_step_type(wavelength_limits.step_type)
+
+def set_prompt_peak_correction(builder, user_file_items):
+    if user_file_fit_monitor_times in user_file_items:
+        fit_monitor_times = user_file_items[user_file_fit_monitor_times]
+        # Should the user have chosen several values, then the last element is selected
+        check_if_contains_only_one_element(fit_monitor_times, user_file_fit_monitor_times)
+        fit_monitor_times = fit_monitor_times[-1]
+        prompt_peak_correction_min = fit_monitor_times.start
+        prompt_peak_correction_max = fit_monitor_times.stop
+        builder.set_prompt_peak_correction_min(prompt_peak_correction_min)
+        builder.set_prompt_peak_correction_max(prompt_peak_correction_max)
+
+
+def set_incident_monitor(builder, user_file_items):
+    if user_file_mon_spectrum in user_file_items:
+        monitor_spectrum = user_file_items[user_file_mon_spectrum]
+        # Should the user have chosen several values, then the last element is selected
+        check_if_contains_only_one_element(monitor_spectrum, user_file_mon_spectrum)
+        monitor_spectrum = monitor_spectrum[-1]
+        spectrum = monitor_spectrum.spectrum
+        builder.set_incident_monitor(spectrum)
+        interpolate = RebinType.Interpolate if monitor_spectrum.interpolate else RebinType.Rebin
+        builder.set_rebin_type(interpolate)
+
+
 class UserFileStateDirectorISIS(object):
     def __init__(self, data_info):
         super(UserFileStateDirectorISIS, self).__init__()
@@ -81,6 +154,7 @@ class UserFileStateDirectorISIS(object):
         self._slice_event_builder = get_slice_event_builder(self._data)
         self._wavelength_builder = get_wavelength_builder(self._data)
         self._save_builder = get_save_builder(self._data)
+        self._adjustment_builder = get_adjustment_builder(self.data)
 
     def set_user_file(self, user_file):
         file_path = find_full_file_path(user_file)
@@ -107,6 +181,10 @@ class UserFileStateDirectorISIS(object):
 
         # Slice event state
         # There does not seem to be a command for this currently -- this should be added in the future
+
+        # Adjustment state. This includes the transmission calculation, the monitor normalizeation and the generation
+        # of other adjustment workspaces
+        self._set_up_adjustment_state(user_file_items)
 
     def construct(self):
         # Create the different sub states and add them to the state
@@ -139,6 +217,10 @@ class UserFileStateDirectorISIS(object):
         save_state = self._save_builder.build()
         save_state.validate()
         self._state_builder.set_save(save_state)
+
+        # Adjustment state
+        adjustment_state = self._adjustment_builder.bulid()
+        adjustment_state.validate()
 
         # Data state
         self._state_builder.set_data(self._data)
@@ -714,3 +796,46 @@ class UserFileStateDirectorISIS(object):
             self._wavelength_builder.set_wavelength_high(wavelength_limits.stop)
             self._wavelength_builder.set_wavelength_step(wavelength_limits.step)
             self._wavelength_builder.set_wavelength_step_type(wavelength_limits.step_type)
+
+    def _set_up_adjustment_state(self, user_file_items):
+        # ------------------------------------------------
+        # Setup the normalize to monitor state
+        # ------------------------------------------------
+        normalize_to_monitor_state = self._set_up_normalize_to_monitor_state(user_file_items)
+        self._adjustment_builder.set_normalize_to_monitor(normalize_to_monitor_state)
+
+        # ------------------------------------------------
+        # Setup the transmission calculation state
+        # ------------------------------------------------
+        calculate_transmission_state = self._set_up_calculate_transmission(user_file_items)
+        self._adjustment_builder.set_calculate_transmission(calculate_transmission_state)
+
+        # ------------------------------------------------
+        # Setup the wavelength and pixel adjustment state
+        # ------------------------------------------------
+        #wavelength_and_pixel_adjustment_state = self.set_up_wavelength_and_pixel_adjustment(user_file_items)
+        #self._adjustment_builder.set_wavelength_and_pixel_adjustment(wavelength_and_pixel_adjustment_state)
+
+    def _set_up_normalize_to_monitor_state(self, user_file_items):
+        normalize_to_state_builder = get_normalize_to_monitor_builder(self._data)
+
+        # Extract the incident monitor and which type of rebinning to use (interpolating or normal)
+        set_incident_monitor(normalize_to_state_builder, user_file_items)
+
+        # The prompt peak correction values
+        set_prompt_peak_correction(normalize_to_state_builder, user_file_items)
+
+        # The general background settings
+        set_background_TOF_general_start(normalize_to_state_builder, user_file_items)
+
+        # The monitor-specific background settings
+        set_background_TOF_monitor_start(normalize_to_state_builder, user_file_items)
+
+        # Get the wavelength settings for the rebin step
+        set_wavelength_limits(normalize_to_state_builder, user_file_items)
+
+        # Now get the SANSStateNormalizeToMonitor state
+        return normalize_to_state_builder.build()
+
+    def _set_up_calculate_transmission(self, user_file_items):
+        #

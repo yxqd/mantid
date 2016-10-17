@@ -196,7 +196,17 @@ class SANSStateCalculateTransmissionISIS(SANSStateBase, SANSStateCalculateTransm
                              "Please see: {0}".format(json.dumps(is_invalid)))
 
 
+class SANSStateCalculateTransmissionLOQ(SANSStateCalculateTransmissionISIS):
+    def __init__(self):
+        super(SANSStateCalculateTransmissionISIS, self).__init__()
+        # Set the LOQ default range for prompt peak correction
+        self.prompt_peak_correction_min = 19000.0
+        self.prompt_peak_correction_max = 20500.0
+
+    def validate(self):
+        super(SANSStateCalculateTransmissionLOQ, self).validate()
+
 # -----------------------------------------------
-# SANSStateNormalizeMonitor setup for other facilities/techniques/scenarios.
-# Needs to derive from SANSStateNormalizeMonitor and SANSStateBase and fulfill its contract.
+# SANSStateCalculateTransmission setup for other facilities/techniques/scenarios.
+# Needs to derive from SANSStateCalculateTransmission and SANSStateBase and fulfill its contract.
 # -----------------------------------------------

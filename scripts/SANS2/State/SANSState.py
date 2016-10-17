@@ -3,6 +3,7 @@
 import json
 import pickle
 import inspect
+from SANS2.State.StateFunctions import validator_sub_state
 from SANS2.State.SANSStateBase import (SANSStateBase, TypedParameter, sans_parameters)
 from SANS2.State.SANSStateData import SANSStateData
 from SANS2.State.SANSStateMove import SANSStateMove
@@ -11,18 +12,6 @@ from SANS2.State.SANSStateSliceEvent import SANSStateSliceEvent
 from SANS2.State.SANSStateMask import SANSStateMask
 from SANS2.State.SANSStateWavelength import SANSStateWavelength
 from SANS2.State.SANSStateSave import SANSStateSave
-
-
-# -----------------------------------------------
-# Validator for sub states
-# -----------------------------------------------
-def validator_sub_state(sub_state):
-    is_valid = True
-    try:
-        sub_state.validate()
-    except ValueError:
-        is_valid = False
-    return is_valid
 
 
 # ------------------------------------------------

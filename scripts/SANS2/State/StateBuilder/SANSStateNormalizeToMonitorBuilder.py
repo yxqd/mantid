@@ -2,7 +2,7 @@
 
 import copy
 
-from SANS2.State.SANSStateNormalizeToMonitor import (SANSStateNormalizeToMonitorISIS)
+from SANS2.State.SANSStateNormalizeToMonitor import (SANSStateNormalizeToMonitorISIS, SANSStateNormalizeToMonitorLOQ)
 from SANS2.Common.SANSEnumerations import SANSInstrument
 from SANS2.State.StateBuilder.AutomaticSetters import (automatic_setters)
 from SANS2.Common.XMLParsing import get_named_elements_from_ipf_file
@@ -31,11 +31,24 @@ def set_default_incident_monitor(normalize_monitor_info, data_info):
 # State builders
 # ---------------------------------------
 class SANSStateNormalizeToMonitorBuilderISIS(object):
-    @automatic_setters(SANSStateNormalizeToMonitorISIS)
+    @automatic_setters(SANSStateNormalizeToMonitorISIS, exclude=["default_incident_monitor"])
     def __init__(self, data_info):
         super(SANSStateNormalizeToMonitorBuilderISIS, self).__init__()
         self._data = data_info
         self.state = SANSStateNormalizeToMonitorISIS()
+        set_default_incident_monitor(self.state, self._data)
+
+    def build(self):
+        self.state.validate()
+        return copy.copy(self.state)
+
+
+class SANSStateNormalizeToMonitorBuilderLOQ(object):
+    @automatic_setters(SANSStateNormalizeToMonitorLOQ)
+    def __init__(self, data_info):
+        super(SANSStateNormalizeToMonitorBuilderISIS, self).__init__()
+        self._data = data_info
+        self.state = SANSStateNormalizeToMonitorLOQ()
         set_default_incident_monitor(self.state, self._data)
 
     def build(self):
@@ -48,8 +61,10 @@ class SANSStateNormalizeToMonitorBuilderISIS(object):
 # ------------------------------------------
 def get_normalize_to_monitor_builder(data_info):
     instrument = data_info.instrument
-    if instrument is SANSInstrument.LARMOR or instrument is SANSInstrument.LOQ or instrument is SANSInstrument.SANS2D:
+    if instrument is SANSInstrument.LARMOR or instrument is SANSInstrument.SANS2D:
         return SANSStateNormalizeToMonitorBuilderISIS(data_info)
+    elif instrument is SANSInstrument.LOQ:
+        return SANSStateNormalizeToMonitorBuilderLOQ(data_info)
     else:
         raise NotImplementedError("SANSStateNormalizeToMonitorBuilder: Could not find any valid normalize to monitor "
                                   "builder for the specified SANSStateData object {0}".format(str(data_info)))

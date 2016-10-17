@@ -26,17 +26,18 @@ def apply_flat_background_correction_to_detectors(workspace, flat_background_cor
     return flat_alg.getProperty(SANSConstants.output_workspace).value
 
 
-def apply_flat_background_correction_to_monitors(workspace, monitor_indices, flat_background_monitors):
+def apply_flat_background_correction_to_monitors(workspace, monitor_indices, background_TOF_monitor_start,
+                                                 background_TOF_monitor_stop):
     """
     Applies the flat background correction to some monitors
 
 
     :param workspace: the workspace which contains monitor spectra which will be corrected.
     :param monitor_indices: the workspace indices of the monitors which will be corrected.
-    :param flat_background_monitors: a PropertyManager object which is used here as a dictionary. The keys are
-                                     spectrum numbers of monitors (as strings) and the values are a collection
-                                     with two entries where the first entry is the start time of the TOF region for
-                                     the background correction and the second entry is the stop time.
+    :param background_TOF_monitor_start: a dictionary where the keys are spectrum numbers of monitors (as strings) and
+                                         the values are the start time of the flat background correction.
+    :param background_TOF_monitor_stop: a dictionary where the keys are spectrum numbers of monitors (as strings) and
+                                        the values are the stop time of the flat background correction.
     :return: a corrected workspace.
     """
     for workspace_index in monitor_indices:
@@ -44,9 +45,8 @@ def apply_flat_background_correction_to_monitors(workspace, monitor_indices, fla
         spectrum = workspace.getSpectrum(workspace_index)
         spectrum_number = spectrum.getSpectrumNo()
         monitor_key = str(spectrum_number)
-        tof_region = flat_background_monitors[monitor_key]
-        tof_start = tof_region[0]
-        tof_stop = tof_region[1]
+        tof_start = background_TOF_monitor_start[monitor_key]
+        tof_stop = background_TOF_monitor_stop[monitor_key]
 
         flat_name = "CalculateFlatBackground"
         flat_options = {SANSConstants.input_workspace: workspace,
