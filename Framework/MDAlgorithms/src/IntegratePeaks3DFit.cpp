@@ -669,6 +669,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
           double c_best_err = sqrt(sum) / event_tot;
           if (c_best_err < best_err) {
             best_err = c_best_err;
+            std::cout << best_norm<<" ERR "<<best_err<<"\n";
             gp_parm = c_gp_parm;
             gp_dist = c_gp_dist;
             gp_events = c_gp_events;
@@ -933,8 +934,8 @@ round(mean(full_box_density(pp_ind))*accumarray(event_vals(gp_rp_ind),1)/mean(fu
         if (gp > gp_max) {
           gp_max = gp;
           int iPts = j1 + gridPts[0] * (j2 + gridPts[1] * j3);
-          std::cout << j1 << "  " << j2 << "  " << j3 << "  "
-                    << num_events[iPts] << "  " << gp << "\n";
+          /*std::cout << j1 << "  " << j2 << "  " << j3 << "  "
+                    << num_events[iPts] << "  " << gp << "\n";*/
         }
         sum3D += gp;
       }
