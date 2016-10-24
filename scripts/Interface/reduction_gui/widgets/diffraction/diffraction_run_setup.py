@@ -10,11 +10,10 @@ from reduction_gui.reduction.diffraction.diffraction_run_setup_script import Run
 import ui.diffraction.ui_diffraction_run_setup
 import ui.diffraction.ui_diffraction_info
 
-#import mantid.simpleapi as api
 IS_IN_MANTIDPLOT = False
 try:
-    from mantid.api import *
-    from mantid.kernel import *
+    from mantid.api import * # noqa
+    from mantid.kernel import * # noqa
     IS_IN_MANTIDPLOT = True
 except:
     pass
@@ -280,7 +279,7 @@ class RunSetupWidget(BaseWidget):
             s.doresamplex = False
             try:
                 s.binning = float(self._content.binning_edit.text())
-            except ValueError as e:
+            except ValueError:
                 raise RuntimeError('Binning parameter is not given!')
 
             if s.binning < 0. and bintypestr.startswith('Linear'):
