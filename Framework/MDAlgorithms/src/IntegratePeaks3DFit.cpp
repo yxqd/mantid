@@ -100,9 +100,9 @@ void IntegratePeaks3DFit::exec() {
   int npeaks = peakWS->getNumberPeaks();
 
   auto prog = make_unique<Progress>(this, 0.3, 1.0, npeaks);
-  PARALLEL_FOR1(peakWS)
+  // PARALLEL_FOR1(peakWS)
   for (int i = 0; i < npeaks; i++) {
-    PARALLEL_START_INTERUPT_REGION
+    // PARALLEL_START_INTERUPT_REGION
 
     IPeak &p = peakWS->getPeak(i);
     // Get the peak center as a position in the dimensions of the workspace
@@ -129,9 +129,9 @@ void IntegratePeaks3DFit::exec() {
     p.setIntensity(intensity);
     p.setSigmaIntensity(sqrt(errorSquared));
     prog->report();
-    PARALLEL_END_INTERUPT_REGION
+    // PARALLEL_END_INTERUPT_REGION
   }
-  PARALLEL_CHECK_INTERUPT_REGION
+  // PARALLEL_CHECK_INTERUPT_REGION
   // Save the output
   setProperty("OutputWorkspace", peakWS);
 }
@@ -645,6 +645,8 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
           for (int j0 = 0; j0 < N_ind; j0++) {
             c_gp_dist_sum += c_gp_dist[j0];
           }
+          // For integration of fit at end
+          gp_dist_sum = c_gp_dist_sum;
 
           for (int j0 = 0; j0 < N_ind; j0++) {
             c_gp_dist[j0] /= c_gp_dist_sum;
@@ -669,7 +671,6 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
           double c_best_err = sqrt(sum) / event_tot;
           if (c_best_err < best_err) {
             best_err = c_best_err;
-            std::cout << best_norm<<" ERR "<<best_err<<"\n";
             gp_parm = c_gp_parm;
             gp_dist = c_gp_dist;
             gp_events = c_gp_events;
@@ -919,7 +920,6 @@ round(mean(full_box_density(pp_ind))*accumarray(event_vals(gp_rp_ind),1)/mean(fu
       ppSum += event_vals[j1];
   }
   double sum3D = 0.0;
-  double gp_max = 0.0;
   for (int j1 = 0; j1 < gridPts[0]; j1++) {
     for (int j2 = 0; j2 < gridPts[1]; j2++) {
       for (int j3 = 0; j3 < gridPts[2]; j3++) {
@@ -928,16 +928,10 @@ round(mean(full_box_density(pp_ind))*accumarray(event_vals(gp_rp_ind),1)/mean(fu
         tmp.push_back(j2 - c_gp_parm[1]);
         tmp.push_back(j3 - c_gp_parm[2]);
         tmp = XYZ_est * tmp;
-        double gp = best_norm * exp(-std::pow(tmp[0], 2) / c_gp_parm[6]) *
+        double gp = exp(-std::pow(tmp[0], 2) / c_gp_parm[6]) *
                     exp(-std::pow(tmp[1], 2) / c_gp_parm[7]) *
                     exp(-std::pow(tmp[2], 2) / c_gp_parm[8]);
-        if (gp > gp_max) {
-          gp_max = gp;
-          int iPts = j1 + gridPts[0] * (j2 + gridPts[1] * j3);
-          /*std::cout << j1 << "  " << j2 << "  " << j3 << "  "
-                    << num_events[iPts] << "  " << gp << "\n";*/
-        }
-        sum3D += gp;
+        sum3D += best_norm * gp / gp_dist_sum;
       }
     }
   }
