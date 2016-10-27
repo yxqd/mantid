@@ -3,7 +3,7 @@
 #include <sstream>
 #include <vector>
 #include <boost/make_shared.hpp>
-
+#include <boost/math/special_functions/fpclassify.hpp>
 #include "MantidKernel/UsageService.h"
 #include "MantidAPI/CoordTransform.h"
 #include "MantidAPI/IMDHistoWorkspace.h"
@@ -108,7 +108,6 @@ SliceViewer::SliceViewer(QWidget *parent)
   m_data = Kernel::make_unique<API::QwtRasterDataMD>();
   m_spect->setColorMap(m_colorBar->getColorMap());
   m_plot->autoRefresh();
-
   // Make the splitter use the minimum size for the controls and not stretch out
   ui.splitter->setStretchFactor(0, 0);
   ui.splitter->setStretchFactor(1, 1);
@@ -1530,8 +1529,8 @@ void SliceViewer::showInfoAt(double x, double y) {
 
   signal_t signal =
       m_ws->getSignalWithMaskAtVMD(coords, this->m_data->getNormalization());
-  ui.lblInfoX->setText(QString::number(x, 'g', 4));
-  ui.lblInfoY->setText(QString::number(y, 'g', 4));
+  ui.lblInfoX->setText(QString::number(coords[m_dimX], 'g', 4));
+  ui.lblInfoY->setText(QString::number(coords[m_dimY], 'g', 4));
   ui.lblInfoSignal->setText(QString::number(signal, 'g', 4));
 
   // Now show the coords in the original workspace
@@ -1542,7 +1541,6 @@ void SliceViewer::showInfoAt(double x, double y) {
     if (toOrig) {
       // Transform the coordinates
       VMD orig = toOrig->applyVMD(coords);
-
       QString text;
       for (size_t d = 0; d < origWS->getNumDims(); d++) {
         text += QString::fromStdString(origWS->getDimension(d)->getName());
