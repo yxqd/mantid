@@ -2405,6 +2405,8 @@ void SliceViewer::disableOrthogonalAnalysisTools(bool checked) {
 	ui.btnClearLine->setDisabled(checked);
 	ui.btnRebinMode->setDisabled(checked);
 	ui.btnPeakOverlay->setDisabled(checked);
+	m_plot->enableAxis(QwtPlot::yLeft, !checked);
+	m_plot->enableAxis(QwtPlot::xBottom, !checked);
 
 }
 /**
