@@ -100,9 +100,9 @@ void IntegratePeaks3DFit::exec() {
   int npeaks = peakWS->getNumberPeaks();
 
   auto prog = make_unique<Progress>(this, 0.3, 1.0, npeaks);
-  // PARALLEL_FOR1(peakWS)
+  PARALLEL_FOR1(peakWS)
   for (int i = 0; i < npeaks; i++) {
-    // PARALLEL_START_INTERUPT_REGION
+    PARALLEL_START_INTERUPT_REGION
 
     IPeak &p = peakWS->getPeak(i);
     // Get the peak center as a position in the dimensions of the workspace
@@ -129,9 +129,9 @@ void IntegratePeaks3DFit::exec() {
     p.setIntensity(intensity);
     p.setSigmaIntensity(sqrt(errorSquared));
     prog->report();
-    // PARALLEL_END_INTERUPT_REGION
+    PARALLEL_END_INTERUPT_REGION
   }
-  // PARALLEL_CHECK_INTERUPT_REGION
+  PARALLEL_CHECK_INTERUPT_REGION
   // Save the output
   setProperty("OutputWorkspace", peakWS);
 }
@@ -253,15 +253,18 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
   std::vector<int> event_hist;
   std::vector<int> event_counts;
   int N_non_zeros = 0;
-  for (int j1 = 1; j1 <= static_cast<int>(event_max); j1++) {
-    int match = 0;
-    for (int j2 = 0; j2 < N_ind; j2++) {
-      if (static_cast<int>(event_vals[j2] + 0.5) == j1)
-        match++;
-    }
-    event_counts.push_back(j1);
-    event_hist.push_back(match);
-    if (match > 0)
+  int number_of_buckets = static_cast<int>(event_max + 0.5);
+  for (int j1 = 0; j1 < number_of_buckets; j1++) {
+    event_counts.push_back(j1 + 1);
+    event_hist.push_back(0);
+  }
+  for (int j1 = 0; j1 < N_ind; j1++) {
+    int bucket = static_cast<int>(event_vals[j1] + 0.5);
+    if (bucket > 0)
+      event_hist[bucket - 1]++;
+  }
+  for (int j1 = 0; j1 < number_of_buckets; j1++) {
+    if (event_hist[j1] > 0)
       N_non_zeros++;
   }
 
@@ -277,7 +280,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
                              (event_hist[0] / gsl_sf_fact(event_counts[0])),
                          (1.0 / (event_counts[1] - event_counts[0])))));
       std::vector<double> pp_dist;
-      for (size_t j1 = 0; j1 < event_hist.size(); j1++) {
+      for (int j1 = 0; j1 < number_of_buckets; j1++) {
         pp_dist.push_back((std::pow((pp_lambda), event_counts[j1])) *
                           exp(-pp_lambda) / gsl_sf_fact(event_counts[j1]));
       }
@@ -286,7 +289,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
                     std::inner_product(pp_dist.begin(), pp_dist.end(),
                                        pp_dist.begin(), 0.0);
       double best_pp_err = 0.;
-      for (size_t j1 = 0; j1 < event_hist.size(); j1++) {
+      for (int j1 = 0; j1 < number_of_buckets; j1++) {
         best_pp_err += std::pow((pp_N * pp_dist[j1] - event_hist[j1]), 2);
       }
       best_pp_err /= event_tot;
@@ -299,7 +302,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
           double c_pp_lambda = pp_lambda;
           c_pp_lambda += (std::pow((-1), js)) * d_pp_lambda;
           std::vector<double> pp_dist;
-          for (size_t j1 = 0; j1 < event_hist.size(); j1++) {
+          for (int j1 = 0; j1 < number_of_buckets; j1++) {
             pp_dist.push_back((std::pow((c_pp_lambda), event_counts[j1])) *
                               exp(-c_pp_lambda) /
                               gsl_sf_fact(event_counts[j1]));
@@ -309,7 +312,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
                         std::inner_product(pp_dist.begin(), pp_dist.end(),
                                            pp_dist.begin(), 0.0);
           double c_best_pp_err = 0.;
-          for (size_t j1 = 0; j1 < event_hist.size(); j1++) {
+          for (int j1 = 0; j1 < number_of_buckets; j1++) {
             c_best_pp_err += std::pow((pp_N * pp_dist[j1] - event_hist[j1]), 2);
           }
           c_best_pp_err /= event_tot;
@@ -705,15 +708,18 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
   event_hist.clear();
   event_counts.clear();
   N_non_zeros = 0;
-  for (int j1 = 1; j1 <= static_cast<int>(event_max); j1++) {
-    int match;
-    for (int j2 = 0; j2 < N_ind; j2++) {
-      if (static_cast<int>(event_vals[j2]) == j1)
-        match++;
-    }
-    event_counts.push_back(j1);
-    event_hist.push_back(match);
-    if (match > 0)
+  number_of_buckets = static_cast<int>(event_max + 0.5);
+  for (int j1 = 0; j1 < number_of_buckets; j1++) {
+    event_counts.push_back(j1 + 1);
+    event_hist.push_back(0);
+  }
+  for (int j1 = 0; j1 < N_ind; j1++) {
+    int bucket = static_cast<int>(event_vals[j1] + 0.5);
+    if (bucket > 0)
+      event_hist[bucket - 1]++;
+  }
+  for (int j1 = 0; j1 < number_of_buckets; j1++) {
+    if (event_hist[j1] > 0)
       N_non_zeros++;
   }
   pp_lambda = 0.;
@@ -724,7 +730,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
                            (event_hist[0] / gsl_sf_fact(event_counts[0])),
                        (1.0 / (event_counts[1] - event_counts[0])))));
     std::vector<double> pp_dist;
-    for (int j1 = 0; j1 < N_ind; j1++) {
+    for (int j1 = 0; j1 < number_of_buckets; j1++) {
       pp_dist.push_back((std::pow((pp_lambda), event_counts[j1])) *
                         exp(-pp_lambda) / gsl_sf_fact(event_counts[j1]));
     }
@@ -733,7 +739,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
                   std::inner_product(pp_dist.begin(), pp_dist.end(),
                                      pp_dist.begin(), 0.0);
     double best_pp_err = 0.;
-    for (int j1 = 0; j1 < N_ind; j1++) {
+    for (int j1 = 0; j1 < number_of_buckets; j1++) {
       best_pp_err += std::pow((pp_N * pp_dist[j1] - event_hist[j1]), 2);
     }
     best_pp_err /= event_tot;
@@ -746,7 +752,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
         double c_pp_lambda = pp_lambda;
         c_pp_lambda += (std::pow((-1), js)) * d_pp_lambda;
         std::vector<double> pp_dist;
-        for (int j1 = 0; j1 < N_ind; j1++) {
+        for (int j1 = 0; j1 < number_of_buckets; j1++) {
           pp_dist.push_back((std::pow((c_pp_lambda), event_counts[j1])) *
                             exp(-c_pp_lambda) / gsl_sf_fact(event_counts[j1]));
         }
@@ -755,7 +761,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
                       std::inner_product(pp_dist.begin(), pp_dist.end(),
                                          pp_dist.begin(), 0.0);
         double c_best_pp_err = 0.;
-        for (int j1 = 0; j1 < N_ind; j1++) {
+        for (int j1 = 0; j1 < number_of_buckets; j1++) {
           c_best_pp_err += std::pow((pp_N * pp_dist[j1] - event_hist[j1]), 2);
         }
         c_best_pp_err /= event_tot;
@@ -775,7 +781,7 @@ void IntegratePeaks3DFit::integratePeak(const int neighborPts,
   }
 
   std::vector<double> pp_dist;
-  for (int j1 = 0; j1 < N_ind; j1++) {
+  for (int j1 = 0; j1 < number_of_buckets; j1++) {
     pp_dist.push_back((std::pow((pp_lambda), event_counts[j1])) *
                       exp(-pp_lambda) / gsl_sf_fact(event_counts[j1]));
   }
@@ -936,9 +942,10 @@ round(mean(full_box_density(pp_ind))*accumarray(event_vals(gp_rp_ind),1)/mean(fu
     }
   }
 
-  std::cout << sum3D << "  " << gpSum << "  " << rpSum << "  " << ppSum << "\n";
-  double Full_Signal = sum3D + rpSum;
-  double Background_in_Signal = ns_count;
+  std::cout << best_err << "  " << sum3D << "  " << gpSum << "  " << rpSum
+            << "  " << ppSum << "\n";
+  double Full_Signal = gpSum;       // + rpSum;
+  double Background_in_Signal = 0.; // ns_count;
   double Background_Signal = ppSum;
 
   intensity = Full_Signal - Background_in_Signal;
