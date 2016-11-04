@@ -1,7 +1,7 @@
 """ Defines the state of the event slices which should be reduced."""
 
 import json
-from SANS2.State.SANSStateBase import (SANSStateBase, sans_parameters, FloatListParameter, StringParameter)
+from SANS2.State.SANSStateBase import (SANSStateBase, sans_parameters, FloatListParameter)
 
 
 # ------------------------------------------------
@@ -31,8 +31,9 @@ class SANSStateSliceEventISIS(SANSStateSliceEvent, SANSStateBase):
         if self.start_time and self.end_time:
             # The length of start_time and end_time needs to be identical
             if len(self.start_time) != len(self.end_time):
-                is_invalid.update({"start_time": "The length of start_time is {} and the length of end_time is {}, but they "
-                                                "have to be identical".format(len(self.start_time), len(self.end_time))})
+                is_invalid.update({"start_time": "The length of start_time is {} and the length of end_time "
+                                                 "is {}, but they have to be identical".format(len(self.start_time),
+                                                                                               len(self.end_time))})
 
             # Each entry in start_time and end_time must be a float
             if len(self.start_time) == len(self.end_time) and len(self.start_time) > 0:
@@ -41,8 +42,8 @@ class SANSStateSliceEventISIS(SANSStateSliceEvent, SANSStateBase):
                         if not isinstance(element1, float) or not isinstance(element2, float):
                             is_invalid.update(
                                 {"start_time or end_time": "An input for the time of flight for event slicing is not a"
-                                                        " floating point value. Start_time is {0} and end_time is "
-                                                        "{1}".format(element1, element2)})
+                                                           " floating point value. Start_time is {0} and end_time is "
+                                                           "{1}".format(element1, element2)})  # noqa
 
             # Check that the entries are monotonically increasing. We don't want 12, 24, 22
             if len(self.start_time) > 1 and not monotonically_increasing(self.start_time):

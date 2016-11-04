@@ -72,6 +72,7 @@ set ( TEST_PY_FILES
   MolDynTest.py
   MSDFitTest.py
   MuscatSofQWTest.py
+  NMoldyn4InterpolationTest.py
   NormaliseSpectraTest.py
   OSIRISDiffractionReductionTest.py
   ResNorm2Test.py
@@ -90,7 +91,6 @@ set ( TEST_PY_FILES
   SortDetectorsTest.py
   SortXAxisTest.py
   StatisticsOfTableWorkspaceTest.py
-  Stitch1DManyTest.py
   StringToPngTest.py
   SuggestTibCNCSTest.py
   SuggestTibHYSPECTest.py
@@ -100,7 +100,6 @@ set ( TEST_PY_FILES
   SANSDarkRunBackgroundCorrectionTest.py
   SANSSubtractTest.py
   TimeSliceTest.py
-  TOFTOFConvertTofToDeltaETest.py
   TOFTOFCropWorkspaceTest.py
   TOFTOFMergeRunsTest.py
   TOSCABankCorrectionTest.py
