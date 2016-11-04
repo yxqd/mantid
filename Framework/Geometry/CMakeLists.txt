@@ -54,7 +54,6 @@ set ( SRC_FILES
 	src/Instrument/IDFObject.cpp
 	src/Instrument/InstrumentDefinitionParser.cpp
 	src/Instrument/NearestNeighbours.cpp
-	src/Instrument/NearestNeighboursFactory.cpp
 	src/Instrument/ObjCompAssembly.cpp
 	src/Instrument/ObjComponent.cpp
 	src/Instrument/ParComponentFactory.cpp
@@ -206,11 +205,8 @@ set ( INC_FILES
 	inc/MantidGeometry/Instrument/FitParameter.h
 	inc/MantidGeometry/Instrument/Goniometer.h
 	inc/MantidGeometry/Instrument/IDFObject.h
-	inc/MantidGeometry/Instrument/INearestNeighbours.h
-	inc/MantidGeometry/Instrument/INearestNeighboursFactory.h
 	inc/MantidGeometry/Instrument/InstrumentDefinitionParser.h
 	inc/MantidGeometry/Instrument/NearestNeighbours.h
-	inc/MantidGeometry/Instrument/NearestNeighboursFactory.h
 	inc/MantidGeometry/Instrument/ObjCompAssembly.h
 	inc/MantidGeometry/Instrument/ObjComponent.h
 	inc/MantidGeometry/Instrument/ParComponentFactory.h
@@ -354,7 +350,6 @@ set ( TEST_FILES
 	MathSupportTest.h
 	MatrixVectorPairParserTest.h
 	MatrixVectorPairTest.h
-	NearestNeighboursFactoryTest.h
 	NearestNeighboursTest.h
 	NiggliCellTest.h
 	NullImplicitFunctionTest.h
@@ -450,7 +445,7 @@ if ( APPLE )
   add_definitions ( -DHAVE_IOSTREAM -DHAVE_LIMITS -DHAVE_IOMANIP )
 endif ()
 
-include_directories ( ${OPENGL_INCLUDE_DIR} )
+include_directories ( ${OPENGL_INCLUDE_DIR} ${TBB_INCLUDE_DIRS} )
 include_directories ( ${GSL_INCLUDE_DIR} )
 
 
@@ -475,6 +470,8 @@ endif ()
 set_property ( TARGET Geometry PROPERTY FOLDER "MantidFramework" )
 
 target_link_libraries ( Geometry LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME} ${MANTIDLIBS}  ${OPENGL_LIBRARIES} ${GSL_LIBRARIES} ${NEXUS_LIBRARIES} ${JSONCPP_LIBRARIES} )
+
+target_link_libraries ( Geometry LINK_PUBLIC ${TBB_LIBRARIES} ${TBB_MALLOC_LIBRARIES} )
 
 if (ENABLE_OPENCASCADE)
   target_link_libraries ( Geometry LINK_PRIVATE ${OPENCASCADE_LIBRARIES} )

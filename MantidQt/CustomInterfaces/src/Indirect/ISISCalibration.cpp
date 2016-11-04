@@ -110,7 +110,7 @@ ISISCalibration::ISISCalibration(IndirectDataReduction *idrUI, QWidget *parent)
   connect(resPeak, SIGNAL(rangeChanged(double, double)), resBackground,
           SLOT(setRange(double, double)));
 
-  // Update property map when a range seclector is moved
+  // Update property map when a range selector is moved
   connect(calPeak, SIGNAL(minValueChanged(double)), this,
           SLOT(calMinChanged(double)));
   connect(calPeak, SIGNAL(maxValueChanged(double)), this,
@@ -128,7 +128,7 @@ ISISCalibration::ISISCalibration(IndirectDataReduction *idrUI, QWidget *parent)
   connect(resBackground, SIGNAL(maxValueChanged(double)), this,
           SLOT(calMaxChanged(double)));
 
-  // Update range selctor positions when a value in the double manager changes
+  // Update range selector positions when a value in the double manager changes
   connect(m_dblManager, SIGNAL(valueChanged(QtProperty *, double)), this,
           SLOT(calUpdateRS(QtProperty *, double)));
   // Plot miniplots after a file has loaded
@@ -139,7 +139,7 @@ ISISCalibration::ISISCalibration(IndirectDataReduction *idrUI, QWidget *parent)
   connect(m_uiForm.ckCreateResolution, SIGNAL(toggled(bool)), this,
           SLOT(resCheck(bool)));
 
-  // Shows message on run buton when user is inputting a run number
+  // Shows message on run button when user is inputting a run number
   connect(m_uiForm.leRunNo, SIGNAL(fileTextChanged(const QString &)), this,
           SLOT(pbRunEditing()));
   // Shows message on run button when Mantid is finding the file for a given run
@@ -155,6 +155,9 @@ ISISCalibration::ISISCalibration(IndirectDataReduction *idrUI, QWidget *parent)
 
   connect(m_batchAlgoRunner, SIGNAL(batchComplete(bool)), this,
           SLOT(algorithmComplete(bool)));
+  // Handle plotting and saving
+  connect(m_uiForm.pbSave, SIGNAL(clicked()), this, SLOT(saveClicked()));
+  connect(m_uiForm.pbPlot, SIGNAL(clicked()), this, SLOT(plotClicked()));
 }
 
 //----------------------------------------------------------------------------------------------
@@ -168,27 +171,9 @@ void ISISCalibration::run() {
   // Get properties
   QStringList filenameList = m_uiForm.leRunNo->getFilenames();
   QString filenames = filenameList.join(",");
-  QString userInFiles = m_uiForm.leRunNo->getText();
-  QString firstFileNumber("");
-  auto cutIndexDash = userInFiles.indexOf("-");
-  auto cutIndexComma = userInFiles.indexOf(",");
-
-  if (cutIndexDash == -1 && cutIndexComma == -1) {
-    firstFileNumber = userInFiles;
-  } else {
-    if (cutIndexDash != -1) {
-      firstFileNumber = userInFiles.left(cutIndexDash);
-    } else {
-      firstFileNumber = userInFiles.left(cutIndexComma);
-    }
-    if (cutIndexDash != -1 && cutIndexComma != -1) {
-      if (cutIndexDash < cutIndexComma) {
-        firstFileNumber = userInFiles.left(cutIndexDash);
-      } else {
-        firstFileNumber = userInFiles.left(cutIndexComma);
-      }
-    }
-  }
+  QString rawFile = m_uiForm.leRunNo->getFirstFilename();
+  QFileInfo rawFileInfo(rawFile);
+  QString name = rawFileInfo.baseName();
 
   auto instDetails = getInstrumentDetails();
   QString instDetectorRange =
@@ -200,8 +185,7 @@ void ISISCalibration::run() {
                             m_properties["CalBackMax"]->valueText();
 
   QString outputWorkspaceNameStem =
-      getInstrumentConfiguration()->getInstrumentName() + firstFileNumber +
-      QString::fromStdString("_") +
+      name + QString::fromStdString("_") +
       getInstrumentConfiguration()->getAnalyserName() +
       getInstrumentConfiguration()->getReflectionName();
 
@@ -230,18 +214,10 @@ void ISISCalibration::run() {
     double scale = m_uiForm.spScale->value();
     calibrationAlg->setProperty("ScaleFactor", scale);
   }
-
-  bool save = m_uiForm.ckSave->isChecked();
-
   m_batchAlgoRunner->addAlgorithm(calibrationAlg);
 
   // Initially take the calibration workspace as the result
   m_pythonExportWsName = m_outputCalibrationName.toStdString();
-
-  // Add save algorithm to queue if ticked
-  if (save)
-    addSaveWorkspaceToQueue(m_outputCalibrationName);
-
   // Configure the resolution algorithm
   if (m_uiForm.ckCreateResolution->isChecked()) {
     m_outputResolutionName = outputWorkspaceNameStem;
@@ -309,9 +285,6 @@ void ISISCalibration::run() {
       m_batchAlgoRunner->addAlgorithm(smoothAlg, smoothAlgInputProps);
     }
 
-    if (save)
-      addSaveWorkspaceToQueue(m_outputResolutionName);
-
     // When creating resolution file take the resolution workspace as the result
     m_pythonExportWsName = m_outputResolutionName.toStdString();
   }
@@ -328,17 +301,8 @@ void ISISCalibration::algorithmComplete(bool error) {
   if (error)
     return;
 
-  if (m_uiForm.ckPlot->isChecked()) {
-    plotTimeBin(m_outputCalibrationName);
-
-    QStringList plotWorkspaces;
-    if (m_uiForm.ckCreateResolution->isChecked()) {
-      plotWorkspaces << m_outputResolutionName;
-      if (m_uiForm.ckSmoothResolution->isChecked())
-        plotWorkspaces << m_outputResolutionName + "_pre_smooth";
-    }
-    plotSpectrum(plotWorkspaces);
-  }
+  m_uiForm.pbSave->setEnabled(true);
+  m_uiForm.pbPlot->setEnabled(true);
 }
 
 bool ISISCalibration::validate() {
@@ -543,10 +507,10 @@ void ISISCalibration::calPlotEnergy() {
 }
 
 /**
- * Set default background and rebinning properties for a given instument
+ * Set default background and rebinning properties for a given instrument
  * and analyser
  *
- * @param ws :: Mantid workspace containing the loaded instument
+ * @param ws :: Mantid workspace containing the loaded instrument
  */
 void ISISCalibration::calSetDefaultResolution(MatrixWorkspace_const_sptr ws) {
   auto inst = ws->getInstrument();
@@ -583,10 +547,10 @@ void ISISCalibration::calSetDefaultResolution(MatrixWorkspace_const_sptr ws) {
 }
 
 /**
- * Handles a range selector having it's minumum value changed.
+ * Handles a range selector having it's minimum value changed.
  * Updates property in property map.
  *
- * @param val :: New minumum value
+ * @param val :: New minimum value
  */
 void ISISCalibration::calMinChanged(double val) {
   auto calPeak = m_uiForm.ppCalibration->getRangeSelector("CalPeak");
@@ -610,10 +574,10 @@ void ISISCalibration::calMinChanged(double val) {
 }
 
 /**
- * Handles a range selector having it's maxumum value changed.
+ * Handles a range selector having it's maximum value changed.
  * Updates property in property map.
  *
- * @param val :: New maxumum value
+ * @param val :: New maximum value
  */
 void ISISCalibration::calMaxChanged(double val) {
   auto calPeak = m_uiForm.ppCalibration->getRangeSelector("CalPeak");
@@ -687,7 +651,7 @@ void ISISCalibration::resCheck(bool state) {
  */
 void ISISCalibration::pbRunEditing() {
   emit updateRunButton(false, "Editing...",
-                       "Run numbers are curently being edited.");
+                       "Run numbers are currently being edited.");
 }
 
 /**
@@ -696,7 +660,7 @@ void ISISCalibration::pbRunEditing() {
 void ISISCalibration::pbRunFinding() {
   emit updateRunButton(
       false, "Finding files...",
-      "Searchig for data files for the run numbers entered...");
+      "Searching for data files for the run numbers entered...");
   m_uiForm.leRunNo->setEnabled(false);
 }
 
@@ -707,13 +671,42 @@ void ISISCalibration::pbRunFinished() {
   if (!m_uiForm.leRunNo->isValid()) {
     emit updateRunButton(
         false, "Invalid Run(s)",
-        "Cannot find data files for some of the run numbers enetered.");
+        "Cannot find data files for some of the run numbers entered.");
   } else {
     emit updateRunButton();
   }
 
   m_uiForm.leRunNo->setEnabled(true);
 }
+/**
+ * Handle saving of workspace
+ */
+void ISISCalibration::saveClicked() {
+  checkADSForPlotSaveWorkspace(m_outputCalibrationName.toStdString(), false);
+  addSaveWorkspaceToQueue(m_outputCalibrationName);
 
+  if (m_uiForm.ckCreateResolution->isChecked()) {
+    checkADSForPlotSaveWorkspace(m_outputResolutionName.toStdString(), false);
+    addSaveWorkspaceToQueue(m_outputResolutionName);
+  }
+  m_batchAlgoRunner->executeBatchAsync();
+}
+
+/**
+ * Handle mantid plotting
+ */
+void ISISCalibration::plotClicked() {
+
+  plotTimeBin(m_outputCalibrationName);
+  checkADSForPlotSaveWorkspace(m_outputCalibrationName.toStdString(), true);
+  QStringList plotWorkspaces;
+  if (m_uiForm.ckCreateResolution->isChecked()) {
+    checkADSForPlotSaveWorkspace(m_outputResolutionName.toStdString(), true);
+    plotWorkspaces.append(m_outputResolutionName);
+    if (m_uiForm.ckSmoothResolution->isChecked())
+      plotWorkspaces.append(m_outputResolutionName + "_pre_smooth");
+  }
+  plotSpectrum(plotWorkspaces);
+}
 } // namespace CustomInterfaces
 } // namespace Mantid

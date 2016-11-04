@@ -59,6 +59,7 @@ set ( SRC_FILES
 	src/Functions/CrystalFieldPeaks.cpp
 	src/Functions/CrystalFieldPeaksBase.cpp
 	src/Functions/CrystalFieldMultiSpectrum.cpp
+	src/Functions/CrystalFieldPeakUtils.cpp
 	src/Functions/CrystalFieldSpectrum.cpp
 	src/Functions/CubicSpline.cpp
 	src/Functions/DeltaFunction.cpp
@@ -67,6 +68,7 @@ set ( SRC_FILES
 	src/Functions/DynamicKuboToyabe.cpp
 	src/Functions/ElasticDiffRotDiscreteCircle.cpp
 	src/Functions/ElasticDiffSphere.cpp
+	src/Functions/ElasticIsoRotDiff.cpp
 	src/Functions/EndErfc.cpp
 	src/Functions/ExpDecay.cpp
 	src/Functions/ExpDecayMuon.cpp
@@ -82,6 +84,8 @@ set ( SRC_FILES
 	src/Functions/IkedaCarpenterPV.cpp
 	src/Functions/InelasticDiffRotDiscreteCircle.cpp
 	src/Functions/InelasticDiffSphere.cpp
+	src/Functions/InelasticIsoRotDiff.cpp
+	src/Functions/IsoRotDiff.cpp
     src/Functions/Keren.cpp
 	src/Functions/LinearBackground.cpp
 	src/Functions/LogNormal.cpp
@@ -109,6 +113,7 @@ set ( SRC_FILES
 	src/Functions/StretchExp.cpp
 	src/Functions/StretchExpMuon.cpp
 	src/Functions/TabulatedFunction.cpp
+	src/Functions/TeixeiraWaterSQE.cpp
 	src/Functions/ThermalNeutronBk2BkExpAlpha.cpp
 	src/Functions/ThermalNeutronBk2BkExpBeta.cpp
 	src/Functions/ThermalNeutronBk2BkExpConvPVoigt.cpp
@@ -122,7 +127,9 @@ set ( SRC_FILES
 	src/GSLMatrix.cpp
 	src/GSLVector.cpp
 	src/GeneralDomainCreator.cpp
+	src/HistogramDomainCreator.cpp
 	src/IFittingAlgorithm.cpp
+	src/IMWDomainCreator.cpp
 	src/LatticeDomainCreator.cpp
 	src/LatticeFunction.cpp
 	src/MSVesuvioHelpers.cpp
@@ -200,9 +207,10 @@ set ( INC_FILES
 	inc/MantidCurveFitting/Functions/ComptonScatteringCountRate.h
 	inc/MantidCurveFitting/Functions/Convolution.h
 	inc/MantidCurveFitting/Functions/CrystalElectricField.h
+	inc/MantidCurveFitting/Functions/CrystalFieldMultiSpectrum.h
 	inc/MantidCurveFitting/Functions/CrystalFieldPeaks.h
 	inc/MantidCurveFitting/Functions/CrystalFieldPeaksBase.h
-	inc/MantidCurveFitting/Functions/CrystalFieldMultiSpectrum.h
+	inc/MantidCurveFitting/Functions/CrystalFieldPeakUtils.h
 	inc/MantidCurveFitting/Functions/CrystalFieldSpectrum.h
 	inc/MantidCurveFitting/Functions/CubicSpline.h
 	inc/MantidCurveFitting/Functions/DeltaFunction.h
@@ -211,6 +219,7 @@ set ( INC_FILES
 	inc/MantidCurveFitting/Functions/DynamicKuboToyabe.h
 	inc/MantidCurveFitting/Functions/ElasticDiffRotDiscreteCircle.h
 	inc/MantidCurveFitting/Functions/ElasticDiffSphere.h
+	inc/MantidCurveFitting/Functions/ElasticIsoRotDiff.h
 	inc/MantidCurveFitting/Functions/EndErfc.h
 	inc/MantidCurveFitting/Functions/ExpDecay.h
 	inc/MantidCurveFitting/Functions/ExpDecayMuon.h
@@ -226,6 +235,8 @@ set ( INC_FILES
 	inc/MantidCurveFitting/Functions/IkedaCarpenterPV.h
 	inc/MantidCurveFitting/Functions/InelasticDiffRotDiscreteCircle.h
 	inc/MantidCurveFitting/Functions/InelasticDiffSphere.h
+	inc/MantidCurveFitting/Functions/InelasticIsoRotDiff.h
+	inc/MantidCurveFitting/Functions/IsoRotDiff.h
     inc/MantidCurveFitting/Functions/Keren.h
 	inc/MantidCurveFitting/Functions/LinearBackground.h
 	inc/MantidCurveFitting/Functions/LogNormal.h
@@ -253,6 +264,7 @@ set ( INC_FILES
 	inc/MantidCurveFitting/Functions/StretchExp.h
 	inc/MantidCurveFitting/Functions/StretchExpMuon.h
 	inc/MantidCurveFitting/Functions/TabulatedFunction.h
+	inc/MantidCurveFitting/Functions/TeixeiraWaterSQE.h
 	inc/MantidCurveFitting/Functions/ThermalNeutronBk2BkExpAlpha.h
 	inc/MantidCurveFitting/Functions/ThermalNeutronBk2BkExpBeta.h
 	inc/MantidCurveFitting/Functions/ThermalNeutronBk2BkExpConvPVoigt.h
@@ -269,8 +281,10 @@ set ( INC_FILES
 	inc/MantidCurveFitting/GSLMatrix.h
 	inc/MantidCurveFitting/GSLVector.h
 	inc/MantidCurveFitting/GeneralDomainCreator.h
+	inc/MantidCurveFitting/HistogramDomainCreator.h
 	inc/MantidCurveFitting/HalfComplex.h
 	inc/MantidCurveFitting/IFittingAlgorithm.h
+	inc/MantidCurveFitting/IMWDomainCreator.h
 	inc/MantidCurveFitting/Jacobian.h
 	inc/MantidCurveFitting/LatticeDomainCreator.h
 	inc/MantidCurveFitting/LatticeFunction.h
@@ -349,7 +363,8 @@ set ( TEST_FILES
 	Functions/DiffRotDiscreteCircleTest.h
 	Functions/DiffSphereTest.h
 	Functions/DynamicKuboToyabeTest.h
-	Functions/EndErfcTest.h
+	Functions/ElasticIsoRotDiffTest.h
+    Functions/EndErfcTest.h
 	Functions/ExpDecayMuonTest.h
 	Functions/ExpDecayOscTest.h
 	Functions/ExpDecayTest.h
@@ -361,6 +376,8 @@ set ( TEST_FILES
 	Functions/GaussianTest.h
 	Functions/GramCharlierComptonProfileTest.h
 	Functions/IkedaCarpenterPVTest.h
+    Functions/InelasticIsoRotDiffTest.h
+    Functions/IsoRotDiffTest.h
     Functions/KerenTest.h
 	Functions/LinearBackgroundTest.h
 	Functions/LogNormalTest.h
@@ -388,6 +405,7 @@ set ( TEST_FILES
 	Functions/StretchExpMuonTest.h
 	Functions/StretchExpTest.h
 	Functions/TabulatedFunctionTest.h
+    Functions/TeixeiraWaterSQETest.h
 	Functions/ThermalNeutronBk2BkExpAlphaTest.h
 	Functions/ThermalNeutronBk2BkExpBetaTest.h
 	Functions/ThermalNeutronBk2BkExpConvPVoigtTest.h
@@ -401,6 +419,7 @@ set ( TEST_FILES
 	GSLMatrixTest.h
 	GSLVectorTest.h
 	GeneralDomainCreatorTest.h
+	HistogramDomainCreatorTest.h
 	IPeakFunctionCentreParameterNameTest.h
 	IPeakFunctionIntensityTest.h
 	LatticeDomainCreatorTest.h

@@ -61,10 +61,9 @@ void FindSXPeaks::exec() {
   m_MinRange = getProperty("RangeLower");
   m_MaxRange = getProperty("RangeUpper");
 
-  int minSpec = getProperty("StartWorkspaceIndex");
-  int maxSpec = getProperty("EndWorkspaceIndex");
-  m_MinSpec = minSpec;
-  m_MaxSpec = maxSpec;
+  // the assignment below is intended and if removed will break the unit tests
+  m_MinSpec = static_cast<int>(getProperty("StartWorkspaceIndex"));
+  m_MaxSpec = static_cast<int>(getProperty("EndWorkspaceIndex"));
   double SB = getProperty("SignalBackground");
 
   // Get the input workspace
@@ -101,38 +100,33 @@ void FindSXPeaks::exec() {
 
   // Calculate the primary flight path.
   Kernel::V3D sample = localworkspace->getInstrument()->getSample()->getPos();
-  Kernel::V3D L1 =
-      sample - localworkspace->getInstrument()->getSource()->getPos();
-
+  Kernel::V3D source = localworkspace->getInstrument()->getSource()->getPos();
+  Kernel::V3D L1 = sample - source;
   double l1 = L1.norm();
-  //
 
   peakvector entries;
   // Reserve 1000 peaks to make later push_back fast for first 1000 peaks, but
   // unlikely to have more than this.
   entries.reserve(1000);
   // Count the peaks so that we can resize the peakvector at the end.
-  PARALLEL_FOR1(localworkspace)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*localworkspace))
   for (int i = static_cast<int>(m_MinSpec); i <= static_cast<int>(m_MaxSpec);
        ++i) {
     PARALLEL_START_INTERUPT_REGION
     // Retrieve the spectrum into a vector
-    const MantidVec &X = localworkspace->readX(i);
-    const MantidVec &Y = localworkspace->readY(i);
+    const auto &X = localworkspace->x(i);
+    const auto &Y = localworkspace->y(i);
 
     // Find the range [min,max]
-    MantidVec::const_iterator lowit, highit;
+    auto lowit = (m_MinRange == EMPTY_DBL())
+                     ? X.begin()
+                     : std::lower_bound(X.begin(), X.end(), m_MinRange);
 
-    if (m_MinRange == EMPTY_DBL())
-      lowit = X.begin();
-    else
-      lowit = std::lower_bound(X.begin(), X.end(), m_MinRange);
-
-    if (m_MaxRange == EMPTY_DBL())
-      highit = X.end();
-    else
-      highit = std::find_if(lowit, X.end(),
-                            std::bind2nd(std::greater<double>(), m_MaxRange));
+    auto highit =
+        (m_MaxRange == EMPTY_DBL())
+            ? X.end()
+            : std::find_if(lowit, X.end(),
+                           std::bind2nd(std::greater<double>(), m_MaxRange));
 
     // If range specified doesn't overlap with this spectrum then bail out
     if (lowit == X.end() || highit == X.begin())
@@ -141,23 +135,25 @@ void FindSXPeaks::exec() {
     --highit; // Upper limit is the bin before, i.e. the last value smaller than
               // MaxRange
 
-    MantidVec::difference_type distmin = std::distance(X.begin(), lowit);
-    MantidVec::difference_type distmax = std::distance(X.begin(), highit);
+    auto distmin = std::distance(X.begin(), lowit);
+    auto distmax = std::distance(X.begin(), highit);
 
     // Find the max element
-    MantidVec::const_iterator maxY;
-    if (Y.size() > 1) {
-      maxY = std::max_element(Y.begin() + distmin, Y.begin() + distmax);
-    } else {
-      maxY = Y.begin();
-    }
+    auto maxY = (Y.size() > 1)
+                    ? std::max_element(Y.begin() + distmin, Y.begin() + distmax)
+                    : Y.begin();
+
     double intensity = (*maxY);
     double background = 0.5 * (1.0 + Y.front() + Y.back());
     if (intensity < SB * background) // This is not a peak.
       continue;
-    MantidVec::difference_type d = std::distance(Y.begin(), maxY);
+
     // t.o.f. of the peak
-    double tof = 0.5 * (*(X.begin() + d) + *(X.begin() + d + 1));
+    auto d = std::distance(Y.begin(), maxY);
+    auto leftBinPosition = X.begin() + d;
+    double leftBinEdge = *leftBinPosition;
+    double rightBinEdge = *std::next(leftBinPosition);
+    double tof = 0.5 * (leftBinEdge + rightBinEdge);
 
     Geometry::IDetector_const_sptr det;
     try {
@@ -178,17 +174,15 @@ void FindSXPeaks::exec() {
       phi += 2.0 * M_PI;
     }
 
-    double th2 = det->getTwoTheta(Mantid::Kernel::V3D(0, 0, 0),
-                                  Mantid::Kernel::V3D(0, 0, 1));
+    double th2 = det->getTwoTheta(sample, L1);
 
     std::vector<int> specs(1, i);
 
     Mantid::Kernel::V3D L2 = det->getPos();
     L2 -= sample;
-    // std::cout << "r,th,phi,t: " << L2.norm() << "," << th2*180/M_PI << "," <<
-    // phi*180/M_PI << "," << tof << "\n";
 
-    SXPeak peak(tof, th2, phi, *maxY, specs, l1 + L2.norm(), det->getID());
+    SXPeak peak(tof, th2, phi, *maxY, specs, l1 + L2.norm(), det->getID(),
+                localworkspace->getInstrument());
     PARALLEL_CRITICAL(entries) { entries.push_back(peak); }
     progress.report();
     PARALLEL_END_INTERUPT_REGION
@@ -212,13 +206,6 @@ void FindSXPeaks::reducePeakList(const peakvector &pcv) {
   peakvector finalv;
 
   for (const auto &currentPeak : pcv) {
-    /*for (auto & finalPeak : finalv) {
-      if (currentPeak.compare(finalPeak, resol)) {
-        finalPeak += currentPeak;
-        found = true;
-        break;
-      }
-    }*/
     auto pos = std::find_if(finalv.begin(), finalv.end(),
                             [&currentPeak, resol](SXPeak &peak) {
                               bool result = currentPeak.compare(peak, resol);

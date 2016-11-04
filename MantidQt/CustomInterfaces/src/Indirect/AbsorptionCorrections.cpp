@@ -27,6 +27,9 @@ AbsorptionCorrections::AbsorptionCorrections(QWidget *parent)
   // Handle algorithm completion
   connect(m_batchAlgoRunner, SIGNAL(batchComplete(bool)), this,
           SLOT(algorithmComplete(bool)));
+  // Handle plotting and saving
+  connect(m_uiForm.pbSave, SIGNAL(clicked()), this, SLOT(saveClicked()));
+  connect(m_uiForm.pbPlot, SIGNAL(clicked()), this, SLOT(plotClicked()));
 }
 
 void AbsorptionCorrections::setup() {}
@@ -44,8 +47,10 @@ void AbsorptionCorrections::run() {
   QString sampleWsName = m_uiForm.dsSampleInput->getCurrentDataName();
   absCorAlgo->setProperty("SampleWorkspace", sampleWsName.toStdString());
 
-  double sampleNumberDensity = m_uiForm.spSampleNumberDensity->value();
-  absCorAlgo->setProperty("SampleNumberDensity", sampleNumberDensity);
+  absCorAlgo->setProperty(
+      "SampleDensityType",
+      m_uiForm.cbSampleDensity->currentText().toStdString());
+  absCorAlgo->setProperty("SampleDensity", m_uiForm.spSampleDensity->value());
 
   QString sampleChemicalFormula = m_uiForm.leSampleChemicalFormula->text();
   absCorAlgo->setProperty("SampleChemicalFormula",
@@ -91,8 +96,10 @@ void AbsorptionCorrections::run() {
     absCorAlgo->setProperty("UseCanCorrections", useCanCorrections);
 
     if (useCanCorrections) {
-      double canNumberDensity = m_uiForm.spCanNumberDensity->value();
-      absCorAlgo->setProperty("CanNumberDensity", canNumberDensity);
+
+      absCorAlgo->setProperty(
+          "CanDensityType", m_uiForm.cbCanDensity->currentText().toStdString());
+      absCorAlgo->setProperty("CanDensity", m_uiForm.spCanDensity->value());
 
       QString canChemicalFormula = m_uiForm.leCanChemicalFormula->text();
       absCorAlgo->setProperty("CanChemicalFormula",
@@ -101,9 +108,6 @@ void AbsorptionCorrections::run() {
 
     addShapeSpecificCanOptions(absCorAlgo, sampleShape);
   }
-
-  bool plot = m_uiForm.ckPlot->isChecked();
-  absCorAlgo->setProperty("Plot", plot);
 
   // Generate workspace names
   int nameCutIndex = sampleWsName.lastIndexOf("_");
@@ -125,43 +129,12 @@ void AbsorptionCorrections::run() {
   // Add correction algorithm to batch
   m_batchAlgoRunner->addAlgorithm(absCorAlgo);
 
-  // Add save algorithms if needed
-  bool save = m_uiForm.ckSave->isChecked();
-  if (save) {
-    addSaveWorkspace(outputWsName);
-    if (keepCorrectionFactors)
-      addSaveWorkspace(outputFactorsWsName);
-  }
-
+  m_absCorAlgo = absCorAlgo;
   // Run algorithm batch
   m_batchAlgoRunner->executeBatchAsync();
 
   // Set the result workspace for Python script export
   m_pythonExportWsName = outputWsName.toStdString();
-}
-
-/**
- * Configures the SaveNexusProcessed algorithm to save a workspace in the
- * default
- * save directory and adds the algorithm to the batch queue.
- *
- * @param wsName Name of workspace to save
- */
-void AbsorptionCorrections::addSaveWorkspace(QString wsName) {
-  QString filename = wsName + ".nxs";
-
-  // Setup the input workspace property
-  API::BatchAlgorithmRunner::AlgorithmRuntimeProps saveProps;
-  saveProps["InputWorkspace"] = wsName.toStdString();
-
-  // Setup the algorithm
-  IAlgorithm_sptr saveAlgo =
-      AlgorithmManager::Instance().create("SaveNexusProcessed");
-  saveAlgo->initialize();
-  saveAlgo->setProperty("Filename", filename.toStdString());
-
-  // Add the save algorithm to the batch
-  m_batchAlgoRunner->addAlgorithm(saveAlgo, saveProps);
 }
 
 /**
@@ -237,7 +210,7 @@ bool AbsorptionCorrections::validate() {
 
   if (uiv.checkFieldIsNotEmpty("Sample Chemical Formula",
                                m_uiForm.leSampleChemicalFormula))
-    uiv.checkFieldIsValid("Sample Chamical Formula",
+    uiv.checkFieldIsValid("Sample Chemical Formula",
                           m_uiForm.leSampleChemicalFormula);
   const auto sampleChem =
       m_uiForm.leSampleChemicalFormula->text().toStdString();
@@ -262,9 +235,9 @@ bool AbsorptionCorrections::validate() {
 
     bool useCanCorrections = m_uiForm.ckUseCanCorrections->isChecked();
     if (useCanCorrections) {
-      if (uiv.checkFieldIsNotEmpty("Container Chamical Formula",
+      if (uiv.checkFieldIsNotEmpty("Container Chemical Formula",
                                    m_uiForm.leCanChemicalFormula))
-        uiv.checkFieldIsValid("Container Chamical Formula",
+        uiv.checkFieldIsValid("Container Chemical Formula",
                               m_uiForm.leCanChemicalFormula);
     }
   }
@@ -304,7 +277,48 @@ void AbsorptionCorrections::algorithmComplete(bool error) {
                                          m_uiForm.spCanShift->value()));
     shiftLog->execute();
   }
+  // Enable plot and save
+  m_uiForm.pbPlot->setEnabled(true);
+  m_uiForm.pbSave->setEnabled(true);
+}
+/**
+ * Handle saving of workspace
+ */
+void AbsorptionCorrections::saveClicked() {
+
+  if (checkADSForPlotSaveWorkspace(m_pythonExportWsName, false))
+    addSaveWorkspaceToQueue(QString::fromStdString(m_pythonExportWsName));
+
+  if (m_uiForm.ckKeepFactors->isChecked()) {
+    std::string factorsWs =
+        m_absCorAlgo->getPropertyValue("CorrectionsWorkspace");
+    if (checkADSForPlotSaveWorkspace(factorsWs, false))
+      addSaveWorkspaceToQueue(QString::fromStdString(factorsWs));
+  }
+  m_batchAlgoRunner->executeBatchAsync();
 }
 
+/**
+ * Handle mantid plotting
+ */
+void AbsorptionCorrections::plotClicked() {
+
+  QStringList plotData = {QString::fromStdString(m_pythonExportWsName),
+                          m_uiForm.dsSampleInput->getCurrentDataName()};
+  auto outputFactorsWsName =
+      m_absCorAlgo->getPropertyValue("CorrectionsWorkspace");
+  if (m_uiForm.ckKeepFactors->isChecked()) {
+    QStringList plotCorr = {QString::fromStdString(outputFactorsWsName) +
+                            "_ass"};
+    if (m_uiForm.ckUseCanCorrections->isChecked()) {
+      plotCorr.push_back(QString::fromStdString(outputFactorsWsName) + "_acc");
+      QString shiftedWs = QString::fromStdString(
+          m_absCorAlgo->getPropertyValue("CanWorkspace"));
+      plotData.push_back(shiftedWs);
+    }
+    plotSpectrum(plotCorr, 0);
+  }
+  plotSpectrum(plotData, 0);
+}
 } // namespace CustomInterfaces
 } // namespace MantidQt

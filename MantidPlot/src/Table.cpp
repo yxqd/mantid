@@ -30,35 +30,35 @@
  *                                                                         *
  ***************************************************************************/
 #include "Table.h"
-#include "SortDialog.h"
-#include "ImportASCIIDialog.h"
-#include "muParserScript.h"
 #include "ApplicationWindow.h"
-#include "pixmaps.h"
-#include "TSVSerialiser.h"
+#include "ImportASCIIDialog.h"
+#include "MantidQtAPI/TSVSerialiser.h"
+#include "SortDialog.h"
+#include "muParserScript.h"
+#include <MantidQtAPI/pixmaps.h>
 
-#include <QContextMenuEvent>
-#include <QMessageBox>
-#include <QDateTime>
-#include <QTextStream>
-#include <QClipboard>
 #include <QApplication>
-#include <QPainter>
+#include <QClipboard>
+#include <QContextMenuEvent>
+#include <QDateTime>
 #include <QEvent>
-#include <QLayout>
-#include <QPrintDialog>
-#include <QLocale>
-#include <QShortcut>
-#include <QProgressDialog>
 #include <QFile>
 #include <QHeaderView>
+#include <QLayout>
+#include <QLocale>
+#include <QMessageBox>
 #include <QModelIndex>
+#include <QPainter>
+#include <QPrintDialog>
+#include <QProgressDialog>
+#include <QShortcut>
+#include <QTextStream>
 
 #include <QVector>
 
-#include <gsl/gsl_vector.h>
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_sort_vector.h>
+#include <gsl/gsl_vector.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -70,6 +70,7 @@
 DECLARE_WINDOW(Table)
 
 using namespace Mantid;
+using namespace MantidQt::API;
 
 Table::Table(ScriptingEnv *env, int rows, int cols, const QString &label,
              QWidget *parent, const QString &name, Qt::WFlags f)
@@ -638,7 +639,7 @@ void Table::updateValues(Table *t, const QString &columnName) {
 }
 
 std::string Table::saveToProject(ApplicationWindow *app) {
-  TSVSerialiser tsv;
+  MantidQt::API::TSVSerialiser tsv;
 
   tsv.writeRaw("<table>");
   tsv.writeLine(objectName().toStdString())
@@ -3001,9 +3002,9 @@ void Table::showAllColumns() {
   }
 }
 
-IProjectSerialisable *Table::loadFromProject(const std::string &lines,
-                                             ApplicationWindow *app,
-                                             const int fileVersion) {
+MantidQt::API::IProjectSerialisable *
+Table::loadFromProject(const std::string &lines, ApplicationWindow *app,
+                       const int fileVersion) {
   Q_UNUSED(fileVersion);
 
   std::vector<std::string> lineVec, valVec;
@@ -3036,7 +3037,7 @@ IProjectSerialisable *Table::loadFromProject(const std::string &lines,
     }
   }
 
-  TSVSerialiser tsv(lines);
+  MantidQt::API::TSVSerialiser tsv(lines);
 
   if (tsv.selectLine("geometry"))
     app->restoreWindowGeometry(
@@ -3176,7 +3177,7 @@ IProjectSerialisable *Table::loadFromProject(const std::string &lines,
 }
 
 std::string Table::saveTableMetadata() {
-  TSVSerialiser tsv;
+  MantidQt::API::TSVSerialiser tsv;
   tsv.writeLine("header");
   for (int j = 0; j < d_table->columnCount(); j++) {
     QString val = colLabel(j);
