@@ -5,7 +5,8 @@ from mantid.api import Algorithm
 from SANS2.State.SANSStateCalculateTransmission import (SANSStateCalculateTransmission,
                                                         SANSStateCalculateTransmissionISIS,
                                                         SANSStateCalculateTransmissionLOQ)
-from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType, FitType)
+from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType, FitType, DataType,
+                                           convert_reduction_data_type_to_string)
 
 
 class SANSStateCalculateTransmissionTest(unittest.TestCase):
@@ -43,8 +44,15 @@ class SANSStateCalculateTransmissionTest(unittest.TestCase):
         state.background_TOF_roi_start = 3.4
         state.background_TOF_roi_stop = 6.8
 
-        state.fit_type = FitType.Polynomial
-        state.polynomial_order = 2
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_low = 10.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_high = 20.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].polynomial_order = 3
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].fit_type = FitType.Polynomial
+
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_low = 10.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_high = 20.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].polynomial_order = 0
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].fit_type = FitType.Linear
 
         try:
             state.validate()
@@ -106,8 +114,15 @@ class SANSStateCalculateTransmissionTest(unittest.TestCase):
         state.background_TOF_roi_start = 3.4
         state.background_TOF_roi_stop = 6.8
 
-        state.fit_type = FitType.Polynomial
-        state.polynomial_order = 2
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_low = 10.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_high = 20.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].polynomial_order = 3
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].fit_type = FitType.Polynomial
+
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_low = 10.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_high = 20.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].polynomial_order = 0
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].fit_type = FitType.Linear
 
         # Act + Assert
         self.assertRaises(ValueError, state.validate)
@@ -137,8 +152,15 @@ class SANSStateCalculateTransmissionTest(unittest.TestCase):
         state.background_TOF_roi_start = 3.4
         state.background_TOF_roi_stop = 6.8
 
-        state.fit_type = FitType.Polynomial
-        state.polynomial_order = 2
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_low = 10.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_high = 20.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].polynomial_order = 3
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].fit_type = FitType.Polynomial
+
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_low = 10.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_high = 20.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].polynomial_order = 0
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].fit_type = FitType.Linear
 
         # Act + Assert
         self.assertRaises(ValueError, state.validate)
@@ -191,8 +213,15 @@ class SANSStateCalculateTransmissionTest(unittest.TestCase):
         state.background_TOF_roi_start = 3.4
         state.background_TOF_roi_stop = 6.8
 
-        state.fit_type = FitType.Polynomial
-        state.polynomial_order = 2
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_low = 10.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_high = 20.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].polynomial_order = 3
+        state.fit[convert_reduction_data_type_to_string(DataType.Sample)].fit_type = FitType.Polynomial
+
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_low = 10.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_high = 20.0
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].polynomial_order = 0
+        state.fit[convert_reduction_data_type_to_string(DataType.Can)].fit_type = FitType.Linear
 
         # Act
         serialized = state.property_manager
@@ -233,8 +262,16 @@ class SANSStateCalculateTransmissionTest(unittest.TestCase):
         self.assertTrue(len(set(state_2.background_TOF_monitor_start.items()) & set({"1": 123, "2": 123}.items())) == 2)
         self.assertTrue(len(set(state_2.background_TOF_monitor_stop.items()) & set({"1": 234, "2": 2323}.items())) == 2)
 
-        self.assertTrue(state_2.fit_type is FitType.Polynomial)
-        self.assertTrue(state_2.polynomial_order == 2)
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_low == 10.0)
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_high == 20.0)
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Sample)].polynomial_order == 3)
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Sample)].fit_type
+                        is FitType.Polynomial)
+
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_low == 10.0)
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_high == 20.0)
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Can)].polynomial_order == 0)
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Can)].fit_type is FitType.Linear)
 
 
 if __name__ == '__main__':

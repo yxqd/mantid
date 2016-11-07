@@ -29,7 +29,7 @@ def get_adjustment_builder(data_info):
     # the instrument is of relevance.
     instrument = data_info.instrument
     if instrument is SANSInstrument.LARMOR or instrument is SANSInstrument.LOQ or instrument is SANSInstrument.SANS2D:
-        return SANSStateAdjustmentBuilderISIS(data_info)
+        return SANSStateAdjustmentBuilderISIS()
     else:
         raise NotImplementedError("SANSStateAdjustmentBuilder: Could not find any valid adjustment builder for the "
                                   "specified SANSStateData object {0}".format(str(data_info)))

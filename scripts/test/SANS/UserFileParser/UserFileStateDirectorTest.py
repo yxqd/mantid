@@ -4,7 +4,9 @@ import mantid
 
 
 from SANS2.UserFile.UserFileStateDirector import UserFileStateDirectorISIS
-from SANS2.Common.SANSEnumerations import (SANSFacility, ISISReductionMode, RangeStepType)
+from SANS2.Common.SANSEnumerations import (SANSFacility, ISISReductionMode, RangeStepType, RebinType,
+                                           DataType, convert_reduction_data_type_to_string, FitType)
+from SANS2.Common.SANSConfigurations import SANSConfigurations
 from SANS2.State.StateBuilder.SANSStateDataBuilder import get_data_builder
 from SANS2.UserFile.UserFileCommon import *
 
@@ -60,6 +62,65 @@ class UserFileStateDirectorISISTest(unittest.TestCase):
         self.assertTrue(wavelength.wavelength_step == 0.125)
         self.assertTrue(wavelength.wavelength_step_type is RangeStepType.Lin)
 
+    def _assert_adjustment(self, state):
+        adjustment = state.adjustment
+
+        # Normalize to monitor settings
+        normalize_to_monitor = adjustment.normalize_to_monitor
+        self.assertTrue(normalize_to_monitor.prompt_peak_correction_min == 1000)
+        self.assertTrue(normalize_to_monitor.prompt_peak_correction_max == 2000)
+        self.assertTrue(normalize_to_monitor.rebin_type is RebinType.InterpolatingRebin)
+        self.assertTrue(normalize_to_monitor.wavelength_low == 1.5)
+        self.assertTrue(normalize_to_monitor.wavelength_high == 12.5)
+        self.assertTrue(normalize_to_monitor.wavelength_step == 0.125)
+        self.assertTrue(normalize_to_monitor.wavelength_step_type is RangeStepType.Lin)
+        self.assertTrue(normalize_to_monitor.background_TOF_general_start == 3500)
+        self.assertTrue(normalize_to_monitor.background_TOF_general_stop == 4500)
+        self.assertTrue(normalize_to_monitor.background_TOF_monitor_start["1"] == 35000)
+        self.assertTrue(normalize_to_monitor.background_TOF_monitor_stop["1"] == 65000)
+        self.assertTrue(normalize_to_monitor.background_TOF_monitor_start["2"] == 85000)
+        self.assertTrue(normalize_to_monitor.background_TOF_monitor_stop["2"] == 98000)
+        self.assertTrue(normalize_to_monitor.incident_monitor == 1)
+
+        # Calculate Transmission
+        calculate_transmission = adjustment.calculate_transmission
+        self.assertTrue(calculate_transmission.prompt_peak_correction_min == 1000)
+        self.assertTrue(calculate_transmission.prompt_peak_correction_max == 2000)
+        self.assertTrue(calculate_transmission.default_transmission_monitor == 3)
+        self.assertTrue(calculate_transmission.default_incident_monitor == 2)
+        self.assertTrue(calculate_transmission.incident_monitor == 1)
+        self.assertTrue(calculate_transmission.transmission_radius_on_detector == 7.0)
+        self.assertTrue(calculate_transmission.transmission_roi_files == ["test.xml", "test2.xml"])
+        self.assertTrue(calculate_transmission.transmission_mask_files == ["test3.xml", "test4.xml"])
+        self.assertTrue(calculate_transmission.transmission_radius_on_detector == 7.0)
+        self.assertTrue(calculate_transmission.transmission_monitor == 4)
+        self.assertTrue(calculate_transmission.rebin_type is RebinType.InterpolatingRebin)
+        self.assertTrue(calculate_transmission.wavelength_low == 1.5)
+        self.assertTrue(calculate_transmission.wavelength_high == 12.5)
+        self.assertTrue(calculate_transmission.wavelength_step == 0.125)
+        self.assertTrue(calculate_transmission.wavelength_step_type is RangeStepType.Lin)
+        self.assertFalse(calculate_transmission.use_full_wavelength_range)
+        self.assertTrue(calculate_transmission.wavelength_full_range_low ==
+                        SANSConfigurations.SANS2D.wavelength_full_range_low)
+        self.assertTrue(calculate_transmission.wavelength_full_range_high ==
+                        SANSConfigurations.SANS2D.wavelength_full_range_high)
+        self.assertTrue(calculate_transmission.background_TOF_general_start == 3500)
+        self.assertTrue(calculate_transmission.background_TOF_general_stop == 4500)
+        self.assertTrue(calculate_transmission.background_TOF_monitor_start["1"] == 35000)
+        self.assertTrue(calculate_transmission.background_TOF_monitor_stop["1"] == 65000)
+        self.assertTrue(calculate_transmission.background_TOF_monitor_start["2"] == 85000)
+        self.assertTrue(calculate_transmission.background_TOF_monitor_stop["2"] == 98000)
+        self.assertTrue(calculate_transmission.background_TOF_roi_start == 123)
+        self.assertTrue(calculate_transmission.background_TOF_roi_stop == 466)
+        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Sample)].fit_type is FitType.Log)
+        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_low == 1.5)
+        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_high == 12.5)
+        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Sample)].polynomial_order == 0)
+        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Can)].fit_type is FitType.Log)
+        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_low == 1.5)
+        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_high == 12.5)
+        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Can)].polynomial_order == 0)
+
     def test_state_can_be_created_from_valid_user_file_with_data_information(self):
         # Arrange
         data_builder = get_data_builder(SANSFacility.ISIS)
@@ -80,6 +141,7 @@ class UserFileStateDirectorISISTest(unittest.TestCase):
         self._assert_mask(state)
         self._assert_reduction(state)
         self._assert_wavelength(state)
+        self._assert_adjustment(state)
 
         # clean up
         if os.path.exists(user_file_path):

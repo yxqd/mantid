@@ -172,6 +172,22 @@ class DataType(object):
     pass
 
 
+def convert_reduction_data_type_to_string(data_type):
+    if data_type is DataType.Sample:
+        data_type_as_string = "Sample"
+    elif data_type is DataType.Can:
+        data_type_as_string = "Can"
+    return data_type_as_string
+
+
+def convert_string_to_reduction_data_type(data_string):
+    if data_string is "Sample":
+        data_type  = DataType.Sample
+    elif data_string is DataType.Can:
+        data_type  = DataType.Can
+    return data_type
+
+
 @inner_classes_with_name_space("Count", "Norm")
 class OutputParts(object):
     """
@@ -285,7 +301,7 @@ def convert_save_type_to_string(save_type):
 # --------------------
 # Fit
 # --------------------
-@inner_classes_with_name_space("Linear", "Log", "Polynomial")
+@inner_classes_with_name_space("Linear", "Log", "Polynomial", "NoFit")
 class FitType(object):
     """
     Defines possible fit types
@@ -301,4 +317,6 @@ def convert_fit_type_to_string(fit_type):
         as_string = "Log"
     elif fit_type is FitType.Polynomial:
         as_string = "Polynomial"
+    elif fit_type is FitType.NoFit:
+        as_string = "NoFit"
     return as_string

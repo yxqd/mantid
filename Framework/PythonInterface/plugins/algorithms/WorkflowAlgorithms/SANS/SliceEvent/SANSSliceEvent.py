@@ -84,7 +84,7 @@ class SANSSliceEvent(DataProcessorAlgorithm):
             state.property_manager = state_property_manager
             state.validate()
         except ValueError as err:
-            errors.update({"SANSSMove": str(err)})
+            errors.update({"SANSSliceEvent": str(err)})
         return errors
 
     def scale_monitors(self, slice_factor):

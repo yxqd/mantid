@@ -1,7 +1,7 @@
 import unittest
 import mantid
 
-from SANS2.Common.SANSEnumerations import (ISISReductionMode, DetectorType, RangeStepType)
+from SANS2.Common.SANSEnumerations import (ISISReductionMode, DetectorType, RangeStepType, FitType, DataType)
 from SANS2.UserFile.UserFileParser import *
 
 
@@ -554,8 +554,8 @@ class TransParserTest(unittest.TestCase):
         do_test(trans_parser, valid_settings, invalid_settings, self.assertTrue, self.assertRaises)
 
     def test_that_trans_spec_shift_is_parsed_correctly(self):
-        valid_settings = {"TRANS/TRANSPEC=4/SHIFT=23": {user_file_trans_spec_shift: 23},
-                          "TRANS/TRANSPEC =4/ SHIFT = 23": {user_file_trans_spec_shift: 23}}
+        valid_settings = {"TRANS/TRANSPEC=4/SHIFT=23": {user_file_trans_spec_shift: 23, user_file_trans_spec: 4},
+                          "TRANS/TRANSPEC =4/ SHIFT = 23": {user_file_trans_spec_shift: 23, user_file_trans_spec: 4}}
 
         invalid_settings = {"TRANS/TRANSPEC=6/SHIFT=23": RuntimeError,
                             "TRANS/TRANSPEC=4/SHIFT/23": RuntimeError,
@@ -689,21 +689,45 @@ class FitParserTest(unittest.TestCase):
         fit_parser = FitParser()
         do_test(fit_parser, valid_settings, invalid_settings, self.assertTrue, self.assertRaises)
 
-    def test_that_range_based_fit_is_parsed_correctly(self):
-        valid_settings = {"FIT/ trans / LIN 123 3556": {user_file_fit_range: range_entry_fit(start=123, stop=3556,
-                                                                                             fit_type="LIN")},
-                          "FIT/ tranS/linear 123 3556": {user_file_fit_range: range_entry_fit(start=123, stop=3556,
-                                                                                              fit_type="LIN")},
-                          "FIT/TRANS/Straight 123 3556": {user_file_fit_range: range_entry_fit(start=123, stop=3556,
-                                                                                               fit_type="LIN")},
-                          "FIT/ tranS/LoG 123  3556.6 ": {user_file_fit_range: range_entry_fit(start=123, stop=3556.6,
-                                                                                               fit_type="LOG")},
-                          "FIT/TRANS/  YlOG 123   3556": {user_file_fit_range: range_entry_fit(start=123, stop=3556,
-                                                                                               fit_type="LOG")}}
+    def test_that_general_fit_is_parsed_correctly(self):
+        valid_settings = {"FIT/ trans / LIN 123 3556": {user_file_fit_general: fit_general(start=123, stop=3556,
+                                                        fit_type=FitType.Linear, data_type=None, polynomial_order=0)},
+                          "FIT/ tranS/linear 123 3556": {user_file_fit_general: fit_general(start=123, stop=3556,
+                                                         fit_type=FitType.Linear, data_type=None, polynomial_order=0)},
+                          "FIT/TRANS/Straight 123 3556": {user_file_fit_general: fit_general(start=123, stop=3556,
+                                                          fit_type=FitType.Linear, data_type=None, polynomial_order=0)},
+                          "FIT/ tranS/LoG 123  3556.6 ": {user_file_fit_general: fit_general(start=123, stop=3556.6,
+                                                          fit_type=FitType.Log, data_type=None, polynomial_order=0)},
+                          "FIT/TRANS/  YlOG 123   3556": {user_file_fit_general: fit_general(start=123, stop=3556,
+                                                          fit_type=FitType.Log, data_type=None, polynomial_order=0)},
+                          "FIT/Trans/Lin": {user_file_fit_general: fit_general(start=None, stop=None,
+                                                     fit_type=FitType.Linear, data_type=None, polynomial_order=0)},
+                          "FIT/Trans/ Log": {user_file_fit_general: fit_general(start=None, stop=None,
+                                                     fit_type=FitType.Log, data_type=None, polynomial_order=0)},
+                          "FIT/Trans/ polYnomial": {user_file_fit_general: fit_general(start=None, stop=None,
+                                                    fit_type=FitType.Polynomial, data_type=None, polynomial_order=2)},
+                          "FIT/Trans/ polYnomial 3": {user_file_fit_general: fit_general(start=None,
+                                                                 stop=None, fit_type=FitType.Polynomial,
+                                                                 data_type=None, polynomial_order=3)},
+                          "FIT/Trans/Sample/Log 23.4 56.7": {user_file_fit_general: fit_general(start=23.4, stop=56.7,
+                                                          fit_type=FitType.Log, data_type=DataType.Sample,
+                                                                                                polynomial_order=0)},
+                          "FIT/Trans/can/ lIn 23.4 56.7": {user_file_fit_general: fit_general(start=23.4, stop=56.7,
+                                                          fit_type=FitType.Linear, data_type=DataType.Can,
+                                                                                             polynomial_order=0)},
+                          "FIT/Trans / can/polynomiAL 5 23 45": {user_file_fit_general: fit_general(start=23, stop=45,
+                                                                 fit_type=FitType.Polynomial, data_type=DataType.Can,
+                                                                                            polynomial_order=5)},
+                          }
 
         invalid_settings = {"FIT/TRANS/ YlOG 123": RuntimeError,
                             "FIT/TRANS/ YlOG 123 34 34": RuntimeError,
-                            "FIT/TRANS/ YlOG 123 fg": RuntimeError}
+                            "FIT/TRANS/ YlOG 123 fg": RuntimeError,
+                            "FIT/Trans / can/polynomiAL 6": RuntimeError,
+                            "FIT/Trans /": RuntimeError,
+                            "FIT/Trans / Lin 23": RuntimeError,
+                            "FIT/Trans / lin 23 5 6": RuntimeError,
+                            "FIT/Trans / lin 23 t": RuntimeError}
 
         fit_parser = FitParser()
         do_test(fit_parser, valid_settings, invalid_settings, self.assertTrue, self.assertRaises)
@@ -714,32 +738,6 @@ class FitParserTest(unittest.TestCase):
 
         invalid_settings = {"Fit / Monitor 12.6 34 34": RuntimeError,
                             "Fit / Monitor": RuntimeError}
-
-        fit_parser = FitParser()
-        do_test(fit_parser, valid_settings, invalid_settings, self.assertTrue, self.assertRaises)
-
-    def test_that_general_fit_is_parsed_correctly(self):
-        valid_settings = {"FIT/Trans/Lin": {user_file_fit_can: user_file_fit_lin,
-                                            user_file_fit_sample: user_file_fit_lin},
-                          "FIT/Trans/ Log": {user_file_fit_can: user_file_fit_log,
-                                            user_file_fit_sample: user_file_fit_log},
-                          "FIT/Trans/ polYnomial": {user_file_fit_can_poly: 2,
-                                             user_file_fit_sample_poly: 2},
-                          "FIT/Trans/ polYnomial 3": {user_file_fit_can_poly: 3,
-                                              user_file_fit_sample_poly: 3},
-                          "FIT/Trans/Sample/Log": { user_file_fit_sample: user_file_fit_log},
-                          "FIT/Trans/Sample/ Lin": {user_file_fit_sample: user_file_fit_lin},
-                          "FIT/Trans / can/Log": {user_file_fit_can: user_file_fit_log},
-                          "FIT/ Trans/CAN/ lin": {user_file_fit_can: user_file_fit_lin},
-                          "FIT/Trans/Sample/ polynomiAL 4": {user_file_fit_sample_poly: 4},
-                          "FIT/Trans / can/polynomiAL 5": {user_file_fit_can_poly: 5}}
-
-        invalid_settings = {"FIT/Trans / can/polynomiAL 6": RuntimeError,
-                            "FIT/Trans /": RuntimeError,
-                            "FIT/Trans": RuntimeError,
-                            "FIT/Trans / Lin 23": RuntimeError,
-                            "FIT/Trans / lin 23 5 6": RuntimeError,
-                            "FIT/Trans / lin 23 t": RuntimeError}
 
         fit_parser = FitParser()
         do_test(fit_parser, valid_settings, invalid_settings, self.assertTrue, self.assertRaises)
@@ -942,6 +940,16 @@ class BackParserTest(unittest.TestCase):
         back_parser = BackParser()
         do_test(back_parser, valid_settings, invalid_settings, self.assertTrue, self.assertRaises)
 
+    def test_that_trans_mon_is_parsed_corretly(self):
+        valid_settings = {"BACK / TRANS  123 344": {user_file_back_trans:  range_entry(start=123, stop=344)},
+                          "BACK / tranS 123 34": {user_file_back_trans: range_entry(start=123, stop=34)}}
+
+        invalid_settings = {"BACK / Trans / 123 34": RuntimeError,
+                            "BACK / trans 123": RuntimeError}
+
+        back_parser = BackParser()
+        do_test(back_parser, valid_settings, invalid_settings, self.assertTrue, self.assertRaises)
+
 
 class SANS2DParserTest(unittest.TestCase):
     def test_that_gets_type(self):
@@ -1002,8 +1010,9 @@ class UserFileParserTest(unittest.TestCase):
 
         # FitParser
         result = user_file_parser.parse_line("FIT/TRANS/Straight 123 3556")
-        assert_valid_result(result, {user_file_fit_range: range_entry_fit(start=123, stop=3556,
-                                                                          fit_type="LIN")}, self.assertTrue)
+        assert_valid_result(result, {user_file_fit_general: fit_general(start=123, stop=3556, fit_type=FitType.Linear,
+                                                                        data_type=None, polynomial_order=0)},
+                            self.assertTrue)
 
         # GravityParser
         result = user_file_parser.parse_line("Gravity/LExtra =23.5")

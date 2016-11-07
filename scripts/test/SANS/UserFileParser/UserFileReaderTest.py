@@ -1,7 +1,7 @@
 import unittest
 import mantid
 import os
-from SANS2.Common.SANSEnumerations import (ISISReductionMode, DetectorType, RangeStepType)
+from SANS2.Common.SANSEnumerations import (ISISReductionMode, DetectorType, RangeStepType, FitType)
 from SANS2.UserFile.UserFileReader import UserFileReader
 from SANS2.UserFile.UserFileCommon import *
 from UserFileTestHelper import create_user_file, sample_user_file
@@ -22,13 +22,15 @@ class UserFileReaderTest(unittest.TestCase):
         # Assert
         expected_values = {user_file_limits_wavelength: [simple_range(start=1.5, stop=12.5, step=0.125,
                                                                       step_type=RangeStepType.Lin)],
-                           user_file_limits_q: [complex_range(.001, .001, .0126, -.08, .2, step_type=RangeStepType.Lin)],
+                           user_file_limits_q: [complex_range(.001, .001, .0126, -.08, .2,
+                                                              step_type=RangeStepType.Lin)],
                            user_file_limits_qxy: [simple_range(0, 0.05, 0.001, RangeStepType.Lin)],
                            user_file_back_single_monitors: [back_single_monitor_entry(1, 35000, 65000),
                                                             back_single_monitor_entry(2, 85000, 98000)],
                            user_file_det_reduction_mode: [ISISReductionMode.Lab],
                            user_file_gravity_on_off: [True],
-                           user_file_fit_range: [range_entry_fit(1.5, 12.5, "LOG")],
+                           user_file_fit_general: [fit_general(start=1.5, stop=12.5, fit_type=FitType.Log,
+                                                               data_type=None, polynomial_order=0)],
                            user_file_mask_vertical_single_strip_mask: [single_entry_with_detector(191,
                                                                                                   DetectorType.Lab),
                                                                        single_entry_with_detector(191,
@@ -66,7 +68,14 @@ class UserFileReaderTest(unittest.TestCase):
                            user_file_mask_clear_time_mask : [True],
                            user_file_limits_radius: [range_entry(12, 15)],
                            user_file_trans_spec_shift: [-70],
-                           user_file_print: ["for changer"]}
+                           user_file_print: ["for changer"],
+                           user_file_back_all_monitors: [range_entry(start=3500, stop=4500)],
+                           user_file_fit_monitor_times: [range_entry(start=1000, stop=2000)],
+                           user_file_trans_spec: [4],
+                           user_file_back_trans: [range_entry(start=123, stop=466)],
+                           user_file_trans_radius: [7.0],
+                           user_file_trans_roi: ["test.xml", "test2.xml"],
+                           user_file_trans_mask: ["test3.xml", "test4.xml"]}
 
         self.assertTrue(len(expected_values) == len(output))
         for key, value in expected_values.items():

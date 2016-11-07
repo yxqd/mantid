@@ -20,7 +20,6 @@ class UserFileReader(object):
             is_list = isinstance(value, list)
             is_key_in_output = key in output
             if is_key_in_output and is_list:
-                print value
                 output[key].extend(value)
             elif is_key_in_output and not is_list:
                 output[key].append(value)

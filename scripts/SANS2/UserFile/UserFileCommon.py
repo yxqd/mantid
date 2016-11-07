@@ -25,6 +25,7 @@ set_scales_entry = namedtuple('set_scales_entry', 's, a, b, c, d')
 
 # Fit
 range_entry_fit = namedtuple('range_entry_fit', 'start, stop, fit_type')
+fit_general = namedtuple('fit_general', 'start, stop, fit_type, data_type, polynomial_order')
 
 # Mon
 monitor_length = namedtuple('monitor_length', 'length, spectrum, interpolate')
@@ -132,18 +133,8 @@ user_file_q_resolution_moderator = "q_resolution_moderator"
 
 # --- FIT
 user_file_fit_clear = "fit_clear"
-
-user_file_fit_range = "fit_range"
 user_file_fit_monitor_times = "fit_monitor_times"
-
-user_file_fit_can = "fit_can"
-user_file_fit_sample = "fit_sample"
-user_file_fit_can_poly = "fit_can_poly"
-user_file_fit_sample_poly = "fit_sample_poly"
-user_file_fit_lin = "LIN"
-user_file_fit_log = "LOG"
-user_file_fit_poly = "POLY"
-
+user_file_fit_general = "fit_general"
 
 # --- GRAVITY
 user_file_gravity_on_off = "gravity_on_off"
@@ -174,3 +165,4 @@ user_file_print = "user_file_print"
 user_file_back_all_monitors = "back_all_monitors"
 user_file_back_single_monitors = "back_single_monitor"
 user_file_back_monitor_off = "back_monitor_off"
+user_file_back_trans = "back_trans"

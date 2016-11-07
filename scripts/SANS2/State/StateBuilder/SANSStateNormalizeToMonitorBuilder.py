@@ -20,8 +20,8 @@ def set_default_incident_monitor(normalize_monitor_info, data_info):
     """
     file_name = data_info.sample_scatter
     _, ipf_path = get_instrument_paths_for_sans_file(file_name)
-    named_element = "default-transmission-monitor-spectrum"
-    monitor_spectrum_tag_to_search = {named_element: named_element}
+    named_element = "default-incident-monitor-spectrum"
+    monitor_spectrum_tag_to_search = [named_element]
     found_monitor_spectrum = get_named_elements_from_ipf_file(ipf_path, monitor_spectrum_tag_to_search, int)
     if named_element in found_monitor_spectrum:
         normalize_monitor_info.incident_monitor = found_monitor_spectrum[named_element]
@@ -31,7 +31,7 @@ def set_default_incident_monitor(normalize_monitor_info, data_info):
 # State builders
 # ---------------------------------------
 class SANSStateNormalizeToMonitorBuilderISIS(object):
-    @automatic_setters(SANSStateNormalizeToMonitorISIS, exclude=["default_incident_monitor"])
+    @automatic_setters(SANSStateNormalizeToMonitorISIS, exclusions=["default_incident_monitor"])
     def __init__(self, data_info):
         super(SANSStateNormalizeToMonitorBuilderISIS, self).__init__()
         self._data = data_info
@@ -46,7 +46,7 @@ class SANSStateNormalizeToMonitorBuilderISIS(object):
 class SANSStateNormalizeToMonitorBuilderLOQ(object):
     @automatic_setters(SANSStateNormalizeToMonitorLOQ)
     def __init__(self, data_info):
-        super(SANSStateNormalizeToMonitorBuilderISIS, self).__init__()
+        super(SANSStateNormalizeToMonitorBuilderLOQ, self).__init__()
         self._data = data_info
         self.state = SANSStateNormalizeToMonitorLOQ()
         set_default_incident_monitor(self.state, self._data)

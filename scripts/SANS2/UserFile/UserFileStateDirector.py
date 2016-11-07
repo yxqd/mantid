@@ -1,7 +1,8 @@
 from mantid.kernel import logger
 
 from SANS2.Common.SANSConstants import SANSConstants
-from SANS2.Common.SANSEnumerations import (DetectorType, FitModeForMerge, RebinType)
+from SANS2.Common.SANSEnumerations import (DetectorType, FitModeForMerge, RebinType, DataType,
+                                           convert_reduction_data_type_to_string)
 from SANS2.Common.SANSFileInformation import find_full_file_path
 from SANS2.UserFile.UserFileReader import UserFileReader
 from SANS2.UserFile.UserFileCommon import *  # noqa
@@ -69,20 +70,18 @@ def convert_mm_to_m(value):
     return value/1000.
 
 
-def set_background_TOF_general_start(builder, user_file_items):
+def set_background_TOF_general(builder, user_file_items):
     # The general background settings
     if user_file_back_all_monitors in user_file_items:
         back_all_monitors = user_file_items[user_file_back_all_monitors]
         # Should the user have chosen several values, then the last element is selected
         check_if_contains_only_one_element(back_all_monitors, user_file_back_all_monitors)
         back_all_monitors = back_all_monitors[-1]
-        background_TOF_general_start = back_all_monitors.start
-        background_TOF_general_stop = back_all_monitors.stop
-        builder.set_background_TOF_general_start(background_TOF_general_start)
-        builder.set_background_TOF_general_stop(background_TOF_general_stop)
+        builder.set_background_TOF_general_start(back_all_monitors.start)
+        builder.set_background_TOF_general_stop(back_all_monitors.stop)
 
 
-def set_background_TOF_monitor_start(builder, user_file_items):
+def set_background_TOF_monitor(builder, user_file_items):
     # The monitor off switches. Get all monitors which should not have an individual background setting
     monitor_exclusion_list = []
     if user_file_back_monitor_off in user_file_items:
@@ -121,22 +120,8 @@ def set_prompt_peak_correction(builder, user_file_items):
         # Should the user have chosen several values, then the last element is selected
         check_if_contains_only_one_element(fit_monitor_times, user_file_fit_monitor_times)
         fit_monitor_times = fit_monitor_times[-1]
-        prompt_peak_correction_min = fit_monitor_times.start
-        prompt_peak_correction_max = fit_monitor_times.stop
-        builder.set_prompt_peak_correction_min(prompt_peak_correction_min)
-        builder.set_prompt_peak_correction_max(prompt_peak_correction_max)
-
-
-def set_incident_monitor(builder, user_file_items):
-    if user_file_mon_spectrum in user_file_items:
-        monitor_spectrum = user_file_items[user_file_mon_spectrum]
-        # Should the user have chosen several values, then the last element is selected
-        check_if_contains_only_one_element(monitor_spectrum, user_file_mon_spectrum)
-        monitor_spectrum = monitor_spectrum[-1]
-        spectrum = monitor_spectrum.spectrum
-        builder.set_incident_monitor(spectrum)
-        interpolate = RebinType.Interpolate if monitor_spectrum.interpolate else RebinType.Rebin
-        builder.set_rebin_type(interpolate)
+        builder.set_prompt_peak_correction_min(fit_monitor_times.start)
+        builder.set_prompt_peak_correction_max(fit_monitor_times.stop)
 
 
 class UserFileStateDirectorISIS(object):
@@ -154,7 +139,7 @@ class UserFileStateDirectorISIS(object):
         self._slice_event_builder = get_slice_event_builder(self._data)
         self._wavelength_builder = get_wavelength_builder(self._data)
         self._save_builder = get_save_builder(self._data)
-        self._adjustment_builder = get_adjustment_builder(self.data)
+        self._adjustment_builder = get_adjustment_builder(self._data)
 
     def set_user_file(self, user_file):
         file_path = find_full_file_path(user_file)
@@ -219,8 +204,9 @@ class UserFileStateDirectorISIS(object):
         self._state_builder.set_save(save_state)
 
         # Adjustment state
-        adjustment_state = self._adjustment_builder.bulid()
+        adjustment_state = self._adjustment_builder.build()
         adjustment_state.validate()
+        self._state_builder.set_adjustment(adjustment_state)
 
         # Data state
         self._state_builder.set_data(self._data)
@@ -820,22 +806,136 @@ class UserFileStateDirectorISIS(object):
         normalize_to_state_builder = get_normalize_to_monitor_builder(self._data)
 
         # Extract the incident monitor and which type of rebinning to use (interpolating or normal)
-        set_incident_monitor(normalize_to_state_builder, user_file_items)
+        if user_file_mon_spectrum in user_file_items:
+            mon_spectrum = user_file_items[user_file_mon_spectrum]
+            for monitor in mon_spectrum:
+                if not monitor.is_trans:
+                    normalize_to_state_builder.set_incident_monitor(monitor.spectrum)
+                    rebin_type = RebinType.InterpolatingRebin if monitor.interpolate else RebinType.Rebin
+                    normalize_to_state_builder.set_rebin_type(rebin_type)
 
         # The prompt peak correction values
         set_prompt_peak_correction(normalize_to_state_builder, user_file_items)
 
         # The general background settings
-        set_background_TOF_general_start(normalize_to_state_builder, user_file_items)
+        set_background_TOF_general(normalize_to_state_builder, user_file_items)
 
         # The monitor-specific background settings
-        set_background_TOF_monitor_start(normalize_to_state_builder, user_file_items)
+        set_background_TOF_monitor(normalize_to_state_builder, user_file_items)
 
-        # Get the wavelength settings for the rebin step
+        # Get the wavelength rebin settings
         set_wavelength_limits(normalize_to_state_builder, user_file_items)
 
         # Now get the SANSStateNormalizeToMonitor state
         return normalize_to_state_builder.build()
 
     def _set_up_calculate_transmission(self, user_file_items):
-        #
+        calculate_transmission_builder = get_calculate_transmission_builder(self._data)
+
+        if user_file_trans_radius in user_file_items:
+            trans_radius = user_file_items[user_file_trans_radius]
+            check_if_contains_only_one_element(trans_radius, user_file_trans_radius)
+            trans_radius = trans_radius[-1]
+            calculate_transmission_builder.set_transmission_radius_on_detector(trans_radius)
+
+        if user_file_trans_roi in user_file_items:
+            trans_roi = user_file_items[user_file_trans_roi]
+            calculate_transmission_builder.set_transmission_roi_files(trans_roi)
+
+        if user_file_trans_mask in user_file_items:
+            trans_mask = user_file_items[user_file_trans_mask]
+            calculate_transmission_builder.set_transmission_mask_files(trans_mask)
+
+        # The prompt peak correction values
+        set_prompt_peak_correction(calculate_transmission_builder, user_file_items)
+
+        # The transmission spectrum
+        if user_file_trans_spec in user_file_items:
+            trans_spec = user_file_items[user_file_trans_spec]
+            # Should the user have chosen several values, then the last element is selected
+            check_if_contains_only_one_element(trans_spec, user_file_trans_spec)
+            trans_spec = trans_spec[-1]
+            calculate_transmission_builder.set_transmission_monitor(trans_spec)
+
+        # The incident monitor spectrum for transmission calculation
+        if user_file_mon_spectrum in user_file_items:
+            mon_spectrum = user_file_items[user_file_mon_spectrum]
+            for monitor in mon_spectrum:
+                if not monitor.is_trans:
+                    rebin_type = RebinType.InterpolatingRebin if monitor.interpolate else RebinType.Rebin
+                    calculate_transmission_builder.set_rebin_type(rebin_type)
+                    calculate_transmission_builder.set_incident_monitor(monitor.spectrum)
+
+        # The general background settings
+        set_background_TOF_general(calculate_transmission_builder, user_file_items)
+
+        # The monitor-specific background settings
+        set_background_TOF_monitor(calculate_transmission_builder, user_file_items)
+
+        # The roi-specific background settings
+        if user_file_back_trans in user_file_items:
+            back_trans = user_file_items[user_file_back_trans]
+            # Should the user have chosen several values, then the last element is selected
+            check_if_contains_only_one_element(back_trans, user_file_back_trans)
+            back_trans = back_trans[-1]
+            calculate_transmission_builder.set_background_TOF_roi_start(back_trans.start)
+            calculate_transmission_builder.set_background_TOF_roi_stop(back_trans.stop)
+
+        # Set the fit settings
+        if user_file_fit_general in user_file_items:
+            fit_general = user_file_items[user_file_fit_general]
+            # We can have settings for both the sample or the can or individually
+            # There can be three types of settings:
+            # 1. General settings where the entry data_type is not specified. Settings apply to both sample and can
+            # 2. Sample settings
+            # 3. Can settings
+            # We first apply the genenral settings. Specialized settings for can or sample override the general settings
+            # As usual if there are multiple settings for a specific case, then the last in the list is used.
+
+            # 1. General settings
+            general_settings = [item for item in fit_general if item.data_type is None]
+            if general_settings:
+                check_if_contains_only_one_element(general_settings, user_file_fit_general)
+                general_settings = general_settings[-1]
+                calculate_transmission_builder.set_Sample_fit_type(general_settings.fit_type)
+                calculate_transmission_builder.set_Sample_polynomial_order(general_settings.polynomial_order)
+                calculate_transmission_builder.set_Sample_wavelength_low(general_settings.start)
+                calculate_transmission_builder.set_Sample_wavelength_high(general_settings.stop)
+                calculate_transmission_builder.set_Can_fit_type(general_settings.fit_type)
+                calculate_transmission_builder.set_Can_polynomial_order(general_settings.polynomial_order)
+                calculate_transmission_builder.set_Can_wavelength_low(general_settings.start)
+                calculate_transmission_builder.set_Can_wavelength_high(general_settings.stop)
+
+            # 2. Sample settings
+            sample_settings = [item for item in fit_general if item.data_type is DataType.Sample]
+            if sample_settings:
+                check_if_contains_only_one_element(sample_settings, user_file_fit_general)
+                sample_settings = sample_settings[-1]
+                calculate_transmission_builder.set_Sample_fit_type(sample_settings.fit_type)
+                calculate_transmission_builder.set_Sample_polynomial_order(sample_settings.polynomial_order)
+                calculate_transmission_builder.set_Sample_wavelength_low(sample_settings.start)
+                calculate_transmission_builder.set_Sample_wavelength_high(sample_settings.stop)
+
+            # 2. Can settings
+            can_settings = [item for item in fit_general if item.data_type is DataType.Can]
+            if can_settings:
+                check_if_contains_only_one_element(can_settings, user_file_fit_general)
+                can_settings = can_settings[-1]
+                calculate_transmission_builder.set_Can_fit_type(can_settings.fit_type)
+                calculate_transmission_builder.set_Can_polynomial_order(can_settings.polynomial_order)
+                calculate_transmission_builder.set_Can_wavelength_low(can_settings.start)
+                calculate_transmission_builder.set_Can_wavelength_high(can_settings.stop)
+
+        # Set the wavelength default configuration
+        if user_file_limits_wavelength in user_file_items:
+            wavelength_limits = user_file_items[user_file_limits_wavelength]
+            check_if_contains_only_one_element(wavelength_limits, user_file_limits_wavelength)
+            wavelength_limits = wavelength_limits[-1]
+            calculate_transmission_builder.set_wavelength_low(wavelength_limits.start)
+            calculate_transmission_builder.set_wavelength_high(wavelength_limits.stop)
+            calculate_transmission_builder.set_wavelength_step(wavelength_limits.step)
+            calculate_transmission_builder.set_wavelength_step_type(wavelength_limits.step_type)
+
+        return calculate_transmission_builder.build()
+
+

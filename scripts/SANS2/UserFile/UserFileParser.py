@@ -3,7 +3,7 @@
 import abc
 import re
 
-from SANS2.Common.SANSEnumerations import (ISISReductionMode, DetectorType, RangeStepType)
+from SANS2.Common.SANSEnumerations import (ISISReductionMode, DetectorType, RangeStepType, FitType, DataType)
 from SANS2.UserFile.UserFileCommon import *
 
 
@@ -139,6 +139,7 @@ class BackParser(UserFileComponentParser):
         BACK    / M m/TIMES      t1 t2
         BACK    / M m            t1 t2
         BACK    / M m/OFF
+        BACK    / TRANS          t1 t2
     """
     Type = "BACK"
 
@@ -163,6 +164,11 @@ class BackParser(UserFileComponentParser):
         # Off
         self._off_pattern = re.compile(start_string + self._single_monitor + "\\s*/\\s*OFF\\s*" + end_string)
 
+        # Trans
+        self._trans = "TRANS"
+        self._trans_pattern = re.compile(start_string + self._trans + space_string + float_number +
+                                         space_string + float_number)
+
     def parse_line(self, line):
         # Get the settings, ie remove command
         setting = UserFileComponentParser.get_settings(line, BackParser.get_type_pattern())
@@ -174,6 +180,8 @@ class BackParser(UserFileComponentParser):
             output = self._extract_single_mon(setting)
         elif self._is_off(setting):
             output = self._extract_off(setting)
+        elif self._is_trans(setting):
+            output = self._extract_trans(setting)
         else:
             raise RuntimeError("BackParser: Unknown command for BACK: {0}".format(line))
         return output
@@ -186,6 +194,9 @@ class BackParser(UserFileComponentParser):
 
     def _is_off(self, line):
         return does_pattern_match(self._off_pattern, line)
+
+    def _is_trans(self, line):
+        return does_pattern_match(self._trans_pattern, line)
 
     def _extract_all_mon(self, line):
         all_mons_string = re.sub(self._all_mons, "", line)
@@ -206,11 +217,17 @@ class BackParser(UserFileComponentParser):
         monitor_number = self._get_monitor_number(line)
         return {user_file_back_monitor_off: monitor_number}
 
+    def _extract_trans(self, line):
+        trans_string = re.sub(self._trans, "", line)
+        time_range = extract_float_range(trans_string)
+        return {user_file_back_trans: range_entry(start=time_range[0],
+                                                         stop=time_range[1])}
+
     def _get_monitor_number(self, line):
         monitor_selection = re.search(self._single_monitor, line).group(0)
         monitor_selection = monitor_selection.strip()
         monitor_number_string = re.sub(self._mon_id, "", monitor_selection)
-        return convert_string_to_float(monitor_number_string)
+        return convert_string_to_integer(monitor_number_string)
 
     @staticmethod
     def get_type():
@@ -1199,7 +1216,7 @@ class TransParser(UserFileComponentParser):
         trans_spec_shift_string = re.sub(self._trans_spec_4, "", line)
         trans_spec_shift_string = re.sub(self._shift, "", trans_spec_shift_string)
         trans_spec_shift = convert_string_to_float(trans_spec_shift_string)
-        return {user_file_trans_spec_shift: trans_spec_shift}
+        return {user_file_trans_spec_shift: trans_spec_shift, user_file_trans_spec: 4}
 
     def _extract_radius(self, line):
         radius_string = re.sub(self._radius, "", line)
@@ -1466,7 +1483,7 @@ class FitParser(UserFileComponentParser):
         FIT/TRANS/LIN [w1 w2]  or  FIT/TRANS/LINEAR [w1 w2]  or  FIT/TRANS/STRAIGHT [w1 w2]
         FIT/TRANS/LOG [w1 w2]  or  FIT/TRANS/YLOG [w1 w2]
         FIT/MONITOR time1 time2
-        FIT/TRANS/[CAN/|SAMPLE/][LIN|LOG|POLYNOMIAL[2|3|4|5]]
+        FIT/TRANS/[CAN/|SAMPLE/][LIN|LOG|POLYNOMIAL[2|3|4|5]] [w1 w2]
     """
     Type = "FIT"
     sample = "SAMPLE"
@@ -1483,26 +1500,23 @@ class FitParser(UserFileComponentParser):
         trans_off_or_clear = self._trans_prefix + "(OFF|CLEAR)\\s*"
         self._trans_clear_pattern = re.compile(start_string + trans_off_or_clear + end_string)
 
-        # Range based fits
-        self._lin = "\\s*(LINEAR|LIN|STRAIGHT)\\s*"
-        self._log = "\\s*(YLOG|LOG)\\s*"
-        self._lin_or_log = "\\s*(" + self._trans_prefix + self._lin + "|" + self._trans_prefix + self._log + ")\\s*"
-        self._range_based_fits_pattern = re.compile(start_string + self._lin_or_log + space_string +
-                                                    float_number + space_string + float_number + end_string)
-
         # General fits
         self._sample = "\\s*SAMPLE\\s*/\\s*"
         self._can = "\\s*CAN\\s*/\\s*"
         self._can_or_sample = "\\s*(" + self._can + "|" + self._sample + ")"
         self._optional_can_or_sample = "\\s*(" + self._can_or_sample + ")?"
 
+        self._lin = "\\s*(LINEAR|LIN|STRAIGHT)\\s*"
+        self._log = "\\s*(YLOG|LOG)\\s*"
         self._polynomial = "\\s*POLYNOMIAL\\s*"
         self._polynomial_with_optional_order = self._polynomial + "(2|3|4|5)?\\s*"
         self._lin_or_log_or_poly = "\\s*(" + self._lin + "|" + self._log + "|" +\
                                    self._polynomial_with_optional_order + ")\\s*"
+        self._lin_or_log_or_poly_to_remove = "\\s*(" + self._lin + "|" + self._log + "|" + self._polynomial + ")\\s*"
+        self._wavelength_optional = "\\s*(" + float_number + space_string + float_number + ")?\\s*"
 
         self._general_fit_pattern = re.compile(start_string + self._trans_prefix + self._optional_can_or_sample +
-                                               self._lin_or_log_or_poly + end_string)
+                                               self._lin_or_log_or_poly + self._wavelength_optional + end_string)
 
         # Monitor times
         self._monitor = "\\s*MONITOR\\s*"
@@ -1516,8 +1530,6 @@ class FitParser(UserFileComponentParser):
         # Determine the qualifier and extract the user setting
         if self._is_clear(setting):
             output = FitParser.extract_clear()
-        elif self._is_range_based_fit(setting):
-            output = self._extract_range_based_fit(setting)
         elif self._is_monitor(setting):
             output = self._extract_monitor(setting)
         elif self._is_general_fit(setting):
@@ -1529,20 +1541,11 @@ class FitParser(UserFileComponentParser):
     def _is_clear(self, line):
         return does_pattern_match(self._trans_clear_pattern, line)
 
-    def _is_range_based_fit(self, line):
-        return does_pattern_match(self._range_based_fits_pattern, line)
-
     def _is_monitor(self, line):
         return does_pattern_match(self._monitor_pattern, line)
 
     def _is_general_fit(self, line):
         return does_pattern_match(self._general_fit_pattern, line)
-
-    def _extract_range_based_fit(self, line):
-        fit_type = user_file_fit_log if re.search(self._log, line) is not None else user_file_fit_lin
-        value_string = re.sub(self._lin_or_log, "", line)
-        values = extract_float_range(value_string)
-        return {user_file_fit_range: range_entry_fit(start=values[0], stop=values[1], fit_type=fit_type)}
 
     def _extract_monitor(self, line):
         values_string = re.sub(self._monitor, "", line)
@@ -1552,59 +1555,76 @@ class FitParser(UserFileComponentParser):
     def _extract_general_fit(self, line):
         fit_type = self._get_fit_type(line)
         ws_type = self._get_workspace_type(line)
+        wavelength_min, wavelength_max = self._get_wavelength(line)
+        polynomial_order = self._get_polynomial_order(fit_type, line)
+        return {user_file_fit_general: fit_general(start=wavelength_min, stop=wavelength_max,
+                                                   fit_type=fit_type, data_type=ws_type,
+                                                   polynomial_order=polynomial_order)}
 
-        output = dict()
-
-        poly_order = self._get_polynomial_order(fit_type, line)
-
-        if ws_type == FitParser.both:
-            if fit_type == user_file_fit_lin or fit_type == user_file_fit_log:
-                output.update({user_file_fit_can: fit_type})
-                output.update({user_file_fit_sample: fit_type})
-            else:
-                output.update({user_file_fit_can_poly: poly_order})
-                output.update({user_file_fit_sample_poly: poly_order})
-        elif ws_type == FitParser.sample:
-            if fit_type == user_file_fit_lin or fit_type == user_file_fit_log:
-                output.update({user_file_fit_sample: fit_type})
-            else:
-                output.update({user_file_fit_sample_poly: poly_order})
-        elif ws_type == FitParser.can:
-            if fit_type == user_file_fit_lin or fit_type == user_file_fit_log:
-                output.update({user_file_fit_can: fit_type})
-            else:
-                output.update({user_file_fit_can_poly: poly_order})
-        else:
-            raise RuntimeError("FitParser: Encountered an unknown workspace selection: {0}".format(line))
-        return output
+    def _get_wavelength(self, line):
+        _, wavelength_min, wavelength_max = self._get_wavelength_and_polynomial(line)
+        return wavelength_min, wavelength_max
 
     def _get_polynomial_order(self, fit_type, line):
-        if fit_type != user_file_fit_poly:
-            return 0
-        # Remove trans
-        poly_string = re.sub(self._trans_prefix, "", line)
-        poly_string = re.sub(self._can_or_sample, "", poly_string)
-        poly_string = re.sub(self._polynomial, "", poly_string)
-        return 2 if poly_string == "" else convert_string_to_integer(poly_string)
+        if fit_type != FitType.Polynomial:
+            poly_order = 0
+        else:
+            poly_order, _, _ = self._get_wavelength_and_polynomial(line)
+        return 2 if poly_order is None else poly_order
+
+    def _get_wavelength_and_polynomial(self, line):
+        fit_string = re.sub(self._trans_prefix, "", line)
+        fit_string = re.sub(self._can_or_sample, "", fit_string)
+        fit_string = re.sub(self._lin_or_log_or_poly_to_remove, "", fit_string)
+
+        # We should now have something like [poly_order] [w1 w2]
+        # There are four posibilities
+        # 1. There is no number
+        # 2. There is one number -> it has to be the poly_order
+        # 3. There are two numbers -> it has to be the w1 and w2
+        # 4. There are three numbers -> it has to be poly_order w1 and w2
+        fit_string = ' '.join(fit_string.split())
+        fit_string_array = fit_string.split()
+        length_array = len(fit_string_array)
+        if length_array == 0:
+            polynomial_order = None
+            wavelength_min = None
+            wavelength_max = None
+        elif length_array == 1:
+            polynomial_order = convert_string_to_integer(fit_string_array[0])
+            wavelength_min = None
+            wavelength_max = None
+        elif length_array == 2:
+            polynomial_order = None
+            wavelength_min = convert_string_to_float(fit_string_array[0])
+            wavelength_max = convert_string_to_float(fit_string_array[1])
+        elif length_array == 3:
+            polynomial_order = convert_string_to_integer(fit_string_array[0])
+            wavelength_min = convert_string_to_float(fit_string_array[1])
+            wavelength_max = convert_string_to_float(fit_string_array[2])
+        else:
+            raise RuntimeError("FitParser: Incorrect number of fit entries: {0}".format(line))
+
+        return polynomial_order, wavelength_min, wavelength_max
 
     def _get_fit_type(self, line):
         if re.search(self._log, line) is not None:
-            fit_type = user_file_fit_log
+            fit_type = FitType.Log
         elif re.search(self._lin, line) is not None:
-            fit_type = user_file_fit_lin
+            fit_type = FitType.Linear
         elif re.search(self._polynomial, line) is not None:
-            fit_type = user_file_fit_poly
+            fit_type = FitType.Polynomial
         else:
             raise RuntimeError("FitParser: Encountered unknown fit function: {0}".format(line))
         return fit_type
 
     def _get_workspace_type(self, line):
         if re.search(self._sample, line) is not None:
-            ws_type = FitParser.sample
+            ws_type = DataType.Sample
         elif re.search(self._can, line) is not None:
-            ws_type = FitParser.can
+            ws_type = DataType.Can
         else:
-            ws_type = FitParser.both
+            ws_type = None
         return ws_type
 
     @staticmethod

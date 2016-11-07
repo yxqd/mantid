@@ -5,8 +5,11 @@
 import json
 from SANS2.State.SANSStateBase import (SANSStateBase, sans_parameters, PositiveIntegerParameter,
                                        BoolParameter, PositiveFloatParameter, ClassTypeParameter,
-                                       FloatParameter, DictParameter, StringListParameter, StringParameter)
-from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType, FitType)
+                                       FloatParameter, DictParameter, StringListParameter, StringParameter,
+                                       PositiveFloatWithNoneParameter)
+from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType, FitType, DataType,
+                                           convert_reduction_data_type_to_string)
+from SANS2.Common.SANSConfigurations import SANSConfigurations
 
 
 # ------------------------------------------------
@@ -14,6 +17,37 @@ from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType, FitType)
 # ------------------------------------------------
 class SANSStateCalculateTransmission(object):
     pass
+
+
+@sans_parameters
+class SANSStateTransmissionFit(SANSStateBase):
+    fit_type = ClassTypeParameter(FitType)
+    polynomial_order = PositiveIntegerParameter()
+    wavelength_low = PositiveFloatWithNoneParameter()
+    wavelength_high = PositiveFloatWithNoneParameter()
+
+    def __init__(self):
+        super(SANSStateTransmissionFit, self).__init__()
+        self.fit_type = FitType.Linear
+        self.polynomial_order = 0
+
+    def validate(self):
+        is_invalid = {}
+        if self.fit_type is not FitType.Polynomial and self.polynomial_order != 0:
+            is_invalid.update({"SANSStateTransmissionFit": "Can only set a polynomial order for polynomial"
+                                                           " fitting, but selected {0}".format(self.fit_type)})
+        if (self.wavelength_low is not None and self.wavelength_high is None) or \
+            (self.wavelength_low is None and self.wavelength_high is not None):
+            is_invalid.update({"SANSStateTransmissionFit": "Either both an upper and a lower limit "
+                                                           "have to be specified or none."})
+        if self.wavelength_low is not None and self.wavelength_high is not None:
+            if self.wavelength_low > self.wavelength_high:
+                is_invalid.update({"SANSStateTransmissionFit": "The lower wavelength limit {0} should be smaller "
+                                                               "than the upper wavelength limit {1}"
+                                                               ".".format(self.wavelength_low, self.wavelength_high)})
+        if is_invalid:
+            raise ValueError("SANSStateTransmissionFit: The provided inputs are illegal. "
+                             "Please see: {0}".format(json.dumps(is_invalid)))
 
 
 @sans_parameters
@@ -63,14 +97,15 @@ class SANSStateCalculateTransmissionISIS(SANSStateBase, SANSStateCalculateTransm
     # -----------------------
     # Fit
     # ----------------------
-    fit_type = ClassTypeParameter(FitType)
-    polynomial_order = PositiveIntegerParameter()
+    fit = DictParameter()
 
     def __init__(self):
         super(SANSStateCalculateTransmissionISIS, self).__init__()
         self.background_TOF_monitor_start = {}
         self.background_TOF_monitor_stop = {}
-        self.fit_type = FitType.Linear
+        self.fit = {convert_reduction_data_type_to_string(DataType.Sample): SANSStateTransmissionFit(),
+                    convert_reduction_data_type_to_string(DataType.Can): SANSStateTransmissionFit()}
+        self.use_full_wavelength_range = False
 
     def validate(self):
         is_invalid = {}
@@ -188,23 +223,49 @@ class SANSStateCalculateTransmissionISIS(SANSStateBase, SANSStateCalculateTransm
         # -----
         # Fit
         # -----
-        if self.fit_type is FitType.Polynomial and self.polynomial_order is None:
-            is_invalid.update({"fit_type": "For a polynomial fit a polynomial order has to specified."})
+        self.fit[convert_reduction_data_type_to_string(DataType.Sample)].validate()
+        self.fit[convert_reduction_data_type_to_string(DataType.Can)].validate()
 
         if is_invalid:
-            raise ValueError("SANSStateMoveDetectorISIS: The provided inputs are illegal. "
+            raise ValueError("SANSStateCalculateTransmissionISIS: The provided inputs are illegal. "
                              "Please see: {0}".format(json.dumps(is_invalid)))
 
 
 class SANSStateCalculateTransmissionLOQ(SANSStateCalculateTransmissionISIS):
     def __init__(self):
-        super(SANSStateCalculateTransmissionISIS, self).__init__()
+        super(SANSStateCalculateTransmissionLOQ, self).__init__()
+        # Set the LOQ full wavelength range
+        self.wavelength_full_range_low = SANSConfigurations.LOQ.wavelength_full_range_low
+        self.wavelength_full_range_high = SANSConfigurations.LOQ.wavelength_full_range_high
+
         # Set the LOQ default range for prompt peak correction
-        self.prompt_peak_correction_min = 19000.0
-        self.prompt_peak_correction_max = 20500.0
+        self.prompt_peak_correction_min = SANSConfigurations.LOQ.prompt_peak_correction_min
+        self.prompt_peak_correction_max = SANSConfigurations.LOQ.prompt_peak_correction_max
 
     def validate(self):
         super(SANSStateCalculateTransmissionLOQ, self).validate()
+
+
+class SANSStateCalculateTransmissionSANS2D(SANSStateCalculateTransmissionISIS):
+    def __init__(self):
+        super(SANSStateCalculateTransmissionSANS2D, self).__init__()
+        # Set the LOQ full wavelength range
+        self.wavelength_full_range_low = SANSConfigurations.SANS2D.wavelength_full_range_low
+        self.wavelength_full_range_high = SANSConfigurations.SANS2D.wavelength_full_range_high
+
+    def validate(self):
+        super(SANSStateCalculateTransmissionSANS2D, self).validate()
+
+
+class SANSStateCalculateTransmissionLARMOR(SANSStateCalculateTransmissionISIS):
+    def __init__(self):
+        super(SANSStateCalculateTransmissionLARMOR, self).__init__()
+        # Set the LOQ full wavelength range
+        self.wavelength_full_range_low = SANSConfigurations.LARMOR.wavelength_full_range_low
+        self.wavelength_full_range_high = SANSConfigurations.LARMOR.wavelength_full_range_high
+
+    def validate(self):
+        super(SANSStateCalculateTransmissionLARMOR, self).validate()
 
 # -----------------------------------------------
 # SANSStateCalculateTransmission setup for other facilities/techniques/scenarios.

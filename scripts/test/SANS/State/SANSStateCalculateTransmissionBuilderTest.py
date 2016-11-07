@@ -3,7 +3,7 @@ import mantid
 
 from SANS2.State.StateBuilder.SANSStateDataBuilder import get_data_builder
 from SANS2.State.StateBuilder.SANSStateCalculateTransmissionBuilder import get_calculate_transmission_builder
-from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType)
+from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType, DataType, convert_reduction_data_type_to_string)
 from SANS2.Common.SANSEnumerations import (SANSFacility, SANSInstrument, FitType)
 
 
@@ -46,8 +46,15 @@ class SANSStateCalculateTransmissionBuilderTest(unittest.TestCase):
         builder.set_background_TOF_roi_start(1.4)
         builder.set_background_TOF_roi_stop(34.4)
 
-        builder.set_fit_type(FitType.Linear)
-        builder.set_polynomial_order(2)
+        builder.set_Sample_fit_type(FitType.Linear)
+        builder.set_Sample_polynomial_order(0)
+        builder.set_Sample_wavelength_low(10.0)
+        builder.set_Sample_wavelength_high(20.0)
+
+        builder.set_Can_fit_type(FitType.Polynomial)
+        builder.set_Can_polynomial_order(3)
+        builder.set_Can_wavelength_low(10.0)
+        builder.set_Can_wavelength_high(20.0)
 
         state = builder.build()
 
@@ -79,8 +86,16 @@ class SANSStateCalculateTransmissionBuilderTest(unittest.TestCase):
         self.assertTrue(state.background_TOF_roi_start == 1.4)
         self.assertTrue(state.background_TOF_roi_stop == 34.4)
 
-        self.assertTrue(state.fit_type is FitType.Linear)
-        self.assertTrue(state.polynomial_order == 2)
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Sample)].fit_type is FitType.Linear)
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Sample)].polynomial_order == 0)
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_low == 10.)
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_high == 20.)
+
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Can)].fit_type is
+                        FitType.Polynomial)
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Can)].polynomial_order == 3)
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_low == 10.)
+        self.assertTrue(state.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_high == 20.)
 
 
 if __name__ == '__main__':

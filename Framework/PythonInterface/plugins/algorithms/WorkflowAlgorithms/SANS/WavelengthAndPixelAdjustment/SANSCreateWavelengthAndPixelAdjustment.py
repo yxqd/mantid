@@ -4,11 +4,11 @@
     and wavelength adjustment.
 """
 
-from mantid.kernel import (Direction, IntBoundedValidator, FloatBoundedValidator, StringListValidator, Property)
+from mantid.kernel import (Direction, IntBoundedValidator, FloatBoundedValidator, StringListValidator, Property,
+                           PropertyManagerProperty)
 from mantid.api import (DataProcessorAlgorithm, MatrixWorkspaceProperty, AlgorithmFactory, PropertyMode,
-                        FileProperty, FileAction, Progress, PropertyManagerProperty)
+                        FileProperty, FileAction, Progress)
 from SANS2.State.SANSStateBase import create_deserialized_sans_state_from_property_manager
-from mantid.dataobjects import EventWorkspace
 from SANS2.Common.SANSEnumerations import (RangeStepType)
 from SANS2.Common.SANSConstants import SANSConstants
 from SANS2.Common.SANSFunctions import create_unmanaged_algorithm
@@ -123,7 +123,7 @@ class SANSCreateWavelengthAndPixelAdjustment(DataProcessorAlgorithm):
             load_name = "LoadRKH"
             load_option = {"Filename": file_name,
                            SANSConstants.output_workspace: SANSConstants.dummy,
-                            "FirstColumnValue": "Wavelength"}
+                           "FirstColumnValue": "Wavelength"}
             load_alg = create_unmanaged_algorithm(load_name, **load_option)
             load_alg.execute()
             output_workspace = load_alg.getProperty(SANSConstants.output_workspace).value
