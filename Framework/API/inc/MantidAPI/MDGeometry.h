@@ -1,19 +1,11 @@
 #ifndef MANTID_API_MDGEOMETRY_H_
 #define MANTID_API_MDGEOMETRY_H_
 
-<<<<<<< HEAD
-#include "MantidKernel/System.h"
-#include "MantidKernel/VMD.h"
-#include "MantidGeometry/MDGeometry/IMDDimension.h"
-#include "MantidAPI/AnalysisDataService.h"
-#include <Poco/NObserver.h>
-=======
 #include "MantidAPI/AnalysisDataService.h"
 #include "MantidAPI/MDLeanGeometry.h"
-
->>>>>>> 5329d0b... add MDLeanGeometry with basic stuff from MDGeometry, re #14165
+#include "MantidGeometry/MDGeometry/IMDDimension.h"
+#include "MantidKernel/System.h"
 #include <boost/shared_ptr.hpp>
-
 #include <Poco/NObserver.h>
 
 namespace Mantid {
@@ -51,34 +43,11 @@ class IMDWorkspace;
   File change history is stored at: <https://github.com/mantidproject/mantid>
   Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
-<<<<<<< HEAD
-class DLLExport MDGeometry {
-=======
-class MANTID_API_DLL MDGeometry : public MDLeanGeometry {
->>>>>>> 5329d0b... add MDLeanGeometry with basic stuff from MDGeometry, re #14165
+class DLLExport MDGeometry : public MDLeanGeometry {
 public:
   MDGeometry();
   MDGeometry(const MDGeometry &other);
   virtual ~MDGeometry();
-<<<<<<< HEAD
-  void
-  initGeometry(std::vector<Mantid::Geometry::IMDDimension_sptr> &dimensions);
-
-  // --------------------------------------------------------------------------------------------
-  // These are the main methods for dimensions, that CAN be overridden (e.g. by
-  // MatrixWorkspace)
-  virtual size_t getNumDims() const;
-  virtual boost::shared_ptr<const Mantid::Geometry::IMDDimension>
-  getDimension(size_t index) const;
-  virtual boost::shared_ptr<const Mantid::Geometry::IMDDimension>
-  getDimensionWithId(std::string id) const;
-  size_t getDimensionIndexByName(const std::string &name) const;
-  size_t getDimensionIndexById(const std::string &id) const;
-  Mantid::Geometry::VecIMDDimension_const_sptr
-  getNonIntegratedDimensions() const;
-  virtual std::vector<coord_t> estimateResolution() const;
-=======
->>>>>>> 5329d0b... add MDLeanGeometry with basic stuff from MDGeometry, re #14165
 
   // --------------------------------------------------------------------------------------------
   boost::shared_ptr<const Mantid::Geometry::IMDDimension> getXDimension() const;
@@ -87,18 +56,6 @@ public:
   boost::shared_ptr<const Mantid::Geometry::IMDDimension> getTDimension() const;
 
   std::string getGeometryXML() const;
-<<<<<<< HEAD
-
-  void addDimension(boost::shared_ptr<Mantid::Geometry::IMDDimension> dim);
-  void addDimension(Mantid::Geometry::IMDDimension *dim);
-
-  // --------------------------------------------------------------------------------------------
-  Mantid::Kernel::VMD &getBasisVector(size_t index);
-  const Mantid::Kernel::VMD &getBasisVector(size_t index) const;
-  void setBasisVector(size_t index, const Mantid::Kernel::VMD &vec);
-  bool allBasisNormalized() const;
-=======
->>>>>>> 5329d0b... add MDLeanGeometry with basic stuff from MDGeometry, re #14165
 
   // --------------------------------------------------------------------------------------------
   bool hasOriginalWorkspace(size_t index = 0) const;
