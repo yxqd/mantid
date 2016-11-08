@@ -12,8 +12,9 @@ from SANS2.State.SANSStateSliceEvent import (SANSStateSliceEventISIS)
 from SANS2.State.SANSStateMask import (SANSStateMaskISIS)
 from SANS2.State.SANSStateWavelength import (SANSStateWavelengthISIS)
 from SANS2.State.SANSStateSave import (SANSStateSaveISIS)
-
-
+from SANS2.State.SANSStateNormalizeToMonitor import (SANSStateNormalizeToMonitorLOQ)
+from SANS2.State.SANSStateCalculateTransmission import (SANSStateCalculateTransmissionLOQ)
+from SANS2.State.SANSStateAdjustment import (SANSStateAdjustmentISIS)
 from SANS2.Common.SANSConstants import SANSConstants
 from SANS2.Common.SANSEnumerations import (ISISReductionMode, ReductionDimensionality, FitModeForMerge,
                                            RangeStepType, RebinType)
@@ -75,6 +76,37 @@ class SANSStateTest(unittest.TestCase):
         save_state = SANSStateSaveISIS()
         save_state.file_name = "test_file_name"
         state.save = save_state
+
+        # Adjustment state
+        normalize_to_monitor_state = SANSStateNormalizeToMonitorLOQ()
+        normalize_to_monitor_state.rebin_type = RebinType.Rebin
+        normalize_to_monitor_state.wavelength_low = 1.0
+        normalize_to_monitor_state.wavelength_high = 2.0
+        normalize_to_monitor_state.wavelength_step = 1.0
+        normalize_to_monitor_state.wavelength_step_type = RangeStepType.Lin
+        normalize_to_monitor_state.background_TOF_general_start = 1.0
+        normalize_to_monitor_state.background_TOF_general_stop = 2.0
+        normalize_to_monitor_state.background_TOF_monitor_start = {"1": 12, "2": 13}
+        normalize_to_monitor_state.background_TOF_monitor_stop = {"1": 15, "2": 18}
+        normalize_to_monitor_state.incident_monitor = 12
+
+        calculate_transmission_state = SANSStateCalculateTransmissionLOQ()
+        calculate_transmission_state.transmission_monitor = 3
+        calculate_transmission_state.incident_monitor = 1
+        calculate_transmission_state.rebin_type = RebinType.Rebin
+        calculate_transmission_state.wavelength_low = 1.0
+        calculate_transmission_state.wavelength_high = 2.0
+        calculate_transmission_state.wavelength_step = 1.0
+        calculate_transmission_state.wavelength_step_type = RangeStepType.Lin
+        calculate_transmission_state.background_TOF_general_start = 1.0
+        calculate_transmission_state.background_TOF_general_stop = 2.0
+        calculate_transmission_state.background_TOF_monitor_start = {"1": 12, "2": 13}
+        calculate_transmission_state.background_TOF_monitor_stop = {"1": 15, "2": 18}
+
+        adjustment_state = SANSStateAdjustmentISIS()
+        adjustment_state.normalize_to_monitor = normalize_to_monitor_state
+        adjustment_state.calculate_transmission = calculate_transmission_state
+        state.adjustment = adjustment_state
 
         # Assert
         try:
@@ -197,6 +229,37 @@ class SANSStateTest(unittest.TestCase):
         save_state.file_name = "test_file_name"
         state.save = save_state
 
+        # Adjustment state
+        normalize_to_monitor_state = SANSStateNormalizeToMonitorLOQ()
+        normalize_to_monitor_state.rebin_type = RebinType.Rebin
+        normalize_to_monitor_state.wavelength_low = 1.0
+        normalize_to_monitor_state.wavelength_high = 2.0
+        normalize_to_monitor_state.wavelength_step = 1.0
+        normalize_to_monitor_state.wavelength_step_type = RangeStepType.Lin
+        normalize_to_monitor_state.background_TOF_general_start = 1.0
+        normalize_to_monitor_state.background_TOF_general_stop = 2.0
+        normalize_to_monitor_state.background_TOF_monitor_start = {"1": 12, "2": 13}
+        normalize_to_monitor_state.background_TOF_monitor_stop = {"1": 15, "2": 18}
+        normalize_to_monitor_state.incident_monitor = 12
+
+        calculate_transmission_state = SANSStateCalculateTransmissionLOQ()
+        calculate_transmission_state.transmission_monitor = 3
+        calculate_transmission_state.incident_monitor = 1
+        calculate_transmission_state.rebin_type = RebinType.Rebin
+        calculate_transmission_state.wavelength_low = 1.0
+        calculate_transmission_state.wavelength_high = 2.0
+        calculate_transmission_state.wavelength_step = 1.0
+        calculate_transmission_state.wavelength_step_type = RangeStepType.Lin
+        calculate_transmission_state.background_TOF_general_start = 1.0
+        calculate_transmission_state.background_TOF_general_stop = 2.0
+        calculate_transmission_state.background_TOF_monitor_start = {"1": 12, "2": 13}
+        calculate_transmission_state.background_TOF_monitor_stop = {"1": 15, "2": 18}
+
+        adjustment_state = SANSStateAdjustmentISIS()
+        adjustment_state.normalize_to_monitor = normalize_to_monitor_state
+        adjustment_state.calculate_transmission = calculate_transmission_state
+        state.adjustment = adjustment_state
+
         # Act
         serialized = state.property_manager
 
@@ -239,6 +302,15 @@ class SANSStateTest(unittest.TestCase):
         self.assertTrue(state_2.wavelength.rebin_type is RebinType.Rebin)
 
         self.assertTrue(state_2.save.file_name == "test_file_name")
+
+        # Adjustment state
+        self.assertTrue(state_2.adjustment.normalize_to_monitor.rebin_type is RebinType.Rebin)
+        self.assertTrue(state_2.adjustment.normalize_to_monitor.wavelength_low == 1.0)
+        self.assertTrue(state_2.adjustment.normalize_to_monitor.wavelength_high == 2.0)
+        self.assertTrue(state_2.adjustment.normalize_to_monitor.wavelength_step == 1.0)
+        self.assertTrue(state_2.adjustment.normalize_to_monitor.background_TOF_monitor_start == {"1": 12, "2": 13})
+        self.assertTrue(state_2.adjustment.calculate_transmission.transmission_monitor == 3)
+
 
 if __name__ == '__main__':
     unittest.main()
