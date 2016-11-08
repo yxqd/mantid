@@ -33,5 +33,12 @@ class SANSConstants(object):
     reduced_workspace_name_in_logs = "reduced_workspace_name"
     sans_file_tag = "sans_file_tag"
 
+
+    # String names for SANSEnumerations
+    rebin = "Rebin"
+    intperpolating_rebin = "InterpolatingRebin"
+    range_step_lin = "lin"
+    range_step_log = "log"
+
     class Calibration(object):
         calibration_workspace_tag = "sans_applied_calibration_file"

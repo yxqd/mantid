@@ -7,6 +7,9 @@ from mantid.dataobjects import EventWorkspace
 from mantid.api import (DataProcessorAlgorithm, MatrixWorkspaceProperty, AlgorithmFactory, PropertyMode, Progress)
 from SANS2.Common.SANSConstants import SANSConstants
 from SANS2.Common.SANSFunctions import (create_unmanaged_algorithm, append_to_sans_file_tag)
+from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType, convert_rebin_type_to_string,
+                                           convert_string_to_rebin_type, convert_string_to_range_step_type,
+                                           convert_range_step_type_to_string)
 
 
 class SANSConvertToWavelength(DataProcessorAlgorithm):
@@ -30,13 +33,17 @@ class SANSConvertToWavelength(DataProcessorAlgorithm):
                              doc='The step size of the wavelength binning.')
 
         # Step type
-        allowed_step_types = StringListValidator(["LOG", "LIN"])
-        self.declareProperty('WavelengthStepType', "LIN", validator=allowed_step_types, direction=Direction.Input,
+        allowed_step_types = StringListValidator([convert_range_step_type_to_string(RangeStepType.Log),
+                                                  convert_range_step_type_to_string(RangeStepType.Lin)])
+        self.declareProperty('WavelengthStepType', convert_range_step_type_to_string(RangeStepType.Lin),
+                             validator=allowed_step_types, direction=Direction.Input,
                              doc='The step type for rebinning.')
 
         # Rebin type
-        allowed_rebin_methods = StringListValidator(["Rebin", "InterpolatingRebin"])
-        self.declareProperty("RebinMode", "Rebin", validator=allowed_rebin_methods, direction=Direction.Input,
+        allowed_rebin_methods = StringListValidator([convert_rebin_type_to_string(RebinType.Rebin),
+                                                     convert_rebin_type_to_string(RebinType.InterpolatingRebin)])
+        self.declareProperty("RebinMode", convert_rebin_type_to_string(RebinType.Rebin),
+                             validator=allowed_rebin_methods, direction=Direction.Input,
                              doc="The method which is to be applied to the rebinning.")
 
         self.declareProperty(MatrixWorkspaceProperty('OutputWorkspace', '',
@@ -52,9 +59,9 @@ class SANSConvertToWavelength(DataProcessorAlgorithm):
         workspace = self._convert_units_to_wavelength(workspace)
 
         # Get the rebin option
-        rebin_name = self.getProperty("RebinMode").value
+        rebin_type = convert_string_to_rebin_type(self.getProperty("RebinMode").value)
         rebin_string = self._get_rebin_string(workspace)
-        if rebin_name == "Rebin":
+        if rebin_type is RebinType.Rebin:
             rebin_options = {SANSConstants.input_workspace: workspace,
                              SANSConstants.output_workspace: SANSConstants.dummy,
                              "PreserveEvents": True,
@@ -65,7 +72,7 @@ class SANSConvertToWavelength(DataProcessorAlgorithm):
                              "Params": rebin_string}
         # # Perform the rebin
         progress.report("Performing rebin.")
-        workspace = self._perform_rebin(rebin_name, rebin_options)
+        workspace = self._perform_rebin(rebin_type, rebin_options)
         append_to_sans_file_tag(workspace, "_toWavelength")
         self.setProperty(SANSConstants.output_workspace, workspace)
         progress.report("Finished converting to wavelength.")
@@ -91,8 +98,8 @@ class SANSConvertToWavelength(DataProcessorAlgorithm):
 
         # Check the workspace
         workspace = self.getProperty(SANSConstants.input_workspace).value
-        rebin_mode = self.getProperty("RebinMode").value
-        if rebin_mode == "InterpolatingRebin" and isinstance(workspace, EventWorkspace):
+        rebin_type = convert_string_to_rebin_type(self.getProperty("RebinMode").value)
+        if rebin_type is RebinType.InterpolatingRebin and isinstance(workspace, EventWorkspace):
             errors.update({"RebinMode": "An interpolating rebin cannot be applied to an EventWorkspace."})
         return errors
 
@@ -120,12 +127,13 @@ class SANSConvertToWavelength(DataProcessorAlgorithm):
             wavelength_high = max(workspace.readX(0))
 
         wavelength_step = self.getProperty("WavelengthStep").value
-        step_type = self.getProperty("WavelengthStepType").value
-        pre_factor = -1 if step_type == "LOG" else 1
+        step_type = convert_string_to_range_step_type(self.getProperty("WavelengthStepType").value)
+        pre_factor = -1 if step_type == RangeStepType.Log else 1
         wavelength_step *= pre_factor
         return str(wavelength_low) + "," + str(wavelength_step) + "," + str(wavelength_high)
 
-    def _perform_rebin(self, rebin_name, rebin_options):
+    def _perform_rebin(self, rebin_type, rebin_options):
+        rebin_name = "Rebin" if rebin_type is RebinType.Rebin else "InterpolatingRebin"
         rebin_alg = create_unmanaged_algorithm(rebin_name, **rebin_options)
         rebin_alg.execute()
         return rebin_alg.getProperty(SANSConstants.output_workspace).value

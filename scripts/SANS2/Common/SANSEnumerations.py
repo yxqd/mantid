@@ -259,6 +259,22 @@ class RangeStepType(object):
     pass
 
 
+def convert_range_step_type_to_string(range_type):
+    if range_type is RangeStepType.Lin:
+        range_string = SANSConstants.range_step_lin
+    elif range_type is RangeStepType.Log:
+        range_string = SANSConstants.range_step_log
+    return range_string
+
+
+def convert_string_to_range_step_type(range_string):
+    if range_string == SANSConstants.range_step_lin:
+        range_type = RangeStepType.Lin
+    elif range_string == SANSConstants.range_step_log:
+        range_type = RangeStepType.Log
+    return range_type
+
+
 # --------------------------
 #  Rebin
 # --------------------------
@@ -268,6 +284,22 @@ class RebinType(object):
     Defines the rebin types available
     """
     pass
+
+
+def convert_rebin_type_to_string(rebin_type):
+    if rebin_type is RebinType.Rebin:
+        rebin_string = SANSConstants.rebin
+    elif rebin_type is RebinType.InterpolatingRebin:
+        rebin_string = SANSConstants.intperpolating_rebin
+    return rebin_string
+
+
+def convert_string_to_rebin_type(rebin_string):
+    if rebin_string == SANSConstants.rebin:
+        rebin_type = RebinType.Rebin
+    elif rebin_string == SANSConstants.intperpolating_rebin:
+        rebin_type = RebinType.InterpolatingRebin
+    return rebin_type
 
 
 # --------------------------

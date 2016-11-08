@@ -4,7 +4,8 @@
 
 import json
 from SANS2.State.SANSStateBase import (SANSStateBase, sans_parameters, PositiveIntegerParameter,
-                                       PositiveFloatParameter, FloatParameter, ClassTypeParameter, DictParameter)
+                                       PositiveFloatParameter, FloatParameter, ClassTypeParameter, DictParameter,
+                                       PositiveFloatWithNoneParameter)
 from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType)
 
 
@@ -17,8 +18,8 @@ class SANSStateNormalizeToMonitor(object):
 
 @sans_parameters
 class SANSStateNormalizeToMonitorISIS(SANSStateBase, SANSStateNormalizeToMonitor):
-    prompt_peak_correction_min = PositiveFloatParameter()
-    prompt_peak_correction_max = PositiveFloatParameter()
+    prompt_peak_correction_min = PositiveFloatWithNoneParameter()
+    prompt_peak_correction_max = PositiveFloatWithNoneParameter()
 
     rebin_type = ClassTypeParameter(RebinType)
     wavelength_low = PositiveFloatParameter()

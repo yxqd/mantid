@@ -8,6 +8,7 @@ from mantid.api import (DataProcessorAlgorithm, MatrixWorkspaceProperty, Algorit
 from SANS2.Common.SANSConstants import SANSConstants
 from SANS2.Common.SANSFunctions import create_unmanaged_algorithm
 from SANS2.State.SANSStateBase import create_deserialized_sans_state_from_property_manager
+from SANS2.Common.SANSEnumerations import convert_rebin_type_to_string, convert_range_step_type_to_string
 
 
 class SANSNormalizeToMonitor(DataProcessorAlgorithm):
@@ -59,7 +60,7 @@ class SANSNormalizeToMonitor(DataProcessorAlgorithm):
         workspace = self._perform_flat_background_correction(workspace, normalize_to_monitor_state)
 
         # 5. Convert to wavelength with the specified bin settings.
-        workspace = self._convert_to_wavelength(workspace)
+        workspace = self._convert_to_wavelength(workspace, normalize_to_monitor_state)
         self.setProperty(SANSConstants.output_workspace, workspace)
 
     def _scale(self, workspace, factor):
@@ -91,6 +92,7 @@ class SANSNormalizeToMonitor(DataProcessorAlgorithm):
         :return: a workspace which only contains the incident beam spectrum.
         """
         workspace = self.getProperty(SANSConstants.input_workspace).value
+
         workspace_index = workspace.getIndexFromSpectrumNumber(spectrum_number)
         extract_name = "ExtractSingleSpectrum"
         extract_options = {SANSConstants.input_workspace: workspace,
@@ -113,8 +115,8 @@ class SANSNormalizeToMonitor(DataProcessorAlgorithm):
         :param normalize_to_monitor_state: a SANSStateNormalizeToMonitor object.
         :return: the corrected workspace.
         """
-        prompt_peak_correction_start = normalize_to_monitor_state.prompt_peak_correction_start
-        prompt_peak_correction_stop = normalize_to_monitor_state.prompt_peak_correction_stop
+        prompt_peak_correction_start = normalize_to_monitor_state.prompt_peak_correction_min
+        prompt_peak_correction_stop = normalize_to_monitor_state.prompt_peak_correction_max
 
         # We perform only a prompt peak correction if the start and stop values of the bins we want to remove,
         # were explicitly set. Some instruments require it, others don't.
@@ -147,13 +149,13 @@ class SANSNormalizeToMonitor(DataProcessorAlgorithm):
         background_tof_monitor_start = normalize_to_monitor_state.background_TOF_monitor_start
         background_tof_monitor_stop = normalize_to_monitor_state.background_TOF_monitor_stop
 
-        if incident_monitor_spectrum_number in background_tof_monitor_start and \
-                        incident_monitor_spectrum_number in background_tof_monitor_stop:
+        if incident_monitor_spectrum_as_string in background_tof_monitor_start.keys() and \
+                        incident_monitor_spectrum_as_string in background_tof_monitor_stop.keys():
             start_tof = background_tof_monitor_start[incident_monitor_spectrum_as_string]
             stop_tof = background_tof_monitor_stop[incident_monitor_spectrum_as_string]
         else:
-            start_tof = normalize_to_monitor_state.background_TOF_start
-            stop_tof = normalize_to_monitor_state.background_TOF_stop
+            start_tof = normalize_to_monitor_state.background_TOF_general_start
+            stop_tof = normalize_to_monitor_state.background_TOF_general_stop
 
         flat_name = "CalculateFlatBackground"
         flat_options = {SANSConstants.input_workspace: workspace,
@@ -185,8 +187,8 @@ class SANSNormalizeToMonitor(DataProcessorAlgorithm):
                            "WavelengthLow": wavelength_low,
                            "WavelengthHigh": wavelength_high,
                            "WavelengthStep": wavelength_step,
-                           "WavelengthStepType": wavelength_step_type,
-                           "RebinMode": wavelength_rebin_mode}
+                           "WavelengthStepType": convert_range_step_type_to_string(wavelength_step_type),
+                           "RebinMode": convert_rebin_type_to_string(wavelength_rebin_mode)}
 
         convert_alg = create_unmanaged_algorithm(convert_name, **convert_options)
         convert_alg.execute()
