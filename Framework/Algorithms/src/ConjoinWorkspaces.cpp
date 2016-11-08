@@ -4,6 +4,7 @@
 #include "MantidAlgorithms/ConjoinWorkspaces.h"
 #include "MantidAPI/CommonBinsValidator.h"
 #include "MantidAPI/SpectraAxis.h"
+#include "MantidAPI/TextAxis.h"
 
 namespace Mantid {
 namespace Algorithms {
@@ -186,10 +187,30 @@ void ConjoinWorkspaces::fixSpectrumNumbers(API::MatrixWorkspace_const_sptr ws1,
   specnum_t ws1max;
   getMinMax(ws1, ws1min, ws1max);
 
+  const int yAxisNum = 1;
+  const auto yAxisWS1 = ws1->getAxis(yAxisNum);
+  const auto yAxisWS2 = ws2->getAxis(yAxisNum);
+  auto outputYAxis = output->getAxis(yAxisNum);
+  const auto ws1len = ws1->getNumberHistograms();
+
+  const bool isTextAxis = yAxisWS1->isText() && yAxisWS2->isText();
+  const bool isNumericAxis = yAxisWS1->isNumeric() && yAxisWS2->isNumeric();
+  auto outputTextAxis = dynamic_cast<TextAxis *>(outputYAxis);
   // change the axis by adding the maximum existing spectrum number to the
   // current value
   for (size_t i = ws1->getNumberHistograms(); i < output->getNumberHistograms();
-       i++) {
+       ++i) {
+    if (isTextAxis) {
+      // check if we're outside the spectra of the first workspace
+      const std::string inputLabel = yAxisWS2->label(i - ws1len);
+      outputTextAxis->setLabel(i, (inputLabel.size() > 0) ? inputLabel : "");
+
+    } else if (isNumericAxis) {
+      // check if we're outside the spectra of the first workspace
+      const double inputVal = yAxisWS2->getValue(i - ws1len);
+      outputYAxis->setValue(i, inputVal);
+    }
+
     specnum_t origid;
     origid = output->getSpectrum(i).getSpectrumNo();
     output->getSpectrum(i).setSpectrumNo(origid + ws1max);

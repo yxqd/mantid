@@ -3,8 +3,9 @@
 
 #include <cxxtest/TestSuite.h>
 
-#include "MantidAlgorithms/ConjoinWorkspaces.h"
 #include "MantidAPI/Axis.h"
+#include "MantidAPI/FrameworkManager.h"
+#include "MantidAlgorithms/ConjoinWorkspaces.h"
 #include "MantidDataHandling/LoadRaw3.h"
 #include "MantidTestHelpers/WorkspaceCreationHelper.h"
 
@@ -233,7 +234,242 @@ public:
 
   void test_DONTCheckForOverlap_2D() { performTestNoOverlap(false); }
 
+  void test_notEmptyTextAxis() {
+    const std::string inputWorkspace = "weRebinned";
+
+    createWorkspaceWithAxisAndLabel(inputWorkspace, "Text", "Text");
+    MatrixWorkspace_const_sptr inputWS =
+        AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(
+            inputWorkspace);
+
+    const size_t inputSize = inputWS->getNumberHistograms();
+
+    doTestConjoinWorkspacesWithWorkspaces(inputWorkspace, inputWorkspace);
+    inputWS = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(
+        inputWorkspace);
+
+    const size_t outputSize = inputWS->getNumberHistograms();
+
+    TS_ASSERT_EQUALS(inputSize * 2, outputSize);
+    // Y axis number is 1, no need to cast up to TextAxis as we're only reading
+    // the values
+    const auto inputAxis = inputWS->getAxis(1);
+
+    for (size_t i = 0; i < outputSize; ++i) {
+      // check that all labels are the same
+      TS_ASSERT_EQUALS(inputAxis->label(0), inputAxis->label(i));
+    }
+  }
+
+  void test_emptyTextAxis() {
+    const std::string inputWorkspace = "weRebinned";
+
+    createWorkspaceWithAxisAndLabel(inputWorkspace, "Text", "");
+    MatrixWorkspace_const_sptr inputWS =
+        AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(
+            inputWorkspace);
+
+    const size_t inputSize = inputWS->getNumberHistograms();
+
+    doTestConjoinWorkspacesWithWorkspaces(inputWorkspace, inputWorkspace);
+    inputWS = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(
+        inputWorkspace);
+
+    const size_t outputSize = inputWS->getNumberHistograms();
+
+    TS_ASSERT_EQUALS(inputSize * 2, outputSize);
+    // Y axis number is 1, no need to cast up to TextAxis as we're only reading
+    // the values
+    const auto inputAxis = inputWS->getAxis(1);
+
+    for (size_t i = 0; i < outputSize; ++i) {
+      // check that all labels are the same
+      TS_ASSERT_EQUALS(inputAxis->label(0), inputAxis->label(i));
+    }
+  }
+
+  void test_emptyAndNotEmptyTextAxis() {
+    const std::string inputWorkspace1 = "weRebinned1";
+    const std::string inputWorkspace2 = "weRebinned2";
+
+    createWorkspaceWithAxisAndLabel(inputWorkspace1, "Text", "Text");
+    createWorkspaceWithAxisAndLabel(inputWorkspace2, "Text", "");
+
+    MatrixWorkspace_const_sptr inputWS1 =
+        AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(
+            inputWorkspace1);
+    MatrixWorkspace_const_sptr inputWS2 =
+        AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(
+            inputWorkspace2);
+
+    const size_t inputSize1 = inputWS1->getNumberHistograms();
+    const size_t inputSize2 = inputWS2->getNumberHistograms();
+
+    doTestConjoinWorkspacesWithWorkspaces(inputWorkspace1, inputWorkspace2);
+
+    inputWS1 = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(
+        inputWorkspace1);
+    inputWS2 = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(
+        inputWorkspace2);
+
+    const size_t outputSize = inputWS1->getNumberHistograms();
+
+    TS_ASSERT_EQUALS(inputSize1 + inputSize2, outputSize);
+
+    // Y axis number is 1, no need to cast up to TextAxis as we're only reading
+    // the values
+    const auto inputAxis1 = inputWS1->getAxis(1);
+    const auto inputAxis2 = inputWS2->getAxis(1);
+
+    const auto ws1len = inputWS1->getNumberHistograms();
+
+    for (size_t i = 0; i < outputSize / 2; ++i) {
+      // check that all labels are the same
+      // this axis label will have value "Text"
+      TS_ASSERT_EQUALS(inputAxis1->label(0), inputAxis1->label(i));
+
+      // this axis label will have value "" <= empty string
+      // this will check the labels for the second workspace that is
+      // appended at position starting from the length of the first workspace
+      TS_ASSERT_EQUALS(inputAxis2->label(0), inputAxis1->label(i + ws1len));
+    }
+  }
+
+  void test_numericAxis() {
+    const std::string inputWorkspace = "weRebinned";
+
+    createWorkspaceWithAxisAndLabel(inputWorkspace, "Time", "1.0");
+    MatrixWorkspace_const_sptr inputWS =
+        AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(
+            inputWorkspace);
+    // get size for later check
+    const size_t inputSize = inputWS->getNumberHistograms();
+
+    doTestConjoinWorkspacesWithWorkspaces(inputWorkspace, inputWorkspace);
+
+    inputWS = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(
+        inputWorkspace);
+
+    const size_t outputSize = inputWS->getNumberHistograms();
+
+    TS_ASSERT_EQUALS(inputSize * 2, outputSize);
+    // Y axis number is 1, no need to cast up to TextAxis as we're only reading
+    // the values
+    const auto inputAxis = inputWS->getAxis(1);
+
+    for (size_t i = 0; i < outputSize; ++i) {
+      // check that all labels are the same
+      TS_ASSERT_EQUALS(inputAxis->getValue(0), inputAxis->getValue(i));
+    }
+  }
+
+  void test_differentNumericAxis() {
+    const std::string inputWorkspace1 = "weRebinned1";
+    const std::string inputWorkspace2 = "weRebinned2";
+
+    createWorkspaceWithAxisAndLabel(inputWorkspace1, "Time", "1.0");
+    createWorkspaceWithAxisAndLabel(inputWorkspace2, "Time", "2.0");
+
+    MatrixWorkspace_const_sptr inputWS1 =
+        AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(
+            inputWorkspace1);
+
+    MatrixWorkspace_const_sptr inputWS2 =
+        AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(
+            inputWorkspace2);
+
+    const size_t inputSize1 = inputWS1->getNumberHistograms();
+    const size_t inputSize2 = inputWS2->getNumberHistograms();
+
+    doTestConjoinWorkspacesWithWorkspaces(inputWorkspace1, inputWorkspace2);
+
+    inputWS1 = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(
+        inputWorkspace1);
+    inputWS2 = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(
+        inputWorkspace2);
+
+    const size_t outputSize = inputWS1->getNumberHistograms();
+
+    TS_ASSERT_EQUALS(inputSize1 + inputSize2, outputSize);
+
+    // Y axis number is 1, no need to cast up to TextAxis as we're only reading
+    // the values
+    const auto inputAxis1 = inputWS1->getAxis(1);
+    const auto inputAxis2 = inputWS2->getAxis(1);
+
+    const auto ws1len = inputWS1->getNumberHistograms();
+
+    for (size_t i = 0; i < outputSize / 2; ++i) {
+      // check that all labels are the same
+      TS_ASSERT_EQUALS(inputAxis1->getValue(0), inputAxis1->getValue(i));
+      // this will check the labels for the second workspace that is
+      // appended at position starting from the length of the first workspace
+      TS_ASSERT_EQUALS(inputAxis2->getValue(0),
+                       inputAxis1->getValue(i + ws1len));
+    }
+  }
+
 private:
+  void
+  doTestConjoinWorkspacesWithWorkspaces(const std::string &inputWorkspace1,
+                                        const std::string &inputWorkspace2) {
+    auto conjoinWorkspaces =
+        Mantid::API::FrameworkManager::Instance().createAlgorithm(
+            "ConjoinWorkspaces");
+    TS_ASSERT_THROWS_NOTHING(conjoinWorkspaces->setRethrows(true));
+    TS_ASSERT_THROWS_NOTHING(
+        conjoinWorkspaces->setProperty("InputWorkspace1", inputWorkspace1));
+    TS_ASSERT_THROWS_NOTHING(
+        conjoinWorkspaces->setProperty("InputWorkspace2", inputWorkspace2));
+    TS_ASSERT_THROWS_NOTHING(
+        conjoinWorkspaces->setProperty("CheckOverlapping", false));
+    TS_ASSERT_THROWS_NOTHING(conjoinWorkspaces->execute());
+    TS_ASSERT(conjoinWorkspaces->isExecuted());
+  }
+  /** Creates a 2D workspace with 5 histograms
+  */
+  void createWorkspaceWithAxisAndLabel(const std::string outputName,
+                                       const std::string &axisType,
+                                       const std::string axisValue) {
+    int nspec = 5;
+    std::vector<std::string> YVals;
+    std::vector<double> dataX;
+    std::vector<double> dataY;
+
+    for (auto i = 0; i < nspec; ++i) {
+      YVals.push_back(axisValue);
+    }
+
+    for (int i = 0; i < 100; ++i) {
+      dataX.push_back(double(i));
+      dataY.push_back(double(i));
+    }
+
+    auto createWS = Mantid::API::FrameworkManager::Instance().createAlgorithm(
+        "CreateWorkspace");
+    TS_ASSERT_THROWS_NOTHING(createWS->setProperty("OutputWorkspace", "we"));
+    TS_ASSERT_THROWS_NOTHING(createWS->setProperty("DataX", dataX));
+    TS_ASSERT_THROWS_NOTHING(createWS->setProperty("DataY", dataY));
+    TS_ASSERT_THROWS_NOTHING(createWS->setProperty("NSpec", nspec));
+    TS_ASSERT_THROWS_NOTHING(createWS->setProperty("UnitX", "Wavelength"));
+    TS_ASSERT_THROWS_NOTHING(
+        createWS->setProperty("VerticalAxisUnit", axisType));
+    TS_ASSERT_THROWS_NOTHING(
+        createWS->setProperty("VerticalAxisValues", YVals));
+    TS_ASSERT_THROWS_NOTHING(createWS->setProperty("YUnitLabel", "Counts"));
+    TS_ASSERT_THROWS_NOTHING(createWS->execute());
+
+    // we do a rebin so we can have nice bins
+    auto rebin =
+        Mantid::API::FrameworkManager::Instance().createAlgorithm("Rebin");
+    TS_ASSERT_THROWS_NOTHING(rebin->setProperty("InputWorkspace", "we"));
+    TS_ASSERT_THROWS_NOTHING(
+        rebin->setProperty("Params", std::vector<double>{1}));
+    TS_ASSERT_THROWS_NOTHING(rebin->setProperty("OutputWorkspace", outputName));
+    TS_ASSERT_THROWS_NOTHING(rebin->execute());
+    TS_ASSERT(rebin->isExecuted());
+  }
+
   const std::string ws1Name;
   const std::string ws2Name;
 };
