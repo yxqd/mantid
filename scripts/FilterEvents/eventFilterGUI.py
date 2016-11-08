@@ -162,19 +162,19 @@ class MainWindow(QtGui.QMainWindow):
                      self.set_max_log_value)
 
 
-        self.ui.lineEdit_7.setValidator(QtGui.QDoubleValidator(self.ui.lineEdit_7))
-        self.ui.lineEdit_8.setValidator(QtGui.QDoubleValidator(self.ui.lineEdit_8))
-        self.ui.lineEdit_9.setValidator(QtGui.QDoubleValidator(self.ui.lineEdit_9))
+        self.ui.lineEdit_timeTolerance.setValidator(QtGui.QDoubleValidator(self.ui.lineEdit_timeTolerance))
+        self.ui.lineEdit_logValueTolerance.setValidator(QtGui.QDoubleValidator(self.ui.lineEdit_logValueTolerance))
+        self.ui.lineEdit_timeInterval.setValidator(QtGui.QDoubleValidator(self.ui.lineEdit_timeInterval))
 
 
 
         dirchangeops = ["Both", "Increase", "Decrease"]
-        self.ui.comboBox_4.addItems(dirchangeops)
+        self.ui.comboBox_valueChangeDir.addItems(dirchangeops)
 
         logboundops = ["Centre", "Left"]
-        self.ui.comboBox_5.addItems(logboundops)
+        self.ui.comboBox_logBoundary.addItems(logboundops)
 
-        self.connect(self.ui.pushButton_4, SIGNAL('clicked()'), self.plotLogValue)
+        self.connect(self.ui.pushButton_plot, SIGNAL('clicked()'), self.plotLogValue)
 
         self.connect(self.ui.pushButton_filterLog, SIGNAL('clicked()'), self.filter_by_log_value)
 
@@ -305,7 +305,7 @@ class MainWindow(QtGui.QMainWindow):
             self.ui.graphicsView.draw()
 
             # Change value
-            self.ui.lineEdit_3.setText(str(newx))
+            self.ui.lineEdit_startTime.setText(str(newx))
 
         else:
             # Reset the value to original value
@@ -316,16 +316,16 @@ class MainWindow(QtGui.QMainWindow):
     def set_startTime(self):
         """ Set the starting time and left slide bar
         """
-        inps = str(self.ui.lineEdit_3.text())
-        info_msg = "Starting time = %s" % (inps)
+        start_time_str = str(self.ui.lineEdit_startTime.text())
+        info_msg = "Starting time = %s" % (start_time_str)
         Logger("Filter_Events").information(info_msg)
 
         xlim = self.ui.mainplot.get_xlim()
-        if inps == "":
+        if start_time_str == "":
             # Empty. Use default
             newtime0 = xlim[0]
         else:
-            newtime0 = float(inps)
+            newtime0 = float(start_time_str)
 
         # Convert to integer slide value
         ileftvalue = int( (newtime0-xlim[0])/(xlim[1] - xlim[0])*100 )
@@ -366,7 +366,7 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.horizontalSlider.setValue(self._leftSlideValue)
         # Reset the value of line edit
         if resetT is True:
-            self.ui.lineEdit_3.setText(str(newtime0))
+            self.ui.lineEdit_startTime.setText(str(newtime0))
 
         return
 
@@ -388,7 +388,7 @@ class MainWindow(QtGui.QMainWindow):
             self.ui.graphicsView.draw()
 
             # Change value
-            self.ui.lineEdit_4.setText(str(newx))
+            self.ui.lineEdit_stopTime.setText(str(newx))
 
         else:
             # Reset the value
@@ -399,17 +399,17 @@ class MainWindow(QtGui.QMainWindow):
     def set_stopTime(self):
         """ Set the starting time and left slide bar
         """
-        inps = str(self.ui.lineEdit_4.text())
-        info_msg = "Stopping time = %s" % (inps)
+        stop_time_str = str(self.ui.lineEdit_stopTime.text())
+        info_msg = "Stopping time = %s" % stop_time_str
         Logger("Filter_Events").information(info_msg)
 
         xlim = self.ui.mainplot.get_xlim()
-        if inps == "":
+        if stop_time_str == "":
             # Empty. Use default
             newtimef = xlim[1]
         else:
             # Parse
-            newtimef = float(inps)
+            newtimef = float(stop_time_str)
 
         # Convert to integer slide value
         irightvalue = int( (newtimef-xlim[0])/(xlim[1] - xlim[0])*100 )
@@ -447,7 +447,7 @@ class MainWindow(QtGui.QMainWindow):
 
         # Reset to line edit
         if resetT:
-            self.ui.lineEdit_4.setText(str(newtimef))
+            self.ui.lineEdit_stopTime.setText(str(newtimef))
 
         return
 
@@ -643,7 +643,7 @@ class MainWindow(QtGui.QMainWindow):
         filename = QtGui.QFileDialog.getOpenFileName(self, 'Input File Dialog',
                                                      self._defaultdir, "Data (*.nxs *.dat);;All files (*)")
 
-        self.ui.lineEdit.setText(str(filename))
+        self.ui.lineEdit_run.setText(str(filename))
 
         info_msg = "Selected file: %s." % str(filename)
         Logger("Filter_Events").information(info_msg)
@@ -1027,33 +1027,34 @@ class MainWindow(QtGui.QMainWindow):
             rel_starttime = float(self.ui.lineEdit_startTime.text())
             kwargs["StartTime"] = str(rel_starttime)
 
-        if self.ui.lineEdit_stopTime.text() != "":
+        if str(self.ui.lineEdit_stopTime.text()) != "":
             rel_stoptime = float(self.ui.lineEdit_stopTime.text())
             kwargs["StopTime"] = str(rel_stoptime)
 
-        if self.ui.lineEdit_minValue.text() != "":
+        if str(self.ui.lineEdit_minValue.text()) != "":
             minlogvalue = float(self.ui.lineEdit_minValue.text())
             kwargs["MinimumLogValue"] = minlogvalue
 
-        if self.ui.lineEdit_maxValue.text() != "":
+        if str(self.ui.lineEdit_maxValue.text()) != "":
             maxlogvalue = float(self.ui.lineEdit_maxValue.text())
             kwargs["MaximumLogValue"] = maxlogvalue
 
-        if self.ui.lineEdit_logStep.text() != "":
+        if str(self.ui.lineEdit_logStep.text()) != "":
             logvalueintv = float(self.ui.lineEdit_logStep.text())
             kwargs["LogValueInterval"] = logvalueintv
-        logvalchangedir = str(self.ui.comboBox_4.currentText())
+        logvalchangedir = str(self.ui.comboBox_valueChangeDir.currentText())
         kwargs["FilterLogValueByChangingDirection"] = logvalchangedir
 
-        if self.ui.lineEdit_9.text() != "":
-            logvalueintv = float(self.ui.lineEdit_9.text())
-            kwargs["TimeTolerance"] = logvalueintv
-        logboundtype = str(self.ui.comboBox_5.currentText())
+        if str(self.ui.lineEdit_timeTolerance.text()) != "":
+            time_tol = float(self.ui.lineEdit_timeTolerance.text())
+            kwargs["TimeTolerance"] = time_tol
+
+        logboundtype = str(self.ui.comboBox_logBoundary.currentText())
         kwargs["LogBoundary"] = logboundtype
 
-        if self.ui.lineEdit_8.text() != "":
-            logvaluetol = float(self.ui.lineEdit_8.text())
-            kwargs["LogValueTolerance"] = logvaluetol
+        if str(self.ui.lineEdit_logValueTolerance.text()) != "":
+            log_val_tol = float(self.ui.lineEdit_logValueTolerance.text())
+            kwargs["LogValueTolerance"] = log_val_tol
 
         splitwsname = str(self._dataWS) + "_splitters"
         splitinfowsname = str(self._dataWS) + "_info"
@@ -1062,13 +1063,13 @@ class MainWindow(QtGui.QMainWindow):
         title = str(self.ui.lineEdit_title.text())
 
         splitws, infows = api.GenerateEventsFilter(
-            InputWorkspace      = self._dataWS,
-            UnitOfTime          = "Seconds",
-            TitleOfSplitters    = title,
-            OutputWorkspace     = splitwsname,
-            LogName             = samplelog,
-            FastLog             = fastLog,
-            InformationWorkspace = splitinfowsname, **kwargs)
+            InputWorkspace=self._dataWS,
+            UnitOfTime="Seconds",
+            TitleOfSplitters=title,
+            OutputWorkspace=splitwsname,
+            LogName=samplelog,
+            FastLog= fastLog,
+            InformationWorkspace=splitinfowsname, **kwargs)
 
         try:
             self.splitWksp(splitws, infows)
@@ -1193,11 +1194,11 @@ class MainWindow(QtGui.QMainWindow):
         """ Reset GUI including all text edits and etc.
         """
         if resetfilerun is True:
-            self.ui.lineEdit.clear()
+            self.ui.lineEdit_run.clear()
 
         # Plot related
-        self.ui.lineEdit_3.clear()
-        self.ui.lineEdit_4.clear()
+        self.ui.lineEdit_startTime.clear()
+        self.ui.lineEdit_stopTime.clear()
         self.ui.horizontalSlider.setValue(0)
         self.ui.horizontalSlider_2.setValue(100)
 
@@ -1205,8 +1206,9 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.lineEdit_title.clear()
 
         # Filter by log value
-        self.ui.lineEdit_5.clear()
-        self.ui.lineEdit_6.clear()
+        self.ui.lineEdit_minValue.clear()
+        self.ui.lineEdit_maxValue.clear()
+        self.ui.lineEdit_logStep.clear()
 
         self.ui.verticalSlider_2.setValue(0)
         self.ui.verticalSlider.setValue(100)
@@ -1219,9 +1221,8 @@ class MainWindow(QtGui.QMainWindow):
         setp(self.upperslideline, xdata=xlim, ydata=[maxy, maxy])
         self.ui.graphicsView.draw()
 
-        self.ui.lineEdit_7.clear()
-        self.ui.lineEdit_8.clear()
-        self.ui.lineEdit_9.clear()
+        self.ui.lineEdit_logValueTolerance.clear()
+        self.ui.lineEdit_timeTolerance.clear()
 
         # Filter by time
         self.ui.lineEdit_timeInterval.clear()
