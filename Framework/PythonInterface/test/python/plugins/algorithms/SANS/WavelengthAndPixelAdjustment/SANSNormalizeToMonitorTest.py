@@ -1,8 +1,6 @@
 import unittest
 import mantid
 
-from mantid.simpleapi import SANSNormalizeToMonitor
-from mantid.api import AnalysisDataService
 from SANS2.State.StateDirector.TestDirector import TestDirector
 from SANS2.State.StateBuilder.SANSStateNormalizeToMonitorBuilder import get_normalize_to_monitor_builder
 from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType)
@@ -45,8 +43,8 @@ class SANSNormalizeToMonitorTest(unittest.TestCase):
         create_name = "CreateSampleWorkspace"
         name = "test_workspace"
         create_options = {SANSConstants.output_workspace: name,
-                        "NumBanks": 0,
-                        "NumMonitors": 8}
+                          "NumBanks": 0,
+                          "NumMonitors": 8}
         create_alg = create_unmanaged_algorithm(create_name, **create_options)
         create_alg.execute()
         ws = create_alg.getProperty(SANSConstants.output_workspace).value
@@ -54,8 +52,7 @@ class SANSNormalizeToMonitorTest(unittest.TestCase):
         return ws
 
     @staticmethod
-    def _get_state(rebin_type=None, wavelength_low=None, wavelength_high=None, wavelength_step=None,
-                   wavelength_step_type=None, background_TOF_general_start=None, background_TOF_general_stop=None,
+    def _get_state(background_TOF_general_start=None, background_TOF_general_stop=None,
                    background_TOF_monitor_start=None, background_TOF_monitor_stop=None, incident_monitor=None,
                    prompt_peak_correction_min=None, prompt_peak_correction_max=None):
         test_director = TestDirector()
@@ -63,16 +60,11 @@ class SANSNormalizeToMonitorTest(unittest.TestCase):
 
         data_state = state.data
         normalize_to_monitor_builder = get_normalize_to_monitor_builder(data_state)
-        if rebin_type:
-            normalize_to_monitor_builder.set_rebin_type(rebin_type)
-        if wavelength_low:
-            normalize_to_monitor_builder.set_wavelength_low(wavelength_low)
-        if wavelength_high:
-            normalize_to_monitor_builder.set_wavelength_high(wavelength_high)
-        if wavelength_step:
-            normalize_to_monitor_builder.set_wavelength_step(wavelength_step)
-        if wavelength_step_type:
-            normalize_to_monitor_builder.set_wavelength_step_type(wavelength_step_type)
+        normalize_to_monitor_builder.set_rebin_type(RebinType.Rebin)
+        normalize_to_monitor_builder.set_wavelength_low(2.)
+        normalize_to_monitor_builder.set_wavelength_high(8.)
+        normalize_to_monitor_builder.set_wavelength_step(2.)
+        normalize_to_monitor_builder.set_wavelength_step_type(RangeStepType.Lin)
         if background_TOF_general_start:
             normalize_to_monitor_builder.set_background_TOF_general_start(background_TOF_general_start)
         if background_TOF_general_stop:
@@ -148,10 +140,7 @@ class SANSNormalizeToMonitorTest(unittest.TestCase):
     def test_that_gets_normalization_for_general_background_and_no_prompt_peak(self):
         # Arrange
         incident_spectrum = 1
-        state = SANSNormalizeToMonitorTest._get_state(rebin_type=RebinType.Rebin, wavelength_low=2.,
-                                                      wavelength_high=8., wavelength_step=2.,
-                                                      wavelength_step_type=RangeStepType.Lin,
-                                                      background_TOF_general_start=5000.,
+        state = SANSNormalizeToMonitorTest._get_state(background_TOF_general_start=5000.,
                                                       background_TOF_general_stop=10000.,
                                                       incident_monitor=incident_spectrum)
         # Get a test monitor workspace with 4 bins where the first bin is the back ground
@@ -170,10 +159,7 @@ class SANSNormalizeToMonitorTest(unittest.TestCase):
         incident_spectrum = 1
         background_TOF_monitor_start = {str(incident_spectrum): 5000.}
         background_TOF_monitor_stop = {str(incident_spectrum): 10000.}
-        state = SANSNormalizeToMonitorTest._get_state(rebin_type=RebinType.Rebin, wavelength_low=2.,
-                                                      wavelength_high=8., wavelength_step=2.,
-                                                      wavelength_step_type=RangeStepType.Lin,
-                                                      background_TOF_monitor_start=background_TOF_monitor_start,
+        state = SANSNormalizeToMonitorTest._get_state(background_TOF_monitor_start=background_TOF_monitor_start,
                                                       background_TOF_monitor_stop=background_TOF_monitor_stop,
                                                       incident_monitor=incident_spectrum)
         # Get a test monitor workspace with 4 bins where the first bin is the back ground
@@ -193,17 +179,14 @@ class SANSNormalizeToMonitorTest(unittest.TestCase):
         # There seems to be an issue with RemoveBins which does not like us specifying xmin or xmax on bin boundaries
         # This is a quick workaround.
         fix_for_remove_bins = 1e-6
-        state = SANSNormalizeToMonitorTest._get_state(rebin_type=RebinType.Rebin, wavelength_low=2.,
-                                                      wavelength_high=8., wavelength_step=2.,
-                                                      wavelength_step_type=RangeStepType.Lin,
-                                                      background_TOF_general_start=5000.,
+        state = SANSNormalizeToMonitorTest._get_state(background_TOF_general_start=5000.,
                                                       background_TOF_general_stop=10000.,
                                                       prompt_peak_correction_min=15000. + fix_for_remove_bins,
                                                       prompt_peak_correction_max=20000.,
                                                       incident_monitor=incident_spectrum)
         # Get a test monitor workspace with 4 bins where the first bin is the back ground and the third bin has
         # a prompt peak which will be removed
-        data = {0: [10., 100., 100., 100.]}
+        data = {0: [10., 100., 1000000., 100.]}
         monitor_workspace = SANSNormalizeToMonitorTest._get_monitor_workspace(data=data)
         # Act
         workspace = SANSNormalizeToMonitorTest._run_test(monitor_workspace, state)

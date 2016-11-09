@@ -37,7 +37,7 @@ class SANSStateTransmissionFit(SANSStateBase):
             is_invalid.update({"SANSStateTransmissionFit": "Can only set a polynomial order for polynomial"
                                                            " fitting, but selected {0}".format(self.fit_type)})
         if (self.wavelength_low is not None and self.wavelength_high is None) or \
-            (self.wavelength_low is None and self.wavelength_high is not None):
+                (self.wavelength_low is None and self.wavelength_high is not None):
             is_invalid.update({"SANSStateTransmissionFit": "Either both an upper and a lower limit "
                                                            "have to be specified or none."})
         if self.wavelength_low is not None and self.wavelength_high is not None:
@@ -200,8 +200,7 @@ class SANSStateCalculateTransmissionISIS(SANSStateBase, SANSStateCalculateTransm
         if (self.background_TOF_monitor_start is not None and self.background_TOF_monitor_stop is None) or \
            (self.background_TOF_monitor_start is None and self.background_TOF_monitor_stop is not None):
             is_invalid.update({"background_TOF_monitor_start value": "Only the start or the stop value of the monitor "
-                                                               "background TOF correction was specified. Either both "
-                                                               "or none has to be specified."})
+                               "background TOF correction was specified. Either both or none has to be specified."})
         if self.background_TOF_monitor_start is not None and self.background_TOF_monitor_stop is not None:
             if len(self.background_TOF_monitor_start) != len(self.background_TOF_monitor_stop):
                 is_invalid.update({"background_TOF_monitor_start length": "The number of entries between for start and"

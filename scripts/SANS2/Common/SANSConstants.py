@@ -39,6 +39,8 @@ class SANSConstants(object):
     intperpolating_rebin = "InterpolatingRebin"
     range_step_lin = "lin"
     range_step_log = "log"
+    sample = "Sample"
+    can = "Can"
 
     class Calibration(object):
         calibration_workspace_tag = "sans_applied_calibration_file"

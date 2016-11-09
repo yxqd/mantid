@@ -14,20 +14,23 @@ def apply_flat_background_correction_to_detectors(workspace, flat_background_cor
     :param flat_background_correction_stop: the end of the flat background region
     :return: a corrected workspace
     """
-    flat_name = "CalculateFlatBackground"
-    flat_options = {SANSConstants.input_workspace: workspace,
-                    SANSConstants.output_workspace: SANSConstants.dummy,
-                    "Mode": "Mean",
-                    "StartX": flat_background_correction_start,
-                    "EndX": flat_background_correction_stop,
-                    "SkipMonitors": True}
-    flat_alg = create_unmanaged_algorithm(flat_name, **flat_options)
-    flat_alg.execute()
-    return flat_alg.getProperty(SANSConstants.output_workspace).value
+    if flat_background_correction_start is not None and flat_background_correction_stop is not None:
+        flat_name = "CalculateFlatBackground"
+        flat_options = {SANSConstants.input_workspace: workspace,
+                        SANSConstants.output_workspace: SANSConstants.dummy,
+                        "Mode": "Mean",
+                        "StartX": flat_background_correction_start,
+                        "EndX": flat_background_correction_stop,
+                        "SkipMonitors": True}
+        flat_alg = create_unmanaged_algorithm(flat_name, **flat_options)
+        flat_alg.execute()
+        workspace = flat_alg.getProperty(SANSConstants.output_workspace).value
+    return workspace
 
 
 def apply_flat_background_correction_to_monitors(workspace, monitor_indices, background_TOF_monitor_start,
-                                                 background_TOF_monitor_stop):
+                                                 background_TOF_monitor_stop, background_TOF_general_start,
+                                                 background_TOF_general_stop):
     """
     Applies the flat background correction to some monitors
 
@@ -38,6 +41,10 @@ def apply_flat_background_correction_to_monitors(workspace, monitor_indices, bac
                                          the values are the start time of the flat background correction.
     :param background_TOF_monitor_stop: a dictionary where the keys are spectrum numbers of monitors (as strings) and
                                         the values are the stop time of the flat background correction.
+    :param background_TOF_general_start: the start value of the general background region. This is used if
+                                         the monitor-specific setting does not exist
+    :param background_TOF_general_stop: the stop value of the general background region. This is used if
+                                         the monitor-specific setting does not exist
     :return: a corrected workspace.
     """
     for workspace_index in monitor_indices:
@@ -45,8 +52,13 @@ def apply_flat_background_correction_to_monitors(workspace, monitor_indices, bac
         spectrum = workspace.getSpectrum(workspace_index)
         spectrum_number = spectrum.getSpectrumNo()
         monitor_key = str(spectrum_number)
-        tof_start = background_TOF_monitor_start[monitor_key]
-        tof_stop = background_TOF_monitor_stop[monitor_key]
+        if monitor_key not in background_TOF_monitor_start and monitor_key not in background_TOF_monitor_stop \
+                and background_TOF_general_start is None and background_TOF_general_stop is None:
+            continue
+        tof_start = background_TOF_monitor_start[monitor_key] if monitor_key in background_TOF_monitor_start else \
+            background_TOF_general_start
+        tof_stop = background_TOF_monitor_stop[monitor_key] if monitor_key in background_TOF_monitor_stop else \
+            background_TOF_general_stop
 
         flat_name = "CalculateFlatBackground"
         flat_options = {SANSConstants.input_workspace: workspace,

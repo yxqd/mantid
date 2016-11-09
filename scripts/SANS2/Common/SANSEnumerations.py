@@ -174,17 +174,21 @@ class DataType(object):
 
 def convert_reduction_data_type_to_string(data_type):
     if data_type is DataType.Sample:
-        data_type_as_string = "Sample"
+        data_type_as_string = SANSConstants.sample
     elif data_type is DataType.Can:
-        data_type_as_string = "Can"
+        data_type_as_string = SANSConstants.can
+    else:
+        raise ValueError("DataType: The data type {0} is not known.".format(data_type))
     return data_type_as_string
 
 
 def convert_string_to_reduction_data_type(data_string):
-    if data_string is "Sample":
-        data_type  = DataType.Sample
-    elif data_string is DataType.Can:
-        data_type  = DataType.Can
+    if data_string == SANSConstants.sample:
+        data_type = DataType.Sample
+    elif data_string is SANSConstants.can:
+        data_type = DataType.Can
+    else:
+        raise ValueError("DataType: The data string {0} is not known.".format(data_string))
     return data_type
 
 
@@ -196,7 +200,7 @@ class OutputParts(object):
     pass
 
 
-@inner_classes_with_name_space("Both", "None", "ShiftOnly", "ScaleOnly")
+@inner_classes_with_name_space("Both", "NoFit", "ShiftOnly", "ScaleOnly")
 class FitModeForMerge(object):
     """
     Defines which fit operation to use during the merge of two reductions.
@@ -207,7 +211,7 @@ class FitModeForMerge(object):
 def convert_fit_mode_for_merge_to_string(to_convert):
     if to_convert is FitModeForMerge.Both:
         selected_fit_mode = "Both"
-    elif to_convert is FitModeForMerge.None:
+    elif to_convert is FitModeForMerge.NoFit:
         selected_fit_mode = "None"
     elif to_convert == FitModeForMerge.ShiftOnly:
         selected_fit_mode = "ShiftOnly"
@@ -264,6 +268,8 @@ def convert_range_step_type_to_string(range_type):
         range_string = SANSConstants.range_step_lin
     elif range_type is RangeStepType.Log:
         range_string = SANSConstants.range_step_log
+    else:
+        raise ValueError("RangeStepType: The range step type {0} is not known.".format(range_type))
     return range_string
 
 
@@ -272,6 +278,8 @@ def convert_string_to_range_step_type(range_string):
         range_type = RangeStepType.Lin
     elif range_string == SANSConstants.range_step_log:
         range_type = RangeStepType.Log
+    else:
+        raise ValueError("RangeStepType: The range step string {0} is not known.".format(range_string))
     return range_type
 
 
@@ -291,6 +299,8 @@ def convert_rebin_type_to_string(rebin_type):
         rebin_string = SANSConstants.rebin
     elif rebin_type is RebinType.InterpolatingRebin:
         rebin_string = SANSConstants.intperpolating_rebin
+    else:
+        raise ValueError("RebinType: The rebin type {0} is not known.".format(rebin_type))
     return rebin_string
 
 
@@ -299,6 +309,8 @@ def convert_string_to_rebin_type(rebin_string):
         rebin_type = RebinType.Rebin
     elif rebin_string == SANSConstants.intperpolating_rebin:
         rebin_type = RebinType.InterpolatingRebin
+    else:
+        raise ValueError("RebinType: The rebin string {0} is not known.".format(rebin_string))
     return rebin_type
 
 

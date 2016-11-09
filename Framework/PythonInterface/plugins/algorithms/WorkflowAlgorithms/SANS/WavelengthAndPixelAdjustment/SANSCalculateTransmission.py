@@ -7,7 +7,10 @@ from mantid.kernel import (Direction, StringArrayProperty, StringListValidator, 
 from mantid.api import (DataProcessorAlgorithm, MatrixWorkspaceProperty, AlgorithmFactory, PropertyMode, Progress)
 from SANS2.Common.SANSConstants import SANSConstants
 from SANS2.Common.SANSFunctions import create_unmanaged_algorithm
-from SANS2.Common.SANSEnumerations import (RangeStepType, RebinType, FitType)
+from SANS2.Common.SANSEnumerations import (RangeStepType, RebinType, FitType, DataType,
+                                           convert_rebin_type_to_string, convert_string_to_rebin_type,
+                                           convert_range_step_type_to_string, convert_string_to_range_step_type,
+                                           convert_reduction_data_type_to_string, convert_string_to_reduction_data_type)
 from SANS2.State.SANSStateBase import create_deserialized_sans_state_from_property_manager
 from SANS2.WavelengthAndPixelAdjustment.CalculateTransmissionHelper import (get_detector_id_for_spectrum_number,
                                                                             get_workspace_indices_for_monitors,
@@ -35,10 +38,17 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
         self.declareProperty(MatrixWorkspaceProperty("DirectWorkspace", '',
                                                      optional=PropertyMode.Mandatory, direction=Direction.Input),
                              doc='The direct workspace in time-of-flight units.')
+        allowed_data = StringListValidator([convert_reduction_data_type_to_string(DataType.Sample),
+                                            convert_reduction_data_type_to_string(DataType.Can)])
+        self.declareProperty("DataType", convert_reduction_data_type_to_string(DataType.Sample),
+                             validator=allowed_data, direction=Direction.Input,
+                             doc="The component of the instrument which is to be reduced.")
 
         # Output workspace
         self.declareProperty(MatrixWorkspaceProperty(SANSConstants.output_workspace, '', direction=Direction.Output),
-                             doc='A workspace in units of wavelength.')
+                             doc='A calculated transmission workspace in units of wavelength.')
+        self.declareProperty(MatrixWorkspaceProperty("UnfittedData", '', direction=Direction.Output),
+                             doc='A unfitted data in units of wavelength.')
 
     def PyExec(self):
         # Read the state
@@ -69,6 +79,8 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
             raise RuntimeError("SANSCalculateTransmission: No region of interest or transmission monitor selected.")
 
         # 2. Clean transmission data
+        data_type_string = self.getProperty("DataType").value
+        data_type = convert_string_to_reduction_data_type(data_type_string)
         transmission_workspace = self._get_corrected_wavelength_workspace(transmission_workspace, all_detector_ids,
                                                                           calculate_transmission_state)
         direct_workspace = self._get_corrected_wavelength_workspace(direct_workspace, all_detector_ids,
@@ -78,15 +90,29 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
         fitted_transmission_workspace, unfitted_transmission_workspace = \
             self._perform_fit(transmission_workspace, direct_workspace, detector_ids_roi,
                               detector_id_transmission_monitor, detector_id_incident_monitor,
-                              calculate_transmission_state)
+                              calculate_transmission_state, data_type)
 
         # Set the output
         self.setProperty(SANSConstants.output_workspace, fitted_transmission_workspace)
-        self.setProperty("UnfittedData", unfitted_transmission_workspace)
+        if unfitted_transmission_workspace:
+            self.setProperty("UnfittedData", unfitted_transmission_workspace)
 
     def _perform_fit(self, transmission_workspace, direct_workspace,
                      transmission_roi_detector_ids, transmission_monitor_detector_id, incident_monitor_detector_id,
-                     calculate_transmission_state):
+                     calculate_transmission_state, data_type):
+        """
+        This performs the actual transmission calculation.
+
+        @param transmission_workspace: the corrected transmission workspace
+        @param direct_workspace: the corrected direct workspace
+        @param transmission_roi_detector_ids: the roi detector ids
+        @param transmission_monitor_detector_id: the transmission monitor detector id
+        @param incident_monitor_detector_id: the incident monitor id
+        @param calculate_transmission_state: the state for the transmission calculation
+        @param data_type: the data type which is currently being investigated, ie if it is a sample or a can run.
+        @return: a fitted workspace and an unfitted workspace
+        """
+
         wavelength_low = calculate_transmission_state.wavelength_low
         wavelength_high = calculate_transmission_state.wavelength_high
         wavelength_step = calculate_transmission_state.wavelength_step
@@ -107,25 +133,30 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
         if transmission_roi_detector_ids:
             trans_options.update({"TransmissionROI": transmission_roi_detector_ids})
         else:
-            trans_options.update({"TransmissionMonitor", transmission_monitor_detector_id})
+            trans_options.update({"TransmissionMonitor": transmission_monitor_detector_id})
 
-        if calculate_transmission_state.fit_type is FitType.Log:
-            fit_type = "Log"
-        elif calculate_transmission_state.fit_type is FitType.Polynomial:
-            fit_type = "Polynomial"
+        # Get the fit setting for the correct data type, ie either for the Sample of the Can
+        fit_type = calculate_transmission_state.fit[convert_reduction_data_type_to_string(data_type)].fit_type
+        if data_type is FitType.Log:
+            fit_string = "Log"
+        elif data_type is FitType.Polynomial:
+            fit_string = "Polynomial"
         else:
-            fit_type = "Linear"
+            fit_string = "Linear"
 
-        trans_options.update({"FitMethod": fit_type})
-        if calculate_transmission_state.fit_type is FitType.Polynomial:
+        trans_options.update({"FitMethod": fit_string})
+        if fit_type is FitType.Polynomial:
             polynomial_order = calculate_transmission_state.polynomial_order
             trans_options.update({"PolynomialOrder": polynomial_order})
 
         trans_alg = create_unmanaged_algorithm(trans_name, **trans_options)
         trans_alg.execute()
 
-        fitted_transmission_workspace = self.getProperty(SANSConstants.output_workspace).value
-        unfitted_transmission_workspace = self.getProperty("UnfittedData").value
+        fitted_transmission_workspace = trans_alg.getProperty(SANSConstants.output_workspace).value
+        try:
+            unfitted_transmission_workspace = trans_alg.getProperty("UnfittedData").value
+        except RuntimeError:
+            unfitted_transmission_workspace = None
 
         # Set the y label correctly for the fitted and unfitted transmission workspaces
         y_unit_label_transmission_ratio = "Transmission"
@@ -146,14 +177,15 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
         """
         transmission_radius = calculate_transmission_state.transmission_radius_on_detector
         transmission_roi = calculate_transmission_state.transmission_roi_files
-        transmission_mask = calculate_transmission_state.transmission_mas_files
+        transmission_mask = calculate_transmission_state.transmission_mask_files
         detector_ids_roi = get_region_of_interest(transmission_workspace, transmission_radius, transmission_roi,
                                                   transmission_mask)
 
         transmission_monitor_spectrum_number = calculate_transmission_state.transmission_monitor
         if transmission_monitor_spectrum_number is None:
             transmission_monitor_spectrum_number = calculate_transmission_state.default_transmission_monitor
-        detector_id_transmission_monitor = get_detector_id_for_spectrum_number(transmission_monitor_spectrum_number)
+        detector_id_transmission_monitor = get_detector_id_for_spectrum_number(transmission_workspace,
+                                                                               transmission_monitor_spectrum_number)
 
         return detector_ids_roi, detector_id_transmission_monitor
 
@@ -188,10 +220,10 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
         # ----------------------------------
         # Perform the prompt peak correction
         # ----------------------------------
-        prompt_peak_correction_start = calculate_transmission_state.prompt_peak_correction_start
-        prompt_peak_correction_stop = calculate_transmission_state.prompt_peak_correction_stop
-        workspace = self._perform_prompt_peak_correction(workspace, prompt_peak_correction_start,
-                                                         prompt_peak_correction_stop)
+        prompt_peak_correction_min = calculate_transmission_state.prompt_peak_correction_min
+        prompt_peak_correction_max = calculate_transmission_state.prompt_peak_correction_max
+        workspace = self._perform_prompt_peak_correction(workspace, prompt_peak_correction_min,
+                                                         prompt_peak_correction_max)
 
         # ---------------------------------------
         # Perform the flat background correction
@@ -202,12 +234,16 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
 
         # Monitor flat background correction
         workspace_indices_of_monitors = list(get_workspace_indices_for_monitors(workspace))
-        background_tof_monitor_start = calculate_transmission_state.background_TOF_monitor_start
-        background_tof_monitor_stop = calculate_transmission_state.background_TOF_monitor_start
+        background_TOF_monitor_start = calculate_transmission_state.background_TOF_monitor_start
+        background_TOF_monitor_stop = calculate_transmission_state.background_TOF_monitor_stop
+        background_TOF_general_start = calculate_transmission_state.background_TOF_general_start
+        background_TOF_general_stop = calculate_transmission_state.background_TOF_general_stop
         workspace = apply_flat_background_correction_to_monitors(workspace,
                                                                  workspace_indices_of_monitors,
-                                                                 background_tof_monitor_start,
-                                                                 background_tof_monitor_stop)
+                                                                 background_TOF_monitor_start,
+                                                                 background_TOF_monitor_stop,
+                                                                 background_TOF_general_start,
+                                                                 background_TOF_general_stop)
 
         # Detector flat background correction
         flat_background_correction_start = calculate_transmission_state.background_TOF_roi_start
@@ -221,14 +257,8 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
         wavelength_low = calculate_transmission_state.wavelength_low
         wavelength_high = calculate_transmission_state.wavelength_high
         wavelength_step = calculate_transmission_state.wavelength_step
-        if calculate_transmission_state.wavelength_step_type is RangeStepType.Lin:
-            wavelength_step_type = "LIN"
-        else:
-            wavelength_step_type = "LOG"
-        if calculate_transmission_state.wavelength_rebin_mode is RebinType.InterpolatingRebin:
-            wavelength_rebin_mode = "InterpolatingRebin"
-        else:
-            wavelength_rebin_mode = "Rebin"
+        rebin_type = calculate_transmission_state.rebin_type
+        wavelength_step_type = calculate_transmission_state.wavelength_step_type
 
         convert_name = "SANSConvertToWavelength"
         convert_options = {SANSConstants.input_workspace: workspace,
@@ -236,33 +266,33 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
                            "WavelengthLow": wavelength_low,
                            "WavelengthHigh": wavelength_high,
                            "WavelengthStep": wavelength_step,
-                           "WavelengthStepType": wavelength_step_type,
-                           "RebinMode": wavelength_rebin_mode}
+                           "WavelengthStepType": convert_range_step_type_to_string(wavelength_step_type),
+                           "RebinMode": convert_rebin_type_to_string(rebin_type)}
         convert_alg = create_unmanaged_algorithm(convert_name, **convert_options)
         convert_alg.execute()
         return convert_alg.getProperty(SANSConstants.output_workspace).value
 
-    def _perform_prompt_peak_correction(self, workspace, prompt_peak_correction_start, prompt_peak_correction_stop):
+    def _perform_prompt_peak_correction(self, workspace, prompt_peak_correction_min, prompt_peak_correction_max):
         """
         Prompt peak correction is performed if it is explicitly set by the user.
 
         :param workspace: the workspace to correct.
-        :param prompt_peak_correction_start: the start time for the prompt peak correction.
-        :param prompt_peak_correction_stop: the stop time for the prompt peak correction.
+        :param prompt_peak_correction_min: the start time for the prompt peak correction.
+        :param prompt_peak_correction_max: the stop time for the prompt peak correction.
         :return: a corrected workspace.
         """
         # We perform only a prompt peak correction if the start and stop values of the bins we want to remove,
         # were explicitly set. Some instruments require it, others don't.
-        if prompt_peak_correction_start != Property.EMPTY_DBL and prompt_peak_correction_stop != Property.EMPTY_DBL:
+        if prompt_peak_correction_min is not None and prompt_peak_correction_max is not None:
             remove_name = "RemoveBins"
             remove_options = {SANSConstants.input_workspace: workspace,
                               SANSConstants.output_workspace: SANSConstants.dummy,
-                              "XMin": prompt_peak_correction_start,
-                              "XMax": prompt_peak_correction_stop,
+                              "XMin": prompt_peak_correction_min,
+                              "XMax": prompt_peak_correction_max,
                               "Interpolation": "Linear"}
             remove_alg = create_unmanaged_algorithm(remove_name, **remove_options)
             remove_alg.execute()
-            workspace = remove_alg.getProperty(SANSConstants.output_workspace)
+            workspace = remove_alg.getProperty(SANSConstants.output_workspace).value
         return workspace
 
     def validateInputs(self):
@@ -286,6 +316,18 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
                 errors.update({"IncidentMonitorSpectrumNumber": "The spectrum number for the incident monitor spectrum "
                                                                 "does not seem to exist for the transmission"
                                                                 " workspace."})
+        calculate_transmission_state = state.adjustment.calculate_transmission
+        fit = calculate_transmission_state.fit
+        if state is not None:
+            data_type_string = self.getProperty("DataType").value
+            data_type = convert_string_to_reduction_data_type(data_type_string)
+            sample = fit[convert_reduction_data_type_to_string(DataType.Sample)]
+            can = fit[convert_reduction_data_type_to_string(DataType.Can)]
+            if data_type is DataType.Sample and sample.fit_type is None:
+                errors.update({"DataType": "There does not seem to be a fit type set for the selected data type"})
+            if data_type is DataType.Can and can.fit_type is None:
+                errors.update({"DataType": "There does not seem to be a fit type set for the selected data type"})
+
         return errors
 
 

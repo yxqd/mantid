@@ -70,9 +70,11 @@ class SANSConvertToWavelength(DataProcessorAlgorithm):
             rebin_options = {SANSConstants.input_workspace: workspace,
                              SANSConstants.output_workspace: SANSConstants.dummy,
                              "Params": rebin_string}
+
         # # Perform the rebin
         progress.report("Performing rebin.")
         workspace = self._perform_rebin(rebin_type, rebin_options)
+
         append_to_sans_file_tag(workspace, "_toWavelength")
         self.setProperty(SANSConstants.output_workspace, workspace)
         progress.report("Finished converting to wavelength.")
