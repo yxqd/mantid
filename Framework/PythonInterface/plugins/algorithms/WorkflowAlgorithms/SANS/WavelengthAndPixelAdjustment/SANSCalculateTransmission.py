@@ -55,7 +55,6 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
         state_property_manager = self.getProperty("SANSState").value
         state = create_deserialized_sans_state_from_property_manager(state_property_manager)
         calculate_transmission_state = state.adjustment.calculate_transmission
-
         # The calculation of the transmission has the following steps:
         # 1. Get all spectrum numbers which take part in the transmission calculation
         # 2. Clean up the transmission and direct workspaces, ie peak prompt correction, flat background calculation,
@@ -68,13 +67,17 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
         # 1. Get relevant spectra
         detector_id_incident_monitor = get_detector_id_for_spectrum_number(transmission_workspace,
                                                                            incident_monitor_spectrum_number)
-        detector_ids_roi, detector_id_transmission_monitor = self._get_detector_ids_for_transmission_calculation(
+        detector_ids_roi, \
+        detector_id_transmission_monitor, \
+        detector_id_default_transmission_monitor = self._get_detector_ids_for_transmission_calculation(
                                                                   transmission_workspace, calculate_transmission_state)
         all_detector_ids = [detector_id_incident_monitor]
         if detector_ids_roi:
             all_detector_ids.extend(detector_ids_roi)
         elif detector_id_transmission_monitor:
             all_detector_ids.append(detector_id_transmission_monitor)
+        elif detector_id_default_transmission_monitor:
+            all_detector_ids.append(detector_id_default_transmission_monitor)
         else:
             raise RuntimeError("SANSCalculateTransmission: No region of interest or transmission monitor selected.")
 
@@ -175,19 +178,26 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
         :param calculate_transmission_state: a SANSStateCalculateTransmission object.
         :return: a list of detector ids for ROI and a detector id for the transmission monitor, either can be None
         """
+        # Get the potential ROI detector ids
         transmission_radius = calculate_transmission_state.transmission_radius_on_detector
         transmission_roi = calculate_transmission_state.transmission_roi_files
         transmission_mask = calculate_transmission_state.transmission_mask_files
         detector_ids_roi = get_region_of_interest(transmission_workspace, transmission_radius, transmission_roi,
                                                   transmission_mask)
 
+        # Get the potential transmission monitor detector id
         transmission_monitor_spectrum_number = calculate_transmission_state.transmission_monitor
-        if transmission_monitor_spectrum_number is None:
+        detector_id_transmission_monitor = None
+        if transmission_monitor_spectrum_number is not None:
             transmission_monitor_spectrum_number = calculate_transmission_state.default_transmission_monitor
-        detector_id_transmission_monitor = get_detector_id_for_spectrum_number(transmission_workspace,
-                                                                               transmission_monitor_spectrum_number)
+            detector_id_transmission_monitor = get_detector_id_for_spectrum_number(transmission_workspace,
+                                                                                   transmission_monitor_spectrum_number)
 
-        return detector_ids_roi, detector_id_transmission_monitor
+        # Get the default transmission monitor detector id. This is our fallback if nothing else was specified.
+        default_transmission_monitor = calculate_transmission_state.default_transmission_monitor
+        detector_id_default_transmission_monitor = get_detector_id_for_spectrum_number(transmission_workspace,
+                                                                                       default_transmission_monitor)
+        return detector_ids_roi, detector_id_transmission_monitor, detector_id_default_transmission_monitor
 
     def _get_corrected_wavelength_workspace(self, workspace, detector_ids, calculate_transmission_state):
         """
@@ -316,9 +326,10 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
                 errors.update({"IncidentMonitorSpectrumNumber": "The spectrum number for the incident monitor spectrum "
                                                                 "does not seem to exist for the transmission"
                                                                 " workspace."})
-        calculate_transmission_state = state.adjustment.calculate_transmission
-        fit = calculate_transmission_state.fit
+
         if state is not None:
+            calculate_transmission_state = state.adjustment.calculate_transmission
+            fit = calculate_transmission_state.fit
             data_type_string = self.getProperty("DataType").value
             data_type = convert_string_to_reduction_data_type(data_type_string)
             sample = fit[convert_reduction_data_type_to_string(DataType.Sample)]

@@ -185,7 +185,7 @@ def convert_reduction_data_type_to_string(data_type):
 def convert_string_to_reduction_data_type(data_string):
     if data_string == SANSConstants.sample:
         data_type = DataType.Sample
-    elif data_string is SANSConstants.can:
+    elif data_string == SANSConstants.can:
         data_type = DataType.Can
     else:
         raise ValueError("DataType: The data string {0} is not known.".format(data_string))

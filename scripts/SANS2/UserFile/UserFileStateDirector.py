@@ -836,7 +836,7 @@ class UserFileStateDirectorISIS(object):
             trans_radius = user_file_items[user_file_trans_radius]
             check_if_contains_only_one_element(trans_radius, user_file_trans_radius)
             trans_radius = trans_radius[-1]
-            calculate_transmission_builder.set_transmission_radius_on_detector(trans_radius)
+            calculate_transmission_builder.set_transmission_radius_on_detector(convert_mm_to_m(trans_radius))
 
         if user_file_trans_roi in user_file_items:
             trans_roi = user_file_items[user_file_trans_roi]

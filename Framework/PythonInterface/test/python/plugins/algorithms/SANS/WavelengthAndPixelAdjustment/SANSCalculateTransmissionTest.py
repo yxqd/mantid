@@ -54,24 +54,44 @@ def get_expected_for_spectrum_n(data_workspace, selected_workspace_index, value_
 
 class SANSCalculateTransmissionTest(unittest.TestCase):
     sample_workspace = None
+    sample_workspace_2 = None
 
     @staticmethod
-    def _get_monitor_workspace(data=None):
-        if SANSCalculateTransmissionTest.sample_workspace is None:
-            load_name = "Load"
-            load_options = {SANSConstants.output_workspace: SANSConstants.dummy,
-                            "Filename": "SANS2D00022024"}
-            load_alg = create_unmanaged_algorithm(load_name, **load_options)
-            load_alg.execute()
-            SANSCalculateTransmissionTest.sample_workspace = load_alg.getProperty(SANSConstants.output_workspace).value
+    def _load_workspace(file_name):
+        load_name = "Load"
+        load_options = {SANSConstants.output_workspace: SANSConstants.dummy,
+                        "Filename": file_name}
+        load_alg = create_unmanaged_algorithm(load_name, **load_options)
+        load_alg.execute()
+        return load_alg.getProperty(SANSConstants.output_workspace).value
+
+    @staticmethod
+    def _clone_workspace(workspace):
         clone_name = "CloneWorkspace"
-        clone_options = {SANSConstants.input_workspace: SANSCalculateTransmissionTest.sample_workspace,
+        clone_options = {SANSConstants.input_workspace: workspace,
                          SANSConstants.output_workspace: SANSConstants.dummy}
         clone_alg = create_unmanaged_algorithm(clone_name, **clone_options)
         clone_alg.execute()
-        ws = clone_alg.getProperty(SANSConstants.output_workspace).value
-        ws = SANSCalculateTransmissionTest._prepare_workspace(ws, data=data)
-        return ws
+        return clone_alg.getProperty(SANSConstants.output_workspace).value
+
+    @staticmethod
+    def _get_monitor_workspace(data=None):
+        # Load the workspace
+        if SANSCalculateTransmissionTest.sample_workspace is None:
+            SANSCalculateTransmissionTest.sample_workspace = \
+                SANSCalculateTransmissionTest._load_workspace("SANS2D00022024")
+        # Clone the workspace
+        workspace = SANSCalculateTransmissionTest._clone_workspace(SANSCalculateTransmissionTest.sample_workspace)
+        # Prepare the workspace
+        return SANSCalculateTransmissionTest._prepare_workspace(workspace, data=data)
+
+    @staticmethod
+    def _get_roi_workspace():
+        # Load the workspace
+        if SANSCalculateTransmissionTest.sample_workspace_2 is None:
+            SANSCalculateTransmissionTest.sample_workspace_2 = SANSCalculateTransmissionTest._load_workspace("LOQ74044")
+        # Clone the workspace
+        return SANSCalculateTransmissionTest._clone_workspace(SANSCalculateTransmissionTest.sample_workspace_2)
 
     @staticmethod
     def _get_state(transmission_radius_on_detector=None, transmission_roi_files=None, transmission_mask_files=None,
@@ -253,9 +273,9 @@ class SANSCalculateTransmissionTest(unittest.TestCase):
                                                                                        is_sample=True)
         # Assert
         self._do_assert(transmission_workspace, direct_workspace, unfitted_workspace, fitted_workspace,
-                        trans_incident, trans_trans, direct_incident, direct_trans)
+                       trans_incident, trans_trans, direct_incident, direct_trans)
 
-    def test_that_calculates_transmission_for_monitor_specific_background_and_prompt_peak(self):
+    def test_that_calculates_transmission_for_monitor_specific_background_and_prompt_peak_for_can(self):
         # Arrange
         incident_spectrum = 1
         transmission_spectrum = 3
@@ -271,9 +291,9 @@ class SANSCalculateTransmissionTest(unittest.TestCase):
                                                          background_TOF_monitor_stop=background_TOF_monitor_stop,
                                                          incident_monitor=incident_spectrum,
                                                          transmission_monitor=transmission_spectrum,
-                                                         sample_fit_type=FitType.Linear,
-                                                         sample_polynomial_order=0, sample_wavelength_low=2.,
-                                                         sample_wavelength_high=8.)
+                                                         can_fit_type=FitType.Linear,
+                                                         can_polynomial_order=0, can_wavelength_low=2.,
+                                                         can_wavelength_high=8.)
         # Get a test monitor workspace with 4 bins where the first bin is the back ground
         trans_incident = [20., 220., 210000000., 220.]
         trans_trans = [10., 80., 210000000., 80.]
@@ -287,7 +307,7 @@ class SANSCalculateTransmissionTest(unittest.TestCase):
         # Act
         fitted_workspace, unfitted_workspace = SANSCalculateTransmissionTest._run_test(transmission_workspace,
                                                                                        direct_workspace, state,
-                                                                                       is_sample=True)
+                                                                                       is_sample=False)
         # Assert
         trans_incident[2] = trans_incident[3]
         trans_trans[2] = trans_trans[3]
@@ -298,33 +318,35 @@ class SANSCalculateTransmissionTest(unittest.TestCase):
                         trans_incident, trans_trans, direct_incident, direct_trans)
 
     def test_that_can_get_transmission_for_region_of_interest_radius(self):
-        pass
-
-    def test_that_raises_if_only_sample_is_specified_but_can_is_selected(self):
+        # This test picks the monitor detector ids based on a radius around the centre of the detector. This is much
+        # more tricky to test here and in principle the main tests should be happening in the actual
+        # CalculateTransmission algorithm.
         # Arrange
         state = SANSCalculateTransmissionTest._get_state(rebin_type=RebinType.Rebin, wavelength_low=2.,
                                                          wavelength_high=8., wavelength_step=2.,
                                                          wavelength_step_type=RangeStepType.Lin,
                                                          background_TOF_general_start=5000.,
-                                                         background_TOF_general_stop=10000.,
-                                                         incident_monitor=1, transmission_monitor=3,
+                                                         background_TOF_general_stop=10000., incident_monitor=1,
+                                                         transmission_radius_on_detector=0.01,
                                                          sample_fit_type=FitType.Linear,
                                                          sample_polynomial_order=0, sample_wavelength_low=2.,
                                                          sample_wavelength_high=8.)
-        # Get a test monitor workspace with 4 bins where the first bin is the back ground
-        trans_incident = [20., 220., 210000000., 220.]
-        trans_trans = [10., 80., 210000000., 80.]
-        direct_incident = [40., 401., 210000000., 401.]
-        direct_trans = [30., 320., 210000000., 320.]
-        data_transmission = {0: trans_incident, 2: trans_trans}
-        transmission_workspace = SANSCalculateTransmissionTest._get_monitor_workspace(data=data_transmission)
-        data_direct = {0: direct_incident, 2: direct_trans}
-        direct_workspace = SANSCalculateTransmissionTest._get_monitor_workspace(data=data_direct)
+        # Gets the full workspace
+        transmission_workspace = SANSCalculateTransmissionTest._get_roi_workspace()
+        direct_workspace = SANSCalculateTransmissionTest._get_roi_workspace()
 
-        # Act + Assert
-        args = [transmission_workspace, direct_workspace, state, False]
-        self.assertRaises(RuntimeError, SANSCalculateTransmissionTest._run_test, *args)
+        # Act
+        try:
+            fitted_workspace, unfitted_workspace = SANSCalculateTransmissionTest._run_test(transmission_workspace,
+                                                                                           direct_workspace, state,
+                                                                                           is_sample=True)
+            was_successful = True
+        except:  # noqa
+            was_successful = False
 
+        # Assert
+        self.assertTrue(was_successful)
+        self.assertTrue(fitted_workspace.getNumberHistograms() == 1)
 
 
 if __name__ == '__main__':
