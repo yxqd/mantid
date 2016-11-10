@@ -485,7 +485,7 @@ class MainWindow(QtGui.QMainWindow):
         # Set line edit input
         if setLineEdit is True:
             # Change value to line edit (5)
-            self.ui.lineEdit_5.setText(str(newy))
+            self.ui.lineEdit_minValue.setText(str(newy))
             # Reset the class variable
             self._lowerSlideValue = inewy
 
