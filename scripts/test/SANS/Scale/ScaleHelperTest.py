@@ -6,7 +6,7 @@ from SANS2.Scale.ScaleHelpers import (DivideByVolumeFactory, DivideByVolumeISIS,
                                       MultiplyByAbsoluteScaleFactory, MultiplyByAbsoluteScaleLOQ,
                                       MultiplyByAbsoluteScaleISIS)
 from SANS2.Common.SANSFunctions import create_unmanaged_algorithm
-from SANS2.Common.SANSEnumerations import (SampleShape, SANSFacility)
+from SANS2.Common.SANSEnumerations import (SampleShape, SANSFacility, DataType)
 from SANS2.State.StateBuilder.SANSStateScaleBuilder import get_scale_builder
 from SANS2.State.StateBuilder.SANSStateDataBuilder import get_data_builder
 
@@ -36,7 +36,7 @@ class ScaleHelperTest(unittest.TestCase):
         state_isis = test_director.construct()
         divide_factory = DivideByVolumeFactory()
         # Act
-        divider = divide_factory.create_divide_by_volume(state_isis, is_can=False)
+        divider = divide_factory.create_divide_by_volume(state_isis, data_type=DataType.Sample)
         # Arrange
         self.assertTrue(isinstance(divider, DivideByVolumeISIS))
 
@@ -46,7 +46,7 @@ class ScaleHelperTest(unittest.TestCase):
         state_isis = test_director.construct()
         divide_factory = DivideByVolumeFactory()
         # Act
-        divider = divide_factory.create_divide_by_volume(state_isis, is_can=True)
+        divider = divide_factory.create_divide_by_volume(state_isis, data_type=DataType.Can)
         # Arrange
         self.assertTrue(isinstance(divider, NullDivideByVolume))
 
@@ -65,7 +65,7 @@ class ScaleHelperTest(unittest.TestCase):
         state = test_director.construct()
 
         divide_factory = DivideByVolumeFactory()
-        divider = divide_factory.create_divide_by_volume(state, is_can=False)
+        divider = divide_factory.create_divide_by_volume(state, data_type=DataType.Sample)
 
         width = 10.
         height = 5.
@@ -105,7 +105,7 @@ class ScaleHelperTest(unittest.TestCase):
         state = test_director.construct()
 
         divide_factory = DivideByVolumeFactory()
-        divider = divide_factory.create_divide_by_volume(state, is_can=False)
+        divider = divide_factory.create_divide_by_volume(state, data_type=DataType.Sample)
 
         workspace = ScaleHelperTest._get_workspace()
 

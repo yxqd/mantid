@@ -8,6 +8,8 @@ from mantid.api import (DataProcessorAlgorithm, MatrixWorkspaceProperty, Algorit
 from SANS2.Common.SANSConstants import SANSConstants
 from SANS2.State.SANSStateBase import create_deserialized_sans_state_from_property_manager
 from SANS2.Common.SANSFunctions import create_unmanaged_algorithm
+from SANS2.Common.SANSEnumerations import (DetectorType, convert_detector_type_to_string,
+                                           convert_reduction_data_type_to_string, DataType)
 
 
 class SANSReductionCore(DataProcessorAlgorithm):
@@ -53,8 +55,18 @@ class SANSReductionCore(DataProcessorAlgorithm):
                                  "Depending on your concrete reduction, this could provide a significant"
                                  " performance boost")
 
-        allowed_detectors = StringListValidator(["LAB", "HAB"])
-        self.declareProperty("Component", "LAB", validator=allowed_detectors, direction=Direction.Input,
+        # The component
+        allowed_detectors = StringListValidator([convert_detector_type_to_string(DetectorType.Lab),
+                                                 convert_detector_type_to_string(DetectorType.Hab)])
+        self.declareProperty("Component", convert_detector_type_to_string(DetectorType.Lab),
+                             validator=allowed_detectors, direction=Direction.Input,
+                             doc="The component of the instrument which is to be reduced.")
+
+        # The data type
+        allowed_data = StringListValidator([convert_reduction_data_type_to_string(DataType.Sample),
+                                            convert_reduction_data_type_to_string(DataType.Can)])
+        self.declareProperty("DataType", convert_reduction_data_type_to_string(DataType.Sample),
+                             validator=allowed_data, direction=Direction.Input,
                              doc="The component of the instrument which is to be reduced.")
 
         # ----------
@@ -112,17 +124,26 @@ class SANSReductionCore(DataProcessorAlgorithm):
         # --------------------------------------------------------------------------------------------------------------
         # 6. Convert to Wavelength
         # --------------------------------------------------------------------------------------------------------------
+        workspace = self._convert_to_wavelength(state, workspace)
 
         # --------------------------------------------------------------------------------------------------------------
         # 7. Multiply by volume and absolute scale
         # --------------------------------------------------------------------------------------------------------------
+        data_type_as_string = self.getProperty("DataType").value
+        workspace = self._scale(state, workspace, data_type_as_string)
 
-        # ------------------------------------------------------------
+        # --------------------------------------------------------------------------------------------------------------
         # 8. Create adjustment workspaces, those are
         #     1. pixel-based adjustments
         #     2. wavelength-based adjustments
         #     3. pixel-and-wavelength-based adjustments
-        # ------------------------------------------------------------
+        # Note that steps 4 to 7 could run in parallel if we don't use wide angle correction. If we do then the
+        # creation of the adjustment workspaces requires the sample workspace itself and we have to run it sequentially.
+        # We could consider to have a serial and a parallel strategy here, depending on the wide angle correction
+        # settings. On the other hand it is not clear that this would be an advantage with the GIL.
+        # --------------------------------------------------------------------------------------------------------------
+        wavelength_adjustment_workspace, pixel_adjustment_workspace, wavelength_and_pixel_adjustment_workspace =\
+            self._adjustment(state, workspace, monitor_workspace, component_as_string, data_type_as_string)
 
         # ------------------------------------------------------------
         # 9. Convert event workspaces to histogram workspaces
@@ -137,7 +158,14 @@ class SANSReductionCore(DataProcessorAlgorithm):
         # Populate the output
         self.setProperty(SANSConstants.output_workspace, workspace)
 
-        # Publish temporary workspaces if required
+        # Set the output
+        if wavelength_adjustment_workspace:
+            self.setProperty("SumOfCounts", wavelength_adjustment_workspace)
+        if pixel_adjustment_workspace:
+            self.setProperty("SumOfNormFactors", pixel_adjustment_workspace)
+
+        # TODO: Publish temporary workspaces if required
+        # This includes partial workspaces of Q1D and unfitted transmission data
 
     def _get_cropped_workspace(self, component):
         scatter_workspace = self.getProperty("ScatterWorkspace").value
@@ -195,6 +223,55 @@ class SANSReductionCore(DataProcessorAlgorithm):
         mask_alg.execute()
         return mask_alg.getProperty(SANSConstants.workspace).value
 
+    def _convert_to_wavelength(self, state, workspace):
+        state_serialized = state.property_manager
+        wavelength_name = "SANSConvertToWavelength"
+        wavelength_options = {"SANSState": state_serialized,
+                              SANSConstants.input_workspace: workspace,
+                              SANSConstants.output_workspace: SANSConstants.dummy}
+        wavelength_alg = create_unmanaged_algorithm(wavelength_name, **wavelength_options)
+        wavelength_alg.execute()
+        return wavelength_alg.getProperty(SANSConstants.output_workspace).value
+
+    def _scale(self, state, workspace, data_type):
+        state_serialized = state.property_manager
+        scale_name = "SANSScale"
+        scale_options = {"SANSState": state_serialized,
+                         SANSConstants.input_workspace: workspace,
+                         SANSConstants.output_workspace: SANSConstants.dummy,
+                         "DataType": data_type}
+        scale_alg = create_unmanaged_algorithm(scale_name, **scale_options)
+        scale_alg.execute()
+        return scale_alg.getProperty(SANSConstants.output_workspace).value
+
+    def _adjustment(self, state, workspace, monitor_workspace, component, data_type):
+        transmission_workspace = self._get_transmission_workspace()
+        direct_workspace = self._get_direct_workspace()
+
+        state_serialized = state.property_manager
+        adjustment_name = "SANSCreateAdjustmentWorkspaces"
+        adjustment_options = {"SANSState": state_serialized,
+                              "Component": component,
+                              "DataType": data_type,
+                              "MonitorWorkspace": monitor_workspace,
+                              "SampleData": workspace,
+                              "OutputWorkspaceWavelengthAdjustment": SANSConstants.dummy,
+                              "OutputWorkspacePixelAdjustment": SANSConstants.dummy,
+                              "OutputWorkspaceWavelengthAndPixelAdjustment": SANSConstants.dummy
+                            }
+        if transmission_workspace:
+            adjustment_options.update({"TransmissionWorkspace": transmission_workspace})
+        if direct_workspace:
+            adjustment_options.update({"DirectWorkspace": direct_workspace})
+        adjustment_alg = create_unmanaged_algorithm(adjustment_name, **adjustment_options)
+        adjustment_alg.execute()
+
+        wavelength_adjustment = adjustment_alg.getProperty("OutputWorkspaceWavelengthAdjustment").value
+        pixel_adjustment = adjustment_alg.getProperty("OutputWorkspacePixelAdjustment").value
+        wavelength_and_pixel_adjustment = adjustment_alg.getProperty(
+                                           "OutputWorkspaceWavelengthAndPixelAdjustment").value
+        return wavelength_adjustment, pixel_adjustment, wavelength_and_pixel_adjustment
+
     def validateInputs(self):
         errors = dict()
         # Check that the input can be converted into the right state object
@@ -211,11 +288,21 @@ class SANSReductionCore(DataProcessorAlgorithm):
         state.property_manager = state_property_manager
         return state
 
+    def _get_transmission_workspace(self):
+        transmission_workspace = self.getProperty("TransmissionWorkspace").value
+        return self._get_cloned_workspace(transmission_workspace) if transmission_workspace else None
+
+    def _get_direct_workspace(self):
+        direct_workspace = self.getProperty("DirectWorkspace").value
+        return self._get_cloned_workspace(direct_workspace) if direct_workspace else None
+
     def _get_monitor_workspace(self):
         monitor_workspace = self.getProperty("ScatterMonitorWorkspace").value
+        return self._get_cloned_workspace(monitor_workspace)
 
+    def _get_cloned_workspace(self, workspace):
         clone_name = "CloneWorkspace"
-        clone_options = {SANSConstants.input_workspace: monitor_workspace,
+        clone_options = {SANSConstants.input_workspace: workspace,
                          SANSConstants.output_workspace: SANSConstants.dummy}
         clone_alg = create_unmanaged_algorithm(clone_name, **clone_options)
         clone_alg.execute()

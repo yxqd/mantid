@@ -391,11 +391,11 @@ class SampleShape(object):
 
 
 def convert_int_to_shape(shape_int):
-    if shape_int == 0:
+    if shape_int == 1:
         as_type = SampleShape.CylinderAxisUp
-    elif shape_int == 1:
-        as_type = SampleShape.Cuboid
     elif shape_int == 2:
+        as_type = SampleShape.Cuboid
+    elif shape_int == 3:
         as_type = SampleShape.CylinderAxisAlong
     else:
         raise ValueError("SampleShape: Cannot convert unknown sample shape integer: {0}".format(shape_int))

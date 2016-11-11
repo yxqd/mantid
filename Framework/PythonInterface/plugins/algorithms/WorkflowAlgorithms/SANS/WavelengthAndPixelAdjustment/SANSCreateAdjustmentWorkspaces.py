@@ -131,12 +131,12 @@ class SANSCreateAdjustmentWorkspaces(DataProcessorAlgorithm):
         wave_pixel_adjustment_name = "SANSCreateWavelengthAndPixelAdjustment"
         serialized_state = state.property_manager
         wave_pixel_adjustment_options = {"SANSState": serialized_state,
-                                         "TransmissionWorkspace": calculated_transmission_workspace,
                                          "NormalizeToMonitorWorkspace": monitor_normalization_workspace,
                                          "OutputWorkspaceWavelengthAdjustment": SANSConstants.dummy,
                                          "OutputWorkspacePixelAdjustment": SANSConstants.dummy,
                                          "Component": component}
-
+        if calculated_transmission_workspace:
+            wave_pixel_adjustment_options.update({"TransmissionWorkspace": calculated_transmission_workspace})
         wave_pixel_adjustment_alg = create_unmanaged_algorithm(wave_pixel_adjustment_name,
                                                                **wave_pixel_adjustment_options)
         wave_pixel_adjustment_alg.execute()
@@ -169,32 +169,37 @@ class SANSCreateAdjustmentWorkspaces(DataProcessorAlgorithm):
         """
         Creates the fitted transmission workspace.
 
+        Note that this step is not mandatory. If no transmission and direct workspaces are provided, then we
+        don't have to do anything here.
         @param state: a SANSState object.
-        @return: the transmission fit.
+        @return: a fitted transmission workspace and the unfitted data.
         """
         transmission_workspace = self.getProperty("TransmissionWorkspace").value
         direct_workspace = self.getProperty("DirectWorkspace").value
-        data_type = self.getProperty("DataType").value
-
-        transmission_name = "SANSCalculateTransmission"
-        serialized_state = state.property_manager
-        transmission_options = {"TransmissionWorkspace": transmission_workspace,
-                                "DirectWorkspace": direct_workspace,
-                                "SANSState": serialized_state,
-                                "DataType": data_type,
-                                SANSConstants.output_workspace: SANSConstants.dummy,
-                                "UnfittedData": SANSConstants.dummy}
-        transmission_alg = create_unmanaged_algorithm(transmission_name, **transmission_options)
-        transmission_alg.execute()
-        fitted_data = transmission_alg.getProperty(SANSConstants.output_workspace).value
-        unfitted_data = transmission_alg.getProperty("UnfittedData").value
+        if transmission_workspace and direct_workspace:
+            data_type = self.getProperty("DataType").value
+            transmission_name = "SANSCalculateTransmission"
+            serialized_state = state.property_manager
+            transmission_options = {"TransmissionWorkspace": transmission_workspace,
+                                    "DirectWorkspace": direct_workspace,
+                                    "SANSState": serialized_state,
+                                    "DataType": data_type,
+                                    SANSConstants.output_workspace: SANSConstants.dummy,
+                                    "UnfittedData": SANSConstants.dummy}
+            transmission_alg = create_unmanaged_algorithm(transmission_name, **transmission_options)
+            transmission_alg.execute()
+            fitted_data = transmission_alg.getProperty(SANSConstants.output_workspace).value
+            unfitted_data = transmission_alg.getProperty("UnfittedData").value
+        else:
+            fitted_data = None
+            unfitted_data = None
         return fitted_data, unfitted_data
 
     def _get_wide_angle_correction_workspace(self, state, calculated_transmission_workspace):
         wide_angle_correction = state.adjustment.wide_angle_correction
         sample_data = self.getProperty("SampleData").value
         workspace = None
-        if wide_angle_correction and sample_data:
+        if wide_angle_correction and sample_data and calculated_transmission_workspace:
             wide_angle_name = "SANSWideAngleCorrection"
             wide_angle_options = {"SampleData": sample_data,
                                   "TransmissionData": calculated_transmission_workspace,

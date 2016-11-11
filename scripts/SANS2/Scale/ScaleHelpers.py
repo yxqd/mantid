@@ -1,6 +1,6 @@
 import math
 from abc import (ABCMeta, abstractmethod)
-from SANS2.Common.SANSEnumerations import (SANSInstrument, SampleShape, convert_int_to_shape)
+from SANS2.Common.SANSEnumerations import (SANSInstrument, SampleShape, convert_int_to_shape, DataType)
 from SANS2.Common.SANSFunctions import create_unmanaged_algorithm
 from SANS2.Common.SANSConstants import SANSConstants
 
@@ -44,13 +44,17 @@ class DivideByVolumeISIS(DivideByVolume):
         return divide_alg.getProperty(SANSConstants.output_workspace).value
 
     def _get_volume(self, workspace, scale_info):
-        # Get the geometry information from the worksapce
+        # Get the geometry information from the workspace
         sample_details = workspace.sample()
 
         # If the sample details are specified in the state, then use
         # this information else use the information stored on the workspace
-        shape = scale_info.shape if scale_info.shape is not None else \
-            convert_int_to_shape(sample_details.getGeometryFlag())
+        try:
+            shape = scale_info.shape if scale_info.shape is not None else \
+                convert_int_to_shape(sample_details.getGeometryFlag())
+        except ValueError:
+            shape = SampleShape.CylinderAxisAlong
+
         thickness = scale_info.thickness if scale_info.thickness is not None else sample_details.getThickness()
         width = scale_info.width if scale_info.width is not None else sample_details.getWidth()
         height = scale_info.height if scale_info.height is not None else sample_details.getHeight()
@@ -79,12 +83,13 @@ class DivideByVolumeFactory(object):
         super(DivideByVolumeFactory, self).__init__()
 
     @staticmethod
-    def create_divide_by_volume(state, is_can):
+    def create_divide_by_volume(state, data_type):
         data = state.data
         instrument = data.instrument
 
-        is_isis_instrument = instrument is SANSInstrument.LARMOR or instrument is SANSInstrument.SANS2D or instrument is SANSInstrument.LOQ
-        if is_isis_instrument and not is_can:
+        is_isis_instrument = instrument is SANSInstrument.LARMOR or instrument is SANSInstrument.SANS2D or\
+                             instrument is SANSInstrument.LOQ
+        if is_isis_instrument and data_type is DataType.Sample:
             divider = DivideByVolumeISIS()
         elif is_isis_instrument:
             divider = NullDivideByVolume()

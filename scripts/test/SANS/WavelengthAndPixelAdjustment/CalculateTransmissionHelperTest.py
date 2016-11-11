@@ -148,12 +148,14 @@ class CalculateTransmissionHelperTest(unittest.TestCase):
         # The second monitor (with spectrum index 2 should find a correction value of 4
         monitor_spectrum_tof_start = {"1": 1, "2": 50}
         monitor_spectrum_tof_stop = {"1": 40, "2": 70}
-
+        tof_general_start = 24
+        tof_general_stop = 38
         # Act
         output_workspace = apply_flat_background_correction_to_monitors(workspace,
                                                                         monitor_workspace_indices,
                                                                         monitor_spectrum_tof_start,
-                                                                        monitor_spectrum_tof_stop)
+                                                                        monitor_spectrum_tof_stop, tof_general_start,
+                                                                        tof_general_stop)
         # Assert
         # The first monitor  should have [0, 0, 2, 2], it has 2.1 in the last value, not clear why
         # The second monitor  should have [0, 0, 0, 0], it has 0.1 in the last value, not clear why. Note that

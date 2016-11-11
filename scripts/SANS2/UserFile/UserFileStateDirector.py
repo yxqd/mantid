@@ -208,7 +208,7 @@ class UserFileStateDirectorISIS(object):
 
         # Scale state
         scale_state = self._scale_builder.build()
-        scale_state.valid()
+        scale_state.validate()
         self._state_builder.set_scale(scale_state)
 
         # Adjustment state

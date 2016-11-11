@@ -95,7 +95,6 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
                               detector_id_transmission_monitor, detector_id_incident_monitor,
                               calculate_transmission_state, data_type)
 
-        # Set the output
         self.setProperty(SANSConstants.output_workspace, fitted_transmission_workspace)
         if unfitted_transmission_workspace:
             self.setProperty("UnfittedData", unfitted_transmission_workspace)
@@ -140,9 +139,9 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
 
         # Get the fit setting for the correct data type, ie either for the Sample of the Can
         fit_type = calculate_transmission_state.fit[convert_reduction_data_type_to_string(data_type)].fit_type
-        if data_type is FitType.Log:
+        if fit_type is FitType.Log:
             fit_string = "Log"
-        elif data_type is FitType.Polynomial:
+        elif fit_type is FitType.Polynomial:
             fit_string = "Polynomial"
         else:
             fit_string = "Linear"
@@ -270,7 +269,7 @@ class SANSCalculateTransmission(DataProcessorAlgorithm):
         rebin_type = calculate_transmission_state.rebin_type
         wavelength_step_type = calculate_transmission_state.wavelength_step_type
 
-        convert_name = "SANSConvertToWavelength"
+        convert_name = "ConvertToWavelength"
         convert_options = {SANSConstants.input_workspace: workspace,
                            SANSConstants.output_workspace: SANSConstants.dummy,
                            "WavelengthLow": wavelength_low,

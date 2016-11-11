@@ -9,6 +9,8 @@ from mantid.api import (DataProcessorAlgorithm, MatrixWorkspaceProperty, Algorit
 from SANS2.State.SANSStateBase import create_deserialized_sans_state_from_property_manager
 from SANS2.Common.SANSConstants import SANSConstants
 from SANS2.Scale.ScaleHelpers import (DivideByVolumeFactory, MultiplyByAbsoluteScaleFactory)
+from SANS2.Common.SANSEnumerations import (convert_reduction_data_type_to_string, convert_string_to_reduction_data_type,
+                                           DataType)
 
 
 class SANSScale(DataProcessorAlgorithm):
@@ -31,8 +33,12 @@ class SANSScale(DataProcessorAlgorithm):
                                                      optional=PropertyMode.Mandatory, direction=Direction.Output),
                              doc='The scaled output workspace')
 
-        self.declareProperty("IsCan", False, direction=Direction.Input,
-                             doc="Set true if the input is a can workspace, else false.")
+        # The data type
+        allowed_data = StringListValidator([convert_reduction_data_type_to_string(DataType.Sample),
+                                            convert_reduction_data_type_to_string(DataType.Can)])
+        self.declareProperty("DataType", convert_reduction_data_type_to_string(DataType.Sample),
+                             validator=allowed_data, direction=Direction.Input,
+                             doc="The component of the instrument which is to be reduced.")
 
     def PyExec(self):
         state_property_manager = self.getProperty("SANSState").value
@@ -45,8 +51,10 @@ class SANSScale(DataProcessorAlgorithm):
 
         # Divide by the sample volume
         progress.report("Dividing by the sample volume.")
-        is_can = self.getProperty("IsCan").value
-        workspace = self._divide_by_volume(workspace, state, is_can)
+        data_type_as_string = self.getProperty("DataType").value
+        data_type = convert_string_to_reduction_data_type(data_type_as_string)
+
+        workspace = self._divide_by_volume(workspace, state, data_type)
 
         # Multiply by the absolute scale
         progress.report("Applying absolute scale.")
@@ -55,9 +63,9 @@ class SANSScale(DataProcessorAlgorithm):
         self.setProperty(SANSConstants.output_workspace, workspace)
         progress.report("Finished applying absolute scale")
 
-    def _divide_by_volume(self, workspace, state, is_can):
+    def _divide_by_volume(self, workspace, state, data_type):
         divide_factory = DivideByVolumeFactory()
-        divider = divide_factory.create_divide_by_volume(state, is_can)
+        divider = divide_factory.create_divide_by_volume(state, data_type)
         scale_info = state.scale
         return divider.divide_by_volume(workspace, scale_info)
 
