@@ -10,6 +10,8 @@ set ( TEST_PY_FILES
    SANSStateDataTest.py
    SANSStateDataBuilderTest.py
    SANSStateFunctionsTest.py
+   SANSStateScaleTest.py
+   SANSStateScaleBuilderTest.py
    SANSStateMaskTest.py
    SANSStateMaskBuilderTest.py
    SANSStateMoveTest.py

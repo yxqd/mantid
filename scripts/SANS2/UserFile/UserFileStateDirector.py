@@ -14,6 +14,7 @@ from SANS2.State.StateBuilder.SANSStateReductionBuilder import get_reduction_bui
 from SANS2.State.StateBuilder.SANSStateSliceEventBuilder import get_slice_event_builder
 from SANS2.State.StateBuilder.SANSStateWavelengthBuilder import get_wavelength_builder
 from SANS2.State.StateBuilder.SANSStateSaveBuilder import get_save_builder
+from SANS2.State.StateBuilder.SANSStateScaleBuilder import get_scale_builder
 from SANS2.State.StateBuilder.SANSStateAdjustmentBuilder import get_adjustment_builder
 from SANS2.State.StateBuilder.SANSStateNormalizeToMonitorBuilder import get_normalize_to_monitor_builder
 from SANS2.State.StateBuilder.SANSStateCalculateTransmissionBuilder import get_calculate_transmission_builder
@@ -140,6 +141,7 @@ class UserFileStateDirectorISIS(object):
         self._slice_event_builder = get_slice_event_builder(self._data)
         self._wavelength_builder = get_wavelength_builder(self._data)
         self._save_builder = get_save_builder(self._data)
+        self._scale_builder = get_scale_builder(self._data)
         self._adjustment_builder = get_adjustment_builder(self._data)
 
     def set_user_file(self, user_file):
@@ -203,6 +205,11 @@ class UserFileStateDirectorISIS(object):
         save_state = self._save_builder.build()
         save_state.validate()
         self._state_builder.set_save(save_state)
+
+        # Scale state
+        scale_state = self._scale_builder.build()
+        scale_state.valid()
+        self._state_builder.set_scale(scale_state)
 
         # Adjustment state
         adjustment_state = self._adjustment_builder.build()

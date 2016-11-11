@@ -350,6 +350,8 @@ def convert_save_type_to_string(save_type):
         as_string = "CSV"
     elif save_type is SaveType.NXcanSAS:
         as_string = "NXcanSAS"
+    else:
+        raise ValueError("SaveType: Cannot convert unknown save type: {0}".format(save_type))
     return as_string
 
 
@@ -375,3 +377,26 @@ def convert_fit_type_to_string(fit_type):
     elif fit_type is FitType.NoFit:
         as_string = "NoFit"
     return as_string
+
+
+# --------------------------
+#  SampleShape
+# --------------------------
+@inner_classes_with_name_space("CylinderAxisUp", "Cuboid", "CylinderAxisAlong")
+class SampleShape(object):
+    """
+    Defines the sample shape types
+    """
+    pass
+
+
+def convert_int_to_shape(shape_int):
+    if shape_int == 0:
+        as_type = SampleShape.CylinderAxisUp
+    elif shape_int == 1:
+        as_type = SampleShape.Cuboid
+    elif shape_int == 2:
+        as_type = SampleShape.CylinderAxisAlong
+    else:
+        raise ValueError("SampleShape: Cannot convert unknown sample shape integer: {0}".format(shape_int))
+    return as_type
