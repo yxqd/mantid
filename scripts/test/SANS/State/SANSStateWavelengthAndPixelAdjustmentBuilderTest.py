@@ -3,7 +3,7 @@ import mantid
 
 from SANS2.State.StateBuilder.SANSStateDataBuilder import get_data_builder
 from SANS2.State.StateBuilder.SANSStateWavelengthAndPixelAdjustmentBuilder import get_wavelength_and_pixel_adjustment_builder
-from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType)
+from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType, DetectorType, convert_detector_type_to_string)
 from SANS2.Common.SANSEnumerations import (SANSFacility, SANSInstrument)
 
 
@@ -19,8 +19,8 @@ class SANSStateReductionBuilderTest(unittest.TestCase):
         builder = get_wavelength_and_pixel_adjustment_builder(data_info)
         self.assertTrue(builder)
 
-        builder.set_pixel_adjustment_file("test")
-        builder.set_wavelength_adjustment_file("testst")
+        builder.set_HAB_pixel_adjustment_file("test")
+        builder.set_HAB_wavelength_adjustment_file("test2")
         builder.set_wavelength_low(1.5)
         builder.set_wavelength_high(2.7)
         builder.set_wavelength_step(0.5)
@@ -29,8 +29,10 @@ class SANSStateReductionBuilderTest(unittest.TestCase):
         state = builder.build()
 
         # Assert
-        self.assertTrue(state.pixel_adjustment_file == "test")
-        self.assertTrue(state.wavelength_adjustment_file == "testst")
+        self.assertTrue(state.adjustment_files[convert_detector_type_to_string(
+                                                                     DetectorType.Hab)].pixel_adjustment_file == "test")
+        self.assertTrue(state.adjustment_files[convert_detector_type_to_string(
+                                                              DetectorType.Hab)].wavelength_adjustment_file == "test2")
         self.assertTrue(state.wavelength_low == 1.5)
         self.assertTrue(state.wavelength_high == 2.7)
         self.assertTrue(state.wavelength_step == 0.5)

@@ -65,7 +65,8 @@ sample_user_file = ("PRINT for changer\n"
                     "DET/CORR/FRONT/ROT 0.0\n"
                     "!\n"
                     "!! 01/10/13 MASKSANS2d_133F M3 by M1 trans Hellsing, Rennie, Jackson, L1=L2=12m A1=20 and A2=8mm\n"
-                    "L/EVENTSTIME 7000.0,500.0,60000.0\n")
+                    "L/EVENTSTIME 7000.0,500.0,60000.0\n"
+                    "SAMPLE/PATH/ON\n")
 
 
 def create_user_file(user_file_content):

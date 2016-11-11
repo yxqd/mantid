@@ -28,13 +28,6 @@ class UserFileReader(object):
             else:
                 output[key] = [value]
 
-    @staticmethod
-    def _check_output(output):
-        pass
-        # ADD SEMANTIC CHECKS HERE!!!!!!
-        # This is the place to check if there are logical errors in the user file and to inform the user that
-        # something is not quite right
-
     def read_user_file(self):
         # Read in all elements
         parser = UserFileParser()
@@ -45,8 +38,6 @@ class UserFileReader(object):
                 parsed = parser.parse_line(line)
                 UserFileReader._add_to_output(output, parsed)
 
-        # Check elements which require checking
-        UserFileReader._check_output(output)
 
         # Provide the read elements
         return output

@@ -4,7 +4,7 @@ from mantid.kernel import (PropertyManagerProperty, PropertyManager)
 from mantid.api import Algorithm
 from SANS2.State.SANSStateWavelengthAndPixelAdjustment import (SANSStateWavelengthAndPixelAdjustment,
                                                                SANSStateWavelengthAndPixelAdjustmentISIS)
-from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType)
+from SANS2.Common.SANSEnumerations import (RebinType, RangeStepType, DetectorType, convert_detector_type_to_string)
 
 
 class SANSStateWavelengthAndPixelAdjustmentTest(unittest.TestCase):
@@ -17,18 +17,17 @@ class SANSStateWavelengthAndPixelAdjustmentTest(unittest.TestCase):
         state = SANSStateWavelengthAndPixelAdjustmentISIS()
 
         # Act + Assert
-        state.pixel_adjustment_file = "tests"
-        state.wavelength_adjustment_file = "tests2"
+        state.adjustment_files[convert_detector_type_to_string(DetectorType.Lab)].pixel_adjustment_file = "tests"
+        state.adjustment_files[convert_detector_type_to_string(DetectorType.Lab)].wavelength_adjustment_file = "tests2"
 
         state.wavelength_low = 1.5
         state.wavelength_high = 2.7
         state.wavelength_step = 0.5
         state.wavelength_step_type = RangeStepType.Lin
-
         try:
             state.validate()
             is_valid = True
-        except ValueError:
+        except ValueError as e:
             is_valid = False
         self.assertTrue(is_valid)
 
@@ -38,7 +37,7 @@ class SANSStateWavelengthAndPixelAdjustmentTest(unittest.TestCase):
 
         # Act + Assert
         try:
-            state.pixel_adjustment_file = 12.5
+            state.adjustment_files[convert_detector_type_to_string(DetectorType.Lab)].pixel_adjustment_file = 12.5
             is_valid = True
         except TypeError:
             is_valid = False
@@ -77,9 +76,8 @@ class SANSStateWavelengthAndPixelAdjustmentTest(unittest.TestCase):
 
         # Arrange
         state = SANSStateWavelengthAndPixelAdjustmentISIS()
-        state.pixel_adjustment_file = "tests"
-        state.wavelength_adjustment_file = "tests2"
-
+        state.adjustment_files[convert_detector_type_to_string(DetectorType.Lab)].pixel_adjustment_file = "tests"
+        state.adjustment_files[convert_detector_type_to_string(DetectorType.Lab)].wavelength_adjustment_file = "tests2"
         state.wavelength_low = 1.5
         state.wavelength_high = 2.7
         state.wavelength_step = 0.5
@@ -97,9 +95,10 @@ class SANSStateWavelengthAndPixelAdjustmentTest(unittest.TestCase):
         self.assertTrue(type(property_manager) == PropertyManager)
         state_2 = SANSStateWavelengthAndPixelAdjustmentISIS()
         state_2.property_manager = property_manager
-
-        self.assertTrue(state_2.pixel_adjustment_file == "tests")
-        self.assertTrue(state_2.wavelength_adjustment_file == "tests2")
+        self.assertTrue(state_2.adjustment_files[convert_detector_type_to_string(
+                                                              DetectorType.Lab)].pixel_adjustment_file == "tests")
+        self.assertTrue(state_2.adjustment_files[convert_detector_type_to_string(
+                                                         DetectorType.Lab)].wavelength_adjustment_file == "tests2")
         self.assertTrue(state_2.wavelength_step_type == RangeStepType.Lin)
         self.assertTrue(state_2.wavelength_low == 1.5)
         self.assertTrue(state_2.wavelength_high == 2.7)

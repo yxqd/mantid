@@ -1848,14 +1848,32 @@ class MonParser(UserFileComponentParser):
                                                      interpolate=interpolate)}
 
     def _extract_direct(self, line, original_line):
-        detector_type = DetectorType.Hab if re.search(self._hab, line, re.IGNORECASE) is not None else DetectorType.Lab
+        # If we have a HAB specified then select HAB
+        # If we have LAB specified then select LAB
+        # If nothing is specified then select BOTH
+        is_hab = re.search(self._hab, line, re.IGNORECASE)
+        is_lab = re.search(self._lab, line, re.IGNORECASE)
+
+        if not is_hab and not is_lab:
+            is_hab = True
+            is_lab = True
+
         file_path = self._extract_file_path(line, original_line, self._direct)
-        return {user_file_mon_direct: monitor_file(file_path=file_path, detector_type=detector_type)}
+        output = []
+        if is_hab:
+            output.append(monitor_file(file_path=file_path, detector_type=DetectorType.Hab))
+        if is_lab:
+            output.append(monitor_file(file_path=file_path, detector_type=DetectorType.Lab))
+        return {user_file_mon_direct: output}
 
     def _extract_flat(self, line, original_line):
-        detector_type = DetectorType.Hab if re.search(self._hab, line, re.IGNORECASE) is not None else DetectorType.Lab
+        # If we have a HAB specified then select HAB
+        # If we have LAB specified then select LAB
+        # If nothing is specified then select LAB
+        detector_type = DetectorType.Hab if re.search(self._hab, line, re.IGNORECASE) else DetectorType.Lab
         file_path = self._extract_file_path(line, original_line, self._flat)
         return {user_file_mon_flat: monitor_file(file_path=file_path, detector_type=detector_type)}
+
 
     def _extract_hab(self, line, original_line):
         file_path = self._extract_file_path(line, original_line, self._hab_file)
@@ -1863,7 +1881,7 @@ class MonParser(UserFileComponentParser):
 
     def _extract_file_path(self, line, original_line, to_remove):
         direct = re.sub(self._detector, "", line)
-        # Remove only the first occurence
+        # Remove only the first occurrence
         direct = re.sub(to_remove, "", direct, count=1)
         direct = re.sub(self._equal, "", direct)
         direct = direct.strip()

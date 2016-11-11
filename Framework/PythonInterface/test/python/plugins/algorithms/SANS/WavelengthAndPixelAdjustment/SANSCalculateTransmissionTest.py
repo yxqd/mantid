@@ -37,16 +37,16 @@ def get_expected_for_spectrum_n(data_workspace, selected_workspace_index, value_
     expected_lambda = [2., 4., 6., 8.]
     if selected_workspace_index == 0:
         expected_signal = [0.,
-                           abs(lambda_after_unit_conversion[1]-expected_lambda[2]) /
-                           abs(lambda_after_unit_conversion[1]-lambda_after_unit_conversion[2])*value_array[1],
-                           (abs(expected_lambda[3]-expected_lambda[2]) /
-                           abs(lambda_after_unit_conversion[1]-lambda_after_unit_conversion[2]))*value_array[1]]
+                           abs(lambda_after_unit_conversion[1] - expected_lambda[2]) /
+                           abs(lambda_after_unit_conversion[1] - lambda_after_unit_conversion[2]) * value_array[1],
+                           (abs(expected_lambda[3] - expected_lambda[2]) /
+                            abs(lambda_after_unit_conversion[1] - lambda_after_unit_conversion[2])) * value_array[1]]
     else:
-        expected_signal = [1.*value_array[1] + abs(lambda_after_unit_conversion[2]-expected_lambda[1]) /
-                           abs(lambda_after_unit_conversion[2]-lambda_after_unit_conversion[3])*value_array[2],
-                           abs(lambda_after_unit_conversion[3]-expected_lambda[1]) /
-                           abs(lambda_after_unit_conversion[2]-lambda_after_unit_conversion[3])*value_array[2] +
-                           1.*value_array[3],
+        expected_signal = [1. * value_array[1] + abs(lambda_after_unit_conversion[2] - expected_lambda[1]) /
+                           abs(lambda_after_unit_conversion[2] - lambda_after_unit_conversion[3]) * value_array[2],
+                           abs(lambda_after_unit_conversion[3] - expected_lambda[1]) /
+                           abs(lambda_after_unit_conversion[2] - lambda_after_unit_conversion[3]) * value_array[2] +
+                           1. * value_array[3],
                            0.]
 
     return np.array(expected_lambda), np.array(expected_signal)
@@ -75,7 +75,7 @@ class SANSCalculateTransmissionTest(unittest.TestCase):
         return clone_alg.getProperty(SANSConstants.output_workspace).value
 
     @staticmethod
-    def _get_monitor_workspace(data=None):
+    def _get_transmission_workspace(data=None):
         # Load the workspace
         if SANSCalculateTransmissionTest.sample_workspace is None:
             SANSCalculateTransmissionTest.sample_workspace = \
@@ -96,12 +96,14 @@ class SANSCalculateTransmissionTest(unittest.TestCase):
     @staticmethod
     def _get_state(transmission_radius_on_detector=None, transmission_roi_files=None, transmission_mask_files=None,
                    transmission_monitor=None, incident_monitor=None, rebin_type=None, wavelength_low=None,
-                   wavelength_high=None, wavelength_step=None, wavelength_step_type=None, use_full_wavelength_range=None,
+                   wavelength_high=None, wavelength_step=None, wavelength_step_type=None,
+                   use_full_wavelength_range=None,
                    wavelength_full_range_low=None, wavelength_full_range_high=None, prompt_peak_correction_min=None,
                    prompt_peak_correction_max=None, background_TOF_general_start=None, background_TOF_general_stop=None,
                    background_TOF_monitor_start=None, background_TOF_monitor_stop=None, background_TOF_roi_start=None,
                    background_TOF_roi_stop=None, sample_fit_type=None, sample_polynomial_order=None,
-                   sample_wavelength_low=None, sample_wavelength_high=None, can_fit_type=None, can_polynomial_order=None,
+                   sample_wavelength_low=None, sample_wavelength_high=None, can_fit_type=None,
+                   can_polynomial_order=None,
                    can_wavelength_low=None, can_wavelength_high=None):
         test_director = TestDirector()
         state = test_director.construct()
@@ -263,9 +265,9 @@ class SANSCalculateTransmissionTest(unittest.TestCase):
         direct_incident = [40., 401., 430., 420.]
         direct_trans = [30., 320., 350., 335.]
         data_transmission = {0: trans_incident, 2: trans_trans}
-        transmission_workspace = SANSCalculateTransmissionTest._get_monitor_workspace(data=data_transmission)
+        transmission_workspace = SANSCalculateTransmissionTest._get_transmission_workspace(data=data_transmission)
         data_direct = {0: direct_incident, 2: direct_trans}
-        direct_workspace = SANSCalculateTransmissionTest._get_monitor_workspace(data=data_direct)
+        direct_workspace = SANSCalculateTransmissionTest._get_transmission_workspace(data=data_direct)
 
         # Act
         fitted_workspace, unfitted_workspace = SANSCalculateTransmissionTest._run_test(transmission_workspace,
@@ -273,7 +275,7 @@ class SANSCalculateTransmissionTest(unittest.TestCase):
                                                                                        is_sample=True)
         # Assert
         self._do_assert(transmission_workspace, direct_workspace, unfitted_workspace, fitted_workspace,
-                       trans_incident, trans_trans, direct_incident, direct_trans)
+                        trans_incident, trans_trans, direct_incident, direct_trans)
 
     def test_that_calculates_transmission_for_monitor_specific_background_and_prompt_peak_for_can(self):
         # Arrange
@@ -300,9 +302,9 @@ class SANSCalculateTransmissionTest(unittest.TestCase):
         direct_incident = [40., 401., 210000000., 401.]
         direct_trans = [30., 320., 210000000., 320.]
         data_transmission = {0: trans_incident, 2: trans_trans}
-        transmission_workspace = SANSCalculateTransmissionTest._get_monitor_workspace(data=data_transmission)
+        transmission_workspace = SANSCalculateTransmissionTest._get_transmission_workspace(data=data_transmission)
         data_direct = {0: direct_incident, 2: direct_trans}
-        direct_workspace = SANSCalculateTransmissionTest._get_monitor_workspace(data=data_direct)
+        direct_workspace = SANSCalculateTransmissionTest._get_transmission_workspace(data=data_direct)
 
         # Act
         fitted_workspace, unfitted_workspace = SANSCalculateTransmissionTest._run_test(transmission_workspace,

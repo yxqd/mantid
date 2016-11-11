@@ -35,9 +35,9 @@ def do_test(parser, valid_settings, invalid_settings, assert_true, assert_raises
         assert_invalid_parse(parser, setting, invalid_settings[setting], assert_raises)
 
 
-# -----------------------------------------------------------------
-# --- Tests -------------------------------------------------------
-# -----------------------------------------------------------------
+# # -----------------------------------------------------------------
+# # --- Tests -------------------------------------------------------
+# # -----------------------------------------------------------------
 class DetParserTest(unittest.TestCase):
     def test_that_gets_type(self):
         self.assertTrue(DetParser.get_type(), "DET")
@@ -806,25 +806,35 @@ class MonParserTest(unittest.TestCase):
 
     def test_that_direct_files_are_parsed_correctly(self):
         valid_settings = {"MON/DIRECT= C:\path1\Path2\file.ext ": {user_file_mon_direct:
-                                                                       monitor_file(file_path="C:/path1/Path2/file.ext",
-                                                                                    detector_type=DetectorType.Lab)},
+                                                                       [monitor_file(file_path="C:/path1/Path2/file.ext",
+                                                                                    detector_type=DetectorType.Hab),
+                                                                        monitor_file(file_path="C:/path1/Path2/file.ext",
+                                                                            detector_type=DetectorType.Lab)]},
                           "MON/ direct  = filE.Ext ": {user_file_mon_direct:
-                                                           monitor_file(file_path="filE.Ext",
-                                                                        detector_type=DetectorType.Lab)},
+                                                           [monitor_file(file_path="filE.Ext",
+                                                                        detector_type=DetectorType.Hab),
+                                                            monitor_file(file_path="filE.Ext",
+                                                                         detector_type=DetectorType.Lab)
+                                                            ]},
                           "MON/DIRECT= \path1\Path2\file.ext ": {user_file_mon_direct:
-                                                                     monitor_file(file_path="/path1/Path2/file.ext",
-                                                                                  detector_type=DetectorType.Lab)},
+                                                                     [monitor_file(file_path="/path1/Path2/file.ext",
+                                                                                  detector_type=DetectorType.Hab),
+                                                                      monitor_file(file_path="/path1/Path2/file.ext",
+                                                                                   detector_type=DetectorType.Lab)]},
                           "MON/DIRECT= /path1/Path2/file.ext ": {user_file_mon_direct:
-                                                                     monitor_file(file_path="/path1/Path2/file.ext",
-                                                                                  detector_type=DetectorType.Lab)},
+                                                                     [monitor_file(file_path="/path1/Path2/file.ext",
+                                                                                  detector_type=DetectorType.Hab),
+                                                                      monitor_file(file_path="/path1/Path2/file.ext",
+                                                                                   detector_type=DetectorType.Lab)]},
                           "MON/DIRECT/ rear= /path1/Path2/file.ext ": {user_file_mon_direct:
-                                                                           monitor_file(
+                                                                           [monitor_file(
                                                                                file_path="/path1/Path2/file.ext",
-                                                                               detector_type=DetectorType.Lab)},
+                                                                               detector_type=DetectorType.Lab)]},
                           "MON/DIRECT/ frONT= path1/Path2/file.ext ": {user_file_mon_direct:
-                                                                           monitor_file(
+                                                                           [monitor_file(
                                                                                file_path="path1/Path2/file.ext",
-                                                                               detector_type=DetectorType.Hab)}}
+                                                                               detector_type=DetectorType.Hab)]}
+                          }
 
         invalid_settings = {"MON/DIRECT= /path1/ Path2/file.ext ": RuntimeError,
                             "MON/DIRECT /path1/Path2/file.ext ": RuntimeError,

@@ -4,8 +4,8 @@
 
 import json
 from SANS2.State.SANSStateBase import (SANSStateBase, sans_parameters, StringParameter,
-                                       ClassTypeParameter, PositiveFloatParameter)
-from SANS2.Common.SANSEnumerations import (RangeStepType)
+                                       ClassTypeParameter, PositiveFloatParameter, DictParameter)
+from SANS2.Common.SANSEnumerations import (RangeStepType, DetectorType, convert_detector_type_to_string)
 
 
 # ------------------------------------------------
@@ -16,17 +16,35 @@ class SANSStateWavelengthAndPixelAdjustment(object):
 
 
 @sans_parameters
-class SANSStateWavelengthAndPixelAdjustmentISIS(SANSStateBase, SANSStateWavelengthAndPixelAdjustment):
+class SANSStateAdjustmentFiles(SANSStateBase):
     pixel_adjustment_file = StringParameter()
     wavelength_adjustment_file = StringParameter()
 
+    def __init__(self):
+        super(SANSStateAdjustmentFiles, self).__init__()
+
+    def validate(self):
+        is_invalid = {}
+        # TODO if a file was specified then make sure that its existence is checked.
+
+        if is_invalid:
+            raise ValueError("SANSStateAdjustmentFiles: The provided inputs are illegal. "
+                             "Please see: {0}".format(json.dumps(is_invalid)))
+
+
+@sans_parameters
+class SANSStateWavelengthAndPixelAdjustmentISIS(SANSStateBase, SANSStateWavelengthAndPixelAdjustment):
     wavelength_low = PositiveFloatParameter()
     wavelength_high = PositiveFloatParameter()
     wavelength_step = PositiveFloatParameter()
     wavelength_step_type = ClassTypeParameter(RangeStepType)
 
+    adjustment_files = DictParameter()
+
     def __init__(self):
         super(SANSStateWavelengthAndPixelAdjustmentISIS, self).__init__()
+        self.adjustment_files = {convert_detector_type_to_string(DetectorType.Lab): SANSStateAdjustmentFiles(),
+                                 convert_detector_type_to_string(DetectorType.Hab): SANSStateAdjustmentFiles()}
 
     def validate(self):
         is_invalid = {}
@@ -44,6 +62,13 @@ class SANSStateWavelengthAndPixelAdjustmentISIS(SANSStateBase, SANSStateWaveleng
                 is_invalid.update({"wavelength_high": "The lower wavelength bound needs to be smaller than the upper "
                                                       "bound. The lower bound is {0} and the upper "
                                                       "is {1}.".format(self.wavelength_low, self.wavelength_high)})
+
+        try:
+            self.adjustment_files[convert_detector_type_to_string(DetectorType.Lab)].validate()
+            self.adjustment_files[convert_detector_type_to_string(DetectorType.Hab)].validate()
+        except ValueError as e:
+            is_invalid.update({"adjustment_files": str(e)})
+
         if is_invalid:
             raise ValueError("SANSStateWavelengthAndPixelAdjustmentISIS: The provided inputs are illegal. "
                              "Please see: {0}".format(json.dumps(is_invalid)))

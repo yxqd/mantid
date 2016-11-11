@@ -2,7 +2,7 @@ from mantid.kernel import logger
 
 from SANS2.Common.SANSConstants import SANSConstants
 from SANS2.Common.SANSEnumerations import (DetectorType, FitModeForMerge, RebinType, DataType,
-                                           convert_reduction_data_type_to_string)
+                                           convert_reduction_data_type_to_string, convert_detector_type_to_string)
 from SANS2.Common.SANSFileInformation import find_full_file_path
 from SANS2.UserFile.UserFileReader import UserFileReader
 from SANS2.UserFile.UserFileCommon import *  # noqa
@@ -17,6 +17,7 @@ from SANS2.State.StateBuilder.SANSStateSaveBuilder import get_save_builder
 from SANS2.State.StateBuilder.SANSStateAdjustmentBuilder import get_adjustment_builder
 from SANS2.State.StateBuilder.SANSStateNormalizeToMonitorBuilder import get_normalize_to_monitor_builder
 from SANS2.State.StateBuilder.SANSStateCalculateTransmissionBuilder import get_calculate_transmission_builder
+from SANS2.State.StateBuilder.SANSStateWavelengthAndPixelAdjustmentBuilder import get_wavelength_and_pixel_adjustment_builder
 
 
 def check_if_contains_only_one_element(to_check, element_name):
@@ -446,7 +447,7 @@ class UserFileStateDirectorISIS(object):
             self._reduction_builder.set_merge_range_min(q_range_min_shift)
             self._reduction_builder.set_merge_range_max(q_range_max_shift)
         else:
-            self._reduction_builder.set_merge_fit_mode(FitModeForMerge.None)
+            self._reduction_builder.set_merge_fit_mode(FitModeForMerge.NoFit)
             self._reduction_builder.set_merge_range_min(None)
             self._reduction_builder.set_merge_range_max(None)
 
@@ -799,8 +800,15 @@ class UserFileStateDirectorISIS(object):
         # ------------------------------------------------
         # Setup the wavelength and pixel adjustment state
         # ------------------------------------------------
-        #wavelength_and_pixel_adjustment_state = self.set_up_wavelength_and_pixel_adjustment(user_file_items)
-        #self._adjustment_builder.set_wavelength_and_pixel_adjustment(wavelength_and_pixel_adjustment_state)
+        wavelength_and_pixel_adjustment_state = self._set_up_wavelength_and_pixel_adjustment(user_file_items)
+        self._adjustment_builder.set_wavelength_and_pixel_adjustment(wavelength_and_pixel_adjustment_state)
+
+        # Get the wide angle correction setting
+        if user_file_sample_path in user_file_items:
+            sample_path = user_file_items[user_file_sample_path]
+            check_if_contains_only_one_element(sample_path, user_file_sample_path)
+            sample_path = sample_path[-1]
+            self._adjustment_builder.set_wide_angle_correction(sample_path)
 
     def _set_up_normalize_to_monitor_state(self, user_file_items):
         normalize_to_state_builder = get_normalize_to_monitor_builder(self._data)
@@ -935,7 +943,44 @@ class UserFileStateDirectorISIS(object):
             calculate_transmission_builder.set_wavelength_high(wavelength_limits.stop)
             calculate_transmission_builder.set_wavelength_step(wavelength_limits.step)
             calculate_transmission_builder.set_wavelength_step_type(wavelength_limits.step_type)
-
         return calculate_transmission_builder.build()
 
+    def _set_up_wavelength_and_pixel_adjustment(self, user_file_items):
+        wavelength_and_pixel_adjustment_builder = get_wavelength_and_pixel_adjustment_builder(self._data)
 
+        # Get the flat/flood files. There can be entries for LAB and HAB.
+        if user_file_mon_flat in user_file_items:
+            mon_flat = user_file_items[user_file_mon_flat]
+            hab_flat_entries = [item for item in mon_flat if item.detector_type is DetectorType.Hab]
+            lab_flat_entries = [item for item in mon_flat if item.detector_type is DetectorType.Lab]
+            if hab_flat_entries:
+                hab_flat_entry = hab_flat_entries[-1]
+                wavelength_and_pixel_adjustment_builder.set_HAB_pixel_adjustment_file(hab_flat_entry.file_path)
+
+            if lab_flat_entries:
+                lab_flat_entry = lab_flat_entries[-1]
+                wavelength_and_pixel_adjustment_builder.set_LAB_pixel_adjustment_file(lab_flat_entry.file_path)
+
+        # Get the direct files. There can be entries for LAB and HAB.
+        if user_file_mon_direct in user_file_items:
+            mon_direct = user_file_items[user_file_mon_direct]
+            hab_direct_entries = [item for item in mon_direct if item.detector_type is DetectorType.Hab]
+            lab_direct_entries = [item for item in mon_direct if item.detector_type is DetectorType.Lab]
+            if hab_direct_entries:
+                hab_direct_entry = hab_direct_entries[-1]
+                wavelength_and_pixel_adjustment_builder.set_HAB_wavelength_adjustment_file(hab_direct_entry.file_path)
+
+            if lab_direct_entries:
+                lab_direct_entry = lab_direct_entries[-1]
+                wavelength_and_pixel_adjustment_builder.set_LAB_wavelength_adjustment_file(lab_direct_entry.file_path)
+
+        # Set up the wavelength
+        if user_file_limits_wavelength in user_file_items:
+            wavelength_limits = user_file_items[user_file_limits_wavelength]
+            check_if_contains_only_one_element(wavelength_limits, user_file_limits_wavelength)
+            wavelength_limits = wavelength_limits[-1]
+            wavelength_and_pixel_adjustment_builder.set_wavelength_low(wavelength_limits.start)
+            wavelength_and_pixel_adjustment_builder.set_wavelength_high(wavelength_limits.stop)
+            wavelength_and_pixel_adjustment_builder.set_wavelength_step(wavelength_limits.step)
+            wavelength_and_pixel_adjustment_builder.set_wavelength_step_type(wavelength_limits.step_type)
+        return wavelength_and_pixel_adjustment_builder.build()

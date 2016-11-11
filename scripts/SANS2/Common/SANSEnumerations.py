@@ -252,6 +252,17 @@ def convert_detector_type_to_string(to_convert):
     return detector_type_string
 
 
+def convert_string_to_detector_type(to_convert):
+    if to_convert == SANSConstants.high_angle_bank:
+        detector_type = DetectorType.Hab
+    elif to_convert == SANSConstants.low_angle_bank:
+        detector_type = DetectorType.Lab
+    else:
+        raise RuntimeError("Trying to convert a detector of type {0} to a string. Cannot handle this detector"
+                           " type currently.".format(to_convert))
+    return detector_type
+
+
 # --------------------------
 #  Ranges
 # --------------------------

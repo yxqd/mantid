@@ -3,6 +3,8 @@
 ##
 
 set ( TEST_PY_FILES
+   SANSStateAdjustmentTest.py
+   SANSStateAdjustmentBuilderTest.py
    SANSStateCalculateTransmissionTest.py
    SANSStateCalculateTransmissionBuilderTest.py
    SANSStateDataTest.py

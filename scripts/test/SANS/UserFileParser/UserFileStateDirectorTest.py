@@ -5,7 +5,8 @@ import mantid
 
 from SANS2.UserFile.UserFileStateDirector import UserFileStateDirectorISIS
 from SANS2.Common.SANSEnumerations import (SANSFacility, ISISReductionMode, RangeStepType, RebinType,
-                                           DataType, convert_reduction_data_type_to_string, FitType)
+                                           DataType, convert_reduction_data_type_to_string, FitType,
+                                           convert_detector_type_to_string, DetectorType)
 from SANS2.Common.SANSConfigurations import SANSConfigurations
 from SANS2.State.StateBuilder.SANSStateDataBuilder import get_data_builder
 from SANS2.UserFile.UserFileCommon import *
@@ -89,10 +90,9 @@ class UserFileStateDirectorISISTest(unittest.TestCase):
         self.assertTrue(calculate_transmission.default_transmission_monitor == 3)
         self.assertTrue(calculate_transmission.default_incident_monitor == 2)
         self.assertTrue(calculate_transmission.incident_monitor == 1)
-        self.assertTrue(calculate_transmission.transmission_radius_on_detector == 7.0)
+        self.assertTrue(calculate_transmission.transmission_radius_on_detector == 0.007)  # This is in mm
         self.assertTrue(calculate_transmission.transmission_roi_files == ["test.xml", "test2.xml"])
         self.assertTrue(calculate_transmission.transmission_mask_files == ["test3.xml", "test4.xml"])
-        self.assertTrue(calculate_transmission.transmission_radius_on_detector == 7.0)
         self.assertTrue(calculate_transmission.transmission_monitor == 4)
         self.assertTrue(calculate_transmission.rebin_type is RebinType.InterpolatingRebin)
         self.assertTrue(calculate_transmission.wavelength_low == 1.5)
@@ -112,14 +112,38 @@ class UserFileStateDirectorISISTest(unittest.TestCase):
         self.assertTrue(calculate_transmission.background_TOF_monitor_stop["2"] == 98000)
         self.assertTrue(calculate_transmission.background_TOF_roi_start == 123)
         self.assertTrue(calculate_transmission.background_TOF_roi_stop == 466)
-        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Sample)].fit_type is FitType.Log)
-        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_low == 1.5)
-        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Sample)].wavelength_high == 12.5)
-        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Sample)].polynomial_order == 0)
-        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Can)].fit_type is FitType.Log)
-        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_low == 1.5)
-        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Can)].wavelength_high == 12.5)
-        self.assertTrue(calculate_transmission.fit[convert_reduction_data_type_to_string(DataType.Can)].polynomial_order == 0)
+        self.assertTrue(calculate_transmission.fit[
+                            convert_reduction_data_type_to_string(DataType.Sample)].fit_type is FitType.Log)
+        self.assertTrue(calculate_transmission.fit[
+                            convert_reduction_data_type_to_string(DataType.Sample)].wavelength_low == 1.5)
+        self.assertTrue(calculate_transmission.fit[
+                            convert_reduction_data_type_to_string(DataType.Sample)].wavelength_high == 12.5)
+        self.assertTrue(calculate_transmission.fit[
+                            convert_reduction_data_type_to_string(DataType.Sample)].polynomial_order == 0)
+        self.assertTrue(calculate_transmission.fit[
+                            convert_reduction_data_type_to_string(DataType.Can)].fit_type is FitType.Log)
+        self.assertTrue(calculate_transmission.fit[
+                            convert_reduction_data_type_to_string(DataType.Can)].wavelength_low == 1.5)
+        self.assertTrue(calculate_transmission.fit[
+                            convert_reduction_data_type_to_string(DataType.Can)].wavelength_high == 12.5)
+        self.assertTrue(calculate_transmission.fit[
+                            convert_reduction_data_type_to_string(DataType.Can)].polynomial_order == 0)
+
+        # Wavelength and Pixel Adjustment
+        wavelength_and_pixel_adjustment = adjustment.wavelength_and_pixel_adjustment
+        self.assertTrue(wavelength_and_pixel_adjustment.wavelength_low == 1.5)
+        self.assertTrue(wavelength_and_pixel_adjustment.wavelength_high == 12.5)
+        self.assertTrue(wavelength_and_pixel_adjustment.wavelength_step == 0.125)
+        self.assertTrue(wavelength_and_pixel_adjustment.wavelength_step_type is RangeStepType.Lin)
+        self.assertTrue(wavelength_and_pixel_adjustment.adjustment_files[
+                            convert_detector_type_to_string(DetectorType.Lab)].wavelength_adjustment_file ==
+                            "DIRECTM1_15785_12m_31Oct12_v12.dat")
+        self.assertTrue(wavelength_and_pixel_adjustment.adjustment_files[
+                            convert_detector_type_to_string(DetectorType.Hab)].wavelength_adjustment_file ==
+                            "DIRECTM1_15785_12m_31Oct12_v12.dat")
+
+        # Assert wide angle correction
+        self.assertTrue(state.adjustment.wide_angle_correction)
 
     def test_state_can_be_created_from_valid_user_file_with_data_information(self):
         # Arrange
