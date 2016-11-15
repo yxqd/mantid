@@ -77,7 +77,7 @@ class UserFileReaderTest(unittest.TestCase):
                            user_file_trans_radius: [7.0],
                            user_file_trans_roi: ["test.xml", "test2.xml"],
                            user_file_trans_mask: ["test3.xml", "test4.xml"],
-                           user_file_sample_path: True}
+                           user_file_sample_path: [True]}
 
         self.assertTrue(len(expected_values) == len(output))
         for key, value in expected_values.items():

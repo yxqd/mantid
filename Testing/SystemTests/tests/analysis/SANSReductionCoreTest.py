@@ -100,7 +100,7 @@ class SANSReductionCoreTest(unittest.TestCase):
         compare_name = "CompareWorkspaces"
         compare_options = {"Workspace1": ws,
                            "Workspace2": reference_workspace,
-                           "Tolerance": 1e-7,
+                           "Tolerance": 1e-6,
                            "CheckInstrument": False,
                            "CheckSample": False,
                            "ToleranceRelErr": True,
@@ -163,7 +163,7 @@ class SANSReductionCoreRunnerTest(stresstesting.MantidStressTest):
             self._success = True
 
     def requiredMemoryMB(self):
-        return 2000
+        return 1000
 
     def validate(self):
         return self._success

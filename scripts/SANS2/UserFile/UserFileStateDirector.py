@@ -170,6 +170,9 @@ class UserFileStateDirectorISIS(object):
         # Slice event state
         # There does not seem to be a command for this currently -- this should be added in the future
 
+        # Scale state
+        self._set_up_scale_state(user_file_items)
+
         # Adjustment state. This includes the transmission calculation, the monitor normalizeation and the generation
         # of other adjustment workspaces
         self._set_up_adjustment_state(user_file_items)
@@ -790,6 +793,15 @@ class UserFileStateDirectorISIS(object):
             self._wavelength_builder.set_wavelength_high(wavelength_limits.stop)
             self._wavelength_builder.set_wavelength_step(wavelength_limits.step)
             self._wavelength_builder.set_wavelength_step_type(wavelength_limits.step_type)
+
+    def _set_up_scale_state(self, user_file_items):
+        # We only extract the first entry here, ie the s entry. ALthough there are other entries which a user can
+        # specify such as a, b, c, d they seem to be
+        if user_file_set_scales in user_file_items:
+            scales = user_file_items[user_file_set_scales]
+            check_if_contains_only_one_element(scales, user_file_set_scales)
+            scales = scales[-1]
+            self._scale_builder.set_scale(scales.s)
 
     def _set_up_adjustment_state(self, user_file_items):
         # ------------------------------------------------

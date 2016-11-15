@@ -56,6 +56,10 @@ class UserFileStateDirectorISISTest(unittest.TestCase):
         reduction = state.reduction
         self.assertTrue(reduction.reduction_mode is ISISReductionMode.Lab)
 
+    def _assert_scale(self, state):
+        scale = state.scale
+        self.assertTrue(scale.scale == 0.074)
+
     def _assert_wavelength(self, state):
         wavelength = state.wavelength
         self.assertTrue(wavelength.wavelength_low == 1.5)
@@ -165,6 +169,7 @@ class UserFileStateDirectorISISTest(unittest.TestCase):
         self._assert_mask(state)
         self._assert_reduction(state)
         self._assert_wavelength(state)
+        self._assert_scale(state)
         self._assert_adjustment(state)
 
         # clean up

@@ -33,7 +33,6 @@ class DivideByVolumeISIS(DivideByVolume):
     def divide_by_volume(self, workspace, scale_info):
         volume = self._get_volume(workspace, scale_info)
         inverse_volume = 1./volume
-
         divide_name = "Scale"
         divide_options = {SANSConstants.input_workspace: workspace,
                           SANSConstants.output_workspace: SANSConstants.dummy,
@@ -127,7 +126,7 @@ class MultiplyByAbsoluteScaleLOQ(MultiplyByAbsoluteScale):
         super(MultiplyByAbsoluteScaleLOQ, self).__init__()
 
     def multiply_by_absolute_scale(self, workspace, scale_info):
-        scale_factor = scale_info.scale if scale_info.scale is not None else self.DEFAULT_SCALING
+        scale_factor = scale_info.scale*self.DEFAULT_SCALING if scale_info.scale is not None else self.DEFAULT_SCALING
         rescale_to_colette = math.pi
         scale_factor /= rescale_to_colette
         return self.do_scale(workspace, scale_factor)
@@ -138,7 +137,7 @@ class MultiplyByAbsoluteScaleISIS(MultiplyByAbsoluteScale):
         super(MultiplyByAbsoluteScaleISIS, self).__init__()
 
     def multiply_by_absolute_scale(self, workspace, scale_info):
-        scale_factor = scale_info.scale if scale_info.scale is not None else self.DEFAULT_SCALING
+        scale_factor = scale_info.scale*self.DEFAULT_SCALING if scale_info.scale is not None else self.DEFAULT_SCALING
         return self.do_scale(workspace, scale_factor)
 
 

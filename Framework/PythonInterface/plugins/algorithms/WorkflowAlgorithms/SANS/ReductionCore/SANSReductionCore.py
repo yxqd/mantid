@@ -148,8 +148,8 @@ class SANSReductionCore(DataProcessorAlgorithm):
         # --------------------------------------------------------------------------------------------------------------
         # 7. Multiply by volume and absolute scale
         # --------------------------------------------------------------------------------------------------------------
-        #data_type_as_string = self.getProperty("DataType").value
-        #workspace = self._scale(state, workspace, data_type_as_string)
+        data_type_as_string = self.getProperty("DataType").value
+        workspace = self._scale(state, workspace, data_type_as_string)
 
         # --------------------------------------------------------------------------------------------------------------
         # 8. Create adjustment workspaces, those are
