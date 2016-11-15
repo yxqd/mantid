@@ -141,12 +141,15 @@ class SANSReductionCoreTest(unittest.TestCase):
         reduction_core_alg = self._run_reduction_core(state, workspace, workspace_monitor,
                                                       transmission_workspace, direct_workspace)
         output_workspace = reduction_core_alg.getProperty(SANSConstants.output_workspace).value
-        # wavelength_adjustment_workspace = reduction_core_alg.getProperty("SumOfCounts").value
-        # wavelength_and_pixel_adjustment_workspace = reduction_core_alg.getProperty("SumOfNormFactors").value
+        wavelength_adjustment_workspace = reduction_core_alg.getProperty("SumOfCounts").value
+        wavelength_and_pixel_adjustment_workspace = reduction_core_alg.getProperty("SumOfNormFactors").value
 
         # Evaluate it up to a defined point
         reference_file_name = "SANS2D_ws_D20_reference.nxs"
         self._compare_workspace(output_workspace, reference_file_name)
+        self.assertTrue(wavelength_and_pixel_adjustment_workspace is None)
+        reference_file_name_wavelength_adjustment = "SANS2D_ws_D20_wavelength_adjustment_reference.nxs"
+        self._compare_workspace(wavelength_adjustment_workspace, reference_file_name_wavelength_adjustment)
 
 
 class SANSReductionCoreRunnerTest(stresstesting.MantidStressTest):

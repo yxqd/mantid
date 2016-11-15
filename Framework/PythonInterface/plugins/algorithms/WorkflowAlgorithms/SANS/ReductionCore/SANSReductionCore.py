@@ -160,9 +160,9 @@ class SANSReductionCore(DataProcessorAlgorithm):
         # creation of the adjustment workspaces requires the sample workspace itself and we have to run it sequentially.
         # We could consider to have a serial and a parallel strategy here, depending on the wide angle correction
         # settings. On the other hand it is not clear that this would be an advantage with the GIL.
-        # --------------------------------------------------------------------------------------------------------------
-        # wavelength_adjustment_workspace, pixel_adjustment_workspace, wavelength_and_pixel_adjustment_workspace =\
-        #     self._adjustment(state, workspace, monitor_workspace, component_as_string, data_type_as_string)
+        #---------------------------------------------------------------------------------------------------------------
+        wavelength_adjustment_workspace, pixel_adjustment_workspace, wavelength_and_pixel_adjustment_workspace =\
+            self._adjustment(state, workspace, monitor_workspace, component_as_string, data_type_as_string)
 
         # ------------------------------------------------------------
         # 9. Convert event workspaces to histogram workspaces
@@ -178,11 +178,19 @@ class SANSReductionCore(DataProcessorAlgorithm):
         # Populate the output
         self.setProperty(SANSConstants.output_workspace, workspace)
 
-        # # Set the output
-        # if wavelength_adjustment_workspace:
-        #     self.setProperty("SumOfCounts", wavelength_adjustment_workspace)
-        # if pixel_adjustment_workspace:
-        #     self.setProperty("SumOfNormFactors", pixel_adjustment_workspace)
+        # # Set the output for partial outputs
+        # **************************************************
+        # ONLY FOR DEVELOPMENT AND TESTING -- BEGIN
+        # **************************************************
+        # We abuse output fields for testing at this point
+        if wavelength_adjustment_workspace:
+            self.setProperty("SumOfCounts", wavelength_adjustment_workspace)
+        if pixel_adjustment_workspace:
+            self.setProperty("SumOfNormFactors", pixel_adjustment_workspace)
+        # **************************************************
+        # ONLY FOR DEVELOPMENT AND TESTING -- END
+        # **************************************************
+
 
         # TODO: Publish temporary workspaces if required
         # This includes partial workspaces of Q1D and unfitted transmission data
