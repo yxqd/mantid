@@ -79,34 +79,13 @@ class SANSReductionCoreTest(unittest.TestCase):
         load_alg.execute()
         reference_workspace = load_alg.getProperty(SANSConstants.output_workspace).value
 
-        # In order to compare the output workspace with the reference, we need to convert it to rebin it so we
-        # get a Workspace2D and then perform a bin masking again
-        rebin_name = "Rebin"
-        rebin_option = {SANSConstants.input_workspace: workspace,
-                        SANSConstants.output_workspace: SANSConstants.dummy,
-                        "Params": "8000,-0.025,100000",
-                        "PreserveEvents": False}
-
-        rebin_alg = create_unmanaged_algorithm(rebin_name, **rebin_option)
-        rebin_alg.execute()
-        rebinned = rebin_alg.getProperty(SANSConstants.output_workspace).value
-
-        mask_name = "MaskBins"
-        mask_options = {SANSConstants.input_workspace: rebinned,
-                        SANSConstants.output_workspace: SANSConstants.dummy,
-                        "XMin": 13000.,
-                        "XMax": 15750.}
-        mask_alg = create_unmanaged_algorithm(mask_name, **mask_options)
-        mask_alg.execute()
-        masked = mask_alg.getProperty(SANSConstants.output_workspace).value
-
         # Save the workspace out and reload it again. This makes equalizes it with the reference workspace
         f_name = os.path.join(mantid.config.getString('defaultsave.directory'),
                               'SANS_temp_single_core_reduction_testout.nxs')
 
         save_name = "SaveNexus"
         save_options = {"Filename": f_name,
-                        "InputWorkspace": masked}
+                        "InputWorkspace": workspace}
         save_alg = create_unmanaged_algorithm(save_name, **save_options)
         save_alg.execute()
         load_alg.setProperty("Filename", f_name)
@@ -162,12 +141,12 @@ class SANSReductionCoreTest(unittest.TestCase):
         reduction_core_alg = self._run_reduction_core(state, workspace, workspace_monitor,
                                                       transmission_workspace, direct_workspace)
         output_workspace = reduction_core_alg.getProperty(SANSConstants.output_workspace).value
-        wavelength_adjustment_workspace = reduction_core_alg.getProperty("SumOfCounts").value
-        wavelength_and_pixel_adjustment_workspace = reduction_core_alg.getProperty("SumOfNormFactors").value
+        # wavelength_adjustment_workspace = reduction_core_alg.getProperty("SumOfCounts").value
+        # wavelength_and_pixel_adjustment_workspace = reduction_core_alg.getProperty("SumOfNormFactors").value
 
         # Evaluate it up to a defined point
-        reference_file_name = "SANS2D_ws_D20_reference_after_masking"
-        #self._compare_workspace(output_workspace, reference_file_name)
+        reference_file_name = "SANS2D_ws_D20_reference.nxs"
+        self._compare_workspace(output_workspace, reference_file_name)
 
 
 class SANSReductionCoreRunnerTest(stresstesting.MantidStressTest):

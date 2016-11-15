@@ -116,6 +116,25 @@ class SANSReductionCore(DataProcessorAlgorithm):
         # ------------------------------------------------------------
         workspace = self._move(state, workspace, component_as_string)
 
+        # **************************************************
+        # ONLY FOR DEVELOPMENT AND TESTING -- BEGIN
+        # **************************************************
+        # We convert the workspace here to a histogram workspace, since we cannot otherwise compare the results between
+        # the old and the new reduction workspace in a meaningful manner. The old one is histogram and the new one
+        # is event.
+        rebin_name = "Rebin"
+        rebin_option = {SANSConstants.input_workspace: workspace,
+                        SANSConstants.output_workspace: SANSConstants.dummy,
+                        "Params": "8000,-0.025,100000",
+                        "PreserveEvents": False}
+
+        rebin_alg = create_unmanaged_algorithm(rebin_name, **rebin_option)
+        rebin_alg.execute()
+        workspace = rebin_alg.getProperty(SANSConstants.output_workspace).value
+        # **************************************************
+        # ONLY FOR DEVELOPMENT AND TESTING -- END
+        # **************************************************
+
         # --------------------------------------------------------------------------------------------------------------
         # 5. Apply masking (pixel masking and time masking)
         # --------------------------------------------------------------------------------------------------------------
@@ -129,8 +148,8 @@ class SANSReductionCore(DataProcessorAlgorithm):
         # --------------------------------------------------------------------------------------------------------------
         # 7. Multiply by volume and absolute scale
         # --------------------------------------------------------------------------------------------------------------
-        data_type_as_string = self.getProperty("DataType").value
-        workspace = self._scale(state, workspace, data_type_as_string)
+        #data_type_as_string = self.getProperty("DataType").value
+        #workspace = self._scale(state, workspace, data_type_as_string)
 
         # --------------------------------------------------------------------------------------------------------------
         # 8. Create adjustment workspaces, those are
@@ -142,12 +161,13 @@ class SANSReductionCore(DataProcessorAlgorithm):
         # We could consider to have a serial and a parallel strategy here, depending on the wide angle correction
         # settings. On the other hand it is not clear that this would be an advantage with the GIL.
         # --------------------------------------------------------------------------------------------------------------
-        wavelength_adjustment_workspace, pixel_adjustment_workspace, wavelength_and_pixel_adjustment_workspace =\
-            self._adjustment(state, workspace, monitor_workspace, component_as_string, data_type_as_string)
+        # wavelength_adjustment_workspace, pixel_adjustment_workspace, wavelength_and_pixel_adjustment_workspace =\
+        #     self._adjustment(state, workspace, monitor_workspace, component_as_string, data_type_as_string)
 
         # ------------------------------------------------------------
         # 9. Convert event workspaces to histogram workspaces
         # ------------------------------------------------------------
+        #workspace = self._convert_to_histogram(workspace)
 
         # ------------------------------------------------------------
         # 10. Convert to Q
@@ -158,11 +178,11 @@ class SANSReductionCore(DataProcessorAlgorithm):
         # Populate the output
         self.setProperty(SANSConstants.output_workspace, workspace)
 
-        # Set the output
-        if wavelength_adjustment_workspace:
-            self.setProperty("SumOfCounts", wavelength_adjustment_workspace)
-        if pixel_adjustment_workspace:
-            self.setProperty("SumOfNormFactors", pixel_adjustment_workspace)
+        # # Set the output
+        # if wavelength_adjustment_workspace:
+        #     self.setProperty("SumOfCounts", wavelength_adjustment_workspace)
+        # if pixel_adjustment_workspace:
+        #     self.setProperty("SumOfNormFactors", pixel_adjustment_workspace)
 
         # TODO: Publish temporary workspaces if required
         # This includes partial workspaces of Q1D and unfitted transmission data
@@ -257,8 +277,7 @@ class SANSReductionCore(DataProcessorAlgorithm):
                               "SampleData": workspace,
                               "OutputWorkspaceWavelengthAdjustment": SANSConstants.dummy,
                               "OutputWorkspacePixelAdjustment": SANSConstants.dummy,
-                              "OutputWorkspaceWavelengthAndPixelAdjustment": SANSConstants.dummy
-                            }
+                              "OutputWorkspaceWavelengthAndPixelAdjustment": SANSConstants.dummy}
         if transmission_workspace:
             adjustment_options.update({"TransmissionWorkspace": transmission_workspace})
         if direct_workspace:
@@ -271,6 +290,16 @@ class SANSReductionCore(DataProcessorAlgorithm):
         wavelength_and_pixel_adjustment = adjustment_alg.getProperty(
                                            "OutputWorkspaceWavelengthAndPixelAdjustment").value
         return wavelength_adjustment, pixel_adjustment, wavelength_and_pixel_adjustment
+
+    def _convert_to_histogram(self, workspace):
+        convert_name = "RebinToWorkspace"
+        convert_options = {"WorkspaceToRebin": workspace,
+                           "WorkspaceToMatch": workspace,
+                           SANSConstants.output_workspace: SANSConstants.output_workspace,
+                           "PreserveEvents": False}
+        convert_alg = create_unmanaged_algorithm(convert_name, **convert_options)
+        convert_alg.execute()
+        return convert_alg.getProperty(SANSConstants.output_workspace).value
 
     def validateInputs(self):
         errors = dict()
