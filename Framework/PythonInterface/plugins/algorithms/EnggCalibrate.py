@@ -126,7 +126,9 @@ class EnggCalibrate(PythonAlgorithm):
     def PyExec(self):
 
         import EnggUtils
-
+        import pydevd
+        pydevd.settrace('localhost', port=49988, stdoutToServer=True, stderrToServer=True)
+        
         # Get peaks in dSpacing from file
         expected_peaks_dsp = EnggUtils.read_in_expected_peaks(self.getPropertyValue("ExpectedPeaksFromFile"),
                                                               self.getProperty('ExpectedPeaks').value)

@@ -8,6 +8,8 @@ import EnggUtils
 
 class EnggFocus(PythonAlgorithm):
     INDICES_PROP_NAME = 'SpectrumNumbers'
+    _IMAT_ENGINX_SWITCH = -1
+
 
     def category(self):
         return "Diffraction\\Engineering"
@@ -108,13 +110,16 @@ class EnggFocus(PythonAlgorithm):
         return issues
 
     def PyExec(self):
+        import pydevd
+        pydevd.settrace('localhost', port=49988, stdoutToServer=True, stderrToServer=True)
+
         # Get the run workspace
         wks = self.getProperty('InputWorkspace').value
 
         # Get spectra indices either from bank or direct list of indices, checking for errors
         bank = self.getProperty('Bank').value
         spectra = self.getProperty(self.INDICES_PROP_NAME).value
-        indices = EnggUtils.getWsIndicesFromInProperties(wks, bank, spectra)
+        indices = EnggUtils.getWsIndicesFromInProperties(wks, bank, spectra, self._IMAT_ENGINX_SWITCH)
 
         detPos = self.getProperty("DetectorPositions").value
         nreports = 5

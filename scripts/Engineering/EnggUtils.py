@@ -80,7 +80,7 @@ def read_in_expected_peaks(filename, expectedGiven):
     return expectedPeaksD
 
 
-def getWsIndicesFromInProperties(ws, bank, detIndices):
+def getWsIndicesFromInProperties(ws, bank, detIndices, switch):
     """
     Get the detector indices that the user requests, either through the input property 'Bank' or
     'DetectorIndices'
@@ -100,7 +100,7 @@ def getWsIndicesFromInProperties(ws, bank, detIndices):
     elif bank:
         bankAliases = {'North': '1', 'South': '2', 'Both: North, South': '-1'}
         bank = bankAliases.get(bank, bank)
-        indices = getWsIndicesForBank(ws, bank)
+        indices = getWsIndicesForBank(ws, bank, switch)
         if not indices:
             raise RuntimeError("Unable to find a meaningful list of workspace indices for the "
                                "bank passed: %s. Please check the inputs." % bank)
@@ -139,7 +139,7 @@ def parseSpectrumIndices(ws, specNumbers):
     return [ws.getIndexFromSpectrumNumber(sn) for sn in indices]
 
 
-def getWsIndicesForBank(ws, bank):
+def getWsIndicesForBank(ws, bank, switch = None):
     """
     Finds the workspace indices of all the pixels/detectors/spectra corresponding to a bank.
 
@@ -148,7 +148,8 @@ def getWsIndicesForBank(ws, bank):
 
     @returns :: list of workspace indices for the bank
     """
-    detIDs = getDetIDsForBank(bank)
+
+    detIDs = getDetIDsForBank(bank, switch)
 
     def isIndexInBank(index):
         try:
@@ -160,7 +161,7 @@ def getWsIndicesForBank(ws, bank):
     return [i for i in range(0, ws.getNumberHistograms()) if isIndexInBank(i)]
 
 
-def getDetIDsForBank(bank):
+def getDetIDsForBank(bank, switch = None):
     """
     Find the detector IDs for an instrument bank. Note this is at this point specific to
     the ENGINX instrument.
@@ -170,14 +171,18 @@ def getDetIDsForBank(bank):
     @returns list of detector IDs corresponding to the specified Engg bank number
     """
     import os
-    groupingFilePath = os.path.join(sapi.config.getInstrumentDirectory(),
+    if switch == -1:
+        groupingFilePath = os.path.join(sapi.config.getInstrumentDirectory(),
+                                    'Grouping', 'IMAT_Grouping.xml')
+    else:   
+        groupingFilePath = os.path.join(sapi.config.getInstrumentDirectory(),
                                     'Grouping', 'ENGINX_Grouping.xml')
 
     alg = AlgorithmManager.create('LoadDetectorsGroupingFile')
     alg.initialize()
     alg.setLogging(False)
     alg.setProperty('InputFile', groupingFilePath)
-    grpName = '__EnginXGrouping'
+    grpName = '__IMATGrouping'
     alg.setProperty('OutputWorkspace', grpName)
     alg.execute()
 
@@ -190,6 +195,9 @@ def getDetIDsForBank(bank):
     grouping = mtd[grpName]
 
     detIDs = set()
+
+    ## DEBUG
+    mtd['grouping'] = grouping
 
     # less then zero indicates both banks, from line 98
     bank_int = int(bank)
@@ -206,6 +214,9 @@ def getDetIDsForBank(bank):
 
     sapi.DeleteWorkspace(grouping)
 
+    ## DEBUG
+    print(detIDs)
+    
     if len(detIDs) == 0:
         raise ValueError('Could not find any detector for this bank: ' + bank +
                          '. This looks like an unknown bank')
