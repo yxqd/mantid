@@ -15,7 +15,7 @@ class EnggFocus(PythonAlgorithm):
         return "Diffraction\\Engineering"
 
     def name(self):
-        return "EnggFocus"
+        return "EnggFocus" 
 
     def summary(self):
         return "Focuses a run by summing up all the spectra into a single one."

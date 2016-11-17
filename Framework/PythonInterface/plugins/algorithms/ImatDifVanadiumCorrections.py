@@ -1,4 +1,4 @@
-#pylint: disable=no-init,invalid-name
+# pylint: disable=no-init,invalid-name
 from __future__ import (absolute_import, division, print_function)
 from mantid.kernel import *
 from mantid.api import *
@@ -9,60 +9,83 @@ import numpy as np
 import EnggUtils
 
 
-class EnggVanadiumCorrections(PythonAlgorithm):
-    # banks (or groups) to which the pixel-by-pixel correction should be applied
-    _ENGINX_BANKS_FOR_PIXBYPIX_CORR = [1,2]
+class IMATDifVanadiumCorrections(PythonAlgorithm):
+    # banks (or groups) to which the pixel-by-pixel correction should be
+    # applied
+    _ENGINX_BANKS_FOR_PIXBYPIX_CORR = [1, 2]
+    _IMAT_BANKS_FOR_PIXBYPIX_CORR = [1]
+    # -1 imat, 1 enginx
+    _IMAT_ENGINX_SWITCH = -1
 
     def category(self):
-        return ("Diffraction\\Engineering;CorrectionFunctions\\BackgroundCorrections;"
-                "CorrectionFunctions\\EfficiencyCorrections;CorrectionFunctions\\NormalisationCorrections")
+        return (
+            "Diffraction\\Engineering;CorrectionFunctions\\BackgroundCorrections;"
+            "CorrectionFunctions\\EfficiencyCorrections;CorrectionFunctions\\NormalisationCorrections"
+        )
 
     def name(self):
-        return "EnggVanadiumCorrections"
+        return "IMATDifVanadiumCorrections"
 
     def summary(self):
-        return ("Calculates correction features and / or uses them to correct diffraction data "
-                "with respect to reference Vanadium data.")
+        return (
+            "Calculates correction features and / or uses them to correct diffraction data "
+            "with respect to reference Vanadium data.")
 
     def PyInit(self):
-        self.declareProperty(MatrixWorkspaceProperty("Workspace", "", Direction.InOut, PropertyMode.Optional),
-                             "Workspace with the diffraction data to correct. The Vanadium corrections "
-                             "will be applied on it.")
+        self.declareProperty(
+            MatrixWorkspaceProperty("Workspace", "", Direction.InOut,
+                                    PropertyMode.Optional),
+            "Workspace with the diffraction data to correct. The Vanadium corrections "
+            "will be applied on it.")
 
-        self.declareProperty(MatrixWorkspaceProperty("VanadiumWorkspace", "", Direction.Input,
-                                                     PropertyMode.Optional),
-                             "Workspace with the reference Vanadium diffraction data.")
+        self.declareProperty(
+            MatrixWorkspaceProperty("VanadiumWorkspace", "", Direction.Input,
+                                    PropertyMode.Optional),
+            "Workspace with the reference Vanadium diffraction data.")
 
-        self.declareProperty(ITableWorkspaceProperty("OutIntegrationWorkspace", "", Direction.Output,
-                                                     PropertyMode.Optional),
-                             'Output integration workspace produced when given an input Vanadium workspace')
+        self.declareProperty(
+            MatrixWorkspaceProperty("OpenBeamWorkspace", "", Direction.Input,
+                                    PropertyMode.Optional),
+            "Workspace with the reference Vanadium diffraction data.")
 
-        self.declareProperty(MatrixWorkspaceProperty("OutCurvesWorkspace", "", Direction.Output,
-                                                     PropertyMode.Optional),
-                             'Output curves workspace produced when given an input Vanadium workspace')
+        self.declareProperty(
+            ITableWorkspaceProperty("OutIntegrationWorkspace", "",
+                                    Direction.Output, PropertyMode.Optional),
+            'Output integration workspace produced when given an input Vanadium workspace'
+        )
+
+        self.declareProperty(
+            MatrixWorkspaceProperty("OutCurvesWorkspace", "", Direction.Output,
+                                    PropertyMode.Optional),
+            'Output curves workspace produced when given an input Vanadium workspace'
+        )
 
         # ~10 break points is still poor, there is no point in using less than that
-        self.declareProperty("SplineBreakPoints", defaultValue=50,
-                             validator=IntBoundedValidator(10),
-                             doc="Number of break points used when fitting the bank profiles with a spline "
-                             "function.")
+        self.declareProperty(
+            "SplineBreakPoints",
+            defaultValue=50,
+            validator=IntBoundedValidator(10),
+            doc="Number of break points used when fitting the bank profiles with a spline "
+            "function.")
 
         out_vana_grp = 'Output parameters (for when calculating corrections)'
         self.setPropertyGroup('OutIntegrationWorkspace', out_vana_grp)
         self.setPropertyGroup('OutCurvesWorkspace', out_vana_grp)
         self.setPropertyGroup('SplineBreakPoints', out_vana_grp)
 
-        self.declareProperty(ITableWorkspaceProperty("IntegrationWorkspace", "", Direction.Input,
-                                                     PropertyMode.Optional),
-                             "Workspace with the integrated values for every spectra of the reference "
-                             "Vanadium diffraction data. One row per spectrum.")
+        self.declareProperty(
+            ITableWorkspaceProperty("IntegrationWorkspace", "",
+                                    Direction.Input, PropertyMode.Optional),
+            "Workspace with the integrated values for every spectra of the reference "
+            "Vanadium diffraction data. One row per spectrum.")
 
-        self.declareProperty(MatrixWorkspaceProperty("CurvesWorkspace", "", Direction.Input,
-                                                     PropertyMode.Optional),
-                             'Workspace with the curves fitted on bank-aggregated Vanadium diffraction '
-                             'data, one per bank. This workspace has three spectra per bank, as produced '
-                             'by the algorithm Fit. This is meant to be used as an alternative input '
-                             'VanadiumWorkspace')
+        self.declareProperty(
+            MatrixWorkspaceProperty("CurvesWorkspace", "", Direction.Input,
+                                    PropertyMode.Optional),
+            'Workspace with the curves fitted on bank-aggregated Vanadium diffraction '
+            'data, one per bank. This workspace has three spectra per bank, as produced '
+            'by the algorithm Fit. This is meant to be used as an alternative input '
+            'VanadiumWorkspace')
 
         in_vana_grp = 'Input parameters (for when applying pre-calculated corrections)'
         self.setPropertyGroup('IntegrationWorkspace', in_vana_grp)
@@ -83,34 +106,119 @@ class EnggVanadiumCorrections(PythonAlgorithm):
 
         The sums and fits are done in d-spacing.
         """
+
+        import pydevd
+        pydevd.settrace(
+            'localhost', port=50986, stdoutToServer=True, stderrToServer=True)
+
         ws = self.getProperty('Workspace').value
         vanWS = self.getProperty('VanadiumWorkspace').value
+        openBeamWS = self.getProperty('OpenBeamWorkspace').value
         integWS = self.getProperty('IntegrationWorkspace').value
         curvesWS = self.getProperty('CurvesWorkspace').value
         spline_breaks = self.getProperty('SplineBreakPoints').value
 
+        if spline_breaks == 51:
+            # enginx
+            self._IMAT_ENGINX_SWITCH = 1
+            spline_breaks = 50
+        else:
+            # imat
+            self._IMAT_ENGINX_SWITCH = -1
+            spline_breaks = 50
+
         preports = 1
         if ws:
             preports += 1
+            # apply normalise by current to in/out ws if provided
+            self._normalize_by_current(ws)
+        if openBeamWS:
+            preports += 1
+            # apply normalise by current to open beam ws if provided
+            self._normalize_by_current(openBeamWS)
+
+            self._background_correction(ws, vanWS, openBeamWS)
+
         prog = Progress(self, start=0, end=1, nreports=preports)
+        prog.report('Applying background corrections on the input workspace')
 
         prog.report('Checking availability of vanadium correction features')
-        # figure out if we are calculating or re-using pre-calculated corrections
-        if vanWS:
-            self.log().information("A workspace with reference Vanadium data was passed. Calculating "
-                                   "corrections")
-            integWS, curvesWS = self._calcVanadiumCorrection(vanWS, spline_breaks)
+        # figure out if we are calculating or re-using pre-calculated
+        # corrections
+        if integWS and curvesWS:
+            # do nothing, just apply calibrations
+            # TODO refactor properly
+            pass
+        elif vanWS:
+            self.log().information(
+                "A workspace with reference Vanadium data was passed. Calculating "
+                "corrections")
+
+            # apply normalise by current to vanadium ws if provided
+            self._normalize_by_current(vanWS)
+
+            integWS, curvesWS = self._calcVanadiumCorrection(vanWS,
+                                                             spline_breaks)
             self.setProperty('OutIntegrationWorkspace', integWS)
             self.setProperty('OutCurvesWorkspace', curvesWS)
 
+            # DEBUG
+            mtd['temp_integ_ws'] = integWS
+            mtd['temp_curves_ws'] = curvesWS
+
         elif not integWS or not curvesWS:
-            raise ValueError('When a VanadiumWorkspace is not passed, both the IntegrationWorkspace and '
-                             'the CurvesWorkspace are required inputs. One or both of them were not given')
+            raise ValueError(
+                'When a VanadiumWorkspace is not passed, both the IntegrationWorkspace and '
+                'the CurvesWorkspace are required inputs. One or both of them were not given'
+            )
 
         prog.report('Applying corrections on the input workspace')
         if ws:
             self._applyVanadiumCorrections(ws, integWS, curvesWS)
             self.setProperty('Workspace', ws)
+
+    def _normalize_by_current(self, wks):
+        """
+        Apply the normalize by current algorithm on a workspace
+
+        @param wks :: workspace (in/out, modified in place)
+        """
+        p_charge = wks.getRun().getProtonCharge()
+
+        if p_charge <= 0:
+            self.log().warning(
+                "Cannot normalize by current because the proton charge log value "
+                "is not positive!")
+
+        self.log().notice(
+            "Normalizing by current with proton charge: {0} uamp".format(
+                p_charge))
+
+        alg = self.createChildAlgorithm('NormaliseByCurrent')
+
+        alg.setProperty('InputWorkspace', wks)
+        alg.setProperty('OutputWorkspace', wks)
+        alg.execute()
+
+    def _background_correction(self, ws, vanWS, openBeamWS):
+        """
+        Simply subtract the open beam WS from the normalised workspaces
+
+        @param ws :: workspace (in/out, modified in place)
+        @param vanWS :: workspace with Vanadium data
+        @param openBeamWS :: workspace with Open Beam data for background correction
+        """
+        alg = self.createChildAlgorithm('Minus')
+        alg.setProperty('LHSWorkspace', vanWS)
+        alg.setProperty('RHSWorkspace', openBeamWS)
+        alg.setProperty('OutputWorkspace', vanWS)
+        alg.execute()
+
+        alg = self.createChildAlgorithm('Minus')
+        alg.setProperty('LHSWorkspace', vanWS)
+        alg.setProperty('RHSWorkspace', openBeamWS)
+        alg.setProperty('OutputWorkspace', vanWS)
+        alg.execute()
 
     def _applyVanadiumCorrections(self, ws, integWS, curvesWS):
         """
@@ -122,13 +230,16 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         @param curvesWS ::workspace with "Vanadium curves" for every bank
         """
         integSpectra = integWS.rowCount()
+
         spectra = ws.getNumberHistograms()
         if integSpectra < spectra:
-            raise ValueError("The number of histograms in the input data workspace (%d) is bigger "
-                             "than the number of spectra (rows) in the integration workspace (%d)"%
-                             (spectra, integSpectra))
+            raise ValueError(
+                "The number of histograms in the input data workspace (%d) is bigger "
+                "than the number of spectra (rows) in the integration workspace (%d)"
+                % (spectra, integSpectra))
 
         prog = Progress(self, start=0, end=1, nreports=2)
+
         prog.report('Applying sensitivity correction')
         self._applySensitivityCorrection(ws, integWS, curvesWS)
         prog.report('Applying pixel-by-pixel correction')
@@ -145,7 +256,8 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         @param curvesWS :: pre-calculated per-bank curves from the Vanadium data
         """
         for i in range(0, ws.getNumberHistograms()):
-            scaleFactor = integWS.cell(i,0) / curvesWS.blocksize()
+            scaleFactor = integWS.cell(i, 0) / curvesWS.blocksize()
+
             ws.setY(i, np.divide(ws.dataY(i), scaleFactor))
 
     def _applyPixByPixCorrection(self, ws, curvesWS):
@@ -176,7 +288,12 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         integWS = self._calcIntegrationSpectra(vanWS)
 
         # Have to calculate curves. get one curve per bank, in d-spacing
-        curvesWS = self._fitCurvesPerBank(vanWS, self._ENGINX_BANKS_FOR_PIXBYPIX_CORR, spline_breaks)
+        if self._IMAT_ENGINX_SWITCH < 0:
+            curvesWS = self._fitCurvesPerBank(
+                vanWS, self._IMAT_BANKS_FOR_PIXBYPIX_CORR, spline_breaks)
+        else:
+            curvesWS = self._fitCurvesPerBank(
+                vanWS, self._ENGINX_BANKS_FOR_PIXBYPIX_CORR, spline_breaks)
 
         return integWS, curvesWS
 
@@ -191,20 +308,27 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         with one row per spectrum
         """
         expectedDim = 'Time-of-flight'
+
         dimType = vanWS.getXDimension().getName()
+
         if expectedDim != dimType:
-            raise ValueError("This algorithm expects a workspace with %s X dimension, but "
-                             "the X dimension of the input workspace is: '%s'" % (expectedDim, dimType))
+            raise ValueError(
+                "This algorithm expects a workspace with %s X dimension, but "
+                "the X dimension of the input workspace is: '%s'" %
+                (expectedDim, dimType))
 
         integWS = self._integrateSpectra(vanWS)
-        if  1 != integWS.blocksize() or integWS.getNumberHistograms() < vanWS.getNumberHistograms():
-            raise RuntimeError("Error while integrating vanadium workspace, the Integration algorithm "
-                               "produced a workspace with %d bins and %d spectra. The workspace "
-                               "being integrated has %d spectra."%
-                               (integWS.blocksize(), integWS.getNumberHistograms(),
-                                vanWS.getNumberHistograms()))
 
-        integTbl = sapi.CreateEmptyTableWorkspace(OutputWorkspace='__vanIntegTbl')
+        if 1 != integWS.blocksize() or integWS.getNumberHistograms() < vanWS.getNumberHistograms():
+            raise RuntimeError(
+                "Error while integrating vanadium workspace, the Integration algorithm "
+                "produced a workspace with %d bins and %d spectra. The workspace "
+                "being integrated has %d spectra." %
+                (integWS.blocksize(), integWS.getNumberHistograms(),
+                 vanWS.getNumberHistograms()))
+
+        integTbl = sapi.CreateEmptyTableWorkspace(
+            OutputWorkspace='__vanIntegTbl')
         integTbl.addColumn('double', 'Spectra Integration')
         for i in range(integWS.getNumberHistograms()):
             integTbl.addRow([integWS.readY(i)[0]])
@@ -224,19 +348,29 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         are in dSpacing units.
         """
         curves = {}
+
         for b in banks:
-            indices = EnggUtils.getWsIndicesForBank(vanWS, b)
+            indices = EnggUtils.getWsIndicesForBank(vanWS, b,
+                                                    self._IMAT_ENGINX_SWITCH)
             if not indices:
                 # no indices at all for this bank, not interested in it, don't add it to the dictionary
-                # (as when doing Calibrate (not-full)) which does CropData() the original workspace
+                # (as when doing Calibrate (not-full)) which does CropData() the originabl workspace
                 continue
 
             wsToFit = EnggUtils.cropData(self, vanWS, indices)
+
             wsToFit = EnggUtils.convertToDSpacing(self, wsToFit)
+
             wsToFit = EnggUtils.sumSpectra(self, wsToFit)
 
             fitWS = self._fitBankCurve(wsToFit, b, spline_breaks)
+
             curves.update({b: fitWS})
+
+            # DEBUG so we can test appendspectra with imaging WS
+            wsname = 'fitws_' + str(b)
+
+            mtd[wsname] = fitWS
 
         curvesWS = self._prepareCurvesWS(curves)
 
@@ -254,21 +388,32 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         workspace, and the Y values simulated from the fitted curve
         """
         expectedDim = 'd-Spacing'
+
         dimType = vanWS.getXDimension().getName()
+
         if expectedDim != dimType:
-            raise ValueError("This algorithm expects a workspace with %s X dimension, but "
-                             "the X dimension of the input workspace is: '%s'" % (expectedDim, dimType))
+            raise ValueError(
+                "This algorithm expects a workspace with %s X dimension, but "
+                "the X dimension of the input workspace is: '%s'" %
+                (expectedDim, dimType))
 
         if 1 != vanWS.getNumberHistograms():
-            raise ValueError("The workspace does not have exactly one histogram. Inconsistency found.")
+            raise ValueError(
+                "The workspace does not have exactly one histogram. Inconsistency found."
+            )
 
         # without these min/max parameters 'BSpline' would completely misbehave
         xvec = vanWS.readX(0)
+
         startX = min(xvec)
+
         endX = max(xvec)
-        functionDesc = ('name=BSpline, Order=3, StartX={0}, EndX={1}, NBreak={2}'.
-                        format(startX, endX, spline_breaks))
+
+        functionDesc = (
+            'name=BSpline, Order=3, StartX={0}, EndX={1}, NBreak={2}'.format(
+                startX, endX, spline_breaks))
         fitAlg = self.createChildAlgorithm('Fit')
+
         fitAlg.setProperty('Function', functionDesc)
         fitAlg.setProperty('InputWorkspace', vanWS)
         # WorkspaceIndex is left to default '0' for 1D function fits
@@ -278,29 +423,41 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         fitAlg.execute()
 
         success = fitAlg.getProperty('OutputStatus').value
-        self.log().information("Fitting Vanadium curve for bank %s, using function '%s', result: %s" %
-                               (bank, functionDesc, success))
 
-        detailMsg = ("It seems that this algorithm failed to to fit a function to the summed "
-                     "spectra of a bank. The function definiton was: '%s'") % functionDesc
+        self.log().information(
+            "Fitting Vanadium curve for bank %s, using function '%s', result: %s"
+            % (bank, functionDesc, success))
+
+        detailMsg = (
+            "It seems that this algorithm failed to to fit a function to the summed "
+            "spectra of a bank. The function definiton was: '%s'"
+        ) % functionDesc
 
         outParsPropName = 'OutputParameters'
+
         try:
             fitAlg.getProperty(outParsPropName).value
         except RuntimeError:
-            raise RuntimeError("Could not find the parameters workspace expected in the output property " +
-                               OutParsPropName + " from the algorithm Fit. It seems that this algorithm failed." +
-                               detailMsg)
+            raise RuntimeError(
+                "Could not find the parameters workspace expected in the output property "
+                + OutParsPropName +
+                " from the algorithm Fit. It seems that this algorithm failed."
+                + detailMsg)
 
         outWSPropName = 'OutputWorkspace'
+
         fitWS = None
+
         try:
             fitWS = fitAlg.getProperty(outWSPropName).value
+
         except RuntimeError:
-            raise RuntimeError("Could not find the data workspace expected in the output property " +
-                               outWSPropName + ". " + detailMsg)
+            raise RuntimeError(
+                "Could not find the data workspace expected in the output property "
+                + outWSPropName + ". " + detailMsg)
 
         mtd['engg_van_ws_dsp'] = vanWS
+
         mtd['engg_fit_ws_dsp'] = fitWS
 
         return fitWS
@@ -318,15 +475,19 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         workspace / bank
         """
         if 0 == len(curvesDict):
-            raise RuntimeError("Expecting a dictionary with fitting workspaces from 'Fit' but got an "
-                               "empty dictionary")
+            raise RuntimeError(
+                "Expecting a dictionary with fitting workspaces from 'Fit' but got an "
+                "empty dictionary")
         if 1 == len(curvesDict):
             return list(curvesDict.values())[0]
 
         keys = sorted(curvesDict)
+
         ws = curvesDict[keys[0]]
+
         for idx in range(1, len(keys)):
             nextWS = curvesDict[keys[idx]]
+
             ws = self._appendSpec(ws, nextWS)
 
         return ws
@@ -357,21 +518,29 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         # cropping separate workspaces, dividing them separately, then appending them
         # with AppendSpectra, etc.
         ws = EnggUtils.convertToDSpacing(self, ws)
+
         for b in curves:
             # process all the spectra (indices) in one bank
             fittedCurve = curves[b]
-            idxs = EnggUtils.getWsIndicesForBank(ws, b)
+            idxs = EnggUtils.getWsIndicesForBank(ws, b,
+                                                 self._IMAT_ENGINX_SWITCH)
 
             if not idxs:
                 pass
 
+            # DEBUG, the fitted curve workspace
+            mtd['fittedCurve'+str(b)] = fittedCurve
+
             # This RebinToWorkspace is required here: normal runs will have narrower range of X values,
             # and possibly different bin size, as compared to (long) Vanadium runs. Same applies to short
-            # Ceria runs (for Calibrate -non-full) and even long Ceria runs (for Calibrate-Full).
+            # Ceria runs (for Calibrate -non-full) and even long Ceria runs
+            # (for Calibrate-Full).
             rebinnedFitCurve = self._rebinToMatchWS(fittedCurve, ws)
+            mtd['rebinnedFitCurve'+str(b)] = fittedCurve
 
             for i in idxs:
-                # take values of the second spectrum of the workspace (fit simulation - fitted curve)
+                # take values of the second spectrum of the workspace (fit
+                # simulation - fitted curve)
                 ws.setY(i, np.divide(ws.dataY(i), rebinnedFitCurve.readY(1)))
 
         # finally, convert back to ToF
@@ -390,14 +559,16 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         curves = {}
 
         if 0 != (ws.getNumberHistograms() % 3):
-            raise RuntimeError("A workspace without instrument definition has ben passed, so it is "
-                               "expected to have fitting results, but it does not have a number of "
-                               "histograms multiple of 3. Number of hsitograms found: %d"%
-                               ws.getNumberHistograms())
+            raise RuntimeError(
+                "A workspace without instrument definition has ben passed, so it is "
+                "expected to have fitting results, but it does not have a number of "
+                "histograms multiple of 3. Number of hsitograms found: %d" %
+                ws.getNumberHistograms())
 
-        for wi in range(0, int(ws.getNumberHistograms()/3)):
-            indiv = EnggUtils.cropData(self, ws, [wi, wi+2])
-            curves.update({wi: indiv})
+        for wi in range(0, int(ws.getNumberHistograms() / 3)):
+            indiv = EnggUtils.cropData(self, ws, [wi, wi + 2])
+            bankId = wi + 1  # we add + 1 because the range starts from 0
+            curves.update({bankId: indiv})
 
         return curves
 
@@ -411,11 +582,13 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         @returns workspace with the concatenation of the spectra ws1+ws2
         """
         alg = self.createChildAlgorithm('AppendSpectra')
+
         alg.setProperty('InputWorkspace1', ws1)
         alg.setProperty('InputWorkspace2', ws2)
         alg.execute()
 
         result = alg.getProperty('OutputWorkspace').value
+
         return result
 
     def _integrateSpectra(self, ws):
@@ -428,6 +601,7 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         @returns integrated workspace, or result of integrating every spectra in the input workspace
         """
         intAlg = self.createChildAlgorithm('Integration')
+
         intAlg.setProperty('InputWorkspace', ws)
         intAlg.execute()
         ws = intAlg.getProperty('OutputWorkspace').value
@@ -447,6 +621,7 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         @returns ws rebinned to resemble targetWS
         """
         reAlg = self.createChildAlgorithm('RebinToWorkspace')
+
         reAlg.setProperty('WorkspaceToRebin', ws)
         reAlg.setProperty('WorkspaceToMatch', targetWS)
         reAlg.execute()
@@ -455,4 +630,4 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         return reWS
 
 
-AlgorithmFactory.subscribe(EnggVanadiumCorrections)
+AlgorithmFactory.subscribe(IMATDifVanadiumCorrections)

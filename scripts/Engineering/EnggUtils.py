@@ -213,9 +213,6 @@ def getDetIDsForBank(bank, switch = None):
             detIDs.add(grouping.getDetector(i).getID())
 
     sapi.DeleteWorkspace(grouping)
-
-    ## DEBUG
-    print(detIDs)
     
     if len(detIDs) == 0:
         raise ValueError('Could not find any detector for this bank: ' + bank +
