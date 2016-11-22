@@ -43,6 +43,10 @@ void transformLookpointToWorkspaceCoordGeneric(T &lookPoint,
 		v2 * skewMatrix[1 + 3 * dimY] +
 		v3 * skewMatrix[2 + 3 * dimY];
 }
+
+std::pair<float, float> EXPORT_OPT_MANTIDQT_API
+getAnglesInRadian(Mantid::coord_t skewMatrixCoord[9], size_t dimX, size_t dimY);
+
 }
 }
 
