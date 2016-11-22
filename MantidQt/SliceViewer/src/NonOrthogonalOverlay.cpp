@@ -273,9 +273,16 @@ void NonOrthogonalOverlay::drawYLines(QPainter &painter, QPen& numberPen, QPen& 
     // We need to make sure that the we don't have a blank area. This "blankness"
     // is determined by the angle. The extra lines which need to be drawn are given by
     // lineSpacing/(x offset of line on the top), ie. increment/xOffsetForYLine
-    const int additionalLinesToDraw = static_cast<int>(std::ceil(xOffsetForYLine / increment));
-    int index = angle < 0 ? 0 - additionalLinesToDraw
-                             : additionalLinesToDraw;
+    int additionalLinesToDraw = static_cast<int>(std::ceil(xOffsetForYLine / increment));
+    int index = 0;
+    if (angle > 0) {
+      // If the angle is positive, then we need to add more lines at the left side of the screen
+      numberOfGridLines += additionalLinesToDraw;
+
+    } else {
+      // IF the angle is negative, then we need to add more lines at the right side of the screen
+      index -= additionalLinesToDraw;
+    }
 
     QString label;
     for (; index < numberOfGridLines; ++index) {
@@ -306,9 +313,17 @@ void NonOrthogonalOverlay::drawXLines(QPainter &painter, QPen& numberPen, QPen& 
     auto yOffsetForXLine = angle == 0. ? 0. : widthScreen
                                                      * std::tan(angle);
 
-    const int additionalLinesToDraw = static_cast<int>(std::ceil(yOffsetForXLine / increment));
-    int index = angle > 0 ?  additionalLinesToDraw
-                             : 0 - additionalLinesToDraw;
+    int additionalLinesToDraw = static_cast<int>(std::ceil(yOffsetForXLine / increment));
+
+    int index = 0;
+    if (angle > 0) {
+      // If the angle is positive, then we need to add more lines at the bottom of the screen
+      numberOfGridLines += additionalLinesToDraw;
+    } else {
+      // If the angle is negative then we need to add more lines at the top of the screen
+        index -= additionalLinesToDraw;
+    }
+
     QString label;
     for (; index < numberOfGridLines; ++index) {
         const auto yValue = increment * index;
