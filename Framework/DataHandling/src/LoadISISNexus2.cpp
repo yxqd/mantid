@@ -70,6 +70,7 @@ DECLARE_NEXUS_FILELOADER_ALGORITHM(LoadISISNexus2)
 using namespace Kernel;
 using namespace API;
 using namespace NeXus;
+using namespace HistogramData;
 using std::size_t;
 
 /// Empty default constructor
@@ -290,7 +291,8 @@ void LoadISISNexus2::exec() {
     // Get the X data
     NXFloat timeBins = entry.openNXFloat("detector_1/time_of_flight");
     timeBins.load();
-    m_tof_data.reset(new MantidVec(timeBins(), timeBins() + x_length));
+    m_tof_data =
+        boost::make_shared<HistogramX>(timeBins(), timeBins() + x_length);
   }
   int64_t firstentry = (m_entrynumber > 0) ? m_entrynumber : 1;
   loadPeriodData(firstentry, entry, local_workspace, m_load_selected_spectra);
@@ -421,7 +423,7 @@ void LoadISISNexus2::exec() {
       }
     } else {
       g_log.information() << " no monitors to load for workspace: " << wsName
-                          << std::endl;
+                          << '\n';
     }
   }
 
@@ -511,7 +513,7 @@ bool LoadISISNexus2::checkOptionalProperties(bool bseparateMonitors,
     std::string err =
         "Inconsistent range property. SpectrumMax is larger than number of "
         "spectra: " +
-        boost::lexical_cast<std::string>(m_loadBlockInfo.getMaxSpectrumID());
+        std::to_string(m_loadBlockInfo.getMaxSpectrumID());
     throw std::invalid_argument(err);
   }
 
@@ -519,10 +521,9 @@ bool LoadISISNexus2::checkOptionalProperties(bool bseparateMonitors,
   m_entrynumber = getProperty("EntryNumber");
   if (static_cast<int>(m_entrynumber) > m_loadBlockInfo.getNumberOfPeriods() ||
       m_entrynumber < 0) {
-    std::string err =
-        "Invalid entry number entered. File contains " +
-        boost::lexical_cast<std::string>(m_loadBlockInfo.getNumberOfPeriods()) +
-        " period. ";
+    std::string err = "Invalid entry number entered. File contains " +
+                      std::to_string(m_loadBlockInfo.getNumberOfPeriods()) +
+                      " period. ";
     throw std::invalid_argument(err);
   }
 
@@ -689,7 +690,7 @@ void LoadISISNexus2::buildSpectraInd2SpectraNumMap(
     int64_t hist = 0;
     for (; !generator->isDone(); generator->next()) {
       specnum_t spec_num = static_cast<specnum_t>(generator->getValue());
-      m_wsInd2specNum_map.insert(std::make_pair(hist, spec_num));
+      m_wsInd2specNum_map.emplace(hist, spec_num);
       ++hist;
     }
   }
@@ -786,25 +787,21 @@ void LoadISISNexus2::loadPeriodData(
       NXInt mondata = monitor.openIntData();
       m_progress->report("Loading monitor");
       mondata.load(1, static_cast<int>(period - 1)); // TODO this is just wrong
-      MantidVec &Y = local_workspace->dataY(hist_index);
-      Y.assign(mondata(), mondata() + m_monBlockInfo.getNumberOfChannels());
-      MantidVec &E = local_workspace->dataE(hist_index);
-      std::transform(Y.begin(), Y.end(), E.begin(), dblSqrt);
+      NXFloat timeBins = monitor.openNXFloat("time_of_flight");
+      timeBins.load();
+      local_workspace->setHistogram(
+          hist_index, BinEdges(timeBins(), timeBins() + timeBins.dim0()),
+          Counts(mondata(), mondata() + m_monBlockInfo.getNumberOfChannels()));
 
       if (update_spectra2det_mapping) {
         // local_workspace->getAxis(1)->setValue(hist_index,
         // static_cast<specnum_t>(it->first));
-        auto spec = local_workspace->getSpectrum(hist_index);
+        auto &spec = local_workspace->getSpectrum(hist_index);
         specnum_t specNum = m_wsInd2specNum_map.at(hist_index);
-        spec->setDetectorIDs(
+        spec.setDetectorIDs(
             m_spec2det_map.getDetectorIDsForSpectrumNo(specNum));
-        spec->setSpectrumNo(specNum);
+        spec.setSpectrumNo(specNum);
       }
-
-      NXFloat timeBins = monitor.openNXFloat("time_of_flight");
-      timeBins.load();
-      local_workspace->dataX(hist_index)
-          .assign(timeBins(), timeBins() + timeBins.dim0());
       hist_index++;
     } else if (m_have_detector) {
       NXData nxdata = entry.openNXData("detector_1");
@@ -846,7 +843,7 @@ void LoadISISNexus2::loadPeriodData(
     local_workspace->mutableRun().addProperty("run_title", title, true);
   } catch (std::runtime_error &) {
     g_log.debug() << "No title was found in the input file, "
-                  << getPropertyValue("Filename") << std::endl;
+                  << getPropertyValue("Filename") << '\n';
   }
 }
 
@@ -883,23 +880,19 @@ void LoadISISNexus2::loadBlock(NXDataSetTyped<int> &data, int64_t blocksize,
   int64_t final(hist + blocksize);
   while (hist < final) {
     m_progress->report("Loading data");
-    MantidVec &Y = local_workspace->dataY(hist);
-    Y.assign(data_start, data_end);
+    local_workspace->setHistogram(hist, BinEdges(m_tof_data),
+                                  Counts(data_start, data_end));
     data_start += m_detBlockInfo.getNumberOfChannels();
     data_end += m_detBlockInfo.getNumberOfChannels();
-    MantidVec &E = local_workspace->dataE(hist);
-    std::transform(Y.begin(), Y.end(), E.begin(), dblSqrt);
-    // Populate the workspace. Loop starts from 1, hence i-1
-    local_workspace->setX(hist, m_tof_data);
     if (m_load_selected_spectra) {
       // local_workspace->getAxis(1)->setValue(hist,
       // static_cast<specnum_t>(spec_num));
-      auto spec = local_workspace->getSpectrum(hist);
+      auto &spec = local_workspace->getSpectrum(hist);
       specnum_t specNum = m_wsInd2specNum_map.at(hist);
       // set detectors corresponding to spectra Number
-      spec->setDetectorIDs(m_spec2det_map.getDetectorIDsForSpectrumNo(specNum));
+      spec.setDetectorIDs(m_spec2det_map.getDetectorIDsForSpectrumNo(specNum));
       // set correct spectra Number
-      spec->setSpectrumNo(specNum);
+      spec.setSpectrumNo(specNum);
     }
 
     ++hist;
@@ -931,7 +924,7 @@ void LoadISISNexus2::runLoadInstrument(
   }
   if (executionSuccessful) {
     // If requested update the instrument to positions in the data file
-    const Geometry::ParameterMap &pmap = localWorkspace->instrumentParameters();
+    const auto &pmap = localWorkspace->constInstrumentParameters();
     if (pmap.contains(localWorkspace->getInstrument()->getComponentID(),
                       "det-pos-source")) {
       boost::shared_ptr<Geometry::Parameter> updateDets = pmap.get(
@@ -971,8 +964,7 @@ void LoadISISNexus2::loadRunDetails(
   m_proton_charge = static_cast<double>(entry.getFloat("proton_charge"));
   runDetails.setProtonCharge(m_proton_charge);
 
-  std::string run_num =
-      boost::lexical_cast<std::string>(entry.getInt("run_number"));
+  std::string run_num = std::to_string(entry.getInt("run_number"));
   runDetails.addProperty("run_number", run_num);
 
   //

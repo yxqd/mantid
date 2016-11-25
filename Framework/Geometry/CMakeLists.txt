@@ -1,5 +1,4 @@
 set ( SRC_FILES
-	${SRC_FILES} ${OPENCASCADE_SRC}
 	src/ComponentParser.cpp
 	src/Crystal/BasicHKLFilters.cpp
 	src/Crystal/BraggScatterer.cpp
@@ -44,6 +43,7 @@ set ( SRC_FILES
 	src/Crystal/V3R.cpp
 	src/IObjComponent.cpp
 	src/Instrument.cpp
+	src/Instrument/Container.cpp
 	src/Instrument/CompAssembly.cpp
 	src/Instrument/Component.cpp
 	src/Instrument/ComponentHelper.cpp
@@ -54,7 +54,6 @@ set ( SRC_FILES
 	src/Instrument/IDFObject.cpp
 	src/Instrument/InstrumentDefinitionParser.cpp
 	src/Instrument/NearestNeighbours.cpp
-	src/Instrument/NearestNeighboursFactory.cpp
 	src/Instrument/ObjCompAssembly.cpp
 	src/Instrument/ObjComponent.cpp
 	src/Instrument/ParComponentFactory.cpp
@@ -63,6 +62,11 @@ set ( SRC_FILES
 	src/Instrument/RectangularDetector.cpp
 	src/Instrument/RectangularDetectorPixel.cpp
 	src/Instrument/ReferenceFrame.cpp
+	src/Instrument/SampleEnvironment.cpp
+	src/Instrument/SampleEnvironmentFactory.cpp
+	src/Instrument/SampleEnvironmentSpec.cpp
+	src/Instrument/SampleEnvironmentSpecParser.cpp
+	src/Instrument/StructuredDetector.cpp
 	src/Instrument/XMLInstrumentParameter.cpp
 	src/MDGeometry/CompositeImplicitFunction.cpp
 	src/MDGeometry/GeneralFrame.cpp
@@ -108,6 +112,7 @@ set ( SRC_FILES
 	src/Rendering/GeometryHandler.cpp
 	src/Rendering/GluGeometryHandler.cpp
 	src/Rendering/GluGeometryRenderer.cpp
+	src/Rendering/StructuredGeometryHandler.cpp
 	src/Rendering/vtkGeometryCacheReader.cpp
 	src/Rendering/vtkGeometryCacheWriter.cpp
 	src/Surfaces/Cone.cpp
@@ -191,7 +196,7 @@ set ( INC_FILES
 	inc/MantidGeometry/IDetector_fwd.h
 	inc/MantidGeometry/IObjComponent.h
 	inc/MantidGeometry/Instrument.h
-	inc/MantidGeometry/Instrument_fwd.h
+	inc/MantidGeometry/Instrument/Container.h
 	inc/MantidGeometry/Instrument/CompAssembly.h
 	inc/MantidGeometry/Instrument/Component.h
 	inc/MantidGeometry/Instrument/ComponentHelper.h
@@ -200,11 +205,8 @@ set ( INC_FILES
 	inc/MantidGeometry/Instrument/FitParameter.h
 	inc/MantidGeometry/Instrument/Goniometer.h
 	inc/MantidGeometry/Instrument/IDFObject.h
-	inc/MantidGeometry/Instrument/INearestNeighbours.h
-	inc/MantidGeometry/Instrument/INearestNeighboursFactory.h
 	inc/MantidGeometry/Instrument/InstrumentDefinitionParser.h
 	inc/MantidGeometry/Instrument/NearestNeighbours.h
-	inc/MantidGeometry/Instrument/NearestNeighboursFactory.h
 	inc/MantidGeometry/Instrument/ObjCompAssembly.h
 	inc/MantidGeometry/Instrument/ObjComponent.h
 	inc/MantidGeometry/Instrument/ParComponentFactory.h
@@ -214,7 +216,13 @@ set ( INC_FILES
 	inc/MantidGeometry/Instrument/RectangularDetector.h
 	inc/MantidGeometry/Instrument/RectangularDetectorPixel.h
 	inc/MantidGeometry/Instrument/ReferenceFrame.h
+	inc/MantidGeometry/Instrument/SampleEnvironment.h
+	inc/MantidGeometry/Instrument/SampleEnvironmentFactory.h
+	inc/MantidGeometry/Instrument/SampleEnvironmentSpec.h
+	inc/MantidGeometry/Instrument/SampleEnvironmentSpecParser.h
+	inc/MantidGeometry/Instrument/StructuredDetector.h
 	inc/MantidGeometry/Instrument/XMLInstrumentParameter.h
+	inc/MantidGeometry/Instrument_fwd.h
 	inc/MantidGeometry/MDGeometry/CompositeImplicitFunction.h
 	inc/MantidGeometry/MDGeometry/GeneralFrame.h
 	inc/MantidGeometry/MDGeometry/HKL.h
@@ -267,6 +275,7 @@ set ( INC_FILES
 	inc/MantidGeometry/Rendering/OCGeometryHandler.h
 	inc/MantidGeometry/Rendering/OCGeometryRenderer.h
 	inc/MantidGeometry/Rendering/OpenGL_Headers.h
+	inc/MantidGeometry/Rendering/StructuredGeometryHandler.h
 	inc/MantidGeometry/Rendering/vtkGeometryCacheReader.h
 	inc/MantidGeometry/Rendering/vtkGeometryCacheWriter.h
 	inc/MantidGeometry/Surfaces/BaseVisit.h
@@ -292,6 +301,7 @@ set ( TEST_FILES
 	BraggScattererFactoryTest.h
 	BraggScattererInCrystalStructureTest.h
 	BraggScattererTest.h
+	ContainerTest.h
 	CenteringGroupTest.h
 	CompAssemblyTest.h
 	ComponentHelperTest.h
@@ -340,7 +350,6 @@ set ( TEST_FILES
 	MathSupportTest.h
 	MatrixVectorPairParserTest.h
 	MatrixVectorPairTest.h
-	NearestNeighboursFactoryTest.h
 	NearestNeighboursTest.h
 	NiggliCellTest.h
 	NullImplicitFunctionTest.h
@@ -383,6 +392,11 @@ set ( TEST_FILES
 	RulesSurfPointTest.h
 	RulesTest.h
 	RulesUnionTest.h
+	SampleEnvironmentFactoryTest.h
+	SampleEnvironmentSpecFileFinderTest.h
+	SampleEnvironmentSpecParserTest.h
+	SampleEnvironmentSpecTest.h
+	SampleEnvironmentTest.h
 	ScalarUtilsTest.h
 	ShapeFactoryTest.h
 	SpaceGroupFactoryTest.h
@@ -390,6 +404,7 @@ set ( TEST_FILES
 	SphereTest.h
 	StructureFactorCalculatorSummationTest.h
 	StructureFactorCalculatorTest.h
+	StructuredDetectorTest.h
 	SurfaceFactoryTest.h
 	SurfaceTest.h
 	SymmetryElementFactoryTest.h
@@ -422,7 +437,7 @@ endif(UNITY_BUILD)
 
 # ===================== Open Cascade ===================
 if (ENABLE_OPENCASCADE)
-  set (SRC_FILES ${SRC_FILES} ${OPENCASCADE_SRC} )
+  LIST (APPEND SRC_FILES ${OPENCASCADE_SRC} )
 endif ()
 
 # A few defines needed for OpenCascade on the Mac
@@ -430,7 +445,7 @@ if ( APPLE )
   add_definitions ( -DHAVE_IOSTREAM -DHAVE_LIMITS -DHAVE_IOMANIP )
 endif ()
 
-include_directories ( ${OPENGL_INCLUDE_DIR} )
+include_directories ( ${OPENGL_INCLUDE_DIR} ${TBB_INCLUDE_DIRS} )
 include_directories ( ${GSL_INCLUDE_DIR} )
 
 
@@ -455,6 +470,8 @@ endif ()
 set_property ( TARGET Geometry PROPERTY FOLDER "MantidFramework" )
 
 target_link_libraries ( Geometry LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME} ${MANTIDLIBS}  ${OPENGL_LIBRARIES} ${GSL_LIBRARIES} ${NEXUS_LIBRARIES} ${JSONCPP_LIBRARIES} )
+
+target_link_libraries ( Geometry LINK_PUBLIC ${TBB_LIBRARIES} ${TBB_MALLOC_LIBRARIES} )
 
 if (ENABLE_OPENCASCADE)
   target_link_libraries ( Geometry LINK_PRIVATE ${OPENCASCADE_LIBRARIES} )

@@ -3,6 +3,7 @@
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/CommonBinsValidator.h"
 #include "MantidAPI/HistogramValidator.h"
+#include "MantidAPI/Run.h"
 
 #include "MantidDataHandling/FindDetectorsPar.h"
 
@@ -39,7 +40,10 @@ SaveNXTomo::SaveNXTomo() : API::Algorithm() {
  */
 void SaveNXTomo::init() {
   auto wsValidator = boost::make_shared<CompositeValidator>();
-  wsValidator->add<API::CommonBinsValidator>();
+  // Note: this would be better, but it is too restrictive in
+  // practice when saving image workspaces loaded from different
+  // formats than FITS or not so standard FITS.
+  // wsValidator->add<API::CommonBinsValidator>();
   wsValidator->add<API::HistogramValidator>();
 
   declareProperty(
@@ -120,11 +124,13 @@ void SaveNXTomo::processAll() {
       throw Exception::NotImplementedError(
           "SaveNXTomo passed invalid workspaces. Must be Workspace2D");
 
+    // Note: check disabled for the same reason as in the input properties
     // Do the full check for common binning
-    if (!WorkspaceHelpers::commonBoundaries(workspace)) {
-      g_log.error("The input workspace must have common bins");
-      throw std::invalid_argument("The input workspace must have common bins");
-    }
+    // if (!WorkspaceHelpers::commonBoundaries(workspace)) {
+    //   g_log.error("The input workspace must have common bins");
+    //   throw std::invalid_argument("The input workspace must have common
+    //   bins");
+    // }
   }
 
   // Retrieve the filename from the properties
@@ -337,10 +343,16 @@ void SaveNXTomo::writeSingleWorkspace(const Workspace2D_sptr workspace,
 
   auto dataArr = new double[m_spectraCount];
 
+  // images can be as one-spectrum-per-pixel, or one-spectrum-per-row
+  bool spectrumPerPixel = (1 == workspace->dataY(0).size());
   for (int64_t i = 0; i < m_dimensions[1]; ++i) {
     for (int64_t j = 0; j < m_dimensions[2]; ++j) {
-      dataArr[i * m_dimensions[1] + j] =
-          workspace->dataY(i * m_dimensions[1] + j)[0];
+      if (spectrumPerPixel) {
+        dataArr[i * m_dimensions[1] + j] =
+            workspace->dataY(i * m_dimensions[1] + j)[0];
+      } else {
+        dataArr[i * m_dimensions[1] + j] = workspace->dataY(i)[j];
+      }
     }
   }
 

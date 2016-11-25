@@ -10,6 +10,8 @@
 #include "MantidQtMantidWidgets/HintStrategy.h"
 #include "MantidQtMantidWidgets/AlgorithmHintStrategy.h"
 
+#include <boost/scoped_ptr.hpp>
+
 using namespace MantidQt::MantidWidgets;
 using namespace Mantid::API;
 
@@ -46,9 +48,8 @@ class AlgorithmHintStrategyTest : public CxxTest::TestSuite {
       declareProperty(
           Mantid::Kernel::make_unique<Mantid::Kernel::ArrayProperty<double>>(
               "DoubleArray"));
-      declareProperty(
-          Mantid::Kernel::make_unique<
-              Mantid::Kernel::ArrayProperty<std::string>>("StringArray"));
+      declareProperty(Mantid::Kernel::make_unique<
+          Mantid::Kernel::ArrayProperty<std::string>>("StringArray"));
     };
     void exec() override { return; };
   };

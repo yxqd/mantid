@@ -1,12 +1,10 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAlgorithms/CreatePSDBleedMask.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceProperty.h"
+#include "MantidGeometry/Instrument/DetectorGroup.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/MultiThreaded.h"
 #include "MantidKernel/NullValidator.h"
-#include "MantidGeometry/Instrument/DetectorGroup.h"
 
 #include <cfloat>
 #include <iterator>
@@ -25,16 +23,8 @@ using API::MatrixWorkspace_sptr;
 using API::MatrixWorkspace_const_sptr;
 using DataObjects::MaskWorkspace_sptr;
 
-//----------------------------------------------------------------------
-// Public methods
-//----------------------------------------------------------------------
-
 /// Default constructor
 CreatePSDBleedMask::CreatePSDBleedMask() {}
-
-//----------------------------------------------------------------------
-// Private methods
-//----------------------------------------------------------------------
 
 /// Initialize the algorithm properties
 void CreatePSDBleedMask::init() {
@@ -159,11 +149,10 @@ void CreatePSDBleedMask::exec() {
 
   progress.resetNumSteps(numTubes, 0, 1);
 
-  PARALLEL_FOR2(inputWorkspace, outputWorkspace)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*inputWorkspace, *outputWorkspace))
   for (int i = 0; i < numTubes; ++i) {
     PARALLEL_START_INTERUPT_REGION
-    auto current = tubeMap.begin();
-    std::advance(current, i);
+    auto current = std::next(tubeMap.begin(), i);
     const TubeIndex::mapped_type tubeIndices = current->second;
     bool mask = performBleedTest(tubeIndices, inputWorkspace, maxRate,
                                  numIgnoredPixels);
@@ -187,7 +176,7 @@ void CreatePSDBleedMask::exec() {
         << " The " << numSpectraMasked
         << " spectra have been masked on the output workspace.\n";
   } else {
-    g_log.information() << std::endl;
+    g_log.information() << '\n';
   }
 
   setProperty("NumberOfFailures", numSpectraMasked);
@@ -227,10 +216,10 @@ bool CreatePSDBleedMask::performBleedTest(
   for (; top < topEnd; ++top, ++bot) {
     const int topIndex = tubeIndices[top];
     const int botIndex = tubeIndices[bot];
-    const MantidVec &topY = inputWS->readY(topIndex);
-    const MantidVec &botY = inputWS->readY(botIndex);
-    const MantidVec &topX = inputWS->readX(topIndex);
-    const MantidVec &botX = inputWS->readX(botIndex);
+    auto &topY = inputWS->y(topIndex);
+    auto &botY = inputWS->y(botIndex);
+    auto &topX = inputWS->x(topIndex);
+    auto &botX = inputWS->x(botIndex);
     for (int j = 0; j < numBins; ++j) {
       double topRate(topY[j]), botRate(botY[j]);
       if (isRawCounts) {
@@ -270,7 +259,7 @@ void CreatePSDBleedMask::maskTube(const std::vector<int> &tubeIndices,
                                   API::MatrixWorkspace_sptr workspace) {
   const double deadValue(1.0); // delete the data
   for (auto tubeIndice : tubeIndices) {
-    workspace->dataY(tubeIndice)[0] = deadValue;
+    workspace->mutableY(tubeIndice)[0] = deadValue;
   }
 }
 }

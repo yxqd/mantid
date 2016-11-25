@@ -2,6 +2,7 @@
 #include "MantidKernel/System.h"
 #include "MantidDataObjects/PeaksWorkspace.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/Run.h"
 
 namespace Mantid {
 namespace Algorithms {
@@ -13,19 +14,6 @@ using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::DataObjects;
 
-//----------------------------------------------------------------------------------------------
-/** Constructor
- */
-CreatePeaksWorkspace::CreatePeaksWorkspace() {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
- */
-CreatePeaksWorkspace::~CreatePeaksWorkspace() {}
-
-//----------------------------------------------------------------------------------------------
-
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void CreatePeaksWorkspace::init() {
@@ -41,7 +29,6 @@ void CreatePeaksWorkspace::init() {
                   "An output workspace.");
 }
 
-//----------------------------------------------------------------------------------------------
 /** Execute the algorithm.
  */
 void CreatePeaksWorkspace::exec() {
@@ -55,6 +42,8 @@ void CreatePeaksWorkspace::exec() {
     Progress progress(this, 0, 1, NumberOfPeaks);
 
     out->setInstrument(instWS->getInstrument());
+    out->mutableRun().setGoniometer(instWS->run().getGoniometer().getR(),
+                                    false);
     // Create some default peaks
     for (int i = 0; i < NumberOfPeaks; i++) {
       out->addPeak(Peak(out->getInstrument(),

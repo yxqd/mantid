@@ -1,3 +1,5 @@
+#include "MantidQtMantidWidgets/CatalogSearch.h"
+#include "MantidQtAPI/MantidDesktopServices.h"
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/AnalysisDataService.h"
 #include "MantidAPI/ITableWorkspace.h"
@@ -5,11 +7,10 @@
 #include "MantidKernel/UserCatalogInfo.h"
 #include "MantidKernel/ConfigService.h"
 #include "MantidKernel/FacilityInfo.h"
-#include "MantidQtMantidWidgets/CatalogSearch.h"
+
 #include <Poco/ActiveResult.h>
 #include <Poco/Path.h>
 
-#include <QDesktopServices>
 #include <QFileDialog>
 #include <QSettings>
 #include <QStyle>
@@ -179,7 +180,8 @@ void CatalogSearch::onFacilityLogin() {}
  * Sends the user to relevant search page on the Mantid project site.
  */
 void CatalogSearch::helpClicked() {
-  QDesktopServices::openUrl(
+  using MantidQt::API::MantidDesktopServices;
+  MantidDesktopServices::openUrl(
       QUrl("http://www.mantidproject.org/Catalog_Search"));
 }
 
@@ -352,7 +354,8 @@ int CatalogSearch::headerIndexByName(QTableWidget *table,
     // Is the column name the same as the searchFor string?
     if (searchFor.compare(
             model->headerData(col, Qt::Horizontal, Qt::DisplayRole)
-                .toString()) == 0) {
+                .toString()
+                .toStdString()) == 0) {
       // Yes? Return the index of the column.
       return (col);
     }
@@ -520,7 +523,7 @@ void CatalogSearch::openCalendar() {
   m_calendar->show();
 
   // Set the name of the date button the user pressed to open the calendar with.
-  m_dateButtonName = sender()->name();
+  m_dateButtonName = sender()->objectName();
 }
 
 /**
@@ -598,7 +601,7 @@ void CatalogSearch::advancedSearchChecked() {
  * pressed.
  */
 void CatalogSearch::searchClicked() {
-  std::string name = sender()->name();
+  auto name = sender()->objectName();
   // This allows us to perform paging on each search separately
   // as we call this method in three separate SLOTS (two paging & search
   // button).
@@ -917,9 +920,9 @@ void CatalogSearch::investigationSelected(QTableWidgetItem *item) {
   // investigation.
   m_icatHelper->executeGetDataFiles(
       investigationId->text().toStdString(),
-      searchResultsTable->item(
-                            item->row(),
-                            headerIndexByName(searchResultsTable, "SessionID"))
+      searchResultsTable->item(item->row(),
+                               headerIndexByName(searchResultsTable,
+                                                 "SessionID"))
           ->text()
           .toStdString());
 
@@ -1085,17 +1088,15 @@ void CatalogSearch::updateDataFileLabels(QTableWidgetItem *item) {
   // Set the instrument label using data from the investigation results
   // workspace.
   m_icatUiForm.dataFileInstrumentRes->setText(
-      searchResultsTable->item(
-                            item->row(),
-                            headerIndexByName(searchResultsTable, "Instrument"))
-          ->text());
+      searchResultsTable->item(item->row(),
+                               headerIndexByName(searchResultsTable,
+                                                 "Instrument"))->text());
 
   // Show the related "run-range" for the specific dataFiles.
   m_icatUiForm.dataFileRunRangeRes->setText(
-      searchResultsTable->item(
-                            item->row(),
-                            headerIndexByName(searchResultsTable, "Run range"))
-          ->text());
+      searchResultsTable->item(item->row(),
+                               headerIndexByName(searchResultsTable,
+                                                 "Run range"))->text());
 }
 
 /**
@@ -1202,7 +1203,7 @@ void CatalogSearch::doFilter(const int &index) {
     // the same.
     if (index == 0 ||
         (item->text().toLower().contains(
-            m_icatUiForm.dataFileFilterCombo->text(index).toLower()))) {
+            m_icatUiForm.dataFileFilterCombo->itemText(index).toLower()))) {
       table->setRowHidden(row, false);
     }
   }

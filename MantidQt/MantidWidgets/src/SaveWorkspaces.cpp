@@ -22,6 +22,25 @@
 #include <QSettings>
 #include <QMessageBox>
 
+namespace {
+void setDetectorNamesOnCanSasFormat(QString &saveCommands,
+                                    const QList<QListWidgetItem *> &wspaces,
+                                    int j) {
+  saveCommands += ", DetectorNames=";
+  Mantid::API::Workspace_sptr workspace_ptr =
+      Mantid::API::AnalysisDataService::Instance().retrieve(
+          wspaces[j]->text().toStdString());
+  Mantid::API::MatrixWorkspace_sptr matrix_workspace =
+      boost::dynamic_pointer_cast<Mantid::API::MatrixWorkspace>(workspace_ptr);
+  if (matrix_workspace) {
+    if (matrix_workspace->getInstrument()->getName() == "SANS2D")
+      saveCommands += "'front-detector, rear-detector'";
+    if (matrix_workspace->getInstrument()->getName() == "LOQ")
+      saveCommands += "'HAB, main-detector-bank'";
+  }
+}
+}
+
 using namespace MantidQt::MantidWidgets;
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
@@ -39,7 +58,9 @@ using namespace Mantid::API;
 SaveWorkspaces::SaveWorkspaces(QWidget *parent, const QString &suggFname,
                                QHash<const QCheckBox *const, QString> &defSavs,
                                bool saveAsZeroErrorFree)
-    : API::MantidDialog(parent), m_saveAsZeroErrorFree(saveAsZeroErrorFree) {
+    : API::MantidDialog(parent), m_saveAsZeroErrorFree(saveAsZeroErrorFree),
+      m_geometryID(""), m_sampleHeight(""), m_sampleWidth(""),
+      m_sampleThickness("") {
   setAttribute(Qt::WA_DeleteOnClose);
   setWindowTitle("Save Workspaces");
 
@@ -107,12 +128,14 @@ void SaveWorkspaces::setupLine2(
   connect(cancel, SIGNAL(clicked()), this, SLOT(close()));
 
   QCheckBox *saveNex = new QCheckBox("Nexus");
+  QCheckBox *saveNXcanSAS = new QCheckBox("NxCanSAS");
   QCheckBox *saveNIST = new QCheckBox("NIST Qxy");
   QCheckBox *saveCan = new QCheckBox("CanSAS");
   QCheckBox *saveRKH = new QCheckBox("RKH");
   QCheckBox *saveCSV = new QCheckBox("CSV");
   // link the save option tick boxes to their save algorithm
   m_savFormats.insert(saveNex, "SaveNexus");
+  m_savFormats.insert(saveNXcanSAS, "SaveNXcanSAS");
   m_savFormats.insert(saveNIST, "SaveNISTDAT");
   m_savFormats.insert(saveCan, "SaveCanSAS1D");
   m_savFormats.insert(saveRKH, "SaveRKH");
@@ -131,6 +154,7 @@ void SaveWorkspaces::setupLine2(
 
   QVBoxLayout *ly_saveFormats = new QVBoxLayout;
   ly_saveFormats->addWidget(saveNex);
+  ly_saveFormats->addWidget(saveNXcanSAS);
   ly_saveFormats->addWidget(saveNIST);
   ly_saveFormats->addWidget(saveCan);
   ly_saveFormats->addWidget(saveRKH);
@@ -149,6 +173,7 @@ void SaveWorkspaces::setupLine2(
   save->setToolTip(formatsTip);
   cancel->setToolTip(formatsTip);
   saveNex->setToolTip(formatsTip);
+  saveNXcanSAS->setToolTip(formatsTip);
   saveNIST->setToolTip(formatsTip);
   saveCan->setToolTip(formatsTip);
   saveRKH->setToolTip(formatsTip);
@@ -252,26 +277,24 @@ QString SaveWorkspaces::saveList(const QList<QListWidgetItem *> &wspaces,
       outFile += exten;
     }
     saveCommands += outFile + "'";
-    if (algorithm != "SaveCSV" && algorithm != "SaveNISTDAT") {
+    if (algorithm != "SaveCSV" && algorithm != "SaveNISTDAT" &&
+        algorithm != "SaveNXcanSAS") {
       saveCommands += ", Append=";
       saveCommands += toAppend ? "True" : "False";
     }
     if (algorithm == "SaveCanSAS1D") {
-      saveCommands += ", DetectorNames=";
-      Workspace_sptr workspace_ptr = AnalysisDataService::Instance().retrieve(
-          wspaces[j]->text().toStdString());
-      MatrixWorkspace_sptr matrix_workspace =
-          boost::dynamic_pointer_cast<MatrixWorkspace>(workspace_ptr);
-      if (matrix_workspace) {
-        if (matrix_workspace->getInstrument()->getName() == "SANS2D")
-          saveCommands += "'front-detector, rear-detector'";
-        if (matrix_workspace->getInstrument()->getName() == "LOQ")
-          saveCommands += "'HAB, main-detector-bank'";
-      } else {
-        // g_log.wa
-      }
+      setDetectorNamesOnCanSasFormat(saveCommands, wspaces, j);
+
+      // Add the geometry information
+      emit updateGeometryInformation();
+      // Remove the first three characters, since they are unwanted
+      saveCommands += ", Geometry='" + m_geometryID + "', SampleHeight=" +
+                      m_sampleHeight + ", SampleWidth=" + m_sampleWidth +
+                      ", SampleThickness=" + m_sampleThickness;
     }
-    // finally finish the algorithm call
+    if (algorithm == "SaveNXcanSAS") {
+      setDetectorNamesOnCanSasFormat(saveCommands, wspaces, j);
+    }
     saveCommands += ")\n";
   }
   return saveCommands;
@@ -325,7 +348,7 @@ void SaveWorkspaces::saveSel() {
         return;
       }
     } // end if save in this format
-  } // end loop over formats
+  }   // end loop over formats
 
   saveCommands += "print 'success'";
   QString status(runPythonCode(saveCommands).trimmed());
@@ -358,10 +381,9 @@ void SaveWorkspaces::saveFileBrowse() {
   QString prevPath =
       prevValues.value("dir", QString::fromStdString(
                                   ConfigService::Instance().getString(
-                                      "defaultsave.directory")))
-          .toString();
+                                      "defaultsave.directory"))).toString();
 
-  QString filter = ";;AllFiles (*.*)";
+  QString filter = ";;AllFiles (*)";
   QFileDialog::Option userCon = m_append->isChecked()
                                     ? QFileDialog::DontConfirmOverwrite
                                     : static_cast<QFileDialog::Option>(0);
@@ -431,4 +453,17 @@ void SaveWorkspaces::onSaveAsZeroErrorFreeChanged(int state) {
   } else {
     m_saveAsZeroErrorFree = true;
   }
+}
+
+/**
+ * Recieves an update for the geometry information
+ */
+void SaveWorkspaces::onUpdateGeomtryInformation(QString &geometryID,
+                                                QString &sampleHeight,
+                                                QString &sampleWidth,
+                                                QString &sampleThickness) {
+  m_geometryID = geometryID;
+  m_sampleHeight = sampleHeight;
+  m_sampleWidth = sampleWidth;
+  m_sampleThickness = sampleThickness;
 }

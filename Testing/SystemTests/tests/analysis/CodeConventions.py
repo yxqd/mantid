@@ -1,8 +1,8 @@
 #pylint: disable=no-init
 import stresstesting
+import re
 import mantid
 from mantid.simpleapi import *
-import re
 
 MAX_ALG_LEN = 40 # TODO convention says 20 is the maximum
 
@@ -50,6 +50,7 @@ FUNC_BAD_PARAMS = {
     "CubicSpline":("y0", "y1", "y2"),
     "DiffRotDiscreteCircle":("f0.Height", "f0.Radius", "f0.Centre"),
     "DiffSphere":("f0.Height", "f0.Radius", "f0.Centre"),
+    "IsoRotDiff":("f0.Height", "f0.Radius", "f0.Centre"),
     "LatticeErrors":("p0", "p1", "p2", "p3", "p4", "p5"),
     "Muon_ExpDecayOscTest":("lambda", "frequency", "phi"),
     "SCDPanelErrors":("f0_detWidthScale", "f0_detHeightScale",
@@ -59,8 +60,14 @@ FUNC_BAD_PARAMS = {
     "StretchedExpFT":("height", "tau", "beta"),
     "PawleyParameterFunction":("a","b","c"),
     "PawleyFunction":("f0.a","f0.b","f0.c", "f0.Alpha", "f0.Beta", "f0.Gamma", "f0.ZeroShift"),
-    "LatticeFunction":("a","b","c")
+    "LatticeFunction":("a","b","c"),
+    "CrystalFieldSpectrum":("f0.Amplitude","f0.PeakCentre","f0.FWHM","f1.Amplitude","f1.PeakCentre","f1.FWHM",
+                            "f2.Amplitude","f2.PeakCentre","f2.FWHM","f3.Amplitude","f3.PeakCentre","f3.FWHM",
+                            "f4.Amplitude","f4.PeakCentre","f4.FWHM","f5.Amplitude","f5.PeakCentre","f5.FWHM"),
+    "CrystalFieldMultiSpectrum":("f0.f0.A0","f0.f1.Amplitude","f0.f1.PeakCentre","f0.f1.FWHM",
+                                 "f0.f2.Amplitude","f0.f2.PeakCentre","f0.f2.FWHM")
     }
+
 
 class Algorithms(stresstesting.MantidStressTest):
 
@@ -103,7 +110,7 @@ class Algorithms(stresstesting.MantidStressTest):
 
     def verifyProperty(self, alg_descr, name):
         upper = name.upper()
-        if (upper in SPECIAL_UPPER) and (not name in SPECIAL):
+        if (upper in SPECIAL_UPPER) and (name not in SPECIAL):
             index = SPECIAL_UPPER.index(upper)
             print alg_descr + " property (" + name + ") has special name "\
                 + "with wrong case: " + name + " should be " + SPECIAL[index]
@@ -139,7 +146,6 @@ class Algorithms(stresstesting.MantidStressTest):
                     if not self.verifyProperty(alg_descr, prop.name):
                         self.__ranOk += 1
 
-
     def validate(self):
         if self.__ranOk > 0:
             print "Found %d errors. Coding conventions found at" % self.__ranOk,\
@@ -147,6 +153,7 @@ class Algorithms(stresstesting.MantidStressTest):
             return False
 
         return True
+
 
 class FitFunctions(stresstesting.MantidStressTest):
     def __init__(self):

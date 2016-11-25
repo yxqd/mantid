@@ -2,14 +2,15 @@
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/HistogramValidator.h"
 #include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidGeometry/Instrument/ParameterMap.h"
-#include "MantidKernel/Exception.h"
-#include "MantidKernel/PhysicalConstants.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/CompositeValidator.h"
+#include "MantidKernel/Exception.h"
+#include "MantidKernel/PhysicalConstants.h"
 
 #include <algorithm>
 #include <cmath>
@@ -120,18 +121,16 @@ void DetectorEfficiencyCor::exec() {
   double numHists_d = static_cast<double>(numHists);
   const int64_t progStep = static_cast<int64_t>(ceil(numHists_d / 100.0));
 
-  PARALLEL_FOR2(m_inputWS, m_outputWS)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*m_inputWS, *m_outputWS))
   for (int64_t i = 0; i < numHists; ++i) {
     PARALLEL_START_INTERUPT_REGION
 
-    m_outputWS->setX(i, m_inputWS->refX(i));
+    m_outputWS->setSharedX(i, m_inputWS->sharedX(i));
     try {
       correctForEfficiency(i);
     } catch (Exception::NotFoundError &) {
       // zero the Y data that can't be corrected
-      MantidVec &outY = m_outputWS->dataY(i);
-      std::transform(outY.begin(), outY.end(), outY.begin(),
-                     std::bind2nd(std::multiplies<double>(), 0));
+      m_outputWS->mutableY(i) *= 0.0;
       PARALLEL_CRITICAL(deteff_invalid) {
         m_spectraSkipped.insert(m_spectraSkipped.end(),
                                 m_inputWS->getAxis(1)->spectraNo(i));
@@ -158,7 +157,7 @@ void DetectorEfficiencyCor::exec() {
 void DetectorEfficiencyCor::retrieveProperties() {
   // these first three properties are fully checked by validators
   m_inputWS = getProperty("InputWorkspace");
-  m_paraMap = &(m_inputWS->instrumentParameters());
+  m_paraMap = &(m_inputWS->constInstrumentParameters());
 
   m_Ei = getProperty("IncidentEnergy");
   // If we're not given an Ei, see if one has been set.
@@ -196,15 +195,15 @@ void DetectorEfficiencyCor::correctForEfficiency(int64_t spectraIn) {
     return;
   }
 
-  MantidVec &yout = m_outputWS->dataY(spectraIn);
-  MantidVec &eout = m_outputWS->dataE(spectraIn);
+  auto &yout = m_outputWS->mutableY(spectraIn);
+  auto &eout = m_outputWS->mutableE(spectraIn);
   // Need the original values so this is not a reference
-  const MantidVec yValues = m_inputWS->readY(spectraIn);
-  const MantidVec eValues = m_inputWS->readE(spectraIn);
+  auto yValues = m_inputWS->y(spectraIn);
+  auto eValues = m_inputWS->e(spectraIn);
 
   // get a pointer to the detectors that created the spectrum
   const std::set<detid_t> &dets =
-      m_inputWS->getSpectrum(spectraIn)->getDetectorIDs();
+      m_inputWS->getSpectrum(spectraIn).getDetectorIDs();
   const double ndets(static_cast<double>(dets.size())); // We correct each pixel
                                                         // so make sure we
                                                         // average the
@@ -258,7 +257,7 @@ void DetectorEfficiencyCor::correctForEfficiency(int64_t spectraIn) {
     auto einItr = eValues.cbegin();
     auto youtItr = yout.begin();
     auto eoutItr = eout.begin();
-    auto xItr = m_inputWS->readX(spectraIn).cbegin();
+    auto xItr = m_inputWS->x(spectraIn).cbegin();
     auto wavItr = oneOverWaveVectors.begin();
 
     for (; youtItr != yout.end(); ++youtItr, ++eoutItr) {
@@ -447,7 +446,7 @@ void DetectorEfficiencyCor::logErrors(size_t totalNDetectors) const {
   if (!m_spectraSkipped.empty()) {
     g_log.warning() << "There were " << nspecs
                     << " spectra that could not be corrected out of total: "
-                    << totalNDetectors << std::endl;
+                    << totalNDetectors << '\n';
     g_log.warning() << "Their spectra were nullified\n";
     g_log.debug() << " Nullified spectra numbers: ";
     auto itend = m_spectraSkipped.end();

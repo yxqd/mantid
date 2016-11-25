@@ -2,6 +2,8 @@
 MantidPlot module to gain access to plotting functions etc.
 Requires that the main script be run from within MantidPlot
 """
+from __future__ import (absolute_import, division,
+                        print_function)
 # Requires MantidPlot
 try:
     import _qti
@@ -18,11 +20,16 @@ import time
 import mantid.api
 import mantidqtpython
 from mantidqtpython import GraphOptions
+# historical names in MantidPlot
+from mantidqtpython import MantidQt as _MantidQt
+from six.moves import range
+InstrumentViewMaskTab = _MantidQt.MantidWidgets.InstrumentWidgetMaskTab
+InstrumentViewPickTab = _MantidQt.MantidWidgets.InstrumentWidgetPickTab
 
 # Import into the global namespace qti classes that:
 #   (a) don't need a proxy & (b) can be constructed from python or (c) have enumerations within them
 from _qti import (PlotSymbol, ImageSymbol, ArrowMarker, ImageMarker, InstrumentView)
-				  
+
 # Make the ApplicationWindow instance accessible from the mantidplot namespace
 from _qti import app
 
@@ -199,7 +206,7 @@ def newTiledWindow(name=None, sources = None, ncols = None):
 
     if ncols is None:
         ncols = proxy.columnCount()
- 
+
     if not sources is None:
         row = 0
         col = 0
@@ -295,6 +302,37 @@ def plotTableColumns(table, columns, type = -1):
     else:
         return graph
 
+# Set some aliases for Layer enumerations so that old code will still work
+Layer = _qti.Layer
+Layer.Log10 = mantidqtpython.GraphOptions.Log10
+Layer.Linear = mantidqtpython.GraphOptions.Linear
+Layer.Left = mantidqtpython.GraphOptions.Left
+Layer.Right = mantidqtpython.GraphOptions.Right
+Layer.Bottom = mantidqtpython.GraphOptions.Bottom
+Layer.Top = mantidqtpython.GraphOptions.Top
+Layer.Line = mantidqtpython.GraphOptions.Line
+Layer.Scatter = mantidqtpython.GraphOptions.Scatter
+Layer.LineSymbols = mantidqtpython.GraphOptions.LineSymbols
+Layer.VerticalBars = mantidqtpython.GraphOptions.VerticalBars
+Layer.Area = mantidqtpython.GraphOptions.Area
+Layer.Pie = mantidqtpython.GraphOptions.Pie
+Layer.VerticalDropLines = mantidqtpython.GraphOptions.VerticalDropLines
+Layer.Spline = mantidqtpython.GraphOptions.Spline
+Layer.HorizontalSteps = mantidqtpython.GraphOptions.HorizontalSteps
+Layer.Histogram = mantidqtpython.GraphOptions.Histogram
+Layer.HorizontalBars = mantidqtpython.GraphOptions.HorizontalBars
+Layer.VectXYXY = mantidqtpython.GraphOptions.VectXYXY
+Layer.ErrorBars = mantidqtpython.GraphOptions.ErrorBars
+Layer.Box = mantidqtpython.GraphOptions.Box
+Layer.VectXYAM = mantidqtpython.GraphOptions.VectXYAM
+Layer.VerticalSteps = mantidqtpython.GraphOptions.VerticalSteps
+Layer.ColorMap = mantidqtpython.GraphOptions.ColorMap
+Layer.GrayScale = mantidqtpython.GraphOptions.GrayScale
+Layer.ColorMapContour = mantidqtpython.GraphOptions.ColorMapContour
+Layer.Contour = mantidqtpython.GraphOptions.Contour
+Layer.Function = mantidqtpython.GraphOptions.Function
+Layer.ImagePlot = mantidqtpython.GraphOptions.ImagePlot
+Layer.User = mantidqtpython.GraphOptions.User
 
 # ----------------------------------------------------------------------------------------------------
 # IPython auto-complete can't handle enumerations as defaults
@@ -677,7 +715,7 @@ def getMantidMatrix(name):
     """Get a handle to the named Mantid matrix"""
     return new_proxy(proxies.MantidMatrix, _qti.app.mantidUI.getMantidMatrix, name)
 
-	
+
 InstrumentWidget = mantidqtpython.MantidQt.MantidWidgets.InstrumentWidget
 InstrumentWidgetRenderTab = mantidqtpython.MantidQt.MantidWidgets.InstrumentWidgetRenderTab
 InstrumentWidgetPickTab = mantidqtpython.MantidQt.MantidWidgets.InstrumentWidgetPickTab
@@ -772,12 +810,6 @@ def plotSlice(source, label="", xydim=None, slicepoint=None,
     workspace_names = getWorkspaceNames(source)
     __checkPlotSliceWorkspaces(workspace_names)
 
-    try:
-        import mantidqtpython
-    except:
-        print "Could not find module mantidqtpython. Cannot open the SliceViewer."
-        return
-
     # Make a list of widgets to return
     out = []
     for wsname in workspace_names:
@@ -829,19 +861,51 @@ def closeAllSliceViewers():
     Closes all currently open SliceViewer windows. This might be useful to
     clean up your desktop after opening many windows.
     """
-    import mantidqtpython
     threadsafe_call(mantidqtpython.MantidQt.Factory.WidgetFactory.Instance().closeAllSliceViewerWindows)
 
+
+# -----------------------------------------------------------------------------
+def openProject(file_name, file_version=0):
+    """Open a mantid project file.
+
+    This will load all associated workspaces and plots.
+
+    Args:
+        file_name :: file path to a mantid project file
+        file_version :: file version to use when loading (default 0).
+    """
+    working_dir = os.path.dirname(os.path.abspath(file_name))
+    threadsafe_call(_qti.app.openProject, working_dir, file_name, file_version)
+
+
+# -----------------------------------------------------------------------------
+def saveProjectAs(file_name, compress=False):
+    """Save a mantid project
+
+    This will serialise all associated workspaces and windows
+
+    Args:
+        file_name :: file path to save to
+        compress :: whether to compress the project after saving
+    """
+    threadsafe_call(_qti.app.saveProjectAs, file_name, compress)
+
+
+# -----------------------------------------------------------------------------
+def newProject():
+    """Start a new mantid project
+
+    This will clear all existing unsaved projects
+    """
+    threadsafe_call(_qti.app.newProject)
 
 # -----------------------------------------------------------------------------
 # Legacy function
 plotTimeBin = plotBin
 
-# import 'safe' methods (i.e. no proxy required) of ApplicationWindow into the global namespace
-# Only 1 at the moment!
-appImports = [
-    'saveProjectAs'
-]
+# import 'safe' methods (i.e. no proxy required) of ApplicationWindow into
+# the global namespace. None at the moment!
+appImports = []
 for name in appImports:
     globals()[name] = getattr(_qti.app, name)
 
@@ -852,15 +916,6 @@ MantidUIImports = [
 # Update globals
 for name in MantidUIImports:
     globals()[name] = getattr(_qti.app.mantidUI, name)
-
-# Set some aliases for Layer enumerations so that old code will still work
-Layer = _qti.Layer
-Layer.Log10 = mantidqtpython.GraphOptions.Log10
-Layer.Linear = mantidqtpython.GraphOptions.Linear
-Layer.Left = mantidqtpython.GraphOptions.Left
-Layer.Right = mantidqtpython.GraphOptions.Right
-Layer.Bottom = mantidqtpython.GraphOptions.Bottom
-Layer.Top = mantidqtpython.GraphOptions.Top
 
 DistrFlag = mantidqtpython.MantidQt.DistributionFlag
 DistrFlag.DistrDefault = mantidqtpython.MantidQt.DistributionDefault
@@ -905,7 +960,7 @@ def __doSliceViewer(wsname, label="", xydim=None, slicepoint=None,
 
     # --- Slice point ---
     if not slicepoint is None:
-        for d in xrange(len(slicepoint)):
+        for d in range(len(slicepoint)):
             try:
                 val = float(slicepoint[d])
             except ValueError:
@@ -925,7 +980,7 @@ def __doSliceViewer(wsname, label="", xydim=None, slicepoint=None,
     try:
         threadsafe_call(sv.setColorScaleLog, colorscalelog)
     except:
-        print "Log color scale not possible."
+        print("Log color scale not possible.")
 
     # --- XY limits ---
     if not limits is None:
@@ -944,9 +999,7 @@ def get_screenshot_dir():
         if not os.path.exists(dest):
             os.mkdir(dest)
     else:
-        errormsg = "The expected environmental does not exist: " + expected_env_var
-        print errormsg
-        raise RuntimeError(errormsg)
+        raise RuntimeError("The expected environmental does not exist: " + expected_env_var)
     return dest
 
 
@@ -984,7 +1037,7 @@ Then, the contents of that section are replaced
     sections[section] = newtext.replace("\n", "")
 
     # Make the output
-    items = sections.items()
+    items = list(sections.items())
     items.sort()
     output = []
     for (section_name, text) in items:
@@ -1183,7 +1236,7 @@ def createDetectorTable(source):
     try:
         import mantidqtpython
     except:
-        print "Could not find module mantidqtpython. Cannot open the detector table."
+        print("Could not find module mantidqtpython. Cannot open the detector table.")
         return
 
     workspace_names = getWorkspaceNames(source)
@@ -1194,3 +1247,59 @@ def createDetectorTable(source):
         return new_proxy(proxies.MDIWindow, _qti.app.mantidUI.createDetectorTable, workspace_names[0])
 
 # -----------------------------------------------------------------------------
+def plotSubplots(source, indices, distribution = mantidqtpython.MantidQt.DistributionDefault, error_bars=False, window=None):
+    """Open a tiled plot.
+
+    This plots one or more spectra, with X as the bin boundaries,
+    and Y as the counts in each bin.
+    
+    If one workspace, each spectrum gets its own tile.
+    Otherwise, each workspace gets its own tile.
+
+    Args:
+        source: list of workspace names
+        indices: workspace index, or tuple or list of workspace indices to plot
+        distribution: whether or not to plot as a distribution
+        error_bars: bool, set to True to add error bars.
+        window: window used for plotting. If None a new one will be created
+    Returns:
+        A handle to window if one was specified, otherwise a handle to the created one. None in case of error.
+    """
+
+    workspace_names = getWorkspaceNames(source)
+   
+    # Deal with workspace groups that may contain various types:
+    # Only want to plot MatrixWorkspaces
+    to_plot = []
+    for name in workspace_names:
+        if isinstance(mantid.api.mtd[name], mantid.api.MatrixWorkspace):
+            to_plot.append(name)
+            
+    __checkPlotWorkspaces(to_plot)
+    # check spectrum indices
+    index_list = __getWorkspaceIndices(indices)
+    if len(index_list) == 0:
+        raise ValueError("No spectrum indices given")
+    for idx in index_list:
+        if idx < 0:
+            raise ValueError("Wrong spectrum index (<0): %d" % idx)
+    for name in to_plot:
+        max_spec = workspace(name).getNumberHistograms() - 1
+        for idx in index_list:
+            if idx > max_spec:
+                raise ValueError("Wrong spectrum index for workspace '%s': %d, which is bigger than the"
+                                 " number of spectra in this workspace - 1 (%d)" % (name, idx, max_spec))
+    
+    # Unwrap the window object, if any specified
+    if window != None:
+        window = window._getHeldObject()
+    
+    graph = proxies.Graph(threadsafe_call(_qti.app.mantidUI.plotSubplots,
+                                          to_plot, index_list, distribution, error_bars, window))
+    if graph._getHeldObject() == None:
+        raise RuntimeError("Cannot create graph, see log for details.")
+    else:
+        return graph
+
+
+# ----------------------------------------------------------------------------------------------------

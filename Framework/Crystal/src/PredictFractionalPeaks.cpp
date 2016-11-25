@@ -5,6 +5,7 @@
 *      Author: ruth
 */
 #include "MantidCrystal/PredictFractionalPeaks.h"
+#include "MantidAPI/Sample.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/PeaksWorkspace.h"
 #include "MantidGeometry/Crystal/OrientedLattice.h"
@@ -23,10 +24,6 @@ using namespace Mantid::Kernel;
 namespace Crystal {
 
 DECLARE_ALGORITHM(PredictFractionalPeaks)
-
-PredictFractionalPeaks::~PredictFractionalPeaks() {}
-
-PredictFractionalPeaks::PredictFractionalPeaks() : Algorithm() {}
 
 /// Initialise the properties
 void PredictFractionalPeaks::init() {
@@ -215,7 +212,7 @@ void PredictFractionalPeaks::exec() {
             }
           } catch (...) {
             if (ErrPos != 1) // setQLabFrame in createPeak throws exception
-              throw new std::invalid_argument("Invalid data at this point");
+              throw std::invalid_argument("Invalid data at this point");
           }
         }
       }

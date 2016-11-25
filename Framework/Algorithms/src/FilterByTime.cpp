@@ -1,7 +1,5 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAlgorithms/FilterByTime.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidKernel/BoundedValidator.h"
@@ -21,15 +19,6 @@ using DataObjects::EventWorkspace;
 using DataObjects::EventWorkspace_sptr;
 using DataObjects::EventWorkspace_const_sptr;
 
-//========================================================================
-//========================================================================
-/// (Empty) Constructor
-FilterByTime::FilterByTime() {}
-
-/// Destructor
-FilterByTime::~FilterByTime() {}
-
-//-----------------------------------------------------------------------
 void FilterByTime::init() {
   std::string commonHelp("\nYou can only specify the relative or absolute "
                          "start/stop times, not both.");
@@ -72,7 +61,6 @@ void FilterByTime::init() {
           absoluteHelp);
 }
 
-//-----------------------------------------------------------------------
 /** Executes the algorithm
  */
 void FilterByTime::exec() {
@@ -104,7 +92,7 @@ void FilterByTime::exec() {
       stop = first + stop_dbl;
     } else {
       this->getLogger().debug()
-          << "No end filter time specified - assuming last pulse" << std::endl;
+          << "No end filter time specified - assuming last pulse\n";
       stop =
           last + 10000.0; // so we get all events - needs to be past last pulse
     }
@@ -142,9 +130,9 @@ void FilterByTime::exec() {
     PARALLEL_START_INTERUPT_REGION
 
     // Get the output event list (should be empty)
-    EventList &output_el = outputWS->getEventList(i);
+    EventList &output_el = outputWS->getSpectrum(i);
     // and this is the input event list
-    const EventList &input_el = inputWS->getEventList(i);
+    const EventList &input_el = inputWS->getSpectrum(i);
 
     // Perform the filtering
     input_el.filterByPulseTime(start, stop, output_el);

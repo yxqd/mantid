@@ -21,18 +21,6 @@ namespace Algorithms {
 DECLARE_ALGORITHM(RayTracerTester)
 
 //----------------------------------------------------------------------------------------------
-/** Constructor
- */
-RayTracerTester::RayTracerTester() {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
- */
-RayTracerTester::~RayTracerTester() {}
-
-//----------------------------------------------------------------------------------------------
-
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void RayTracerTester::init() {
@@ -62,7 +50,7 @@ void RayTracerTester::exec() {
 
   detid2index_map detTowi = ws->getDetectorIDToWorkspaceIndexMap();
   for (size_t i = 0; i < ws->getNumberHistograms(); i++)
-    ws->dataY(i)[0] = 0.0;
+    ws->mutableY(i)[0] = 0.0;
 
   int NumAzimuth = getProperty("NumAzimuth");
   int NumZenith = getProperty("NumZenith");
@@ -83,8 +71,8 @@ void RayTracerTester::exec() {
       IDetector_const_sptr det = tracker.getDetectorResult();
       if (det) {
         size_t wi = detTowi[det->getID()];
-        g_log.information() << "Found detector " << det->getID() << std::endl;
-        ws->dataY(wi)[0] = double(int(az * 57.3) * 1000 + int(iz));
+        g_log.information() << "Found detector " << det->getID() << '\n';
+        ws->mutableY(wi)[0] = double(int(az * 57.3) * 1000 + int(iz));
       }
     }
   }

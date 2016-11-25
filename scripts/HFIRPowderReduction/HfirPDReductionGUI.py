@@ -16,6 +16,7 @@ except AttributeError:
         return s
 
 import mantid
+import mantidqtpython as mqt
 from HfirPDReductionControl import *
 
 #----- default configuration ---------------
@@ -24,9 +25,11 @@ DEFAULT_INSTRUMENT = 'hb2a'
 DEFAULT_WAVELENGTH = 2.4100
 #-------------------------------------------
 
+
 class EmptyError(Exception):
     """ Exception for finding empty input for integer or float
     """
+
     def __init__(self, value):
         """ Init
         """
@@ -146,7 +149,7 @@ class MainWindow(QtGui.QMainWindow):
         self.connect(self.ui.actionQuit, QtCore.SIGNAL('triggered()'),
                      self.doExist)
         self.connect(self.ui.actionFind_Help, QtCore.SIGNAL('triggered()'),
-                self.doHelp)
+                     self.doHelp)
 
         # main
         self.connect(self.ui.comboBox_wavelength, QtCore.SIGNAL('currentIndexChanged(int)'),
@@ -180,77 +183,77 @@ class MainWindow(QtGui.QMainWindow):
 
         # tab 'Normalized'
         self.connect(self.ui.pushButton_loadData, QtCore.SIGNAL('clicked()'),
-                self.doLoadData)
+                     self.doLoadData)
         self.connect(self.ui.pushButton_prevScan, QtCore.SIGNAL('clicked()'),
-                self.doLoadReduceScanPrev)
+                     self.doLoadReduceScanPrev)
         self.connect(self.ui.pushButton_nextScan, QtCore.SIGNAL('clicked()'),
-                self.doLoadReduceScanNext)
+                     self.doLoadReduceScanNext)
         self.connect(self.ui.pushButton_unit2theta, QtCore.SIGNAL('clicked()'),
-                self.doReduce2Theta)
+                     self.doReduce2Theta)
         self.connect(self.ui.pushButton_unitD, QtCore.SIGNAL('clicked()'),
-                self.doReduceDSpacing)
+                     self.doReduceDSpacing)
         self.connect(self.ui.pushButton_unitQ, QtCore.SIGNAL('clicked()'),
-                self.doReduceQ)
+                     self.doReduceQ)
         self.connect(self.ui.pushButton_saveData, QtCore.SIGNAL('clicked()'),
-                self.doSaveData)
+                     self.doSaveData)
         self.connect(self.ui.pushButton_clearTab2Canvas, QtCore.SIGNAL('clicked()'),
-                self.doClearCanvas)
+                     self.doClearCanvas)
 
         # tab 'Multiple Scans'
         self.connect(self.ui.pushButton_loadMultData, QtCore.SIGNAL('clicked()'),
                      self.doLoadSetData)
         self.connect(self.ui.pushButton_mscanBin, QtCore.SIGNAL('clicked()'),
-                self.doReduceSetData)
+                     self.doReduceSetData)
         self.connect(self.ui.pushButton_mergeScans, QtCore.SIGNAL('clicked()'),
-                self.doMergeScans)
+                     self.doMergeScans)
         self.connect(self.ui.pushButton_viewMScan1D, QtCore.SIGNAL('clicked()'),
-                self.doMergeScanView1D)
+                     self.doMergeScanView1D)
         self.connect(self.ui.pushButton_view2D, QtCore.SIGNAL('clicked()'),
-                self.doMergeScanView2D)
+                     self.doMergeScanView2D)
         self.connect(self.ui.pushButton_viewMerge, QtCore.SIGNAL('clicked()'),
-                self.doMergeScanViewMerged)
+                     self.doMergeScanViewMerged)
         self.connect(self.ui.pushButton_clearMultCanvas, QtCore.SIGNAL('clicked()'),
-                self.doClearMultiRunCanvas)
+                     self.doClearMultiRunCanvas)
         self.connect(self.ui.pushButton_saveAllIndScans, QtCore.SIGNAL('clicked()'),
-                self.doSaveMultipleScans)
+                     self.doSaveMultipleScans)
         self.connect(self.ui.pushButton_saveMerge, QtCore.SIGNAL('clicked()'),
-                self.doSaveMergedScan)
+                     self.doSaveMergedScan)
         self.connect(self.ui.pushButton_plotRawMultiScans, QtCore.SIGNAL('clicked()'),
                      self.do_convert_plot_multi_scans)
 
         # tab 'Vanadium'
         self.connect(self.ui.pushButton_stripVanPeaks, QtCore.SIGNAL('clicked()'),
-                self.doStripVandiumPeaks)
+                     self.doStripVandiumPeaks)
         self.connect(self.ui.pushButton_saveVanRun, QtCore.SIGNAL('clicked()'),
-                self.doSaveVanRun)
+                     self.doSaveVanRun)
         self.connect(self.ui.pushButton_rebin2Theta, QtCore.SIGNAL('clicked()'),
-                self.doReduceVanadium2Theta)
+                     self.doReduceVanadium2Theta)
         self.connect(self.ui.pushButton_smoothVanData, QtCore.SIGNAL('clicked()'),
-                self.doSmoothVanadiumData)
+                     self.doSmoothVanadiumData)
         self.connect(self.ui.pushButton_applySmooth, QtCore.SIGNAL('clicked()'),
-                self.doSmoothVanadiumApply)
+                     self.doSmoothVanadiumApply)
         self.connect(self.ui.pushButton_undoSmooth, QtCore.SIGNAL('clicked()'),
-                self.doSmoothVanadiumUndo)
+                     self.doSmoothVanadiumUndo)
 
         # tab 'Advanced Setup'
         self.connect(self.ui.pushButton_browseCache, QtCore.SIGNAL('clicked()'),
-                self.doBrowseCache)
+                     self.doBrowseCache)
         self.connect(self.ui.radioButton_useServer, QtCore.SIGNAL('clicked()'),
-                self.doChangeSrcLocation)
+                     self.doChangeSrcLocation)
         self.connect(self.ui.radioButton_useLocal, QtCore.SIGNAL('clicked()'),
-                self.doChangeSrcLocation)
+                     self.doChangeSrcLocation)
         self.connect(self.ui.pushButton_browseLocalSrc, QtCore.SIGNAL('clicked()'),
-                self.doBrowseLocalDataSrc)
+                     self.doBrowseLocalDataSrc)
         self.connect(self.ui.pushButton_chkServer, QtCore.SIGNAL('clicked()'),
-                self.doCheckSrcServer)
+                     self.doCheckSrcServer)
 
         # Define signal-event handling
 
         # define event handlers for matplotlib canvas
-        self.ui.graphicsView_mergeRun.canvas.mpl_connect('button_press_event', \
-                self.on_mouseDownEvent)
-        self.ui.graphicsView_mergeRun.canvas.mpl_connect('motion_notify_event', \
-                self.on_mouseMotion)
+        self.ui.graphicsView_mergeRun.canvas.mpl_connect('button_press_event',
+                                                         self.on_mouseDownEvent)
+        self.ui.graphicsView_mergeRun.canvas.mpl_connect('motion_notify_event',
+                                                         self.on_mouseMotion)
 
         # Widget type definition
         validator0 = QtGui.QIntValidator(self.ui.lineEdit_expNo)
@@ -419,8 +422,10 @@ class MainWindow(QtGui.QMainWindow):
             self.ui.radioButton_useLocal.setChecked(False)
         # ENDIF
 
-        return
+        #register startup
+        mantid.UsageService.registerFeatureUsage("Interface","HfirPowderReduction",False)
 
+        return
 
     #-- Event Handling ----------------------------------------------------
 
@@ -449,7 +454,7 @@ class MainWindow(QtGui.QMainWindow):
         Return :: None
         """
         # Get file name
-        filefilter = "Text (*.txt);;Data (*.dat);;All files (*.*)"
+        filefilter = "Text (*.txt);;Data (*.dat);;All files (*)"
         curDir = os.getcwd()
         excldetfnames = QtGui.QFileDialog.getOpenFileNames(self, 'Open File(s)', curDir, filefilter)
         try:
@@ -481,7 +486,6 @@ class MainWindow(QtGui.QMainWindow):
         QtGui.QMessageBox.information(self, "Click!", msg)
         return
 
-
     def doChangeSrcLocation(self):
         """ Source file location is changed
         """
@@ -492,7 +496,7 @@ class MainWindow(QtGui.QMainWindow):
         print "Use Local : ", uselocal
 
         if (useserver is True and uselocal is True) or \
-            (useserver is False and uselocal is False):
+                (useserver is False and uselocal is False):
             raise NotImplementedError("Impossible for radio buttons")
 
         self._srcAtLocal = uselocal
@@ -511,7 +515,6 @@ class MainWindow(QtGui.QMainWindow):
             self.ui.pushButton_browseLocalSrc.setDisabled(True)
 
         return
-
 
     def doCheckSrcServer(self):
         """" Check source data server's availability
@@ -538,13 +541,12 @@ class MainWindow(QtGui.QMainWindow):
         # Clear all lines on canvas
         self.ui.graphicsView_indvDet.clearAllLines()
         # Remove their references in dictionary
-        if self._tabLineDict.has_key(self.ui.graphicsView_indvDet):
+        if self.ui.graphicsView_indvDet in self._tabLineDict:
             self._tabLineDict[self.ui.graphicsView_indvDet] = []
         # Reset colur schedule
         self.ui.graphicsView_indvDet.resetLineColorStyle()
 
         return
-
 
     def doClearMultiRunCanvas(self):
         """ Clear the canvas in tab 'Multiple Run'
@@ -556,7 +558,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return
 
-
     def doClearRawDetCanvas(self):
         """ Clear the canvas in tab 'Raw Detector':
         only need to clear lines
@@ -566,14 +567,12 @@ class MainWindow(QtGui.QMainWindow):
 
         return
 
-
     def doClearVanadiumCanvas(self):
         """ Clear the canvas in tab 'Vanadium'
         """
         self.ui.graphicsView_vanPeaks.clearAllLines()
 
         return
-
 
     def doExist(self):
         """ Exist the application
@@ -596,13 +595,13 @@ class MainWindow(QtGui.QMainWindow):
         helpapp = QtCore.QLibraryInfo.location(QtCore.QLibraryInfo.BinariesPath) + QtCore.QDir.separator()
         helpapp += 'assistant'
         args = ['-enableRemoteControl', '-collectionFile',self.collectionFile,'-showUrl',self.qtUrl]
-        if os.path.isfile(helpapp):
+        if os.path.isfile(helpapp) and os.path.isfile(self.collectionFile):
             self.assistantProcess.close()
             self.assistantProcess.waitForFinished()
             self.assistantProcess.start(helpapp, args)
             print "Show help from (app) ", helpapp
         else:
-            QtGui.QDesktopServices.openUrl(QtCore.QUrl(self.externalUrl))
+            mqt.MantidQt.API.MantidDesktopServices.openUrl(QtCore.QUrl(self.externalUrl))
             print "Show help from (url)", QtCore.QUrl(self.externalUrl)
 
         return
@@ -738,7 +737,7 @@ class MainWindow(QtGui.QMainWindow):
             # Apply detector efficiency correction
             if vancorrfname is None:
                 # browse vanadium correction file
-                filefilter = "Text (*.txt);;Data (*.dat);;All files (*.*)"
+                filefilter = "Text (*.txt);;Data (*.dat);;All files (*)"
                 curDir = os.getcwd()
                 vancorrfnames = QtGui.QFileDialog.getOpenFileNames(self, 'Open File(s)', curDir, filefilter)
                 if len(vancorrfnames) > 0:
@@ -854,7 +853,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return
 
-
     def doLoadReduceScanPrev(self):
         """ Load and reduce previous scan for tab 'Normalized'
         """
@@ -880,7 +878,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return
 
-
     def doLoadReduceScanNext(self):
         """ Load and reduce next scan for tab 'Normalized'
         """
@@ -905,7 +902,6 @@ class MainWindow(QtGui.QMainWindow):
         self._uiReducePlotNoramlized(self._currUnit)
 
         return
-
 
     def doMergeScans(self):
         """ Merge several scans for tab 'merge'
@@ -950,7 +946,6 @@ class MainWindow(QtGui.QMainWindow):
         self._lastMergeLabel = label
 
         return
-
 
     def doMergeScanView1D(self):
         """ Change the multiple runs to 1D
@@ -1029,8 +1024,8 @@ class MainWindow(QtGui.QMainWindow):
         # Plot
         holdprev=False
         self.ui.graphicsView_mergeRun.clearAllLines()
-        self.ui.graphicsView_mergeRun.addPlot2D(dim2array, xmin=xmin, xmax=xmax, ymin=0, \
-            ymax=len(vecylist), holdprev=holdprev, yticklabels=yticklabels)
+        self.ui.graphicsView_mergeRun.addPlot2D(dim2array, xmin=xmin, xmax=xmax, ymin=0,
+                                                ymax=len(vecylist), holdprev=holdprev, yticklabels=yticklabels)
 
         return
 
@@ -1050,7 +1045,6 @@ class MainWindow(QtGui.QMainWindow):
         self._plotMergedReducedData(mkey=self._lastMergeIndex, label=self._lastMergeLabel)
 
         return
-
 
     def doPlotIndvDetMain(self):
         """ Plot individual detector
@@ -1119,7 +1113,7 @@ class MainWindow(QtGui.QMainWindow):
                 self.doClearIndDetCanvas()
 
             self._plot_individual_detector_counts(self._expNo, self._scanNo, currdetid,
-                    self._indvXLabel)
+                                                  self._indvXLabel)
         except KeyError as e:
             self._logError(str(e))
         else:
@@ -1143,7 +1137,7 @@ class MainWindow(QtGui.QMainWindow):
                 self.doClearIndDetCanvas()
 
             self._plot_individual_detector_counts(self._expNo, self._scanNo, currdetid,
-                    self._indvXLabel)
+                                                  self._indvXLabel)
         except KeyError as e:
             self._logError(str(e))
         else:
@@ -1214,7 +1208,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return
 
-
     def doPlotRawPtMain(self):
         """ Plot current raw detector signal for a specific Pt.
         """
@@ -1249,7 +1242,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return
 
-
     def doPlotRawPtNext(self):
         """ Plot next raw detector signals
         """
@@ -1266,7 +1258,7 @@ class MainWindow(QtGui.QMainWindow):
         plotmode = str(self.ui.comboBox_rawDetMode.currentText())
         overplot = bool(self.ui.checkBox_overpltRawDet.isChecked())
         execstatus = self._plotRawDetSignal(self._rawDetExpNo, self._rawDetScanNo, plotmode,
-                ptno, overplot)
+                                            ptno, overplot)
 
         # update if it is good to plot
         if execstatus is True:
@@ -1301,7 +1293,7 @@ class MainWindow(QtGui.QMainWindow):
         plotmode = str(self.ui.comboBox_rawDetMode.currentText())
         overplot = bool(self.ui.checkBox_overpltRawDet.isChecked())
         execstatus = self._plotRawDetSignal(self._rawDetExpNo, self._rawDetScanNo, plotmode,
-                ptno, overplot)
+                                            ptno, overplot)
 
         # update if it is good to plot
         if execstatus is True:
@@ -1320,7 +1312,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return
 
-
     def doReduce2Theta(self):
         """ Rebin the data and plot in 2theta for tab 'Normalized'
         """
@@ -1328,7 +1319,6 @@ class MainWindow(QtGui.QMainWindow):
         self._uiReducePlotNoramlized(unit)
 
         return
-
 
     def doReduceDSpacing(self):
         """ Rebin the data and plot in d-spacing for tab 'Normalized'
@@ -1339,7 +1329,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return
 
-
     def doReduceQ(self):
         """ Rebin the data and plot in momentum transfer Q for tab 'Normalized'
         """
@@ -1347,7 +1336,6 @@ class MainWindow(QtGui.QMainWindow):
         self._uiReducePlotNoramlized(unit)
 
         return
-
 
     def doReduceSetData(self):
         """ Reduce multiple data
@@ -1389,7 +1377,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return
 
-
     def doReduceVanadium2Theta(self):
         """ Rebin MDEventWorkspaces in 2-theta. for pushButton_rebinD
         in vanadium peak strip tab
@@ -1421,7 +1408,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return good
 
-
     def doSaveData(self):
         """ Save data
         """
@@ -1433,12 +1419,12 @@ class MainWindow(QtGui.QMainWindow):
             filetype = str(self.ui.comboBox_outputFormat.currentText())
             # file name
             savedatadir = str(self.ui.lineEdit_outputFileName.text()).strip()
-            if savedatadir != None and os.path.exists(savedatadir) is True:
+            if savedatadir is not None and os.path.exists(savedatadir) is True:
                 homedir = savedatadir
             else:
                 homedir = os.getcwd()
             # launch a dialog to get data
-            filefilter = "All files (*.*);;Fullprof (*.dat);;GSAS (*.gsa)"
+            filefilter = "All files (*);;Fullprof (*.dat);;GSAS (*.gsa)"
             sfilename = str(QtGui.QFileDialog.getSaveFileName(self, 'Save File', homedir, filefilter))
         except NotImplementedError as e:
             self._logError(str(e))
@@ -1457,7 +1443,6 @@ class MainWindow(QtGui.QMainWindow):
         self._myControl.saveMergedScan(sfilename, mergeindex=self._lastMergeIndex)
 
         return
-
 
     def doSaveMultipleScans(self):
         """ Save multiple scans
@@ -1478,7 +1463,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return
 
-
     def doSaveVanRun(self):
         """ Save the vanadium run with peaks removed
         """
@@ -1497,7 +1481,6 @@ class MainWindow(QtGui.QMainWindow):
         self._myControl.saveProcessedVanadium(expno, scanno, sfilename)
 
         return
-
 
     def doSmoothVanadiumData(self):
         """ Smooth vanadium spectrum
@@ -1538,7 +1521,6 @@ class MainWindow(QtGui.QMainWindow):
         self._myControl.applySmoothVanadium(expno, scanno, True)
 
         return
-
 
     def doSmoothVanadiumUndo(self):
         """ Undo smoothing vanadium
@@ -1583,9 +1565,7 @@ class MainWindow(QtGui.QMainWindow):
             label="Exp %d Scan %d Bin = %.5f Vanadium Stripped" % (expno, scanno, binsize)
             self._plotVanadiumRun(expno, scanno, xlabel, label, False)
 
-
         return
-
 
     def doUpdateWavelength(self):
         """ Update the wavelength to line edit
@@ -1622,7 +1602,6 @@ class MainWindow(QtGui.QMainWindow):
         x = event.xdata
         y = event.ydata
         button = event.button
-
 
         if x is not None and y is not None:
             # mouse is clicked within graph
@@ -1755,7 +1734,7 @@ class MainWindow(QtGui.QMainWindow):
 
         # Canvas and line information
         canvas = self.ui.graphicsView_indvDet
-        if self._tabLineDict.has_key(canvas) is False:
+        if (canvas in self._tabLineDict) is False:
             self._tabLineDict[canvas] = []
 
         # get data
@@ -1811,7 +1790,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return True
 
-
     def _plotPeakIndicators(self, canvas, peakposlist):
         """ Plot indicators for peaks
         """
@@ -1829,7 +1807,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return
 
-
     def _plotRawDetSignal(self, expno, scanno, plotmode, ptno, dooverplot):
         """ Plot the counts of all detectors of a certain Pt. in an experiment
         """
@@ -1839,7 +1816,7 @@ class MainWindow(QtGui.QMainWindow):
 
         # Set up canvas and dictionary
         canvas = self.ui.graphicsView_Raw
-        if self._tabLineDict.has_key(canvas) is False:
+        if (canvas in self._tabLineDict) is False:
             self._tabLineDict[canvas] = []
 
         # Check whether data exists
@@ -1890,8 +1867,8 @@ class MainWindow(QtGui.QMainWindow):
                 continue
 
             marker, color = canvas.getNextLineMarkerColorCombo()
-            canvas.add_plot1d(vecx, vecy, marker=marker, color=color, x_label=unit, \
-                    y_label='intensity',label=label)
+            canvas.add_plot1d(vecx, vecy, marker=marker, color=color, x_label=unit,
+                              y_label='intensity',label=label)
 
             # set up line tuple
             self._tabLineDict[canvas].append( (expno, scanno, ptno) )
@@ -1910,7 +1887,6 @@ class MainWindow(QtGui.QMainWindow):
             canvas.setXYLimit(xmin-dx*0.0001, xmax+dx*0.0001, ymin-dy*0.0001, ymax+dy*0.0001)
 
         return True
-
 
     def _plotMergedReducedData(self, mkey, label):
         """ Plot the reduced data from merged ...
@@ -1933,7 +1909,7 @@ class MainWindow(QtGui.QMainWindow):
         xlabel = self._getXLabelFromUnit(self.ui.comboBox_mscanUnit.currentText())
 
         canvas.add_plot1d(vecx, vecy, marker=marker, color=color,
-            x_label=xlabel, y_label='intensity',label=label)
+                          x_label=xlabel, y_label='intensity',label=label)
 
         xmax = max(vecx)
         xmin = min(vecx)
@@ -2042,8 +2018,8 @@ class MainWindow(QtGui.QMainWindow):
 
         label = samplelogname
 
-        canvas.add_plot1d(vecx, vecy, marker=marker, color=color, x_label=xlabel, \
-            y_label='Counts',label=label)
+        canvas.add_plot1d(vecx, vecy, marker=marker, color=color, x_label=xlabel,
+                          y_label='Counts',label=label)
 
         # auto setup for image boundary
         xmin = min(vecx)
@@ -2056,7 +2032,6 @@ class MainWindow(QtGui.QMainWindow):
         canvas.setXYLimit(xmin-dx*0.0001, xmax+dx*0.0001, ymin-dy*0.0001, ymax+dy*0.0001)
 
         return True
-
 
     def _plotVanadiumRun(self, exp, scan, xlabel, label, clearcanvas=False, TempData=False):
         """ Plot processed vanadium data
@@ -2102,11 +2077,11 @@ class MainWindow(QtGui.QMainWindow):
 
         # plot
         canvas.add_plot1d(vecx, vecy, marker=marker, color=color,
-            x_label=xlabel, y_label='intensity',label=label)
+                          x_label=xlabel, y_label='intensity',label=label)
 
         if TempData is False:
             canvas.add_plot1d(vecx, diffY, marker='+', color='green',
-                x_label=xlabel, y_label='intensity',label='Diff')
+                              x_label=xlabel, y_label='intensity',label='Diff')
 
         # reset canvas limits
         if clearcanvas is True:
@@ -2122,7 +2097,6 @@ class MainWindow(QtGui.QMainWindow):
         # ENDIF
 
         return
-
 
     def _uiDownloadDataFile(self, exp, scan):
         """ Download data file according to its exp and scan
@@ -2146,7 +2120,7 @@ class MainWindow(QtGui.QMainWindow):
             if self._serverAddress.endswith('/') is False:
                 self._serverAddress += '/'
             fullurl = "%s%s/exp%d/Datafiles/%s_exp%04d_scan%04d.dat" % (self._serverAddress,
-                    self._instrument.lower(), exp, self._instrument.upper(), exp, scan)
+                                                                        self._instrument.lower(), exp, self._instrument.upper(), exp, scan)
             print "URL: ", fullurl
 
             cachedir = str(self.ui.lineEdit_cache.text()).strip()
@@ -2177,7 +2151,6 @@ class MainWindow(QtGui.QMainWindow):
                 Nor from local drive")
 
         return (rvalue,srcFileName)
-
 
     def _uiGetBinningParams(self, itab):
         """ Get binning parameters
@@ -2225,7 +2198,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return (xmin, binsize, xmax)
 
-
     def _uiGetExcludedDetectors(self):
         """ Get excluded detectors from input line edit
 
@@ -2245,8 +2217,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return excludedetidlist
 
-
-
     def _uiGetExpScanNumber(self):
         """ Get experiment number and scan number from widgets for merged
         """
@@ -2260,7 +2230,6 @@ class MainWindow(QtGui.QMainWindow):
                 is not set up right as integer." % (expnostr, scannostr))
 
         return (expno, scanno)
-
 
     def _uiGetExpScanTabMultiScans(self):
         """ Get exp number and scans from tab 3
@@ -2291,7 +2260,6 @@ class MainWindow(QtGui.QMainWindow):
             scanslist.remove(scan)
 
         return (expno, sorted(scanslist))
-
 
     def _uiIsBinParamsChange(self, itab, binparams):
         """ Check whether current bin parameters are same
@@ -2327,7 +2295,6 @@ class MainWindow(QtGui.QMainWindow):
             print "[DB] Rebin = False"
 
         return change
-
 
     def _uiReduceData(self, itab, unit, expno=None, scanno=None):
         """ Rebin and plot by reading GUI widgets' value
@@ -2384,7 +2351,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return (True, expno, scanno)
 
-
     def _uiReducePlotNoramlized(self, unit):
         """ Support Reduce2Theta, ReduceDspacing and ReduceQ
         """
@@ -2432,13 +2398,10 @@ class MainWindow(QtGui.QMainWindow):
 
         return
 
-
-
     def _logDebug(self, dbinfo):
         """ Log debug information
         """
         print dbinfo
-
 
     def _logError(self, errinfo):
         """ Log error information
@@ -2452,7 +2415,6 @@ class MainWindow(QtGui.QMainWindow):
         print msg
         # QtGui.QMessageBox.information(self, "Click!", msg)
 
-
     def _logWarning(self, warning_info):
         """ Log error information
         """
@@ -2460,7 +2422,6 @@ class MainWindow(QtGui.QMainWindow):
         QtGui.QMessageBox.information(self, "OK!", msg)
 
         return
-
 
     def _getFloat(self, lineedit):
         """ Get integer from line edit
@@ -2477,7 +2438,6 @@ class MainWindow(QtGui.QMainWindow):
 
         return value
 
-
     def _getInteger(self, lineedit):
         """ Get integer from line edit
         """
@@ -2491,7 +2451,6 @@ class MainWindow(QtGui.QMainWindow):
             raise e
 
         return value
-
 
     def _getIntArray(self, intliststring):
         """ Validate whether the string can be divided into integer strings.
@@ -2569,7 +2528,6 @@ class MainWindow(QtGui.QMainWindow):
             return (False, errmsg)
 
         return (True, intlist)
-
 
     def _getXLabelFromUnit(self, unit):
         """ Get X-label from unit

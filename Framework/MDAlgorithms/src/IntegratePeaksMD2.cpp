@@ -21,7 +21,8 @@
 #include "MantidAPI/FunctionFactory.h"
 #include "MantidAPI/IPeakFunction.h"
 #include "MantidAPI/Progress.h"
-#include <boost/math/special_functions/fpclassify.hpp>
+#include "MantidAPI/Run.h"
+#include <cmath>
 #include <gsl/gsl_integration.h>
 #include <fstream>
 
@@ -37,19 +38,6 @@ using namespace Mantid::DataObjects;
 using namespace Mantid::DataObjects;
 using namespace Mantid::Geometry;
 
-//----------------------------------------------------------------------------------------------
-/** Constructor
- */
-IntegratePeaksMD2::IntegratePeaksMD2() {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
- */
-IntegratePeaksMD2::~IntegratePeaksMD2() {}
-
-//----------------------------------------------------------------------------------------------
-
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void IntegratePeaksMD2::init() {
@@ -100,11 +88,9 @@ void IntegratePeaksMD2::init() {
       "If false, do not integrate if the outer radius is not on a detector.");
 
   declareProperty("AdaptiveQBackground", false,
-                  "Default is false.   If true, all background values"
-                  "vary on a line so that they are"
-                  "background plus AdaptiveQMultiplier multiplied"
-                  "by the magnitude of Q at the peak center so each peak has a "
-                  "different integration radius.  Q includes the 2*pi factor.");
+                  "Default is false.   If true, "
+                  "BackgroundOuterRadius + AdaptiveQMultiplier * **|Q|**"
+                  "BackgroundInnerRadius + AdaptiveQMultiplier * **|Q|**");
 
   declareProperty("Cylinder", false,
                   "Default is sphere.  Use next five parameters for cylinder.");
@@ -144,9 +130,8 @@ void IntegratePeaksMD2::init() {
       "Save (Optionally) as Isaw peaks file with profiles included");
 
   declareProperty("AdaptiveQMultiplier", 0.0,
-                  "Peak integration radius varies on a line so that it is"
-                  "PeakRadius plus this value multiplied"
-                  "by the magnitude of Q at the peak center so each peak has a "
+                  "PeakRadius + AdaptiveQMultiplier * **|Q|** "
+                  "so each peak has a "
                   "different integration radius.  Q includes the 2*pi factor.");
 
   declareProperty(
@@ -175,7 +160,7 @@ void IntegratePeaksMD2::integrate(typename MDEventWorkspace<MDE, nd>::sptr ws) {
   Mantid::DataObjects::PeaksWorkspace_sptr peakWS =
       getProperty("OutputWorkspace");
   if (peakWS != inPeakWS)
-    peakWS.reset(inPeakWS->clone().release());
+    peakWS = inPeakWS->clone();
   // This only fails in the unit tests which say that MaskBTP is not registered
   try {
     runMaskDetectors(inPeakWS, "Tube", "edges");
@@ -317,7 +302,7 @@ void IntegratePeaksMD2::integrate(typename MDEventWorkspace<MDE, nd>::sptr ws) {
     if (edge < std::max(BackgroundOuterRadius, PeakRadius)) {
       g_log.warning() << "Warning: sphere/cylinder for integration is off edge "
                          "of detector for peak " << i
-                      << "; radius of edge =  " << edge << std::endl;
+                      << "; radius of edge =  " << edge << '\n';
       if (!integrateEdge) {
         if (replaceIntensity) {
           p.setIntensity(0.0);
@@ -342,15 +327,26 @@ void IntegratePeaksMD2::integrate(typename MDEventWorkspace<MDE, nd>::sptr ws) {
     if (!cylinderBool) {
       // modulus of Q
       coord_t lenQpeak = 0.0;
-      if (adaptiveQMultiplier > 0.0) {
+      if (adaptiveQMultiplier != 0.0) {
         lenQpeak = 0.0;
         for (size_t d = 0; d < nd; d++) {
           lenQpeak += center[d] * center[d];
         }
         lenQpeak = std::sqrt(lenQpeak);
       }
-
-      PeakRadiusVector[i] = adaptiveQMultiplier * lenQpeak + PeakRadius;
+      double adaptiveRadius = adaptiveQMultiplier * lenQpeak + PeakRadius;
+      if (adaptiveRadius <= 0.0) {
+        g_log.error() << "Error: Radius for integration sphere of peak " << i
+                      << " is negative =  " << adaptiveRadius << '\n';
+        adaptiveRadius = 0.;
+        p.setIntensity(0.0);
+        p.setSigmaIntensity(0.0);
+        PeakRadiusVector[i] = 0.0;
+        BackgroundInnerRadiusVector[i] = 0.0;
+        BackgroundOuterRadiusVector[i] = 0.0;
+        continue;
+      }
+      PeakRadiusVector[i] = adaptiveRadius;
       BackgroundInnerRadiusVector[i] =
           adaptiveQBackgroundMultiplier * lenQpeak + BackgroundInnerRadius;
       BackgroundOuterRadiusVector[i] =
@@ -368,10 +364,8 @@ void IntegratePeaksMD2::integrate(typename MDEventWorkspace<MDE, nd>::sptr ws) {
 
       // Perform the integration into whatever box is contained within.
       ws->getBox()->integrateSphere(
-          sphere,
-          static_cast<coord_t>((adaptiveQMultiplier * lenQpeak + PeakRadius) *
-                               (adaptiveQMultiplier * lenQpeak + PeakRadius)),
-          signal, errorSquared);
+          sphere, static_cast<coord_t>(adaptiveRadius * adaptiveRadius), signal,
+          errorSquared);
 
       // Integrate around the background radius
 
@@ -599,7 +593,7 @@ void IntegratePeaksMD2::integrate(typename MDEventWorkspace<MDE, nd>::sptr ws) {
         signal = 0.0;
         if (integrationOption.compare("Sum") == 0) {
           for (size_t j = peakMin; j <= peakMax; j++)
-            if (!boost::math::isnan(yy[j]) && !boost::math::isinf(yy[j]))
+            if (std::isfinite(yy[j]))
               signal += yy[j];
         } else {
           gsl_integration_workspace *w = gsl_integration_workspace_alloc(1000);
@@ -666,7 +660,7 @@ void IntegratePeaksMD2::integrate(typename MDEventWorkspace<MDE, nd>::sptr ws) {
                         << bgSignal + ratio * background_total << " (sig^2 "
                         << bgErrorSquared +
                                ratio * ratio * std::fabs(background_total)
-                        << ") subtracted." << std::endl;
+                        << ") subtracted.\n";
   }
   // This flag is used by the PeaksWorkspace to evaluate whether it has been
   // integrated.
@@ -740,9 +734,9 @@ void IntegratePeaksMD2::calculateE1(Geometry::Instrument_const_sptr inst) {
 double IntegratePeaksMD2::detectorQ(Mantid::Kernel::V3D QLabFrame, double r) {
   double edge = r;
   for (auto &E1 : E1Vec) {
-    V3D distv = QLabFrame -
-                E1 * (QLabFrame.scalar_prod(
-                         E1)); // distance to the trajectory as a vector
+    V3D distv = QLabFrame - E1 * (QLabFrame.scalar_prod(E1)); // distance to the
+                                                              // trajectory as a
+                                                              // vector
     if (distv.norm() < r) {
       edge = distv.norm();
     }
@@ -804,7 +798,7 @@ void IntegratePeaksMD2::checkOverlap(
     if (pos1.distance(pos2) < radius) {
       g_log.warning() << " Warning:  Peak integration spheres for peaks " << i
                       << " and " << j << " overlap.  Distance between peaks is "
-                      << pos1.distance(pos2) << std::endl;
+                      << pos1.distance(pos2) << '\n';
     }
   }
 }

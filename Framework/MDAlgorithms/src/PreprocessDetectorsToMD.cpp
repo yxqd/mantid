@@ -2,6 +2,7 @@
 #include "MantidAPI/InstrumentValidator.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/NumericAxis.h"
+#include "MantidAPI/Run.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/PropertyWithValue.h"
@@ -18,7 +19,6 @@ DECLARE_ALGORITHM(PreprocessDetectorsToMD)
 PreprocessDetectorsToMD::PreprocessDetectorsToMD()
     : m_getEFixed(false), m_getIsMasked(false) {}
 
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties. */
 void PreprocessDetectorsToMD::init() {
   auto ws_valid = boost::make_shared<Kernel::CompositeValidator>();
@@ -201,7 +201,7 @@ void PreprocessDetectorsToMD::processDetectorsPositions(
   try {
     double L1 = source->getDistance(*sample);
     targWS->logs()->addProperty<double>("L1", L1, true);
-    g_log.debug() << "Source-sample distance: " << L1 << std::endl;
+    g_log.debug() << "Source-sample distance: " << L1 << '\n';
   } catch (Kernel::Exception::NotFoundError &) {
     throw Kernel::Exception::InstrumentDefinitionError(
         "Unable to calculate source-sample distance for workspace",
@@ -275,7 +275,7 @@ void PreprocessDetectorsToMD::processDetectorsPositions(
     detIDMap[liveDetectorsCount] = i;
     L2[liveDetectorsCount] = spDet->getDistance(*sample);
 
-    double polar = inputWS->detectorTwoTheta(spDet);
+    double polar = inputWS->detectorTwoTheta(*spDet);
     double azim = spDet->getPhi();
     TwoTheta[liveDetectorsCount] = polar;
     Azimuthal[liveDetectorsCount] = azim;

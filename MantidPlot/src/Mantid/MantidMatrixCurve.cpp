@@ -7,11 +7,11 @@
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/MatrixWorkspace.h"
 
-#include "MantidQtAPI/QwtWorkspaceSpectrumData.h"
 #include "MantidQtAPI/QwtWorkspaceBinData.h"
+#include "MantidQtAPI/QwtWorkspaceSpectrumData.h"
 
-#include "../Graph.h"
 #include "../ApplicationWindow.h"
+#include "../Graph.h"
 #include "../MultiLayer.h"
 #include "ErrorBarSettings.h"
 #include "MantidKernel/ReadLock.h"
@@ -43,7 +43,7 @@ Mantid::Kernel::Logger g_log("MantidMatrixCurve");
 MantidMatrixCurve::MantidMatrixCurve(const QString &, const QString &wsName,
                                      Graph *g, int index, IndexDir indexType,
                                      bool err, bool distr,
-                                     Graph::CurveType style)
+                                     GraphOptions::CurveType style)
     : MantidCurve(err), m_wsName(wsName), m_index(index),
       m_indexType(indexType) {
   if (!g) {
@@ -67,7 +67,7 @@ MantidMatrixCurve::MantidMatrixCurve(const QString &, const QString &wsName,
  */
 MantidMatrixCurve::MantidMatrixCurve(const QString &wsName, Graph *g, int index,
                                      IndexDir indexType, bool err, bool distr,
-                                     Graph::CurveType style)
+                                     GraphOptions::CurveType style)
     : MantidCurve(err), m_wsName(wsName), m_index(index),
       m_indexType(indexType) {
   init(g, distr, style);
@@ -91,7 +91,8 @@ MantidMatrixCurve::MantidMatrixCurve(const MantidMatrixCurve &c)
  *  @param distr :: True for a distribution
  *  @param style :: The curve type to use
  */
-void MantidMatrixCurve::init(Graph *g, bool distr, Graph::CurveType style) {
+void MantidMatrixCurve::init(Graph *g, bool distr,
+                             GraphOptions::CurveType style) {
   // Will throw if name not found but return NULL ptr if the type is incorrect
   MatrixWorkspace_const_sptr workspace =
       AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(
@@ -152,7 +153,7 @@ void MantidMatrixCurve::init(Graph *g, bool distr, Graph::CurveType style) {
 
   int lineWidth = 1;
   MultiLayer *ml = dynamic_cast<MultiLayer *>(g->parent()->parent()->parent());
-  if (ml && (style == Graph::Unspecified ||
+  if (ml && (style == GraphOptions::Unspecified ||
              ml->applicationWindow()->applyCurveStyleToMantid)) {
     applyStyleChoice(style, ml, lineWidth);
   } else if (matrixWS->isHistogramData() && !matrixWS->isDistribution()) {
@@ -202,7 +203,9 @@ MantidMatrixCurve *MantidMatrixCurve::clone(const Graph *g) const {
 void MantidMatrixCurve::loadData() {
   // This should only be called for waterfall plots
   // Calculate the offsets...
-  computeWaterfallOffsets();
+  double xDataOffset = 0.0;
+  double yDataOffset = 0.0;
+  computeWaterfallOffsets(xDataOffset, yDataOffset);
 
   Plot *plot = static_cast<Plot *>(this->plot());
   Graph *g = static_cast<Graph *>(plot->parent());
@@ -211,8 +214,9 @@ void MantidMatrixCurve::loadData() {
       dynamic_cast<MantidQwtWorkspaceData &>(this->data());
 
   data.setWaterfallPlot(g->isWaterfallPlot());
-  data.setXOffset(d_x_offset);
-  data.setYOffset(d_y_offset);
+  data.setXOffset(xDataOffset);
+  data.setYOffset(yDataOffset);
+  invalidateBoundingRect();
 }
 
 void MantidMatrixCurve::setData(const QwtData &data) {
@@ -228,6 +232,7 @@ QwtDoubleRect MantidMatrixCurve::boundingRect() const {
 
 void MantidMatrixCurve::draw(QPainter *p, const QwtScaleMap &xMap,
                              const QwtScaleMap &yMap, const QRect &rect) const {
+  p->translate(d_x_offset, -d_y_offset);
   PlotCurve::draw(p, xMap, yMap, rect);
 
   if (m_drawErrorBars) // drawing error bars
@@ -238,10 +243,6 @@ void MantidMatrixCurve::draw(QPainter *p, const QwtScaleMap &xMap,
       throw std::runtime_error(
           "Only MantidQwtWorkspaceData can be set to a MantidMatrixCurve");
     }
-    p->translate(d_x_offset,
-                 -d_y_offset); // For waterfall plots (will be zero otherwise)
-    // Don't really know why you'd want errors on a waterfall plot, but just in
-    // case...
     doDraw(p, xMap, yMap, rect, d);
   }
 }

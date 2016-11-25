@@ -3,6 +3,7 @@
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/FunctionFactory.h"
 #include "MantidAPI/IPeakFunction.h"
+#include "MantidAPI/Sample.h"
 #include "MantidKernel/VectorHelper.h"
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/BoundedValidator.h"
@@ -24,13 +25,6 @@ using namespace API;
 using std::size_t;
 using namespace DataObjects;
 
-/// Constructor
-OptimizeLatticeForCellType::OptimizeLatticeForCellType() {}
-
-/// Destructor
-OptimizeLatticeForCellType::~OptimizeLatticeForCellType() {}
-
-//-----------------------------------------------------------------------------------------
 /** Initialisation method. Declares properties to be used in algorithm.
  */
 void OptimizeLatticeForCellType::init() {
@@ -67,7 +61,6 @@ void OptimizeLatticeForCellType::init() {
   gsl_set_error_handler_off();
 }
 
-//-----------------------------------------------------------------------------------------
 /** Executes the algorithm
  *
  *  @throw Exception::FileError If the grouping file cannot be opened or read
@@ -111,8 +104,7 @@ void OptimizeLatticeForCellType::exec() {
         runWS[count]->addPeak(peak);
         run = peak.getRunNumber();
         AnalysisDataService::Instance().addOrReplace(
-            boost::lexical_cast<std::string>(run) + ws->getName(),
-            runWS[count]);
+            std::to_string(run) + ws->getName(), runWS[count]);
       } else {
         runWS[count]->addPeak(peak);
       }
@@ -120,7 +112,7 @@ void OptimizeLatticeForCellType::exec() {
   }
   // finally do the optimization
   for (auto &i_run : runWS) {
-    DataObjects::PeaksWorkspace_sptr peakWS(i_run->clone().release());
+    DataObjects::PeaksWorkspace_sptr peakWS(i_run->clone());
     AnalysisDataService::Instance().addOrReplace("_peaks", peakWS);
     const DblMatrix UB = peakWS->sample().getOrientedLattice().getUB();
     std::vector<double> lat(6);
@@ -143,7 +135,6 @@ void OptimizeLatticeForCellType::exec() {
     fit_alg->setProperty("InputWorkspace", peakWS);
     fit_alg->setProperty("CostFunction", "Unweighted least squares");
     fit_alg->setProperty("CreateOutput", true);
-    fit_alg->setProperty("Output", "fit");
     fit_alg->executeAsChildAlg();
 
     double chisq = fit_alg->getProperty("OutputChi2overDoF");
@@ -191,7 +182,7 @@ void OptimizeLatticeForCellType::exec() {
     AnalysisDataService::Instance().remove("_peaks");
     if (perRun) {
       std::string outputdir = getProperty("OutputDirectory");
-      if (outputdir[outputdir.size() - 1] != '/')
+      if (outputdir.back() != '/')
         outputdir += "/";
       // Save Peaks
       Mantid::API::IAlgorithm_sptr savePks_alg =

@@ -28,12 +28,13 @@
  *   Boston, MA  02110-1301  USA                                           *
  *                                                                         *
  ***************************************************************************/
-#include "ApplicationWindow.h"
 #include "Folder.h"
-#include "pixmaps.h"
-
+#include "ApplicationWindow.h"
+#include <MantidQtAPI/pixmaps.h>
 #include <QApplication>
 #include <QDateTime>
+
+using namespace MantidQt::API;
 
 Folder::Folder(Folder *parent, const QString &name)
     : QObject(parent),
@@ -50,7 +51,7 @@ QList<Folder *> Folder::folders() {
 }
 
 QStringList Folder::subfolders() {
-  QStringList list = QStringList();
+  QStringList list;
   QObjectList folderList = children();
   if (!folderList.isEmpty()) {
     QObject *f;
@@ -131,29 +132,35 @@ MdiSubWindow *Folder::findWindow(const QString &s, bool windowNames,
                                  bool labels, bool caseSensitive,
                                  bool partialMatch) {
   MdiSubWindow *w;
+
+  auto qt_cs = Qt::CaseInsensitive;
+  if (!caseSensitive)
+    qt_cs = Qt::CaseInsensitive;
+
   foreach (w, lstWindows) {
     if (windowNames) {
       QString name = w->objectName();
-      if (partialMatch && name.startsWith(s, caseSensitive))
+
+      if (partialMatch && name.startsWith(s, qt_cs))
         return w;
       else if (caseSensitive && name == s)
         return w;
       else {
         QString text = s;
-        if (name == text.lower())
+        if (name == text.toLower())
           return w;
       }
     }
 
     if (labels) {
       QString label = w->windowLabel();
-      if (partialMatch && label.startsWith(s, caseSensitive))
+      if (partialMatch && label.startsWith(s, qt_cs))
         return w;
       else if (caseSensitive && label == s)
         return w;
       else {
         QString text = s;
-        if (label == text.lower())
+        if (label == text.toLower())
           return w;
       }
     }
@@ -231,9 +238,7 @@ Folder *Folder::rootFolder() {
   return i;
 }
 
-bool Folder::isEmpty() const {
-  return lstWindows.isEmpty();
-}
+bool Folder::isEmpty() const { return lstWindows.isEmpty(); }
 
 /*****************************************************************************
  *

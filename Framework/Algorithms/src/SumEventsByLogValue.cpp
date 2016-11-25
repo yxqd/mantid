@@ -3,6 +3,7 @@
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/Column.h"
 #include "MantidAPI/ITableWorkspace.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidGeometry/IDetector.h"
 #include "MantidKernel/ArrayProperty.h"
@@ -19,14 +20,6 @@ DECLARE_ALGORITHM(SumEventsByLogValue)
 
 using namespace Kernel;
 using namespace API;
-
-/** Constructor
- */
-SumEventsByLogValue::SumEventsByLogValue() {}
-
-/** Destructor
- */
-SumEventsByLogValue::~SumEventsByLogValue() {}
 
 void SumEventsByLogValue::init() {
   declareProperty(
@@ -155,10 +148,10 @@ void SumEventsByLogValue::createTableOutput(
   std::vector<int> Y(xLength);
   const int numSpec = static_cast<int>(m_inputWorkspace->getNumberHistograms());
   Progress prog(this, 0.0, 1.0, numSpec + xLength);
-  PARALLEL_FOR1(m_inputWorkspace)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*m_inputWorkspace))
   for (int spec = 0; spec < numSpec; ++spec) {
     PARALLEL_START_INTERUPT_REGION
-    const IEventList &eventList = m_inputWorkspace->getEventList(spec);
+    const IEventList &eventList = m_inputWorkspace->getSpectrum(spec);
     filterEventList(eventList, minVal, maxVal, log, Y);
     prog.report();
     PARALLEL_END_INTERUPT_REGION
@@ -321,7 +314,7 @@ void SumEventsByLogValue::addMonitorCounts(ITableWorkspace_sptr outputWorkspace,
       const std::string monitorName =
           monitorWorkspace->getDetector(spec)->getName();
       auto monitorCounts = outputWorkspace->addColumn("int", monitorName);
-      const IEventList &eventList = monitorWorkspace->getEventList(spec);
+      const IEventList &eventList = monitorWorkspace->getSpectrum(spec);
       // Accumulate things in a local vector before transferring to the table
       // workspace
       std::vector<int> Y(xLength);
@@ -385,8 +378,7 @@ double SumEventsByLogValue::sumProtonCharge(
     const Kernel::TimeSeriesProperty<double> *protonChargeLog,
     const Kernel::TimeSplitterType &filter) {
   // Clone the proton charge log and filter the clone on this log value
-  boost::scoped_ptr<TimeSeriesProperty<double>> protonChargeLogClone(
-      protonChargeLog->clone());
+  auto protonChargeLogClone(protonChargeLog->clone());
   protonChargeLogClone->filterByTimes(filter);
   // Seems like the only way to sum this is to yank out the values
   const std::vector<double> pcValues = protonChargeLogClone->valuesAsVector();
@@ -408,7 +400,9 @@ void SumEventsByLogValue::createBinnedOutput(
         log->maxValue() *
         1.000001); // Make it a tiny bit larger to cover full range
   }
-  MantidVec XValues;
+
+  // XValues will be resized in createAxisFromRebinParams()
+  std::vector<double> XValues;
   const int XLength =
       VectorHelper::createAxisFromRebinParams(m_binningParams, XValues);
   assert((int)XValues.size() == XLength);
@@ -417,17 +411,17 @@ void SumEventsByLogValue::createBinnedOutput(
   MatrixWorkspace_sptr outputWorkspace = WorkspaceFactory::Instance().create(
       "Workspace2D", 1, XLength, XLength - 1);
   // Copy the bin boundaries into the output workspace
-  outputWorkspace->dataX(0) = XValues;
+  outputWorkspace->mutableX(0) = XValues;
   outputWorkspace->getAxis(0)->title() = m_logName;
   outputWorkspace->setYUnit("Counts");
 
-  MantidVec &Y = outputWorkspace->dataY(0);
+  auto &Y = outputWorkspace->mutableY(0);
   const int numSpec = static_cast<int>(m_inputWorkspace->getNumberHistograms());
   Progress prog(this, 0.0, 1.0, numSpec);
-  PARALLEL_FOR1(m_inputWorkspace)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*m_inputWorkspace))
   for (int spec = 0; spec < numSpec; ++spec) {
     PARALLEL_START_INTERUPT_REGION
-    const IEventList &eventList = m_inputWorkspace->getEventList(spec);
+    const IEventList &eventList = m_inputWorkspace->getSpectrum(spec);
     const auto pulseTimes = eventList.getPulseTimes();
     for (auto pulseTime : pulseTimes) {
       // Find the value of the log at the time of this event
@@ -445,7 +439,7 @@ void SumEventsByLogValue::createBinnedOutput(
 
   // The errors are the sqrt of the counts so long as we don't deal with
   // weighted events.
-  std::transform(Y.begin(), Y.end(), outputWorkspace->dataE(0).begin(),
+  std::transform(Y.cbegin(), Y.cend(), outputWorkspace->mutableE(0).begin(),
                  (double (*)(double))std::sqrt);
 
   setProperty("OutputWorkspace", outputWorkspace);

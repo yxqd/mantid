@@ -4,6 +4,7 @@
 #include "MantidAPI/IEventWorkspace.h"
 #include "MantidAPI/ITableWorkspace.h"
 #include "MantidAPI/HistogramValidator.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidAPI/Progress.h"
 
@@ -146,16 +147,6 @@ namespace MDAlgorithms {
 
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(ConvertToReflectometryQ)
-
-//----------------------------------------------------------------------------------------------
-/** Constructor
- */
-ConvertToReflectometryQ::ConvertToReflectometryQ() {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
- */
-ConvertToReflectometryQ::~ConvertToReflectometryQ() {}
 
 //----------------------------------------------------------------------------------------------
 /// Algorithm's name for identification. @see Algorithm::name

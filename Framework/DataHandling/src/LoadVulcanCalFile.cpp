@@ -2,6 +2,7 @@
 #include "MantidAPI/Algorithm.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/Run.h"
 #include "MantidDataObjects/GroupingWorkspace.h"
 #include "MantidDataObjects/MaskWorkspace.h"
 #include "MantidDataObjects/OffsetsWorkspace.h"
@@ -35,20 +36,6 @@ const size_t NUMBERDETECTORPERMODULE = 1232;
 // Number of reserved detectors per module/bank
 const size_t NUMBERRESERVEDPERMODULE = 1250;
 
-//----------------------------------------------------------------------------------------------
-/** Constructor
- */
-LoadVulcanCalFile::LoadVulcanCalFile()
-    : m_instrument(), m_groupingType(VULCAN_OFFSET_BANK), m_offsetFilename(""),
-      m_badPixFilename(""), m_tofOffsetsWS(), m_offsetsWS(), m_groupWS(),
-      m_maskWS(), m_doAlignEventWS(false), m_eventWS(), m_effLTheta() {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
- */
-LoadVulcanCalFile::~LoadVulcanCalFile() {}
-
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void LoadVulcanCalFile::init() {
@@ -98,7 +85,6 @@ void LoadVulcanCalFile::init() {
       "It serves as a verifying tool, and will be removed after test. ");
 }
 
-//----------------------------------------------------------------------------------------------
 /** Execute the algorithm.
  */
 void LoadVulcanCalFile::exec() {
@@ -119,7 +105,6 @@ void LoadVulcanCalFile::exec() {
     setProperty("EventWorkspace", m_eventWS);
 }
 
-//----------------------------------------------------------------------------------------------
 /** Process input and output
   */
 void LoadVulcanCalFile::processInOutProperites() {
@@ -213,16 +198,13 @@ void LoadVulcanCalFile::processInOutProperites() {
     m_doAlignEventWS = true;
   else
     m_doAlignEventWS = false;
-
-  return;
 }
 
-//----------------------------------------------------------------------------------------------
 /** Set up grouping workspace
   */
 void LoadVulcanCalFile::setupGroupingWorkspace() {
   // Get the right group option for CreateGroupingWorkspace
-  string groupdetby = "";
+  string groupdetby;
   switch (m_groupingType) {
   case VULCAN_OFFSET_BANK:
     groupdetby = "bank";
@@ -266,11 +248,8 @@ void LoadVulcanCalFile::setupGroupingWorkspace() {
                   "Set the output GroupingWorkspace. ");
   m_groupWS->mutableRun().addProperty("Filename", m_offsetFilename);
   setProperty("OutputGroupingWorkspace", m_groupWS);
-
-  return;
 }
 
-//----------------------------------------------------------------------------------------------
 /** Set up masking workspace
   */
 void LoadVulcanCalFile::setupMaskWorkspace() {
@@ -318,11 +297,8 @@ void LoadVulcanCalFile::setupMaskWorkspace() {
     }
   }
   g_log.information(msg.str());
-
-  return;
 }
 
-//----------------------------------------------------------------------------------------------
 /** Generate offset workspace
   */
 void LoadVulcanCalFile::generateOffsetsWorkspace() {
@@ -340,11 +316,8 @@ void LoadVulcanCalFile::generateOffsetsWorkspace() {
 
   // Convert to Mantid offset values
   convertOffsets();
-
-  return;
 }
 
-//----------------------------------------------------------------------------------------------
 /** Read VULCAN's offset file
   */
 void LoadVulcanCalFile::readOffsetFile(
@@ -367,11 +340,8 @@ void LoadVulcanCalFile::readOffsetFile(
     detid_t detid = static_cast<detid_t>(pid);
     map_detoffset.emplace(detid, offset);
   }
-
-  return;
 }
 
-//----------------------------------------------------------------------------------------------
 /** Process offsets by generating maps
   * Output: Offset workspace : 10^(xi_0 + xi_1 + xi_2)
   */
@@ -497,11 +467,8 @@ void LoadVulcanCalFile::processOffsets(
     double offset = offsetiter->second + bankcorriter->second;
     m_tofOffsetsWS->dataY(iws)[0] = pow(10., offset);
   }
-
-  return;
 }
 
-//----------------------------------------------------------------------------------------------
 /** Align the input EventWorkspace
   */
 void LoadVulcanCalFile::alignEventWorkspace() {
@@ -519,16 +486,13 @@ void LoadVulcanCalFile::alignEventWorkspace() {
     double factor = m_tofOffsetsWS->readY(i)[0];
 
     // Perform the multiplication on all events
-    m_eventWS->getEventList(i).convertTof(1. / factor);
+    m_eventWS->getSpectrum(i).convertTof(1. / factor);
 
     PARALLEL_END_INTERUPT_REGION
   }
   PARALLEL_CHECK_INTERUPT_REGION
-
-  return;
 }
 
-//----------------------------------------------------------------------------------------------
 /** Translate the VULCAN's offset to Mantid
   * Input Offset workspace : 10^(xi_0 + xi_1 + xi_2)
   *
@@ -598,11 +562,8 @@ void LoadVulcanCalFile::convertOffsets() {
                        1.;
     m_offsetsWS->dataY(iws)[0] = manoffset;
   }
-
-  return;
 }
 
-//----------------------------------------------------------------------------------------------
 /** Get a pointer to an instrument in one of 3 ways: InputWorkspace,
  * InstrumentName, InstrumentFilename
   */
@@ -625,7 +586,6 @@ Geometry::Instrument_const_sptr LoadVulcanCalFile::getInstrument() {
   return inst;
 }
 
-//-----------------------------------------------------------------------
 /** Reads the calibration file.
  *
  * @param calFileName :: path to the old .cal file

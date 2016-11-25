@@ -2,6 +2,7 @@
 
 #include "MantidAPI/CommonBinsValidator.h"
 #include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/MDEventWorkspace.h"
@@ -31,7 +32,6 @@ bool compareMomentum(const Mantid::Kernel::VMD &v1,
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(MDNormSCD)
 
-//----------------------------------------------------------------------------------------------
 /**
  * Constructor
  */
@@ -59,7 +59,6 @@ const std::string MDNormSCD::summary() const {
 /// Algorithm's name for use in the GUI and help. @see Algorithm::name
 const std::string MDNormSCD::name() const { return "MDNormSCD"; }
 
-//----------------------------------------------------------------------------------------------
 /**
   * Initialize the algorithm's properties.
   */
@@ -107,7 +106,6 @@ void MDNormSCD::init() {
                   "A name for the output normalization MDHistoWorkspace.");
 }
 
-//----------------------------------------------------------------------------------------------
 /**
  * Execute the algorithm.
  */
@@ -177,7 +175,7 @@ std::string MDNormSCD::inputEnergyMode() const {
   const size_t nalgs = hist.size();
   const auto &lastAlgorithm = hist.lastAlgorithm();
 
-  std::string emode("");
+  std::string emode;
   if (lastAlgorithm->name() == "ConvertToMD") {
     emode = lastAlgorithm->getPropertyValue("dEAnalysisMode");
   } else if ((lastAlgorithm->name() == "Load" ||
@@ -226,7 +224,7 @@ MDHistoWorkspace_sptr MDNormSCD::binInputWS() {
  */
 void MDNormSCD::createNormalizationWS(const MDHistoWorkspace &dataWS) {
   // Copy the MDHisto workspace, and change signals and errors to 0.
-  m_normWS.reset(dataWS.clone().release());
+  m_normWS = dataWS.clone();
   m_normWS->setTo(0., 0., 0.);
 }
 
@@ -403,7 +401,7 @@ void MDNormSCD::calculateNormalization(
       solidAngleWS->getDetectorIDToWorkspaceIndexMap();
 
   auto prog = make_unique<API::Progress>(this, 0.3, 1.0, ndets);
-  PARALLEL_FOR1(integrFlux)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*integrFlux))
   for (int64_t i = 0; i < ndets; i++) {
     PARALLEL_START_INTERUPT_REGION
 

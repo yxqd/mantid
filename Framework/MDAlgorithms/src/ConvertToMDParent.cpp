@@ -2,6 +2,7 @@
 
 #include "MantidAPI/IMDEventWorkspace.h"
 #include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 
 #include "MantidKernel/ArrayProperty.h"
@@ -24,7 +25,6 @@ const std::string ConvertToMDParent::category() const {
   return "MDAlgorithms\\Creation";
 }
 
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
 */
 void ConvertToMDParent::init() {
@@ -129,6 +129,7 @@ void ConvertToMDParent::init() {
       "without quotes) or empty (possible from script only) "
       "to force the workspace recalculation each time the algorithm is "
       "invoked.*");
+  getPointerToProperty("PreprocDetectorsWS")->setAutoTrim(false);
 
   declareProperty(
       make_unique<PropertyWithValue<bool>>("UpdateMasks", false,
@@ -313,9 +314,8 @@ ConvertToMDParent::preprocessDetectorsPositions(
               "ActualDetectorsNum");
       for (uint32_t i = 0; i < NDetectors; i++)
         if (isNaN(*(eFixed + i)))
-          throw(
-              std::invalid_argument("Undefined eFixed energy for detector N: " +
-                                    boost::lexical_cast<std::string>(i)));
+          throw(std::invalid_argument(
+              "Undefined eFixed energy for detector N: " + std::to_string(i)));
     }
   }
 

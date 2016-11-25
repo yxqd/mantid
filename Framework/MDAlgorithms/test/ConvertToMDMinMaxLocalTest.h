@@ -7,6 +7,7 @@
 #include "MantidTestHelpers/WorkspaceCreationHelper.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidAPI/NumericAxis.h"
+#include "MantidAPI/Sample.h"
 #include "MantidDataHandling/LoadEventNexus.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidGeometry/Crystal/OrientedLattice.h"
@@ -232,7 +233,7 @@ private:
     testInst->add(physicalPixel);
     testInst->markAsDetector(physicalPixel);
 
-    ws->getSpectrum(0)->addDetectorID(physicalPixel->getID());
+    ws->getSpectrum(0).addDetectorID(physicalPixel->getID());
 
     if (Ei > 0) {
       ws->mutableRun().addProperty(

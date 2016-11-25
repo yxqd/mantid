@@ -45,6 +45,7 @@ set ( QTIPLOT_SRCS src/ApplicationWindow.cpp
                    src/Folder.cpp
                    src/FunctionCurve.cpp
                    src/FunctionDialog.cpp
+                   src/globals.cpp
                    src/Graph3D.cpp
                    src/Graph.cpp
                    src/Grid.cpp
@@ -81,7 +82,6 @@ set ( QTIPLOT_SRCS src/ApplicationWindow.cpp
                    src/Note.cpp
                    src/nrutil.cpp
                    src/OpenProjectDialog.cpp
-                   src/pixmaps.cpp
                    src/Plot3DDialog.cpp
                    src/Plot.cpp
                    src/PlotCurve.cpp
@@ -90,6 +90,7 @@ set ( QTIPLOT_SRCS src/ApplicationWindow.cpp
                    src/PluginFit.cpp
                    src/PolynomFitDialog.cpp
                    src/PolynomialFit.cpp
+                   src/ProjectSerialiser.cpp
                    src/PythonScript.cpp
                    src/PythonScripting.cpp
                    src/QwtBarCurve.cpp
@@ -129,9 +130,9 @@ set ( QTIPLOT_SRCS src/ApplicationWindow.cpp
                    src/TiledWindow.cpp
                    src/TitlePicker.cpp
                    src/TranslateCurveTool.cpp
-                   src/TSVSerialiser.cpp
                    src/UserFunction.cpp
                    src/VectorCurve.cpp
+                   src/WindowFactory.cpp
                    src/origin/OPJFile.cpp
                    src/plot2D/ImageSymbol.cpp
                    src/analysis/fft2D.cpp
@@ -157,22 +158,21 @@ if ( CMAKE_COMPILER_IS_GNUCXX )
                                 PROPERTIES COMPILE_FLAGS -Wno-cast-qual )
 endif ()
 
-set ( MANTID_SRCS  src/Mantid/AlgorithmMonitor.cpp
+set ( MANTID_SRCS  src/Mantid/AlgorithmDockWidget.cpp
+				   src/Mantid/AlgorithmMonitor.cpp
                    src/Mantid/AlgorithmHistoryWindow.cpp
                    src/Mantid/ErrorBarSettings.cpp
                    src/Mantid/FirstTimeSetup.cpp
                    src/Mantid/FitParameterTie.cpp
-                   src/Mantid/FlowLayout.cpp
                    src/Mantid/IFunctionWrapper.cpp
                    src/Mantid/ImportWorkspaceDlg.cpp
                    src/Mantid/InputHistory.cpp
-                   src/Mantid/LoadDAEDlg.cpp
+				   src/Mantid/LabelToolLogValuesDialog.cpp
                    src/Mantid/ManageCustomMenus.cpp
                    src/Mantid/ManageInterfaceCategories.cpp
                    src/Mantid/MantidAbout.cpp
                    src/Mantid/MantidApplication.cpp
                    src/Mantid/MantidCurve.cpp
-                   src/Mantid/MantidDock.cpp
                    src/Mantid/MantidMatrix.cpp
                    src/Mantid/MantidMatrixCurve.cpp
 		   src/Mantid/MantidMatrixDxExtensionHandler.cpp
@@ -184,16 +184,14 @@ set ( MANTID_SRCS  src/Mantid/AlgorithmMonitor.cpp
                    src/Mantid/MantidMatrixDialog.cpp
                    src/Mantid/MantidSampleLogDialog.cpp
                    src/Mantid/MantidSampleMaterialDialog.cpp
-				   src/Mantid/MantidSurfacePlotDialog.cpp
 				   src/Mantid/MantidGroupPlotGenerator.cpp
                    src/Mantid/MantidUI.cpp
                    src/Mantid/MantidTable.cpp
-                   src/Mantid/MantidWSIndexDialog.cpp
                    src/Mantid/PeakPickerTool.cpp
                    src/Mantid/Preferences.cpp
                    src/Mantid/RemoveErrorsDialog.cpp
+				   src/Mantid/SampleLogDialogBase.cpp
                    src/Mantid/UserFitFunctionDialog.cpp
-                   src/Mantid/WorkspaceIcons.cpp
                    src/Mantid/InstrumentWidget/InstrumentWindow.cpp
 )
 
@@ -279,7 +277,6 @@ set ( QTIPLOT_HDRS src/ApplicationWindow.h
                    src/Note.h
                    src/nrutil.h
                    src/OpenProjectDialog.h
-                   src/pixmaps.h
                    src/Plot3DDialog.h
                    src/PlotCurve.h
                    src/PlotDialog.h
@@ -289,6 +286,7 @@ set ( QTIPLOT_HDRS src/ApplicationWindow.h
                    src/PluginFit.h
                    src/PolynomFitDialog.h
                    src/PolynomialFit.h
+		    src/ProjectSerialiser.h
                    src/PythonScript.h
                    src/PythonScripting.h
                    src/QwtBarCurve.h
@@ -329,9 +327,9 @@ set ( QTIPLOT_HDRS src/ApplicationWindow.h
                    src/TiledWindow.h
                    src/TitlePicker.h
                    src/TranslateCurveTool.h
-                   src/TSVSerialiser.h
                    src/UserFunction.h
                    src/VectorCurve.h
+                   src/WindowFactory.h
                    src/analysis/fft2D.h
                    src/origin/OPJFile.h
                    src/plot2D/ImageSymbol.h
@@ -354,18 +352,16 @@ set ( MANTID_HDRS  src/Mantid/AlgorithmMonitor.h
                    src/Mantid/ErrorBarSettings.h
                    src/Mantid/FirstTimeSetup.h
                    src/Mantid/FitParameterTie.h
-                   src/Mantid/FlowLayout.h
                    src/Mantid/IFunctionWrapper.h
                    src/Mantid/ImportWorkspaceDlg.h
 		   src/Mantid/IMantidMatrixExtensionHandler.h
                    src/Mantid/InputHistory.h
-                   src/Mantid/LoadDAEDlg.h
+				   src/Mantid/LabelToolLogValuesDialog.h
                    src/Mantid/ManageCustomMenus.h
                    src/Mantid/ManageInterfaceCategories.h
                    src/Mantid/MantidAbout.h
                    src/Mantid/MantidApplication.h
                    src/Mantid/MantidCurve.h
-                   src/Mantid/MantidDock.h
                    src/Mantid/MantidMatrixCurve.h
 		   src/Mantid/MantidMatrixDxExtensionHandler.h
 		   src/Mantid/MantidMatrixExtensionRequest.h
@@ -379,17 +375,14 @@ set ( MANTID_HDRS  src/Mantid/AlgorithmMonitor.h
                    src/Mantid/MantidMatrixFunction.h
                    src/Mantid/MantidSampleLogDialog.h
                    src/Mantid/MantidSampleMaterialDialog.h
-				   src/Mantid/MantidSurfacePlotDialog.h
 				   src/Mantid/MantidGroupPlotGenerator.h
                    src/Mantid/MantidUI.h
-                   src/Mantid/MantidWSIndexDialog.h
                    src/Mantid/MantidTable.h
                    src/Mantid/PeakPickerTool.h
                    src/Mantid/Preferences.h
                    src/Mantid/RemoveErrorsDialog.h
+				   src/Mantid/SampleLogDialogBase.h
                    src/Mantid/UserFitFunctionDialog.h
-                   src/Mantid/WorkspaceIcons.h
-                   src/Mantid/IProjectSerialisable.h
                    src/Mantid/InstrumentWidget/InstrumentWindow.h
 )
 
@@ -587,19 +580,19 @@ set ( QTIPLOT_MOC_FILES src/ApplicationWindow.h
                         src/lib/3rdparty/qtcolorpicker/src/qtcolorpicker.h
 )
 
-set ( MANTID_MOC_FILES src/Mantid/AlgorithmMonitor.h
+set ( MANTID_MOC_FILES src/Mantid/AlgorithmDockWidget.h
+					   src/Mantid/AlgorithmMonitor.h
                        src/Mantid/AlgorithmHistoryWindow.h
                        src/Mantid/ErrorBarSettings.h
                        src/Mantid/FirstTimeSetup.h
                        src/Mantid/IFunctionWrapper.h
                        src/Mantid/ImportWorkspaceDlg.h
-                       src/Mantid/LoadDAEDlg.h
+					   src/Mantid/LabelToolLogValuesDialog.h
                        src/Mantid/ManageCustomMenus.h
                        src/Mantid/ManageInterfaceCategories.h
                        src/Mantid/MantidAbout.h
                        src/Mantid/MantidApplication.h
                        src/Mantid/MantidCurve.h
-                       src/Mantid/MantidDock.h
                        src/Mantid/MantidMatrixCurve.h
                        src/Mantid/MantidMDCurve.h
                        src/Mantid/MantidMDCurveDialog.h
@@ -609,12 +602,11 @@ set ( MANTID_MOC_FILES src/Mantid/AlgorithmMonitor.h
 		               src/Mantid/MantidMatrixModel.h
                        src/Mantid/MantidSampleLogDialog.h
                        src/Mantid/MantidSampleMaterialDialog.h
-					   src/Mantid/MantidSurfacePlotDialog.h
                        src/Mantid/MantidUI.h
-                       src/Mantid/MantidWSIndexDialog.h
                        src/Mantid/MantidTable.h
                        src/Mantid/PeakPickerTool.h
                        src/Mantid/RemoveErrorsDialog.h
+					   src/Mantid/SampleLogDialogBase.h
                        src/Mantid/UserFitFunctionDialog.h
                        src/Mantid/InstrumentWidget/InstrumentWindow.h
 )
@@ -665,6 +657,10 @@ qt4_add_resources ( RES_FILES ${PROJECT_SOURCE_DIR}/Vates/VatesSimpleGui/ViewWid
 ###########################################################################
 # Add the dependencies
 ###########################################################################
+
+if(MAKE_VATES)
+  include( ${PARAVIEW_USE_FILE} )
+endif()
 
 include_directories ( SYSTEM ${MUPARSER_INCLUDE_DIR} )
 include_directories ( ${ZLIB_INCLUDE_DIRS} )
@@ -754,6 +750,14 @@ copy_files_to_dir ( "${MTDPLOTPY_FILES}"
                             ${CMAKE_CURRENT_SOURCE_DIR}/pymantidplot
                             ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/pymantidplot
                             MTDPLOT_INSTALL_FILES )
+set( MTDPLOTPYMPL_FILES
+  __init__.py
+  backend_mtdqt4agg.py
+)
+copy_files_to_dir ( "${MTDPLOTPYMPL_FILES}"
+                            ${CMAKE_CURRENT_SOURCE_DIR}/pymantidplot/mpl
+                            ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/pymantidplot/mpl
+                            MTDPLOTMPL_INSTALL_FILES )
 
 # IPython scripts
 set( IPY_FILES
@@ -772,11 +776,12 @@ copy_files_to_dir ( "${IPY_FILES}"
 add_executable ( MantidPlot ${WIN_CONSOLE} MACOSX_BUNDLE ${ALL_SRC} src/main.cpp
 							${INC_FILES} ${QTIPLOT_C_SRC} ${UI_HDRS}
 							${RES_FILES} ${MANTID_RC_FILE}
-							${PYTHON_INSTALL_FILES} ${MTDPLOT_INSTALL_FILES} ${CONFIG_RESET_SCRIPT_FILE} ${IPYTHON_INSTALL_FILES}
+							${PYTHON_INSTALL_FILES} ${MTDPLOT_INSTALL_FILES} ${MTDPLOTMPL_INSTALL_FILES}
+                                                        ${CONFIG_RESET_SCRIPT_FILE} ${IPYTHON_INSTALL_FILES}
 )
 
 # Library dependencies
-target_link_libraries ( MantidPlot LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME} 
+target_link_libraries ( MantidPlot LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME}
             ${CORE_MANTIDLIBS}
             API
             MantidQtAPI
@@ -798,6 +803,11 @@ target_link_libraries ( MantidPlot LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME}
             ${OPENGL_LIBRARIES}
 )
 
+if(MAKE_VATES)
+  target_include_directories( MantidPlot SYSTEM PRIVATE ${PARAVIEW_INCLUDE_DIRS} )
+  target_link_libraries ( MantidPlot LINK_PRIVATE vtkPVClientServerCoreRendering )
+endif()
+
 if (WITH_ASAN)
   target_link_libraries ( MantidPlot LINK_PRIVATE -lasan )
 endif ()
@@ -806,7 +816,7 @@ endif ()
 add_dependencies( MantidPlot mantidqtpython CompilePyUI )
 
 if (OSX_VERSION VERSION_GREATER 10.8)
-  set_target_properties(MantidPlot PROPERTIES INSTALL_RPATH "@executable_path/")
+  set_target_properties(MantidPlot PROPERTIES INSTALL_RPATH "@executable_path;@executable_path/../Libraries")
 endif ()
 
 ###########################################################################
@@ -858,6 +868,8 @@ set ( MANTIDPLOT_TEST_PY_FILES
     MantidPlotSliceViewerTest.py
     MantidPlot1DPlotTest.py
     MantidPlot2DPlotTest.py
+    MantidPlotMatplotlibTest.py
+    MantidPlotProjectSerialiseTest.py
     MantidPlotProxiesTest.py
     MantidPlotPythonImportTest.py
     MantidPlotFoldersTest.py
@@ -866,6 +878,10 @@ set ( MANTIDPLOT_TEST_PY_FILES
     MantidPlotInputArgsCheck.py
     MantidPlotPyplotGeneralTest.py
 )
+
+if ( MAKE_VATES )
+ list  ( APPEND MANTIDPLOT_TEST_PY_FILES MantidPlotPVPythonTest.py )
+endif ()
 
 if ( 0 )
 	message (STATUS "Your CMAKE_SYSTEM string is '${CMAKE_SYSTEM}'")
@@ -929,6 +945,9 @@ install ( TARGETS MantidPlot RUNTIME DESTINATION ${BIN_DIR}
 install ( FILES ${PY_FILES} DESTINATION ${BIN_DIR} )
 foreach(PY_FILE ${MTDPLOTPY_FILES} )
   install ( FILES pymantidplot/${PY_FILE} DESTINATION ${BIN_DIR}/pymantidplot )
+endforeach()
+foreach(PY_FILE ${MTDPLOTPYMPL_FILES} )
+  install ( FILES pymantidplot/mpl/${PY_FILE} DESTINATION ${BIN_DIR}/pymantidplot/mpl )
 endforeach()
 foreach(PY_FILE ${IPY_FILES} )
   install ( FILES ipython_widget/${PY_FILE} DESTINATION ${BIN_DIR}/ipython_widget )

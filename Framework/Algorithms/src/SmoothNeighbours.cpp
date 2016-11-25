@@ -1,5 +1,6 @@
 #include "MantidAlgorithms/SmoothNeighbours.h"
 #include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/NearestNeighbourInfo.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/EventList.h"
 #include "MantidDataObjects/EventWorkspace.h"
@@ -227,7 +228,6 @@ void SmoothNeighbours::findNeighboursRectangular() {
     setWeightingStrategy("Flat", Radius);
     nNeighbours = AdjX * AdjY - 1;
     findNeighboursUbiqutious();
-    return;
   }
 
   // Resize the vector we are setting
@@ -250,7 +250,7 @@ void SmoothNeighbours::findNeighboursRectangular() {
   // Build a map to sort by the detectorID
   std::vector<std::pair<int, int>> v1;
   for (int i = 0; i < static_cast<int>(detList.size()); i++)
-    v1.push_back(std::pair<int, int>(detList[i]->getAtXY(0, 0)->getID(), i));
+    v1.emplace_back(detList[i]->getAtXY(0, 0)->getID(), i);
 
   // To sort in descending order
   if (sum)
@@ -287,7 +287,7 @@ void SmoothNeighbours::findNeighboursRectangular() {
               auto mapEntry = pixel_to_wi.find(pixelID);
               if (mapEntry != pixel_to_wi.end()) {
                 size_t wi = mapEntry->second;
-                neighbours.push_back(weightedNeighbour(wi, smweight));
+                neighbours.emplace_back(wi, smweight);
                 // Count the total weight
                 totalWeight += smweight;
               }
@@ -316,12 +316,6 @@ void SmoothNeighbours::findNeighboursRectangular() {
 void SmoothNeighbours::findNeighboursUbiqutious() {
   g_log.debug(
       "SmoothNeighbours processing NOT assuming rectangular detectors.");
-  /*
-    This will cause the Workspace to rebuild the nearest neighbours map, so that
-    we can pick-up any of the properties specified
-    for this algorithm in the constructor for the NearestNeighboursObject.
-  */
-  inWS->rebuildNearestNeighbours();
 
   m_prog->resetNumSteps(inWS->getNumberHistograms(), 0.2, 0.5);
   this->progress(0.2, "Building Neighbour Map");
@@ -333,6 +327,7 @@ void SmoothNeighbours::findNeighboursUbiqutious() {
   m_neighbours.resize(inWS->getNumberHistograms());
 
   bool ignoreMaskedDetectors = getProperty("IgnoreMaskedDetectors");
+  NearestNeighbourInfo neighbourInfo(*inWS, ignoreMaskedDetectors, nNeighbours);
 
   // Cull by radius
   RadiusFilter radiusFilter(Radius);
@@ -355,7 +350,7 @@ void SmoothNeighbours::findNeighboursUbiqutious() {
     // We want to skip monitors
     try {
       // Get the list of detectors in this pixel
-      const auto &dets = inWS->getSpectrum(wi)->getDetectorIDs();
+      const auto &dets = inWS->getSpectrum(wi).getDetectorIDs();
       det = inst->getDetector(*dets.begin());
       if (det->isMonitor())
         continue; // skip monitor
@@ -375,11 +370,10 @@ void SmoothNeighbours::findNeighboursUbiqutious() {
       continue; // skip missing detector
     }
 
-    specnum_t inSpec = inWS->getSpectrum(wi)->getSpectrumNo();
+    specnum_t inSpec = inWS->getSpectrum(wi).getSpectrumNo();
 
     // Step one - Get the number of specified neighbours
-    SpectraDistanceMap insideGrid =
-        inWS->getNeighboursExact(inSpec, nNeighbours, ignoreMaskedDetectors);
+    SpectraDistanceMap insideGrid = neighbourInfo.getNeighboursExact(inSpec);
 
     // Step two - Filter the results by the radius cut off.
     SpectraDistanceMap neighbSpectra = radiusFilter.apply(insideGrid);
@@ -409,7 +403,7 @@ void SmoothNeighbours::findNeighboursUbiqutious() {
           if (sum > 1) {
             // Get the list of detectors in this pixel
             const std::set<detid_t> &dets =
-                inWS->getSpectrum(neighWI)->getDetectorIDs();
+                inWS->getSpectrum(neighWI).getDetectorIDs();
             det = inst->getDetector(*dets.begin());
             neighbParent = det->getParent();
             neighbGParent = neighbParent->getParent();
@@ -421,7 +415,7 @@ void SmoothNeighbours::findNeighboursUbiqutious() {
             noNeigh++;
             used[neighWI] = true;
           }
-          neighbours.push_back(weightedNeighbour(neighWI, weight));
+          neighbours.emplace_back(neighWI, weight);
           totalWeight += weight;
         }
       }
@@ -621,18 +615,18 @@ void SmoothNeighbours::execWorkspace2D() {
   // API::WorkspaceFactory::Instance().initializeFromParent(inWS, outWS, false);
 
   // Go through all the output workspace
-  PARALLEL_FOR2(inWS, outWS)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*inWS, *outWS))
   for (int outWIi = 0; outWIi < int(numberOfSpectra); outWIi++) {
     PARALLEL_START_INTERUPT_REGION
 
-    ISpectrum *outSpec = outWS->getSpectrum(outWIi);
+    auto &outSpec = outWS->getSpectrum(outWIi);
     // Reset the Y and E vectors
-    outSpec->clearData();
-    MantidVec &outY = outSpec->dataY();
+    outSpec.clearData();
+    auto &outY = outSpec.mutableY();
     // We will temporarily carry the squared error
-    MantidVec &outE = outSpec->dataE();
+    auto &outE = outSpec.mutableE();
     // tmp to carry the X Data.
-    MantidVec &outX = outSpec->dataX();
+    auto &outX = outSpec.mutableX();
 
     // Which are the neighbours?
     std::vector<weightedNeighbour> &neighbours = m_neighbours[outWIi];
@@ -642,11 +636,10 @@ void SmoothNeighbours::execWorkspace2D() {
       double weight = it->second;
       double weightSquared = weight * weight;
 
-      const ISpectrum *inSpec = inWS->getSpectrum(inWI);
-      inSpec->lockData();
-      const MantidVec &inY = inSpec->readY();
-      const MantidVec &inE = inSpec->readE();
-      const MantidVec &inX = inSpec->readX();
+      const auto &inSpec = inWS->getSpectrum(inWI);
+      const auto &inY = inSpec.y();
+      const auto &inE = inSpec.e();
+      const auto &inX = inSpec.x();
 
       for (size_t i = 0; i < YLength; i++) {
         // Add the weighted signal
@@ -663,8 +656,6 @@ void SmoothNeighbours::execWorkspace2D() {
       if (inWS->isHistogramData()) {
         outX[YLength] = inX[YLength];
       }
-
-      inSpec->unlockData();
     } //(each neighbour)
 
     // Now un-square the error, since we summed it in quadrature
@@ -694,29 +685,16 @@ void SmoothNeighbours::setupNewInstrument(MatrixWorkspace_sptr outws) {
   size_t numberOfSpectra = outws->getNumberHistograms();
 
   for (int outWIi = 0; outWIi < int(numberOfSpectra); outWIi++) {
-    ISpectrum *outSpec = outws->getSpectrum(outWIi);
-    /*
-    g_log.notice() << "[DBx555] Original spectrum number for wsindex " << outWIi
-                   << " = " << outSpec->getSpectrumNo() << std::endl;
-    outSpec->setSpectrumNo(outWIi+1);
-    */
+    auto &outSpec = outws->getSpectrum(outWIi);
 
     // Reset detectors
-    outSpec->clearDetectorIDs();
-    ;
+    outSpec.clearDetectorIDs();
 
     // Which are the neighbours?
-    std::vector<weightedNeighbour> &neighbours = m_neighbours[outWIi];
-    std::vector<weightedNeighbour>::iterator it;
-    for (it = neighbours.begin(); it != neighbours.end(); ++it) {
-      size_t inWI = it->first;
-
-      const ISpectrum *inSpec = inWS->getSpectrum(inWI);
-
-      auto thesedetids = inSpec->getDetectorIDs();
-      outSpec->addDetectorIDs(thesedetids);
-
-    } //(each neighbour)
+    for (const auto &neighbor : m_neighbours[outWIi]) {
+      const auto &inSpec = inWS->getSpectrum(neighbor.first);
+      outSpec.addDetectorIDs(inSpec.getDetectorIDs());
+    }
   }
 
   return;
@@ -745,47 +723,24 @@ void SmoothNeighbours::spreadPixels(MatrixWorkspace_sptr outws) {
   API::WorkspaceFactory::Instance().initializeFromParent(inWS, outws2, false);
   // Go through all the input workspace
   for (int outWIi = 0; outWIi < int(numberOfSpectra); outWIi++) {
-    ISpectrum *inSpec = inWS->getSpectrum(outWIi);
-    MantidVec &inX = inSpec->dataX();
-
-    auto thesedetids = inSpec->getDetectorIDs();
-    ISpectrum *outSpec2 = outws2->getSpectrum(outWIi);
-    MantidVec &outX = outSpec2->dataX();
-    outX = inX;
-    outSpec2->addDetectorIDs(thesedetids);
+    const auto &inSpec = inWS->getSpectrum(outWIi);
+    auto &outSpec2 = outws2->getSpectrum(outWIi);
+    outSpec2.mutableX() = inSpec.x();
+    outSpec2.addDetectorIDs(inSpec.getDetectorIDs());
     // Zero the Y and E vectors
-    outSpec2->clearData();
-    outSpec2->dataY().assign(YLength, 0.0);
-    outSpec2->dataE().assign(YLength, 0.0);
+    outSpec2.clearData();
   }
 
   // Go through all the output workspace
   const size_t numberOfSpectra2 = outws->getNumberHistograms();
   for (int outWIi = 0; outWIi < int(numberOfSpectra2); outWIi++) {
-    const ISpectrum *outSpec = outws->getSpectrum(outWIi);
 
     // Which are the neighbours?
-    std::vector<weightedNeighbour> &neighbours = m_neighbours[outWIi];
-    std::vector<weightedNeighbour>::iterator it;
-    for (it = neighbours.begin(); it != neighbours.end(); ++it) {
-      size_t inWI = it->first;
-
-      ISpectrum *outSpec2 = outws2->getSpectrum(inWI);
-      // Reset the Y and E vectors
-      outSpec2->clearData();
-      MantidVec &out2Y = outSpec2->dataY();
-      MantidVec &out2E = outSpec2->dataE();
-      MantidVec &out2X = outSpec2->dataX();
-      const MantidVec &outY = outSpec->dataY();
-      const MantidVec &outE = outSpec->dataE();
-      const MantidVec &outX = outSpec->dataX();
-      out2Y = outY;
-      out2E = outE;
-      out2X = outX;
-    } //(each neighbour)
+    for (const auto &neighbor : m_neighbours[outWIi]) {
+      outws2->setHistogram(neighbor.first, outws->histogram(outWIi));
+    }
   }
   this->setProperty("OutputWorkspace", outws2);
-  return;
 }
 //--------------------------------------------------------------------------------------------
 /** Execute the algorithm for a EventWorkspace input
@@ -812,12 +767,12 @@ void SmoothNeighbours::execEvent(Mantid::DataObjects::EventWorkspace_sptr ws) {
                     boost::dynamic_pointer_cast<MatrixWorkspace>(outWS));
 
   // Go through all the output workspace
-  PARALLEL_FOR2(ws, outWS)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*ws, *outWS))
   for (int outWIi = 0; outWIi < int(numberOfSpectra); outWIi++) {
     PARALLEL_START_INTERUPT_REGION
 
     // Create the output event list (empty)
-    EventList &outEL = outWS->getOrAddEventList(outWIi);
+    EventList &outEL = outWS->getSpectrum(outWIi);
 
     // Which are the neighbours?
     std::vector<weightedNeighbour> &neighbours = m_neighbours[outWIi];
@@ -827,7 +782,7 @@ void SmoothNeighbours::execEvent(Mantid::DataObjects::EventWorkspace_sptr ws) {
       // if(sum)outEL.copyInfoFrom(*ws->getSpectrum(inWI));
       double weight = it->second;
       // Copy the event list
-      EventList tmpEL = ws->getEventList(inWI);
+      EventList tmpEL = ws->getSpectrum(inWI);
       // Scale it
       tmpEL *= weight;
       // Add it
@@ -844,8 +799,7 @@ void SmoothNeighbours::execEvent(Mantid::DataObjects::EventWorkspace_sptr ws) {
   PARALLEL_CHECK_INTERUPT_REGION
 
   // Give the 0-th X bins to all the output spectra.
-  Kernel::cow_ptr<MantidVec> outX = inWS->refX(0);
-  outWS->setAllX(outX);
+  outWS->setAllX(inWS->binEdges(0));
   if (expandSumAllPixels)
     spreadPixels(outWS);
 }

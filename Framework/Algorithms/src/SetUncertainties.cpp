@@ -1,11 +1,12 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAlgorithms/SetUncertainties.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/SpectrumInfo.h"
 #include "MantidAPI/WorkspaceFactory.h"
+#include "MantidGeometry/IDetector.h"
+#include "MantidGeometry/Instrument.h"
 #include "MantidKernel/ListValidator.h"
 
+#include <algorithm>
 #include <vector>
 
 namespace Mantid {
@@ -20,13 +21,41 @@ using namespace API;
 namespace {
 /// Used to compare signal to zero
 const double TOLERANCE = 1.e-10;
+
+const std::string ZERO("zero");
+const std::string SQRT("sqrt");
+const std::string ONE_IF_ZERO("oneIfZero");
+const std::string SQRT_OR_ONE("sqrtOrOne");
+
+struct resetzeroerror {
+  explicit resetzeroerror(const double constant) : zeroErrorValue(constant) {}
+
+  double operator()(const double error) {
+    if (error < TOLERANCE) {
+      return zeroErrorValue;
+    } else {
+      return error;
+    }
+  }
+
+  double zeroErrorValue;
+};
+
+struct sqrterror {
+  explicit sqrterror(const double constant) : zeroSqrtValue(constant) {}
+
+  double operator()(const double intensity) {
+    const double localIntensity = fabs(intensity);
+    if (localIntensity > TOLERANCE) {
+      return sqrt(localIntensity);
+    } else {
+      return zeroSqrtValue;
+    }
+  }
+
+  double zeroSqrtValue;
+};
 }
-
-/// (Empty) Constructor
-SetUncertainties::SetUncertainties() : API::Algorithm() {}
-
-/// Virtual destructor
-SetUncertainties::~SetUncertainties() {}
 
 /// Algorithm's name
 const std::string SetUncertainties::name() const { return "SetUncertainties"; }
@@ -34,17 +63,12 @@ const std::string SetUncertainties::name() const { return "SetUncertainties"; }
 /// Algorithm's version
 int SetUncertainties::version() const { return (1); }
 
-const std::string ZERO("zero");
-const std::string SQRT("sqrt");
-
 void SetUncertainties::init() {
   declareProperty(make_unique<WorkspaceProperty<API::MatrixWorkspace>>(
       "InputWorkspace", "", Direction::Input));
   declareProperty(make_unique<WorkspaceProperty<API::MatrixWorkspace>>(
       "OutputWorkspace", "", Direction::Output));
-  std::vector<std::string> errorTypes;
-  errorTypes.push_back(ZERO);
-  errorTypes.push_back(SQRT);
+  std::vector<std::string> errorTypes = {ZERO, SQRT, SQRT_OR_ONE, ONE_IF_ZERO};
   declareProperty("SetError", ZERO,
                   boost::make_shared<StringListValidator>(errorTypes),
                   "How to reset the uncertainties");
@@ -54,6 +78,10 @@ void SetUncertainties::exec() {
   MatrixWorkspace_const_sptr inputWorkspace = getProperty("InputWorkspace");
   std::string errorType = getProperty("SetError");
   bool zeroError = (errorType.compare(ZERO) == 0);
+  bool takeSqrt =
+      ((errorType.compare(SQRT) == 0) || (errorType.compare(SQRT_OR_ONE) == 0));
+  bool resetOne = ((errorType.compare(ONE_IF_ZERO) == 0) ||
+                   (errorType.compare(SQRT_OR_ONE) == 0));
 
   // Create the output workspace. This will copy many aspects from the input
   // one.
@@ -61,26 +89,34 @@ void SetUncertainties::exec() {
       WorkspaceFactory::Instance().create(inputWorkspace);
 
   // ...but not the data, so do that here.
+  const auto &spectrumInfo = inputWorkspace->spectrumInfo();
   const size_t numHists = inputWorkspace->getNumberHistograms();
   Progress prog(this, 0.0, 1.0, numHists);
 
-  PARALLEL_FOR2(inputWorkspace, outputWorkspace)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*inputWorkspace, *outputWorkspace))
   for (int64_t i = 0; i < int64_t(numHists); ++i) {
     PARALLEL_START_INTERUPT_REGION
 
-    outputWorkspace->setX(i, inputWorkspace->refX(i));
-    outputWorkspace->dataY(i) = inputWorkspace->readY(i);
-    outputWorkspace->dataE(i) =
-        std::vector<double>(inputWorkspace->readE(i).size(), 0.);
+    // copy the X/Y
+    outputWorkspace->setSharedX(i, inputWorkspace->sharedX(i));
+    outputWorkspace->setSharedY(i, inputWorkspace->sharedY(i));
+    // copy the E or set to zero depending on the mode
+    if (errorType.compare(ONE_IF_ZERO) == 0) {
+      outputWorkspace->setSharedE(i, inputWorkspace->sharedE(i));
+    } else {
+      outputWorkspace->mutableE(i) = 0.0;
+    }
 
-    if (!zeroError) {
-      MantidVec &Y = outputWorkspace->dataY(i);
-      MantidVec &E = outputWorkspace->dataE(i);
-      std::size_t numE = E.size();
-      for (std::size_t j = 0; j < numE; j++) {
-        const double y_val = fabs(Y[j]);
-        if (y_val > TOLERANCE)
-          E[j] = sqrt(y_val);
+    // ZERO mode doesn't calculate anything further
+    if ((!zeroError) &&
+        (!(spectrumInfo.hasDetectors(i) && spectrumInfo.isMasked(i)))) {
+      auto &E = outputWorkspace->mutableE(i);
+      if (takeSqrt) {
+        const auto &Y = outputWorkspace->y(i);
+        std::transform(Y.begin(), Y.end(), E.begin(),
+                       sqrterror(resetOne ? 1. : 0.));
+      } else {
+        std::transform(E.begin(), E.end(), E.begin(), resetzeroerror(1.));
       }
     }
 

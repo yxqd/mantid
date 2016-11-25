@@ -4,27 +4,37 @@
 #include "MantidAPI/ISpectrum.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/NumericAxis.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/SpectraAxis.h"
 #include "MantidAPI/SpectrumDetectorMapping.h"
+#include "MantidAPI/SpectrumInfo.h"
 #include "MantidAPI/WorkspaceFactory.h"
+#include "MantidGeometry/Instrument/ComponentHelper.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidGeometry/Instrument/Detector.h"
+#include "MantidKernel/make_cow.h"
 #include "MantidKernel/TimeSeriesProperty.h"
 #include "MantidKernel/VMD.h"
-#include "MantidTestHelpers/FakeGmockObjects.h"
 #include "MantidTestHelpers/FakeObjects.h"
 #include "MantidTestHelpers/InstrumentCreationHelper.h"
+#include "MantidTestHelpers/ComponentCreationHelper.h"
 #include "MantidTestHelpers/NexusTestHelper.h"
 #include "PropertyManagerHelper.h"
 
 #include <cxxtest/TestSuite.h>
+
 #include <boost/make_shared.hpp>
+
+#include <algorithm>
+#include <atomic>
+#include <cmath>
+#include <functional>
+#include <numeric>
 
 using std::size_t;
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::Geometry;
-using namespace testing;
 
 // Declare into the factory.
 DECLARE_WORKSPACE(WorkspaceTester)
@@ -40,7 +50,7 @@ boost::shared_ptr<MatrixWorkspace> makeWorkspaceWithDetectors(size_t numSpectra,
       boost::make_shared<WorkspaceTester>();
   ws2->initialize(numSpectra, numBins, numBins);
 
-  Instrument_sptr inst(new Instrument("TestInstrument"));
+  auto inst = boost::make_shared<Instrument>("TestInstrument");
   ws2->setInstrument(inst);
   // We get a 1:1 map by default so the detector ID should match the spectrum
   // number
@@ -49,7 +59,7 @@ boost::shared_ptr<MatrixWorkspace> makeWorkspaceWithDetectors(size_t numSpectra,
     Detector *det = new Detector("pixel", static_cast<detid_t>(i), inst.get());
     inst->add(det);
     inst->markAsDetector(det);
-    ws2->getSpectrum(i)->addDetectorID(static_cast<detid_t>(i));
+    ws2->getSpectrum(i).addDetectorID(static_cast<detid_t>(i));
   }
   return ws2;
 }
@@ -63,7 +73,9 @@ public:
   }
   static void destroySuite(MatrixWorkspaceTest *suite) { delete suite; }
 
-  MatrixWorkspaceTest() : ws(new WorkspaceTester) { ws->initialize(1, 1, 1); }
+  MatrixWorkspaceTest() : ws(boost::make_shared<WorkspaceTester>()) {
+    ws->initialize(1, 1, 1);
+  }
 
   void test_toString_Produces_Expected_Contents() {
     auto testWS = boost::make_shared<WorkspaceTester>();
@@ -80,7 +92,7 @@ public:
                            "X axis: Time-of-flight / microsecond\n"
                            "Y axis: Counts\n"
                            "Distribution: False\n"
-                           "Instrument:  (1990-Jan-01 to 1990-Jan-01)\n"
+                           "Instrument: None\n"
                            "Run start: not available\n"
                            "Run end:  not available\n";
 
@@ -105,7 +117,7 @@ public:
     WorkspaceTester ws;
     ws.initialize(10, 1, 1);
     for (size_t i = 0; i < 10; i++)
-      ws.getSpectrum(i)->setDetectorID(detid_t(i * 10));
+      ws.getSpectrum(i).setDetectorID(detid_t(i * 10));
     std::vector<detid_t> dets;
     dets.push_back(60);
     dets.push_back(20);
@@ -123,9 +135,8 @@ public:
     const size_t nhist(10);
     testWS.initialize(nhist, 1, 1);
     for (size_t i = 0; i < testWS.getNumberHistograms(); i++) {
-      TS_ASSERT_EQUALS(testWS.getSpectrum(i)->getSpectrumNo(),
-                       specnum_t(i + 1));
-      TS_ASSERT(testWS.getSpectrum(i)->hasDetectorID(detid_t(i)));
+      TS_ASSERT_EQUALS(testWS.getSpectrum(i).getSpectrumNo(), specnum_t(i + 1));
+      TS_ASSERT(testWS.getSpectrum(i).hasDetectorID(detid_t(i)));
     }
   }
 
@@ -138,23 +149,23 @@ public:
     TS_ASSERT_THROWS_NOTHING(
         testWS.updateSpectraUsing(SpectrumDetectorMapping(specs, detids, 4)));
 
-    TS_ASSERT(testWS.getSpectrum(0)->hasDetectorID(10));
-    TS_ASSERT(testWS.getSpectrum(1)->hasDetectorID(20));
-    TS_ASSERT(testWS.getSpectrum(1)->hasDetectorID(99));
-    TS_ASSERT(testWS.getSpectrum(2)->hasDetectorID(30));
+    TS_ASSERT(testWS.getSpectrum(0).hasDetectorID(10));
+    TS_ASSERT(testWS.getSpectrum(1).hasDetectorID(20));
+    TS_ASSERT(testWS.getSpectrum(1).hasDetectorID(99));
+    TS_ASSERT(testWS.getSpectrum(2).hasDetectorID(30));
   }
 
   void testDetectorMappingCopiedWhenAWorkspaceIsCopied() {
     boost::shared_ptr<MatrixWorkspace> parent =
         boost::make_shared<WorkspaceTester>();
     parent->initialize(1, 1, 1);
-    parent->getSpectrum(0)->setSpectrumNo(99);
-    parent->getSpectrum(0)->setDetectorID(999);
+    parent->getSpectrum(0).setSpectrumNo(99);
+    parent->getSpectrum(0).setDetectorID(999);
 
     MatrixWorkspace_sptr copied = WorkspaceFactory::Instance().create(parent);
     // Has it been copied?
-    TS_ASSERT_EQUALS(copied->getSpectrum(0)->getSpectrumNo(), 99);
-    TS_ASSERT(copied->getSpectrum(0)->hasDetectorID(999));
+    TS_ASSERT_EQUALS(copied->getSpectrum(0).getSpectrumNo(), 99);
+    TS_ASSERT(copied->getSpectrum(0).hasDetectorID(999));
   }
 
   void testGetMemorySize() { TS_ASSERT_THROWS_NOTHING(ws->getMemorySize()); }
@@ -180,7 +191,7 @@ public:
 
   void testIsDistribution() {
     TS_ASSERT(!ws->isDistribution());
-    TS_ASSERT(ws->isDistribution(true));
+    ws->setDistribution(true);
     TS_ASSERT(ws->isDistribution());
   }
 
@@ -193,11 +204,8 @@ public:
   void testGetSpectrum() {
     WorkspaceTester ws;
     ws.initialize(4, 1, 1);
-    ISpectrum *spec = NULL;
-    TS_ASSERT_THROWS_NOTHING(spec = ws.getSpectrum(0));
-    TS_ASSERT(spec);
-    TS_ASSERT_THROWS_NOTHING(spec = ws.getSpectrum(3));
-    TS_ASSERT(spec);
+    TS_ASSERT_THROWS_NOTHING(ws.getSpectrum(0));
+    TS_ASSERT_THROWS_NOTHING(ws.getSpectrum(3));
   }
 
   /** Get a detector sptr for each spectrum */
@@ -219,16 +227,16 @@ public:
     }
 
     // Now a detector group
-    ISpectrum *spec = workspace->getSpectrum(0);
-    spec->addDetectorID(1);
-    spec->addDetectorID(2);
+    auto &spec = workspace->getSpectrum(0);
+    spec.addDetectorID(1);
+    spec.addDetectorID(2);
     IDetector_const_sptr det;
     TS_ASSERT_THROWS_NOTHING(det = workspace->getDetector(0));
     TS_ASSERT(det);
 
     // Now an empty (no detector) pixel
-    spec = workspace->getSpectrum(1);
-    spec->clearDetectorIDs();
+    auto &spec2 = workspace->getSpectrum(1);
+    spec2.clearDetectorIDs();
     IDetector_const_sptr det2;
     TS_ASSERT_THROWS_ANYTHING(det2 = workspace->getDetector(1));
     TS_ASSERT(!det2);
@@ -278,6 +286,57 @@ public:
         TS_FAIL("No detector defined");
       }
     }
+  }
+
+  void testWholeSpectraMasking_SpectrumInfo() {
+    // Workspace has 3 spectra, each 1 in length
+    const int numHist(3);
+    auto workspace = makeWorkspaceWithDetectors(numHist, 1);
+    workspace->maskWorkspaceIndex(1);
+    workspace->maskWorkspaceIndex(2);
+
+    const auto &spectrumInfo = workspace->spectrumInfo();
+    for (int i = 0; i < numHist; ++i) {
+      bool expectedMasked(false);
+      if (i == 0) {
+        expectedMasked = false;
+      } else {
+        expectedMasked = true;
+      }
+      TS_ASSERT_EQUALS(spectrumInfo.isMasked(i), expectedMasked);
+    }
+  }
+
+  void test_spectrumInfo_works_unthreaded() {
+    const int numHist(3);
+    auto workspace = makeWorkspaceWithDetectors(numHist, 1);
+    std::atomic<bool> parallelException{false};
+    for (int i = 0; i < numHist; ++i) {
+      try {
+        static_cast<void>(workspace->spectrumInfo());
+      } catch (...) {
+        parallelException = true;
+      }
+    }
+    TS_ASSERT(!parallelException);
+  }
+
+  void test_spectrumInfo_works_threaded() {
+    const int numHist(3);
+    auto workspace = makeWorkspaceWithDetectors(numHist, 1);
+    std::vector<const SpectrumInfo *> spectrumInfos(numHist);
+    std::atomic<bool> parallelException{false};
+    PARALLEL_FOR_IF(Kernel::threadSafe(*workspace))
+    for (int i = 0; i < numHist; ++i) {
+      try {
+        spectrumInfos[i] = &(workspace->spectrumInfo());
+      } catch (...) {
+        parallelException = true;
+      }
+    }
+    TS_ASSERT(!parallelException);
+    for (int i = 0; i < numHist; ++i)
+      TS_ASSERT_EQUALS(spectrumInfos[0], spectrumInfos[i]);
   }
 
   void testFlagMasked() {
@@ -340,6 +399,33 @@ public:
     TS_ASSERT_EQUALS(ws2->dataY(0)[1], 0.5);
   }
 
+  void testMaskingNaNInf() {
+    const size_t s = 4;
+    const double y[s] = {NAN, INFINITY, -INFINITY, 2.};
+    WorkspaceTester ws;
+    ws.initialize(1, s + 1, s);
+
+    // initialize and mask first with 0 weights
+    // masking with 0 weight should be equiavalent to flagMasked
+    // i.e. values should not change, even Inf and NaN
+    for (size_t i = 0; i < s; ++i) {
+      ws.mutableY(0)[i] = y[i];
+      ws.maskBin(0, i, 0);
+    }
+
+    TS_ASSERT(std::isnan(ws.y(0)[0]));
+    TS_ASSERT(std::isinf(ws.y(0)[1]));
+    TS_ASSERT(std::isinf(ws.y(0)[2]));
+    TS_ASSERT_EQUALS(ws.y(0)[3], 2.);
+
+    // now mask w/o specifying weight (e.g. 1 by default)
+    // in this case everything should be 0, even NaN and Inf
+    for (size_t i = 0; i < s; ++i) {
+      ws.maskBin(0, i);
+      TS_ASSERT_EQUALS(ws.y(0)[i], 0.);
+    }
+  }
+
   void testSize() {
     WorkspaceTester wkspace;
     wkspace.initialize(1, 4, 3);
@@ -349,7 +435,7 @@ public:
 
   void testBinIndexOf() {
     WorkspaceTester wkspace;
-    wkspace.initialize(1, 4, 2);
+    wkspace.initialize(1, 4, 3);
     // Data is all 1.0s
     wkspace.dataX(0)[1] = 2.0;
     wkspace.dataX(0)[2] = 3.0;
@@ -381,6 +467,47 @@ public:
     TS_ASSERT_THROWS(wkspace.binIndexOf(0.), std::out_of_range);
   }
 
+  void testBinIndexOfDescendingBinning() {
+    WorkspaceTester wkspace;
+    wkspace.initialize(1, 4, 3);
+
+    wkspace.dataX(0)[0] = 5.3;
+    wkspace.dataX(0)[1] = 4.3;
+    wkspace.dataX(0)[2] = 3.3;
+    wkspace.dataX(0)[3] = 2.3;
+
+    TS_ASSERT_EQUALS(wkspace.getNumberHistograms(), 1);
+
+    // First boundary
+    TS_ASSERT_EQUALS(wkspace.binIndexOf(5.3), 0)
+    // First bin
+    TS_ASSERT_EQUALS(wkspace.binIndexOf(5.2), 0);
+    // Bin boundary
+    TS_ASSERT_EQUALS(wkspace.binIndexOf(4.3), 0);
+    // Mid range
+    TS_ASSERT_EQUALS(wkspace.binIndexOf(3.8), 1);
+    // Still second bin
+    TS_ASSERT_EQUALS(wkspace.binIndexOf(std::nextafter(3.3, 10.0)), 1);
+    // Last bin
+    TS_ASSERT_EQUALS(wkspace.binIndexOf(3.1), 2);
+    // Last value
+    TS_ASSERT_EQUALS(wkspace.binIndexOf(2.3), 2);
+
+    // Error handling
+
+    // Bad index value
+    TS_ASSERT_THROWS(wkspace.binIndexOf(2.5, 1), std::out_of_range);
+    TS_ASSERT_THROWS(wkspace.binIndexOf(2.5, -1), std::out_of_range);
+
+    // Bad X values
+    TS_ASSERT_THROWS(wkspace.binIndexOf(std::nextafter(5.3, 10.0)),
+                     std::out_of_range);
+    TS_ASSERT_THROWS(wkspace.binIndexOf(5.4), std::out_of_range);
+    TS_ASSERT_THROWS(wkspace.binIndexOf(std::nextafter(2.3, 0.0)),
+                     std::out_of_range);
+    TS_ASSERT_THROWS(wkspace.binIndexOf(0.), std::out_of_range);
+  }
+
   void test_nexus_spectraMap() {
     NexusTestHelper th(true);
     th.createFile("MatrixWorkspaceTest.nxs");
@@ -388,126 +515,12 @@ public:
     std::vector<int> spec;
     for (int i = 0; i < 100; i++) {
       // Give some funny numbers, so it is not the default
-      ws->getSpectrum(size_t(i))->setSpectrumNo(i * 11);
-      ws->getSpectrum(size_t(i))->setDetectorID(99 - i);
+      ws->getSpectrum(size_t(i)).setSpectrumNo(i * 11);
+      ws->getSpectrum(size_t(i)).setDetectorID(99 - i);
       spec.push_back(i);
     }
     // Save that to the NXS file
     TS_ASSERT_THROWS_NOTHING(ws->saveSpectraMapNexus(th.file, spec););
-  }
-
-  void test_get_neighbours_exact() {
-    // Create a nearest neighbours product, which can be returned.
-    SpectrumDistanceMap map;
-    MockNearestNeighbours *product = new MockNearestNeighbours;
-    EXPECT_CALL(*product, neighbours(_)).WillRepeatedly(Return(map));
-    EXPECT_CALL(*product, die()).Times(1); // Created once and destroyed once!
-
-    // Create a factory, for generating the nearest neighbour products
-    MockNearestNeighboursFactory *factory = new MockNearestNeighboursFactory;
-    EXPECT_CALL(*factory, create(_, _, _, _))
-        .Times(1)
-        .WillOnce(Return(product));
-
-    WorkspaceTester wkspace(factory);
-    wkspace.initialize(1, 4, 3);
-    wkspace.getNeighboursExact(0, 1); // First call should construct nearest
-                                      // neighbours before calling ::neighbours
-    wkspace.getNeighboursExact(0, 1); // Second call should not construct
-                                      // nearest neighbours before calling
-                                      // ::neighbours
-  }
-
-  void test_get_neighbours_radius() {
-    // Create a nearest neighbours product, which can be returned.
-    SpectrumDistanceMap map;
-    MockNearestNeighbours *product = new MockNearestNeighbours;
-    EXPECT_CALL(*product, neighboursInRadius(_, _)).WillRepeatedly(Return(map));
-    EXPECT_CALL(*product, die()).Times(1); // Created once and destroyed once!
-
-    // Create a factory, for generating the nearest neighbour products
-    MockNearestNeighboursFactory *factory = new MockNearestNeighboursFactory;
-    EXPECT_CALL(*factory, create(_, _, _)).Times(1).WillOnce(Return(product));
-
-    WorkspaceTester wkspace(factory);
-    wkspace.initialize(1, 4, 3);
-    wkspace.getNeighbours(0, 1); // First call should construct nearest
-                                 // neighbours before calling ::neighbours
-    wkspace.getNeighbours(0, 1); // Second call should not construct nearest
-                                 // neighbours before calling ::neighbours
-  }
-
-  void test_reset_neighbours() {
-    // Create a nearest neighbours product, which can be returned.
-    SpectrumDistanceMap map;
-    MockNearestNeighbours *product = new MockNearestNeighbours;
-    EXPECT_CALL(*product, neighboursInRadius(_, _)).WillRepeatedly(Return(map));
-    EXPECT_CALL(*product, die())
-        .Times(1); // Should be explicitly called upon reset.
-
-    // Create a factory, for generating the nearest neighbour products
-    MockNearestNeighboursFactory *factory = new MockNearestNeighboursFactory;
-    EXPECT_CALL(*factory, create(_, _, _)).Times(1).WillOnce(Return(product));
-
-    WorkspaceTester wkspace(factory);
-    wkspace.initialize(1, 4, 3);
-    wkspace.getNeighbours(0, 1); // First call should construct nearest
-                                 // neighbours before calling ::neighbours
-    wkspace.rebuildNearestNeighbours(); // should cause die.
-
-    TSM_ASSERT("Nearest neigbhbours Factory has not been used as expected",
-               Mock::VerifyAndClearExpectations(factory));
-    TSM_ASSERT("Nearest neigbhbours Product has not been used as expected",
-               Mock::VerifyAndClearExpectations(product));
-  }
-
-  void test_rebuild_after_reset_neighbours() {
-    SpectrumDistanceMap mapA, mapB, mapC;
-
-    MockNearestNeighbours *productA = new MockNearestNeighbours;
-    EXPECT_CALL(*productA, neighboursInRadius(_, _))
-        .WillRepeatedly(Return(mapA));
-    EXPECT_CALL(*productA, die()).Times(1);
-
-    MockNearestNeighbours *productB = new MockNearestNeighbours;
-    EXPECT_CALL(*productB, neighboursInRadius(_, _))
-        .WillRepeatedly(Return(mapB));
-    EXPECT_CALL(*productB, die()).Times(1);
-
-    MockNearestNeighbours *productC = new MockNearestNeighbours;
-    EXPECT_CALL(*productC, neighboursInRadius(_, _))
-        .WillRepeatedly(Return(mapC));
-    EXPECT_CALL(*productC, die()).Times(1);
-
-    // Create a factory, for generating the nearest neighbour products
-    MockNearestNeighboursFactory *factory = new MockNearestNeighboursFactory;
-    EXPECT_CALL(*factory, create(_, _, _))
-        .Times(3)
-        .WillOnce(Return(productA))
-        .WillOnce(Return(productB))
-        .WillOnce(Return(productC));
-
-    WorkspaceTester wkspace(factory);
-    wkspace.initialize(1, 4, 3);
-    wkspace.getNeighbours(0, 1); // First call should construct nearest
-                                 // neighbours before calling ::neighbours
-    wkspace.rebuildNearestNeighbours(); // should cause die.
-    wkspace.getNeighbours(0, 1); // should cause creation for radius type call
-    wkspace.rebuildNearestNeighbours(); // should cause die.
-    wkspace.getNeighbours(
-        0, 1); // should cause creation for number of neighbours type call
-    wkspace.rebuildNearestNeighbours(); // should cause die. allows expectations
-                                        // to be checked, otherwise die called
-                                        // on nn destruction!
-
-    TSM_ASSERT("Nearest neigbhbours Factory has not been used as expected",
-               Mock::VerifyAndClearExpectations(factory));
-    TSM_ASSERT("Nearest neigbhbours ProductA has not been used as expected",
-               Mock::VerifyAndClearExpectations(productA));
-    TSM_ASSERT("Nearest neigbhbours ProductB has not been used as expected",
-               Mock::VerifyAndClearExpectations(productB));
-    TSM_ASSERT("Nearest neigbhbours ProductC has not been used as expected",
-               Mock::VerifyAndClearExpectations(productC));
   }
 
   /** Properly, this tests a method on Instrument, not MatrixWorkspace, but they
@@ -521,7 +534,7 @@ public:
     TS_ASSERT(!inst->isDetectorMasked(1));
     TS_ASSERT(!inst->isDetectorMasked(19));
     // Mask then check that it returns as masked
-    TS_ASSERT(ws->getSpectrum(19)->hasDetectorID(19));
+    TS_ASSERT(ws->getSpectrum(19).hasDetectorID(19));
     ws->maskWorkspaceIndex(19);
     TS_ASSERT(inst->isDetectorMasked(19));
   }
@@ -563,19 +576,17 @@ public:
     auto ws = makeWorkspaceWithDetectors(5, 1);
     TS_ASSERT_EQUALS(ws->hasGroupedDetectors(), false);
 
-    ws->getSpectrum(0)->addDetectorID(3);
+    ws->getSpectrum(0).addDetectorID(3);
     TS_ASSERT_EQUALS(ws->hasGroupedDetectors(), true);
   }
 
   void test_getSpectrumToWorkspaceIndexMap() {
     WorkspaceTester ws;
     ws.initialize(2, 1, 1);
-    const auto map = ws.getSpectrumToWorkspaceIndexMap();
+    auto map = ws.getSpectrumToWorkspaceIndexMap();
+    TS_ASSERT_EQUALS(0, map[1]);
+    TS_ASSERT_EQUALS(1, map[2]);
     TS_ASSERT_EQUALS(map.size(), 2);
-    TS_ASSERT_EQUALS(map.begin()->first, 1);
-    TS_ASSERT_EQUALS(map.begin()->second, 0);
-    TS_ASSERT_EQUALS(map.rbegin()->first, 2);
-    TS_ASSERT_EQUALS(map.rbegin()->second, 1);
 
     // Check it throws for non-spectra axis
     ws.replaceAxis(1, new NumericAxis(1));
@@ -593,7 +604,7 @@ public:
       TS_ASSERT_EQUALS(idmap[i], i);
     }
 
-    ws->getSpectrum(2)->addDetectorID(99); // Set a second ID on one spectrum
+    ws->getSpectrum(2).addDetectorID(99); // Set a second ID on one spectrum
     TS_ASSERT_THROWS(ws->getDetectorIDToWorkspaceIndexMap(true),
                      std::runtime_error);
     detid2index_map idmap2 = ws->getDetectorIDToWorkspaceIndexMap();
@@ -630,9 +641,9 @@ public:
       Detector *det = new Detector("pixel", detid, inst.get());
       inst->add(det);
       inst->markAsDetector(det);
-      ws->getSpectrum(i)->addDetectorID(detid);
+      ws->getSpectrum(i).addDetectorID(detid);
     }
-    ws->getSpectrum(66)->clearDetectorIDs();
+    ws->getSpectrum(66).clearDetectorIDs();
 
     TS_ASSERT_THROWS_NOTHING(
         out = ws->getDetectorIDToWorkspaceIndexVector(offset));
@@ -657,24 +668,34 @@ public:
     TS_ASSERT_EQUALS(out[99], 99);
   }
 
-  void test_getSignalAtCoord() {
-    WorkspaceTester ws;
-    // Matrix with 4 spectra, 5 bins each
-    ws.initialize(4, 6, 5);
-    for (size_t wi = 0; wi < 4; wi++)
-      for (size_t x = 0; x < 6; x++) {
-        ws.dataX(wi)[x] = double(x);
-        if (x < 5) {
-          ws.dataY(wi)[x] = double(wi * 10 + x);
-          ws.dataE(wi)[x] = double((wi * 10 + x) * 2);
-        }
-      }
-    coord_t coords[2] = {0.5, 1.0};
-    TS_ASSERT_DELTA(ws.getSignalAtCoord(coords, Mantid::API::NoNormalization),
-                    0.0, 1e-5);
+  void test_getSignalAtCoord_histoData() {
+    // Create a test workspace
+    const auto ws = createTestWorkspace(4, 6, 5);
+
+    // Get signal at coordinates
+    std::vector<coord_t> coords = {0.5, 1.0};
+    TS_ASSERT_DELTA(
+        ws.getSignalAtCoord(coords.data(), Mantid::API::NoNormalization), 0.0,
+        1e-5);
     coords[0] = 1.5;
-    TS_ASSERT_DELTA(ws.getSignalAtCoord(coords, Mantid::API::NoNormalization),
-                    1.0, 1e-5);
+    TS_ASSERT_DELTA(
+        ws.getSignalAtCoord(coords.data(), Mantid::API::NoNormalization), 1.0,
+        1e-5);
+  }
+
+  void test_getSignalAtCoord_pointData() {
+    // Create a test workspace
+    const auto ws = createTestWorkspace(4, 5, 5);
+
+    // Get signal at coordinates
+    std::vector<coord_t> coords = {0.0, 1.0};
+    TS_ASSERT_DELTA(
+        ws.getSignalAtCoord(coords.data(), Mantid::API::NoNormalization), 0.0,
+        1e-5);
+    coords[0] = 1.0;
+    TS_ASSERT_DELTA(
+        ws.getSignalAtCoord(coords.data(), Mantid::API::NoNormalization), 1.0,
+        1e-5);
   }
 
   void test_getCoordAtSignal_regression() {
@@ -1265,7 +1286,7 @@ public:
   */
   void testGetProperty_const_sptr() {
     const std::string wsName = "InputWorkspace";
-    MatrixWorkspace_sptr wsInput(new WorkspaceTester());
+    MatrixWorkspace_sptr wsInput = boost::make_shared<WorkspaceTester>();
     PropertyManagerHelper manager;
     manager.declareProperty(wsName, wsInput, Direction::Input);
 
@@ -1291,24 +1312,124 @@ public:
     TS_ASSERT_EQUALS(wsCastConst, wsCastNonConst);
   }
 
-private:
-  Mantid::API::MantidImage_sptr createImage(size_t width, size_t height) {
-    auto image = new Mantid::API::MantidImage(height);
-    double value = 1.0;
-    for (auto row = image->begin(); row != image->end(); ++row) {
-      row->resize(width);
-      for (auto pixel = row->begin(); pixel != row->end();
-           ++pixel, value += 1.0) {
-        *pixel = value;
-      }
+  void test_x_uncertainty_can_be_set() {
+    // Arrange
+    WorkspaceTester ws;
+    const size_t numspec = 4;
+    const size_t j = 3;
+    const size_t k = j;
+    ws.init(numspec, j, k);
+
+    double values[3] = {10, 11, 17};
+    size_t workspaceIndexWithDx[3] = {0, 1, 2};
+
+    Mantid::MantidVec dxSpec0(j, values[0]);
+    auto dxSpec1 =
+        Kernel::make_cow<Mantid::HistogramData::HistogramDx>(j, values[1]);
+    auto dxSpec2 = boost::make_shared<Mantid::HistogramData::HistogramDx>(
+        Mantid::MantidVec(j, values[2]));
+
+    // Act
+    for (size_t spec = 0; spec < numspec; ++spec) {
+      TSM_ASSERT("Should not have any x resolution values", !ws.hasDx(spec));
     }
-    return Mantid::API::MantidImage_sptr(image);
+    ws.dataDx(workspaceIndexWithDx[0]) = dxSpec0;
+    ws.setSharedDx(workspaceIndexWithDx[1], dxSpec1);
+    ws.setSharedDx(workspaceIndexWithDx[2], dxSpec2);
+
+    // Assert
+    auto compareValue =
+        [&values](double data, size_t index) { return data == values[index]; };
+    for (auto &index : workspaceIndexWithDx) {
+      TSM_ASSERT("Should have x resolution values", ws.hasDx(index));
+      TSM_ASSERT_EQUALS("Should have a length of 3", ws.dataDx(index).size(),
+                        j);
+      auto compareValueForSpecificWorkspaceIndex =
+          std::bind(compareValue, std::placeholders::_1, index);
+
+      auto &dataDx = ws.dataDx(index);
+      TSM_ASSERT("dataDx should allow access to the spectrum",
+                 std::all_of(std::begin(dataDx), std::end(dataDx),
+                             compareValueForSpecificWorkspaceIndex));
+
+      auto &readDx = ws.readDx(index);
+      TSM_ASSERT("readDx should allow access to the spectrum",
+                 std::all_of(std::begin(readDx), std::end(readDx),
+                             compareValueForSpecificWorkspaceIndex));
+
+      auto refDx = ws.sharedDx(index);
+      TSM_ASSERT("readDx should allow access to the spectrum",
+                 std::all_of(std::begin(*refDx), std::end(*refDx),
+                             compareValueForSpecificWorkspaceIndex));
+    }
+
+    TSM_ASSERT("Should not have any x resolution values", !ws.hasDx(3));
+  }
+
+private:
+  Mantid::API::MantidImage_sptr createImage(const size_t width,
+                                            const size_t height) {
+    auto image =
+        boost::make_shared<Mantid::API::MantidImage>(height, MantidVec(width));
+    double startingValue = 1.0;
+    for (auto &row : *image) {
+      std::iota(row.begin(), row.end(), startingValue);
+      startingValue += static_cast<double>(width);
+    }
+    return image;
+  }
+
+  /**
+   * Create a test workspace. Can be histo or points depending on x/yLength.
+   * @param nVectors :: [input] Number of vectors
+   * @param xLength :: [input] Length of X vector
+   * @param yLength :: [input] Length of Y, E vectors
+   * @returns :: workspace
+   */
+  WorkspaceTester createTestWorkspace(size_t nVectors, size_t xLength,
+                                      size_t yLength) {
+    WorkspaceTester ws;
+    ws.initialize(nVectors, xLength, yLength);
+    // X data
+    std::vector<double> xData(xLength);
+    std::iota(xData.begin(), xData.end(), 0.0);
+
+    // Y data
+    const auto yCounts = [&yLength](size_t wi) {
+      std::vector<double> v(yLength);
+      std::iota(v.begin(), v.end(), static_cast<double>(wi) * 10.0);
+      return v;
+    };
+
+    // E data
+    const auto errors = [&yLength](size_t wi) {
+      std::vector<double> v(yLength);
+      std::generate(v.begin(), v.end(), [&wi]() {
+        return std::sqrt(static_cast<double>(wi) * 10.0);
+      });
+      return v;
+    };
+
+    for (size_t wi = 0; wi < nVectors; ++wi) {
+      if (xLength == yLength) {
+        ws.setPoints(wi, xData);
+      } else if (xLength == yLength + 1) {
+        ws.setBinEdges(wi, xData);
+      } else {
+        throw std::invalid_argument(
+            "yLength must either be equal to xLength or xLength - 1");
+      }
+      ws.setCounts(wi, yCounts(wi));
+      ws.setCountStandardDeviations(wi, errors(wi));
+    }
+    return ws;
   }
 
   boost::shared_ptr<MatrixWorkspace> ws;
 };
 
 class MatrixWorkspaceTestPerformance : public CxxTest::TestSuite {
+
 public:
   static MatrixWorkspaceTestPerformance *createSuite() {
     return new MatrixWorkspaceTestPerformance();
@@ -1317,7 +1438,9 @@ public:
     delete suite;
   }
 
-  MatrixWorkspaceTestPerformance() : m_workspace(nullptr) {
+  MatrixWorkspaceTestPerformance() : m_workspace() {
+    using namespace Mantid::Geometry;
+
     size_t numberOfHistograms = 10000;
     size_t numberOfBins = 1;
     m_workspace.init(numberOfHistograms, numberOfBins, numberOfBins - 1);
@@ -1326,8 +1449,33 @@ public:
     const std::string instrumentName("SimpleFakeInstrument");
     InstrumentCreationHelper::addFullInstrumentToWorkspace(
         m_workspace, includeMonitors, startYNegative, instrumentName);
-  }
 
+    Mantid::Kernel::V3D sourcePos(0, 0, 0);
+    Mantid::Kernel::V3D samplePos(0, 0, 1);
+    Mantid::Kernel::V3D trolley1Pos(0, 0, 3);
+    Mantid::Kernel::V3D trolley2Pos(0, 0, 6);
+    m_paramMap = boost::make_shared<Mantid::Geometry::ParameterMap>();
+
+    auto baseInstrument = ComponentCreationHelper::sansInstrument(
+        sourcePos, samplePos, trolley1Pos, trolley2Pos);
+
+    auto sansInstrument =
+        boost::make_shared<Instrument>(baseInstrument, m_paramMap);
+
+    // See component creation helper for instrument definition
+    m_sansBank = sansInstrument->getComponentByName("Bank1");
+
+    numberOfHistograms = sansInstrument->getNumberDetectors();
+    m_workspaceSans.init(numberOfHistograms, numberOfBins, numberOfBins - 1);
+    m_workspaceSans.setInstrument(sansInstrument);
+    m_workspaceSans.getAxis(0)->setUnit("TOF");
+    m_workspaceSans.rebuildSpectraMapping();
+
+    m_zRotation =
+        Mantid::Kernel::Quat(180, V3D(0, 0, 1)); // rotate 180 degrees around z
+
+    m_pos = Mantid::Kernel::V3D(1, 1, 1);
+  }
   /// This test is equivalent to GeometryInfoFactoryTestPerformance, see there.
   void test_typical() {
     auto instrument = m_workspace.getInstrument();
@@ -1339,14 +1487,146 @@ public:
       auto detector = m_workspace.getDetector(i);
       result += L1;
       result += detector->getDistance(*sample);
-      result += m_workspace.detectorTwoTheta(detector);
+      result += m_workspace.detectorTwoTheta(*detector);
     }
-    // We are computing an using the result to fool the optimizer.
+    // We are computing and using the result to fool the optimizer.
     TS_ASSERT_DELTA(result, 5214709.740869, 1e-6);
+  }
+
+  void test_calculateL2() {
+
+    /*
+     * Simulate the L2 calculation performed via the Workspace/Instrument
+     * interface.
+     */
+    auto instrument = m_workspaceSans.getInstrument();
+    auto sample = instrument->getSample();
+    double l2 = 0;
+    for (size_t i = 0; i < m_workspaceSans.getNumberHistograms(); ++i) {
+      auto detector = m_workspaceSans.getDetector(i);
+      l2 += detector->getDistance(*sample);
+    }
+    // Prevent optimization
+    TS_ASSERT(l2 > 0);
+  }
+
+  void test_calculateL2_x10() {
+
+    /*
+     * Simulate the L2 calculation performed via the Workspace/Instrument
+     * interface. Repeat several times to benchmark any caching/optmisation that
+     * might be taken place in parameter maps.
+     */
+    auto instrument = m_workspaceSans.getInstrument();
+    auto sample = instrument->getSample();
+    double l2 = 0;
+    int count = 0;
+    while (count < 10) {
+      for (size_t i = 0; i < m_workspaceSans.getNumberHistograms(); ++i) {
+        auto detector = m_workspaceSans.getDetector(i);
+        l2 += detector->getDistance(*sample);
+      }
+      ++count;
+    }
+    // Prevent optimization
+    TS_ASSERT(l2 > 0);
+  }
+
+  /*
+   * Rotate a bank in the workspace and read the positions out again. Very
+   * typical.
+   */
+  void test_rotate_bank_and_read_positions_x10() {
+
+    using namespace Mantid::Geometry;
+    using namespace Mantid::Kernel;
+
+    int count = 0;
+    // Repeated execution to improve statistics and for comparison purposes with
+    // future updates
+    while (count < 10) {
+      // Rotate the bank
+      ComponentHelper::rotateComponent(
+          *m_sansBank, *m_paramMap, m_zRotation,
+          Mantid::Geometry::ComponentHelper::Relative);
+
+      V3D pos;
+      for (size_t i = 1; i < m_workspaceSans.getNumberHistograms(); ++i) {
+        pos += m_workspaceSans.getDetector(i)->getPos();
+      }
+      ++count;
+    }
+  }
+
+  /*
+   * Move a bank in the workspace and read the positions out again. Very
+   * typical.
+   */
+  void test_move_bank_and_read_positions_x10() {
+
+    using namespace Mantid::Geometry;
+    using namespace Mantid::Kernel;
+
+    int count = 0;
+    // Repeated execution to improve statistics and for comparison purposes with
+    // future updates
+    while (count < 10) {
+      // move the bank
+      ComponentHelper::moveComponent(
+          *m_sansBank, *m_paramMap, m_pos,
+          Mantid::Geometry::ComponentHelper::Relative);
+
+      V3D pos;
+      for (size_t i = 1; i < m_workspaceSans.getNumberHistograms(); ++i) {
+        pos += m_workspaceSans.getDetector(i)->getPos();
+      }
+      ++count;
+    }
+  }
+
+  // As test_rotate_bank_and_read_positions_x10 but based on SpectrumInfo.
+  void test_rotate_bank_and_read_positions_SpectrumInfo_x10() {
+    int count = 0;
+    while (count < 10) {
+      // Rotate the bank
+      ComponentHelper::rotateComponent(
+          *m_sansBank, *m_paramMap, m_zRotation,
+          Mantid::Geometry::ComponentHelper::Relative);
+
+      V3D pos;
+      const auto &spectrumInfo = m_workspaceSans.spectrumInfo();
+      for (size_t i = 1; i < m_workspaceSans.getNumberHistograms(); ++i) {
+        pos += spectrumInfo.position(i);
+      }
+      ++count;
+    }
+  }
+
+  // As test_move_bank_and_read_positions_x10 but based on SpectrumInfo.
+  void test_move_bank_and_read_positions_SpectrumInfo_x10() {
+    int count = 0;
+    while (count < 10) {
+      // move the bank
+      ComponentHelper::moveComponent(
+          *m_sansBank, *m_paramMap, m_pos,
+          Mantid::Geometry::ComponentHelper::Relative);
+
+      V3D pos;
+      const auto &spectrumInfo = m_workspaceSans.spectrumInfo();
+      for (size_t i = 1; i < m_workspaceSans.getNumberHistograms(); ++i) {
+        pos += spectrumInfo.position(i);
+      }
+      ++count;
+    }
   }
 
 private:
   WorkspaceTester m_workspace;
+  WorkspaceTester m_workspaceSans;
+  Mantid::Kernel::Quat m_zRotation;
+  Mantid::Kernel::V3D m_pos;
+  Mantid::Geometry::IComponent_const_sptr m_sansBank;
+  boost::shared_ptr<Mantid::Geometry::ParameterMap> m_paramMap;
 };
 
 #endif /*WORKSPACETEST_H_*/

@@ -2,6 +2,7 @@
 
 #include "MantidKernel/ConfigService.h"
 #include "MantidKernel/FacilityInfo.h"
+#include "MantidKernel/VectorHelper.h"
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/FileFinder.h"
 #include "MantidAPI/FileProperty.h"
@@ -173,7 +174,7 @@ void FindFilesThread::getFilesFromAlgorithm() {
     std::vector<std::vector<std::string>> filenames =
         algorithm->getProperty(propName);
     std::vector<std::string> flattenedNames =
-        MultipleFileProperty::flattenFileNames(filenames);
+        VectorHelper::flattenVector(filenames);
 
     for (auto filename = flattenedNames.begin();
          filename != flattenedNames.end(); ++filename) {
@@ -248,8 +249,7 @@ MWRunFiles::MWRunFiles(QWidget *parent)
     QStringList dataDirs =
         QString::fromStdString(
             Mantid::Kernel::ConfigService::Instance().getString(
-                "datasearch.directories"))
-            .split(";", QString::SkipEmptyParts);
+                "datasearch.directories")).split(";", QString::SkipEmptyParts);
 
     if (!dataDirs.isEmpty())
       m_lastDir = dataDirs[0];
@@ -736,11 +736,13 @@ void MWRunFiles::findFiles() {
       // Regex to match a selection of run numbers as defined here:
       // mantidproject.org/MultiFileLoading
       // Also allowing spaces between delimiters as this seems to work fine
-      boost::regex runNumbers("([0-9]+)([:+-] ?[0-9]+)? ?(:[0-9]+)?",
-                              boost::regex::extended);
+      const std::string runNumberString =
+          "([0-9]+)([:+-] ?[0-9]+)? ?(:[0-9]+)?";
+      boost::regex runNumbers(runNumberString, boost::regex::extended);
       // Regex to match a list of run numbers delimited by commas
-      boost::regex runNumberList("([0-9]+)(, ?[0-9]+)*",
-                                 boost::regex::extended);
+      const std::string runListString =
+          "(" + runNumberString + ")(, ?(" + runNumberString + "))*";
+      boost::regex runNumberList(runListString, boost::regex::extended);
 
       // See if we can just prepend the instrument and be done
       if (boost::regex_match(searchText.toStdString(), runNumbers)) {
@@ -793,6 +795,7 @@ void MWRunFiles::inspectThreadResult() {
 
   if (!error.empty()) {
     setFileProblem(QString::fromStdString(error));
+    emit fileInspectionFinished();
     return;
   }
 
@@ -810,6 +813,8 @@ void MWRunFiles::inspectThreadResult() {
   } else {
     setFileProblem("");
   }
+
+  emit fileInspectionFinished();
 
   // Only emit the signal if file(s) were found
   if (!m_foundFiles.isEmpty())
@@ -832,8 +837,7 @@ void MWRunFiles::readSettings(const QString &group) {
     QStringList datadirs =
         QString::fromStdString(
             Mantid::Kernel::ConfigService::Instance().getString(
-                "datasearch.directories"))
-            .split(";", QString::SkipEmptyParts);
+                "datasearch.directories")).split(";", QString::SkipEmptyParts);
     if (!datadirs.isEmpty())
       m_lastDir = datadirs[0];
   }
@@ -866,7 +870,7 @@ QString MWRunFiles::createFileFilter() {
     }
   }
 
-  QString allFiles("All Files (*.*)");
+  QString allFiles("All Files (*)");
   if (!fileExts.isEmpty()) {
 
     // The list may contain upper and lower cased versions, ensure these are on

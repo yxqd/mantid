@@ -8,6 +8,8 @@
 #include "MantidAPI/IEventWorkspace.h"
 #include "MantidAPI/IMDWorkspace.h"
 #include "MantidAPI/IPeaksWorkspace.h"
+#include "MantidAPI/Run.h"
+#include "MantidAPI/Sample.h"
 #include "MantidGeometry/Crystal/IPeak.h"
 #include "MantidGeometry/Crystal/OrientedLattice.h"
 #include "MantidKernel/EmptyValues.h"
@@ -153,14 +155,31 @@ bool MantidEVWorker::loadAndConvertToMD(
   try {
     IAlgorithm_sptr alg;
     if (load_data) {
+      bool topaz = false;
+      // Limits and filtering only done for topaz
+      if (file_name.find("TOPAZ") != std::string::npos)
+        topaz = true;
       IAlgorithm_sptr alg = AlgorithmManager::Instance().create("Load");
       alg->setProperty("Filename", file_name);
       alg->setProperty("OutputWorkspace", ev_ws_name);
-      alg->setProperty("Precount", true);
+      if (topaz) {
+        alg->setProperty("FilterByTofMin", 500.0);
+        alg->setProperty("FilterByTofMax", 16666.0);
+      }
       alg->setProperty("LoadMonitors", true);
 
       if (!alg->execute())
         return false;
+
+      if (topaz) {
+        alg = AlgorithmManager::Instance().create("FilterBadPulses");
+        alg->setProperty("InputWorkspace", ev_ws_name);
+        alg->setProperty("OutputWorkspace", ev_ws_name);
+        alg->setProperty("LowerCutoff", 25.0);
+
+        if (!alg->execute())
+          return false;
+      }
 
       if (load_det_cal) {
         alg = AlgorithmManager::Instance().create("LoadIsawDetCal");
@@ -202,11 +221,10 @@ bool MantidEVWorker::loadAndConvertToMD(
     if (!alg->execute())
       return false;
   } catch (std::exception &e) {
-    g_log.error() << "Error:" << e.what() << std::endl;
+    g_log.error() << "Error:" << e.what() << '\n';
     return false;
   } catch (...) {
-    g_log.error() << "Error: Could Not load file and convert to MD"
-                  << std::endl;
+    g_log.error() << "Error: Could Not load file and convert to MD\n";
     return false;
   }
   return true;
@@ -314,10 +332,10 @@ bool MantidEVWorker::findPeaks(const std::string &ev_ws_name,
       return true;
     }
   } catch (std::exception &e) {
-    g_log.error() << "Error:" << e.what() << std::endl;
+    g_log.error() << "Error:" << e.what() << '\n';
     return false;
   } catch (...) {
-    g_log.error() << "Error: Could Not findPeaks" << std::endl;
+    g_log.error() << "Error: Could Not findPeaks\n";
     return false;
   }
   return false;
@@ -353,10 +371,10 @@ bool MantidEVWorker::predictPeaks(const std::string &peaks_ws_name,
     if (alg->execute())
       return true;
   } catch (std::exception &e) {
-    g_log.error() << "Error:" << e.what() << std::endl;
+    g_log.error() << "Error:" << e.what() << '\n';
     return false;
   } catch (...) {
-    g_log.error() << "Error: Could Not predictPeaks" << std::endl;
+    g_log.error() << "Error: Could Not predictPeaks\n";
     return false;
   }
   return false;
@@ -752,6 +770,13 @@ bool MantidEVWorker::changeHKL(const std::string &peaks_ws_name,
  *                                    that is background.
  *  @param cylinder_profile_fit       The fitting function for cylinder
  *                                    integration.
+ *  @param adaptiveQBkg                Default is false.   If true,
+ *            BackgroundOuterRadius + AdaptiveQMultiplier *|Q|
+ *            BackgroundInnerRadius + AdaptiveQMultiplier *|Q|
+ *  @param adaptiveQMult       Default is 0.
+ *                PeakRadius + AdaptiveQMultiplier * |Q|
+ *                so each peak has a
+ *                different integration radius.  Q includes the 2*pi factor.
  *
  *  @return true if the unweighted workspace was successfully created and
  *          integrated using IntegratePeaksMD.
@@ -760,7 +785,8 @@ bool MantidEVWorker::sphereIntegrate(
     const std::string &peaks_ws_name, const std::string &event_ws_name,
     double peak_radius, double inner_radius, double outer_radius,
     bool integrate_edge, bool use_cylinder_integration, double cylinder_length,
-    double cylinder_percent_bkg, const std::string &cylinder_profile_fit) {
+    double cylinder_percent_bkg, const std::string &cylinder_profile_fit,
+    bool adaptiveQBkg, double adaptiveQMult) {
   try {
     if (!isPeaksWorkspace(peaks_ws_name))
       return false;
@@ -786,10 +812,10 @@ bool MantidEVWorker::sphereIntegrate(
     alg->setProperty("SplitThreshold", 200);
     alg->setProperty("MaxRecursionDepth", 10);
     alg->setProperty("MinRecursionDepth", 7);
-    std::cout << "Making temporary MD workspace" << std::endl;
+    std::cout << "Making temporary MD workspace\n";
     if (!alg->execute())
       return false;
-    std::cout << "Made temporary MD workspace...OK" << std::endl;
+    std::cout << "Made temporary MD workspace...OK\n";
 
     alg = AlgorithmManager::Instance().create("IntegratePeaksMD");
     alg->setProperty("InputWorkspace", temp_MD_ws_name);
@@ -804,27 +830,27 @@ bool MantidEVWorker::sphereIntegrate(
     alg->setProperty("CylinderLength", cylinder_length);
     alg->setProperty("PercentBackground", cylinder_percent_bkg);
     alg->setProperty("ProfileFunction", cylinder_profile_fit);
-
-    std::cout << "Integrating temporary MD workspace" << std::endl;
+    alg->setProperty("AdaptiveQBackground", adaptiveQBkg);
+    alg->setProperty("AdaptiveQMultiplier", adaptiveQMult);
+    std::cout << "Integrating temporary MD workspace\n";
 
     bool integrate_OK = alg->execute();
     auto &ADS = AnalysisDataService::Instance();
-    std::cout << "Removing temporary MD workspace" << std::endl;
+    std::cout << "Removing temporary MD workspace\n";
     ADS.remove(temp_MD_ws_name);
 
     if (integrate_OK) {
-      std::cout << "Integrated temporary MD workspace...OK" << std::endl;
+      std::cout << "Integrated temporary MD workspace...OK\n";
       return true;
     }
 
-    std::cout << "Integrated temporary MD workspace FAILED" << std::endl;
+    std::cout << "Integrated temporary MD workspace FAILED\n";
     return false;
   } catch (std::exception &e) {
-    g_log.error() << "Error:" << e.what() << std::endl;
+    g_log.error() << "Error:" << e.what() << '\n';
     return false;
   } catch (...) {
-    g_log.error() << "Error: Could Not Integrated temporary MD workspace"
-                  << std::endl;
+    g_log.error() << "Error: Could Not Integrated temporary MD workspace\n";
     return false;
   }
 }
@@ -868,7 +894,7 @@ bool MantidEVWorker::fitIntegrate(const std::string &peaks_ws_name,
     alg->setProperty("Params", rebin_param_str);
     alg->setProperty("PreserveEvents", true);
 
-    std::cout << "Rebinning event workspace" << std::endl;
+    std::cout << "Rebinning event workspace\n";
     if (!alg->execute())
       return false;
 
@@ -880,25 +906,24 @@ bool MantidEVWorker::fitIntegrate(const std::string &peaks_ws_name,
     alg->setProperty("MatchingRunNo", true);
     alg->setProperty("NBadEdgePixels", (int)n_bad_edge_pix);
 
-    std::cout << "Integrating temporary Rebinned workspace" << std::endl;
+    std::cout << "Integrating temporary Rebinned workspace\n";
 
     bool integrate_OK = alg->execute();
     auto &ADS = AnalysisDataService::Instance();
-    std::cout << "Removing temporary Rebinned workspace" << std::endl;
+    std::cout << "Removing temporary Rebinned workspace\n";
     ADS.remove(temp_FIT_ws_name);
 
     if (integrate_OK) {
-      std::cout << "Integrated temporary FIT workspace...OK" << std::endl;
+      std::cout << "Integrated temporary FIT workspace...OK\n";
       return true;
     }
 
-    std::cout << "Integrated temporary FIT workspace FAILED" << std::endl;
+    std::cout << "Integrated temporary FIT workspace FAILED\n";
   } catch (std::exception &e) {
-    g_log.error() << "Error:" << e.what() << std::endl;
+    g_log.error() << "Error:" << e.what() << '\n';
     return false;
   } catch (...) {
-    g_log.error() << "Error: Could Not Integrated temporary FIT workspace"
-                  << std::endl;
+    g_log.error() << "Error: Could Not Integrated temporary FIT workspace\n";
     return false;
   }
   return false;
@@ -947,19 +972,19 @@ bool MantidEVWorker::ellipsoidIntegrate(const std::string &peaks_ws_name,
     alg->setProperty("BackgroundOuterSize", outer_size);
     alg->setProperty("OutputWorkspace", peaks_ws_name);
 
-    std::cout << "Running IntegrateEllipsoids" << std::endl;
+    std::cout << "Running IntegrateEllipsoids\n";
 
     if (alg->execute()) {
-      std::cout << "IntegrateEllipsoids Executed OK" << std::endl;
+      std::cout << "IntegrateEllipsoids Executed OK\n";
       return true;
     }
 
-    std::cout << "IntegrateEllipsoids FAILED" << std::endl;
+    std::cout << "IntegrateEllipsoids FAILED\n";
   } catch (std::exception &e) {
-    g_log.error() << "Error:" << e.what() << std::endl;
+    g_log.error() << "Error:" << e.what() << '\n';
     return false;
   } catch (...) {
-    g_log.error() << "Error: Could Not IntegratedEllipsoids" << std::endl;
+    g_log.error() << "Error: Could Not IntegratedEllipsoids\n";
     return false;
   }
   return false;
@@ -990,19 +1015,17 @@ bool MantidEVWorker::showUB(const std::string &peaks_ws_name) {
         peaks_ws->mutableSample().getOrientedLattice();
     Matrix<double> UB = o_lattice.getUB();
 
-    g_log.notice() << std::endl;
-    g_log.notice() << "Mantid UB = " << std::endl;
+    g_log.notice() << '\n';
+    g_log.notice() << "Mantid UB = \n";
     sprintf(logInfo, std::string(" %12.8f %12.8f %12.8f\n %12.8f %12.8f "
-                                 "%12.8f\n %12.8f %12.8f %12.8f\n")
-                         .c_str(),
+                                 "%12.8f\n %12.8f %12.8f %12.8f\n").c_str(),
             UB[0][0], UB[0][1], UB[0][2], UB[1][0], UB[1][1], UB[1][2],
             UB[2][0], UB[2][1], UB[2][2]);
     g_log.notice(std::string(logInfo));
 
-    g_log.notice() << "ISAW UB = " << std::endl;
+    g_log.notice() << "ISAW UB = \n";
     sprintf(logInfo, std::string(" %12.8f %12.8f %12.8f\n %12.8f %12.8f "
-                                 "%12.8f\n %12.8f %12.8f %12.8f\n")
-                         .c_str(),
+                                 "%12.8f\n %12.8f %12.8f %12.8f\n").c_str(),
             UB[2][0], UB[0][0], UB[1][0], UB[2][1], UB[0][1], UB[1][1],
             UB[2][2], UB[0][2], UB[1][2]);
     g_log.notice(std::string(logInfo));
@@ -1094,9 +1117,7 @@ bool MantidEVWorker::getUB(const std::string &peaks_ws_name, bool lab_coords,
  */
 bool MantidEVWorker::copyLattice(const std::string &peaks_ws_name,
                                  const std::string &md_ws_name,
-                                 const std::string &event_ws_name)
-
-{
+                                 const std::string &event_ws_name) {
   // fail if peaks workspace is not there
   if (!isPeaksWorkspace(peaks_ws_name)) {
     return false;

@@ -2,14 +2,14 @@
 #define MANTID_CUSTOMINTERFACES_REFLLEGACYTRANSFERSTRATEGYTEST_H
 
 #include <cxxtest/TestSuite.h>
+#include <gmock/gmock.h>
 #include <map>
 #include <string>
 #include <vector>
-#include <gmock/gmock.h>
 
 #include "MantidQtCustomInterfaces/Reflectometry/ReflLegacyTransferStrategy.h"
 #include "MantidQtCustomInterfaces/Reflectometry/ReflTableSchema.h"
-#include "ReflMainViewMockObjects.h"
+#include "ReflMockObjects.h"
 
 using namespace MantidQt::CustomInterfaces;
 using namespace testing;

@@ -9,6 +9,14 @@
 #include "MantidKernel/IPropertyManager.h"
 
 namespace Mantid {
+namespace HistogramData {
+class BinEdges;
+class CountStandardDeviations;
+class Counts;
+}
+}
+
+namespace Mantid {
 namespace Algorithms {
 /** Normalizes a 2D workspace by a specified monitor spectrum. By default ,the
     normalization is done bin-by-bin following this formula:
@@ -71,8 +79,6 @@ namespace Algorithms {
 */
 class DLLExport NormaliseToMonitor : public API::Algorithm {
 public:
-  NormaliseToMonitor();
-  ~NormaliseToMonitor() override;
   /// Algorithm's name for identification overriding a virtual method
   const std::string name() const override { return "NormaliseToMonitor"; }
   /// Summary of algorithms purpose
@@ -113,18 +119,19 @@ protected: // for testing
 
   void normaliseBinByBin(const API::MatrixWorkspace_sptr &inputWorkspace,
                          API::MatrixWorkspace_sptr &outputWorkspace);
-  void normalisationFactor(const MantidVec &X, MantidVec *Y, MantidVec *E);
-  //
+  void normalisationFactor(const HistogramData::BinEdges &X,
+                           HistogramData::Counts &Y,
+                           HistogramData::CountStandardDeviations &E);
 
 private:
   /// A single spectrum workspace containing the monitor
   API::MatrixWorkspace_sptr m_monitor;
   /// Whether the input workspace has common bins
-  bool m_commonBins;
+  bool m_commonBins = false;
   /// The lower bound of the integration range
-  double m_integrationMin;
+  double m_integrationMin = EMPTY_DBL();
   /// The upper bound of the integration range
-  double m_integrationMax;
+  double m_integrationMax = EMPTY_DBL();
 };
 
 // the internal class to verify and modify interconnected properties affecting
@@ -150,7 +157,6 @@ public:
   IPropertySettings *clone() override {
     return new MonIDPropChanger(hostWSname, SpectraNum, MonitorWorkspaceProp);
   }
-  ~MonIDPropChanger() override{};
 
 private:
   // the name of the property, which specifies the workspace which has to be

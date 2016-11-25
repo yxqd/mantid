@@ -11,14 +11,11 @@
 
 class pqMultiSliceView;
 
-namespace Mantid
-{
-namespace Vates
-{
-namespace SimpleGui
-{
+namespace Mantid {
+namespace Vates {
+namespace SimpleGui {
 
-  class RebinnedSourcesManager;
+class RebinnedSourcesManager;
 /**
  *
   This class uses the MultiSliceView created by Kitware based on our
@@ -26,7 +23,8 @@ namespace SimpleGui
 
   @date 24/05/2011
 
-  Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
+  Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge
+ National Laboratory & European Spallation Source
 
   This file is part of Mantid.
 
@@ -46,8 +44,8 @@ namespace SimpleGui
   File change history is stored at: <https://github.com/mantidproject/mantid>
   Code Documentation is available at: <http://doxygen.mantidproject.org>
  */
-class EXPORT_OPT_MANTIDVATES_SIMPLEGUI_VIEWWIDGETS MultiSliceView : public ViewBase
-{
+class EXPORT_OPT_MANTIDVATES_SIMPLEGUI_VIEWWIDGETS MultiSliceView
+    : public ViewBase {
   Q_OBJECT
 
 public:
@@ -55,8 +53,11 @@ public:
    * Default constructor.
    * @param parent the parent widget of the multislice view widget
    * @param rebinnedSourcesManager Pointer to a RebinnedSourcesManager
+   * @param createRenderProxy :: Whether to create a render proxy for this view
    */
-  MultiSliceView(QWidget *parent = 0, RebinnedSourcesManager* rebinnedSourcesManager = 0);
+  MultiSliceView(QWidget *parent = 0,
+                 RebinnedSourcesManager *rebinnedSourcesManager = 0,
+                 bool createRenderProxy = true);
   /// Default constructor.
   ~MultiSliceView() override;
 
@@ -85,13 +86,18 @@ public:
    */
   void resetDisplay() override;
 
+  /// @see ViewBase::setView
+  void setView(pqRenderView *view) override;
+  /// @see ViewBase::getViewType
+  ModeControlWidget::Views getViewType() override;
+
 protected slots:
   /// Determine if slice is to be shown in SliceViewer.
-  void checkSliceClicked(int axisIndex, double sliceOffsetOnAxis,
-                         int button, int modifier);
+  void checkSliceClicked(int axisIndex, double sliceOffsetOnAxis, int button,
+                         int modifier);
   /// Launch SliceViewer with the specified cut.
   void showCutInSliceViewer(int axisIndex, double sliceOffsetOnAxis);
-  
+
   //// changes the slice point in VATES.
   void changedSlicePoint(Mantid::Kernel::VMD selectedPoint);
 
@@ -104,9 +110,8 @@ private:
   void setupData();
 
   QPointer<pqMultiSliceView> m_mainView; ///< The main view class
-  Ui::MultiSliceViewClass m_ui; ///< The view's UI form
+  Ui::MultiSliceViewClass m_ui;          ///< The view's UI form
 };
-
 }
 }
 }

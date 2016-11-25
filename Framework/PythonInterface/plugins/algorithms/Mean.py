@@ -1,4 +1,5 @@
 #pylint: disable=no-init,invalid-name
+from __future__ import (absolute_import, division, print_function)
 from mantid.simpleapi import *
 from mantid.api import *
 from mantid.kernel import *
@@ -9,14 +10,11 @@ class Mean(PythonAlgorithm):
     def category(self):
         return "Arithmetic"
 
-
     def name(self):
         return "Mean"
 
-
     def summary(self):
         return "Calculates the arithemetic mean of the workspaces provided."
-
 
     def PyInit(self):
         mustHaveWorkspaceNames = StringMandatoryValidator()
@@ -28,12 +26,10 @@ class Mean(PythonAlgorithm):
         self.declareProperty(MatrixWorkspaceProperty("OutputWorkspace", "", Direction.Output),
                              doc="Output mean workspace")
 
-
     def _are_workspaces_compatible(self, ws_a, ws_b):
         sizeA = ws_a.blocksize() * ws_a.getNumberHistograms()
         sizeB = ws_b.blocksize() * ws_b.getNumberHistograms()
         return sizeA == sizeB
-
 
     def PyExec(self):
         workspaces = self.getProperty("Workspaces").value.split(',')
@@ -47,7 +43,6 @@ class Mean(PythonAlgorithm):
             out_ws += workspace
         out_ws /= len(workspaces)
         self.setProperty("OutputWorkspace", out_ws)
-
 
 
 AlgorithmFactory.subscribe(Mean())

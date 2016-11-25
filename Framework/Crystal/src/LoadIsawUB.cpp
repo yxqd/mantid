@@ -3,6 +3,7 @@
 #include <fstream>
 #include <MantidGeometry/Crystal/OrientedLattice.h>
 #include "MantidAPI/IMDEventWorkspace.h"
+#include "MantidAPI/Sample.h"
 
 using namespace Mantid::Kernel::Strings;
 using Mantid::Kernel::DblMatrix;
@@ -18,19 +19,6 @@ DECLARE_ALGORITHM(LoadIsawUB)
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
 
-//----------------------------------------------------------------------------------------------
-/** Constructor
- */
-LoadIsawUB::LoadIsawUB() {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
- */
-LoadIsawUB::~LoadIsawUB() {}
-
-//----------------------------------------------------------------------------------------------
-
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void LoadIsawUB::init() {
@@ -49,7 +37,6 @@ void LoadIsawUB::init() {
                                         "proper rotation matrix");
 }
 
-//----------------------------------------------------------------------------------------------
 /** Execute the algorithm.
  */
 void LoadIsawUB::exec() {

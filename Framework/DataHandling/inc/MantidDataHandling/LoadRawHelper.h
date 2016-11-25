@@ -1,13 +1,11 @@
 #ifndef MANTID_DATAHANDLING_LOADRAWHELPER_H_
 #define MANTID_DATAHANDLING_LOADRAWHELPER_H_
 
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAPI/IFileLoader.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidDataHandling/ISISRunLogs.h"
 #include "MantidAPI/Run.h"
+#include <boost/scoped_ptr.hpp>
 #include <climits>
 
 //----------------------------------------------------------------------
@@ -56,8 +54,6 @@ class DLLExport LoadRawHelper
 public:
   /// Default constructor
   LoadRawHelper();
-  /// Destructor
-  ~LoadRawHelper() override;
   /// Algorithm's name for identification overriding a virtual method
   const std::string name() const override { return "LoadRawHelper"; }
   /// Algorithm's version for identification overriding a virtual method
@@ -150,7 +146,7 @@ protected:
   bool readData(FILE *file, int64_t hist);
 
   // Constructs the time channel (X) vector(s)
-  std::vector<boost::shared_ptr<MantidVec>>
+  std::vector<boost::shared_ptr<HistogramData::HistogramX>>
   getTimeChannels(const int64_t &regimes, const int64_t &lengthIn);
   /// loadinstrument Child Algorithm
   void runLoadInstrument(const std::string &fileName,
@@ -176,7 +172,8 @@ protected:
   /// This method sets the raw file data to workspace vectors
   void setWorkspaceData(
       DataObjects::Workspace2D_sptr newWorkspace,
-      const std::vector<boost::shared_ptr<MantidVec>> &timeChannelsVec,
+      const std::vector<boost::shared_ptr<HistogramData::HistogramX>> &
+          timeChannelsVec,
       int64_t wsIndex, specnum_t nspecNum, int64_t noTimeRegimes,
       int64_t lengthIn, int64_t binStart);
 
@@ -210,7 +207,7 @@ protected:
   /// load the spectra
   void loadSpectra(FILE *file, const int &period, const int &total_specs,
                    DataObjects::Workspace2D_sptr ws_sptr,
-                   std::vector<boost::shared_ptr<MantidVec>>);
+                   std::vector<boost::shared_ptr<HistogramData::HistogramX>>);
 
   /// Has the spectrum_list property been set?
   bool m_list;

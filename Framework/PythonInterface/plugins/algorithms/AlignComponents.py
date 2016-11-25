@@ -1,4 +1,6 @@
 #pylint: disable=no-init, no-name-in-module
+from __future__ import (absolute_import, division, print_function)
+
 import math
 import numpy as np
 from scipy.stats import chisquare
@@ -7,6 +9,7 @@ from mantid.api import PythonAlgorithm, AlgorithmFactory, MatrixWorkspacePropert
 from mantid.kernel import Direction, FloatBoundedValidator, PropertyCriterion, EnabledWhenProperty, \
     logger, Quat, V3D, StringArrayProperty, StringListValidator
 import mantid.simpleapi as api
+
 
 class AlignComponents(PythonAlgorithm):
     """
@@ -25,7 +28,7 @@ class AlignComponents(PythonAlgorithm):
         """
         Mantid required
         """
-        return "PythonAlgorithms;Diffraction"
+        return "Diffraction"
 
     def name(self):
         """

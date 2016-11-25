@@ -20,13 +20,6 @@ using namespace API;
 using namespace Geometry;
 /// using namespace DataObjects;
 
-/// Default constructor
-CopyInstrumentParameters::CopyInstrumentParameters()
-    : Algorithm(), m_different_instrument_sp(false) {}
-
-/// Destructor
-CopyInstrumentParameters::~CopyInstrumentParameters() {}
-
 void CopyInstrumentParameters::init() {
   declareProperty(
       make_unique<WorkspaceProperty<>>("InputWorkspace", "", Direction::Input),
@@ -52,7 +45,7 @@ void CopyInstrumentParameters::exec() {
   this->checkProperties();
 
   // Get parameters
-  Geometry::ParameterMap &givParams = m_givingWorkspace->instrumentParameters();
+  const auto &givParams = m_givingWorkspace->constInstrumentParameters();
 
   if (m_different_instrument_sp) {
     Instrument_const_sptr inst1 = m_givingWorkspace->getInstrument();
@@ -133,8 +126,7 @@ void CopyInstrumentParameters::checkProperties() {
   if (baseInstRec != baseInstGiv) {
     m_different_instrument_sp = true;
     g_log.warning() << "The base instrument in the output workspace is not the "
-                       "same as the base instrument in the input workspace."
-                    << std::endl;
+                       "same as the base instrument in the input workspace.\n";
   }
 }
 

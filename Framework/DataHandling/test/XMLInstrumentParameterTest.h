@@ -45,7 +45,7 @@ public:
     TS_ASSERT_EQUALS(output2->getNumberHistograms(), 4)
 
     // get the parameter map for the period 1 CRISP data
-    ParameterMap &paramMap = output1->instrumentParameters();
+    const auto &paramMap = output1->constInstrumentParameters();
 
     // check that parameter have been read into the instrument parameter map
     std::vector<V3D> ret1 = paramMap.getV3D("point-detector", "pos");
@@ -58,7 +58,7 @@ public:
     TS_ASSERT_DELTA(ret2[0].Y(), 0.0, 0.0001);
     TS_ASSERT_DELTA(ret2[0].X(), 0.0, 0.0001);
     TS_ASSERT_DELTA(ret2[0].Z(), 0.1499, 0.0001);
-    std::vector<double> ret3 = paramMap.getDouble("slit1", "opening height");
+    std::vector<double> ret3 = paramMap.getDouble("slit1", "vertical gap");
     TS_ASSERT_EQUALS(static_cast<int>(ret3.size()), 1);
     TS_ASSERT_DELTA(ret3[0], 0.5005, 0.0001);
   }

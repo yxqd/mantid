@@ -20,6 +20,7 @@
 
 import numpy as np
 
+
 def scale_down(data_vol, block_size, method='average'):
     """
     Downscale to for example shrink 1Kx1K images to 512x512
@@ -44,7 +45,7 @@ def scale_down(data_vol, block_size, method='average'):
                          format(data_vol.shape[2], data_vol.shape[1], block_size))
 
     supported_methods = ['average', 'sum']
-    if not method.lower() in supported_methods:
+    if method.lower() not in supported_methods:
         raise ValueError("The method to combine pixels in blocks must be one of {0}. Got unknown "
                          "value: {1}".format(supported_methods, method))
 
@@ -60,6 +61,7 @@ def scale_down(data_vol, block_size, method='average'):
             rescaled_vol[vert_slice, :, :] = vsl.reshape(tmp_shape).mean(-1).mean(1)
 
     return rescaled_vol
+
 
 def crop_vol(data_vol, coords):
     """
@@ -77,10 +79,17 @@ def crop_vol(data_vol, coords):
         raise ValueError("Wrong coordinates object when trying to crop: {0}".format(coords))
     elif not isinstance(data_vol, np.ndarray) or 3 != len(data_vol.shape):
         raise ValueError("Wrong data volume when trying to crop: {0}".format(data_vol))
+    elif not any(coords) or coords[1] > coords[3] or coords[0] > coords[2]:
+        # skip if for example: 0, 0, 0, 0 (empty selection)
+        return data_vol
+    elif not all(isinstance(crd, int) for crd in coords):
+        raise ValueError("Cannot use non-integer coordinates to crop images. Got "
+                         "these coordinates: {0}".format(coords))
     else:
-        cropped_data = data_vol[:, coords[1]:coords[3], coords[0]:coords[2]]
+        cropped_data = data_vol[:, coords[1]:(coords[3]+1), coords[0]:(coords[2]+1)]
 
     return cropped_data
+
 
 def remove_stripes_ring_artifacts(data_vol, method='wavelet-fourier'):
     """
@@ -106,7 +115,7 @@ def remove_stripes_ring_artifacts(data_vol, method='wavelet-fourier'):
         raise ValueError("Wrong data volume when trying to filter stripes/ring artifacts: {0}".
                          format(data_vol))
 
-    if not method.lower() in supported_methods:
+    if method.lower() not in supported_methods:
         raise ValueError("The method to remove stripes and ring artifacts must be one of {0}. "
                          "Got unknown value: {1}".format(supported_methods, method))
 
@@ -118,6 +127,7 @@ def remove_stripes_ring_artifacts(data_vol, method='wavelet-fourier'):
 
     return stripped_vol
 
+
 def remove_sino_stripes_rings_wf(data_vol, wv_levels=None):
     if not wv_levels:
         max_len = np.max(data_vol.shape)
@@ -125,6 +135,7 @@ def remove_sino_stripes_rings_wf(data_vol, wv_levels=None):
 
     from . import filters_adv
     return filters_adv.remove_sino_stripes_rings_wf(data_vol, wv_levels)
+
 
 def circular_mask(data_vol, ratio=1.0, mask_out_val=0.0):
     """
@@ -148,6 +159,7 @@ def circular_mask(data_vol, ratio=1.0, mask_out_val=0.0):
         data_vol[idx, ~mask_in] = mask_out_val
 
     return data_vol
+
 
 def _calc_mask(ydim, xdim, ratio):
     """

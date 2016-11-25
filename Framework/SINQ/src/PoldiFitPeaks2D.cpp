@@ -36,15 +36,6 @@ using namespace Kernel;
 using namespace DataObjects;
 using namespace Geometry;
 
-/** Constructor
- */
-PoldiFitPeaks2D::PoldiFitPeaks2D()
-    : Algorithm(), m_poldiInstrument(), m_timeTransformer(), m_deltaT(0.0) {}
-
-/** Destructor
- */
-PoldiFitPeaks2D::~PoldiFitPeaks2D() {}
-
 /// Algorithm's name for identification. @see Algorithm::name
 const std::string PoldiFitPeaks2D::name() const { return "PoldiFitPeaks2D"; }
 
@@ -104,7 +95,7 @@ PoldiFitPeaks2D::getPeakCollectionsFromInput() const {
   if (peakTable) {
     try {
       peakCollections.push_back(getPeakCollection(peakTable));
-    } catch (std::runtime_error) {
+    } catch (const std::runtime_error &) {
       // do nothing
     }
 
@@ -124,7 +115,7 @@ PoldiFitPeaks2D::getPeakCollectionsFromInput() const {
       if (peakTable) {
         try {
           peakCollections.push_back(getPeakCollection(peakTable));
-        } catch (std::runtime_error) {
+        } catch (const std::runtime_error &) {
           // do nothing
         }
       }
@@ -329,7 +320,7 @@ std::vector<PoldiPeakCollection_sptr> PoldiFitPeaks2D::getCountPeakCollections(
           getPeakCollectionFromFunction(localFunction);
 
       countPeakCollections.push_back(getCountPeakCollection(normalizedPeaks));
-    } catch (std::invalid_argument) {
+    } catch (const std::invalid_argument &) {
       // not a Poldi2DFunction - skip (the background functions)
     }
 
@@ -1322,7 +1313,7 @@ void PoldiFitPeaks2D::exec() {
           ITableWorkspace_sptr cell =
               getRefinedCellParameters(poldi2DFunction->getFunction(i));
           cells.push_back(cell);
-        } catch (std::invalid_argument) {
+        } catch (const std::invalid_argument &) {
           // do nothing
         }
       }

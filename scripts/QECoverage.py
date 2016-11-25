@@ -1,4 +1,4 @@
-﻿# pylint: disable=line-too-long, too-many-instance-attributes, invalid-name, missing-docstring, too-many-statements
+# pylint: disable=line-too-long, too-many-instance-attributes, invalid-name, missing-docstring, too-many-statements
 # pylint: disable= too-many-branches, no-self-use
 import sys
 
@@ -197,6 +197,9 @@ class QECoverageGUI(QtGui.QWidget):
         self.grid.addWidget(self.helpbtn)
         # Matplotlib does seem to rescale x-axis properly after axes.clear()
         self.xlim = 0
+
+        #register startup
+        mantid.UsageService.registerFeatureUsage("Interface","QECoverage",False)
 
     def onHelp(self):
         from pymantidplot.proxies import showCustomInterfaceHelp

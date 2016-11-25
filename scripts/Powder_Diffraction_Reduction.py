@@ -5,7 +5,6 @@
 import os
 
 from reduction_application import ReductionGUI
-from PyQt4 import QtCore, uic
 
 reducer = ReductionGUI(instrument_list=["PG3", "NOM", "VULCAN"])
 if reducer.setup_layout(load_last=True):
@@ -20,7 +19,7 @@ if reducer.setup_layout(load_last=True):
         reducer.open_file(autopath)
     except IOError as e:
         print "[Error] Unable to load previously reduction setup from file %s.\nReason: %s." % (
-                autopath, str(e))
+            autopath, str(e))
     else:
         print "[Info] Load earlier reduction setup from auto-saved %s." % (autopath)
 

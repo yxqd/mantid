@@ -25,6 +25,8 @@ pre-processing, reconstruction, and post-processing
 import os
 
 #pylint: disable=too-few-public-methods
+
+
 class ToolAlgorithmConfig(object):
     """
     Reconstruction algorithm specific configuration. Required for any reconstruction:
@@ -79,8 +81,9 @@ class PreProcConfig(object):
         self.in_img_format = 'tiff'
         self.out_img_format = 'tiff'
         self.max_angle = 360
-        # Center of rotation
-        self.cor = None
+        # Rotation 90 degrees clockwise (positive) or counterclockwise (negative)
+        # Example: -1 => (-90 degrees == 90 degrees counterclockwise)
+        self.rotation = -1
         self.normalize_flat_dark = True
         # list with coordinates of the region for normalization / "air" / not blocked by any object
         self.normalize_air_region = None
@@ -91,11 +94,10 @@ class PreProcConfig(object):
         self.mcp_corrections = True
         self.scale_down = 0
         self.median_filter_size = 3
-        # Rotation 90 degrees clockwise (positive) or counterclockwise (negative)
-        # Example: -1 => (-90 degrees == 90 degrees counterclockwise)
-        self.rotation = -1
         self.line_projection = True
         self.stripe_removal_method = 'wavelet-fourier'
+        # Center of rotation
+        self.cor = None
         self.save_preproc_imgs = True
 
     def __str__(self):
@@ -158,6 +160,7 @@ class PostProcConfig(object):
         mystr += "Median filter (3d) size:: {0}\n".format(self.median_filter3d_size)
 
         return mystr
+
 
 class ReconstructionConfig(object):
     """

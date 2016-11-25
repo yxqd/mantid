@@ -2,6 +2,7 @@
 #include "MantidMDAlgorithms/IntegrateEllipsoids.h"
 #include "MantidAPI/FrameworkManager.h"
 #include "MantidAPI/AlgorithmManager.h"
+#include "MantidAPI/Sample.h"
 #include "MantidTestHelpers/ComponentCreationHelper.h"
 #include "MantidDataObjects/PeaksWorkspace.h"
 #include "MantidDataObjects/EventWorkspace.h"
@@ -31,7 +32,7 @@ void addFakeEllipsoid(const V3D &peakHKL, const int &totalNPixels,
   const double tofExact = peak->getTOF();
   delete peak;
 
-  EventList &el = eventWS->getEventList(detectorId - totalNPixels);
+  EventList &el = eventWS->getSpectrum(detectorId - totalNPixels);
 
   // Add more events to the event list corresponding to the peak centre
   double start = tofExact - (double(nEvents) / 2 * tofGap);
@@ -68,7 +69,7 @@ createDiffractionData(const int nPixels = 100, const int nEventsPerPeak = 20,
   // Give the spectra-detector mapping for all event lists
   const int nPixelsTotal = nPixels * nPixels;
   for (int i = 0; i < nPixelsTotal; ++i) {
-    EventList &el = eventWS->getOrAddEventList(i);
+    EventList &el = eventWS->getSpectrum(i);
     el.setDetectorID(i + nPixelsTotal);
   }
 

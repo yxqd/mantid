@@ -1,6 +1,7 @@
 #ifndef MANTID_CRYSTAL_NormaliseVanadiumTEST_H_
 #define MANTID_CRYSTAL_NormaliseVanadiumTEST_H_
 
+#include "MantidHistogramData/LinearGenerator.h"
 #include "MantidCrystal/NormaliseVanadium.h"
 #include "MantidAPI/Axis.h"
 #include "MantidDataHandling/LoadInstrument.h"
@@ -25,6 +26,8 @@ using namespace Mantid::API;
 using namespace Mantid::DataObjects;
 using namespace Mantid::DataHandling;
 using namespace Mantid::Geometry;
+using Mantid::HistogramData::BinEdges;
+using Mantid::HistogramData::LinearGenerator;
 
 class NormaliseVanadiumImpl : public NormaliseVanadium {
 public:
@@ -87,7 +90,7 @@ public:
     DateAndTime run_start("2010-01-01T00:00:00");
 
     for (int pix = 0; pix < numPixels; pix++) {
-      EventList &el = retVal->getEventList(pix);
+      EventList &el = retVal->getSpectrum(pix);
       el.setSpectrumNo(pix);
       el.addDetectorID(pix);
       // Background
@@ -114,16 +117,8 @@ public:
     for (size_t d = 0; d < nd; ++d)
       delete gens[d];
 
-    // Create the x-axis for histogramming.
-    MantidVecPtr x1;
-    MantidVec &xRef = x1.access();
-    xRef.resize(numBins);
-    for (int i = 0; i < numBins; ++i) {
-      xRef[i] = i * binDelta;
-    }
-
     // Set all the histograms at once.
-    retVal->setAllX(x1);
+    retVal->setAllX(BinEdges(numBins, LinearGenerator(0.0, binDelta)));
 
     // Some sanity checks
     TS_ASSERT_EQUALS(retVal->getInstrument()->getName(), "MINITOPAZ");
@@ -144,8 +139,6 @@ public:
 
     int numEventsPer = 100;
     MatrixWorkspace_sptr inputW = createDiffractionEventWorkspace(numEventsPer);
-    EventWorkspace_sptr in_ws =
-        boost::dynamic_pointer_cast<EventWorkspace>(inputW);
     inputW->getAxis(0)->setUnit("Wavelength");
 
     NormaliseVanadium alg;
@@ -165,7 +158,7 @@ public:
     TS_ASSERT(ws);
     if (!ws)
       return;
-    TS_ASSERT_DELTA(ws->readY(5050)[5], 7.7142, 0.01);
+    TS_ASSERT_DELTA(ws->y(5050)[5], 7.7142, 0.01);
     AnalysisDataService::Instance().remove("TOPAZ");
   }
 

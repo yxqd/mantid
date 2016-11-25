@@ -1,10 +1,8 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidDataHandling/LoadIsawDetCal.h"
 
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/Run.h"
 
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidDataObjects/EventWorkspace.h"
@@ -34,12 +32,6 @@ using namespace Kernel;
 using namespace API;
 using namespace Geometry;
 using namespace DataObjects;
-
-/// Constructor
-LoadIsawDetCal::LoadIsawDetCal() : API::Algorithm() {}
-
-/// Destructor
-LoadIsawDetCal::~LoadIsawDetCal() {}
 
 /** Initialisation method
 */
@@ -394,8 +386,6 @@ void LoadIsawDetCal::exec() {
   }
 
   setProperty("InputWorkspace", ws);
-
-  return;
 }
 
 /**

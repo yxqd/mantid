@@ -23,16 +23,6 @@ std::string LessThan() { return "Less Than"; }
 std::string GreaterThan() { return "Greater Than"; }
 
 //----------------------------------------------------------------------------------------------
-/** Constructor
- */
-ThresholdMD::ThresholdMD() {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
- */
-ThresholdMD::~ThresholdMD() {}
-
-//----------------------------------------------------------------------------------------------
 /// Algorithm's name for identification. @see Algorithm::name
 const std::string ThresholdMD::name() const { return "ThresholdMD"; }
 
@@ -119,7 +109,7 @@ void ThresholdMD::exec() {
     frequency = nPoints / 100;
   }
 
-  PARALLEL_FOR2(inputWS, outWS)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*inputWS, *outWS))
   for (int64_t i = 0; i < nPoints; ++i) {
     PARALLEL_START_INTERUPT_REGION
     const double signalAt = inputWS->getSignalAt(i);

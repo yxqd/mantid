@@ -1,16 +1,16 @@
-#include <math.h>
-#include <fstream>
-#include <boost/math/special_functions/round.hpp>
-#include <boost/make_shared.hpp>
+#include "MantidMDAlgorithms/Integrate3DEvents.h"
 #include "MantidDataObjects/NoShape.h"
 #include "MantidDataObjects/PeakShapeEllipsoid.h"
-#include "MantidMDAlgorithms/Integrate3DEvents.h"
+#include <boost/make_shared.hpp>
+#include <boost/math/special_functions/round.hpp>
+#include <cmath>
+#include <fstream>
 
 extern "C" {
-#include <stdio.h>
-#include <gsl/gsl_vector.h>
-#include <gsl/gsl_matrix.h>
+#include <cstdio>
 #include <gsl/gsl_eigen.h>
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_vector.h>
 }
 
 using namespace Mantid::DataObjects;
@@ -143,7 +143,7 @@ Integrate3DEvents::ellipseIntegrateEvents(
 
   bool invalid_peak = false;
   for (int i = 0; i < 3; i++) {
-    if ((boost::math::isnan)(sigmas[i])) {
+    if ((std::isnan)(sigmas[i])) {
       invalid_peak = true;
     } else if (sigmas[i] <= 0) {
       invalid_peak = true;

@@ -1,5 +1,6 @@
 #include "MantidAlgorithms/ShiftLogTime.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/Run.h"
 #include "MantidKernel/System.h"
 #include "MantidKernel/TimeSeriesProperty.h"
 
@@ -17,16 +18,6 @@ namespace Algorithms {
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(ShiftLogTime)
 
-//----------------------------------------------------------------------------------------------
-/** Constructor
- */
-ShiftLogTime::ShiftLogTime() {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
- */
-ShiftLogTime::~ShiftLogTime() {}
-
 /// Algorithm's name for identification
 const string ShiftLogTime::name() const { return "ShiftLogTime"; }
 
@@ -36,7 +27,6 @@ int ShiftLogTime::version() const { return 1; }
 /// Algorithm's category for identification
 const string ShiftLogTime::category() const { return "DataHandling\\Logs"; }
 
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void ShiftLogTime::init() {
@@ -52,7 +42,6 @@ void ShiftLogTime::init() {
       "Number of (integer) values to move the log values. Required.");
 }
 
-//----------------------------------------------------------------------------------------------
 /** Execute the algorithm.
  */
 void ShiftLogTime::exec() {

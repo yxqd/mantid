@@ -14,8 +14,7 @@
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidKernel/EmptyValues.h"
 
-#include <boost/math/special_functions/fpclassify.hpp>
-
+#include <cmath>
 #include <algorithm>
 #include <limits>
 
@@ -310,8 +309,7 @@ private:
 
     bool isGoodValue(double y, double e) {
       return !ignoreInvalidData ||
-             (!boost::math::isnan(y) && !boost::math::isinf(y) &&
-              !boost::math::isnan(e) && !boost::math::isinf(e) && e > 0);
+             (std::isfinite(y) && std::isfinite(e) && e > 0);
     }
 
   public:
@@ -478,7 +476,7 @@ private:
           function->function(x, y);
           double tmp = yValues[i] - y[0];
           // std::cerr << "test " << xValue << ' ' << yValues[i] << ' ' << y[0]
-          // << std::endl;
+          // << '\n';
           sum2 += tmp * tmp;
           tmp /= eValues[i];
           sum2w += tmp * tmp;

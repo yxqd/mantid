@@ -1,4 +1,5 @@
 #pylint: disable=too-many-public-methods,invalid-name
+from __future__ import (absolute_import, division, print_function)
 
 import unittest
 from mantid import logger
@@ -37,6 +38,7 @@ class SimulatedDensityOfStatesTest(unittest.TestCase):
     def setUp(self):
         self._phonon_file = 'squaricn.phonon'
         self._castep_file = 'squaricn.castep'
+        self._isotope_phonon = 'test_isotopes.phonon'
 
     def test_phonon_load(self):
         wks = SimulatedDensityOfStates(PHONONFile=self._phonon_file)
@@ -189,7 +191,7 @@ class SimulatedDensityOfStatesTest(unittest.TestCase):
                                        SpectrumType='IonTable')
 
         self.assertTrue(isinstance(wks, ITableWorkspace))
-        self.assertEqual(wks.columnCount(), 9)
+        self.assertEqual(wks.columnCount(), 10)
         self.assertEqual(wks.rowCount(), 20)
 
         all_species = wks.column('Species')
@@ -224,6 +226,108 @@ class SimulatedDensityOfStatesTest(unittest.TestCase):
                           PHONONFile=self._phonon_file,
                           SpectrumType='IonTable')
 
+    def test_bin_ranges_are_correct(self):
+        """
+        Test that the bin ranges are correct when draw peak function is called
+        """
+        bin_width = 3
+        wks_grp = SimulatedDensityOfStates(PHONONFile=self._phonon_file,
+                                           SpectrumType='DOS',
+                                           BinWidth=bin_width,
+                                           Ions='H,C,O')
+        expected_x_min = -0.051481
+        for idx in range(wks_grp.getNumberOfEntries()):
+            ws = wks_grp.getItem(idx)
+            self.assertAlmostEqual(expected_x_min,ws.readX(0)[0])
+            self.assertAlmostEqual(bin_width,(ws.readX(0)[1] - ws.readX(0)[0]))
+
+
+    def test_isotopes_are_parsed_correctly(self):
+        """
+        Test that isotopes in the file in the format `element:P` are valid
+        """
+        wks_grp = SimulatedDensityOfStates(PHONONFile=self._isotope_phonon,
+                                           SpectrumType='DOS',
+                                           Ions='H:P,C:P,O')
+        self.assertEqual(3, wks_grp.size())
+        self.assertTrue(_is_name_material_in_group(wks_group = wks_grp, \
+                                                   name_to_find = 'wks_grp_C(13)', material_to_find = '(C13)'))
+
+
+    def test_non_isotpe_element_indices_loading(self):
+        """
+        Test that the individual indices for each element can be loaded seperately
+        Tests parse_chemical_and_ws_name for non-isotope + indices
+        """
+        wks_grp = SimulatedDensityOfStates(PHONONFile=self._phonon_file,
+                                           SpectrumType='DOS',
+                                           CalculateIonIndices=True,
+                                           Ions='H,C,O')
+        self.assertEqual(20, len(wks_grp))
+        self.assertTrue(_is_name_in_group(wks_group=wks_grp, name_to_find='wks_grp_H_0'))
+        self.assertTrue(_is_name_in_group(wks_group=wks_grp, name_to_find='wks_grp_C_4'))
+        self.assertTrue(_is_name_in_group(wks_group=wks_grp, name_to_find='wks_grp_O_12'))
+
+
+    def test_isotope_element_indices_loading(self):
+        """
+        """
+        wks_grp = SimulatedDensityOfStates(PHONONFile=self._isotope_phonon,
+                                           SpectrumType='DOS',
+                                           CalculateIonIndices=True,
+                                           Ions='H:P,C:P')
+        self.assertEqual(2, len(wks_grp))
+        self.assertTrue(_is_name_in_group(wks_group=wks_grp, name_to_find='wks_grp_C(13)_0'))
+        self.assertTrue(_is_name_in_group(wks_group=wks_grp, name_to_find='wks_grp_H(2)_1'))
+
+
+def _is_name_material_in_group(wks_group, name_to_find, material_to_find):
+    """
+    Checks all elements in a group as the order is not guaranteed in Python 3
+    that both the name exist and the associated material is correct
+    :param wks_group: The group to check all elements of
+    :param name_to_find: The name to find in that group
+    :param material_to_find: The correct material for that name
+    :return: True is both parts are correct, else false
+    """
+
+    found_ws = _perform_group_name_search(wks_group, name_to_find)
+    if found_ws == None:
+        return False
+
+    if found_ws.sample().getMaterial().name() == material_to_find:
+        return True
+    else:
+        return False
+
+
+def _is_name_in_group(wks_group, name_to_find):
+    """
+    Checks that the name specified exists in the group specified.
+    :param wks_group: The group to search for the name
+    :param name_to_find: The name to search for
+    :return: True if the name exists in the group, else false
+    """
+
+    found_ws = _perform_group_name_search(wks_group, name_to_find)
+
+    if found_ws == None:
+        return False
+    else:
+        return True
+
+def _perform_group_name_search(wks_group, name_to_find):
+    """
+    Performs the search for a name in a group and returns
+    the element if found
+    :param wks_group: The group to search in
+    :param name_to_find: The name to find
+    :return: The first element with that name
+    """
+
+    for workspace in wks_group:
+        if workspace.getName() == name_to_find:
+            return workspace
 
 if __name__=="__main__":
     unittest.main()

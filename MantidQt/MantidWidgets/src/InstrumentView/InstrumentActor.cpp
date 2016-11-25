@@ -1,4 +1,5 @@
 #include "MantidQtMantidWidgets/InstrumentView/InstrumentActor.h"
+#include "MantidQtAPI/TSVSerialiser.h"
 #include "MantidQtMantidWidgets/InstrumentView/CompAssemblyActor.h"
 #include "MantidQtMantidWidgets/InstrumentView/ComponentActor.h"
 #include "MantidQtMantidWidgets/InstrumentView/GLActorVisitor.h"
@@ -6,6 +7,7 @@
 #include "MantidQtMantidWidgets/InstrumentView/ObjComponentActor.h"
 #include "MantidQtMantidWidgets/InstrumentView/RectangularDetectorActor.h"
 #include "MantidQtMantidWidgets/InstrumentView/SampleActor.h"
+#include "MantidQtMantidWidgets/InstrumentView/StructuredDetectorActor.h"
 
 #include "MantidAPI/AnalysisDataService.h"
 #include "MantidAPI/Axis.h"
@@ -27,7 +29,7 @@
 #include "MantidKernel/V3D.h"
 
 #include <boost/algorithm/string.hpp>
-#include <boost/math/special_functions/fpclassify.hpp>
+#include <cmath>
 
 #include <QMessageBox>
 #include <QSettings>
@@ -132,8 +134,7 @@ void InstrumentActor::setUpWorkspace(
   for (size_t i = 0; i < nHist; ++i) {
     const Mantid::MantidVec &values = sharedWorkspace->readX(i);
     double xtest = values.front();
-    if (xtest != std::numeric_limits<double>::infinity()) {
-
+    if (!std::isinf(xtest)) {
       if (xtest < m_WkspBinMinValue) {
         m_WkspBinMinValue = xtest;
       } else if (xtest > m_WkspBinMaxValue) {
@@ -143,7 +144,7 @@ void InstrumentActor::setUpWorkspace(
     }
 
     xtest = values.back();
-    if (xtest != std::numeric_limits<double>::infinity()) {
+    if (!std::isinf(xtest)) {
       if (xtest < m_WkspBinMinValue) {
         m_WkspBinMinValue = xtest;
       } else if (xtest > m_WkspBinMaxValue) {
@@ -637,13 +638,12 @@ void InstrumentActor::resetColors() {
   Instrument_const_sptr inst = getInstrument();
   IMaskWorkspace_sptr mask = getMaskWorkspaceIfExists();
 
-  // PARALLEL_FOR1(m_workspace)
   for (int iwi = 0; iwi < int(m_specIntegrs.size()); iwi++) {
     size_t wi = size_t(iwi);
     double integratedValue = m_specIntegrs[wi];
     try {
       // Find if the detector is masked
-      const auto &dets = sharedWorkspace->getSpectrum(wi)->getDetectorIDs();
+      const auto &dets = sharedWorkspace->getSpectrum(wi).getDetectorIDs();
       bool masked = false;
 
       if (mask) {
@@ -1150,7 +1150,7 @@ void InstrumentActor::setDataIntegrationRange(const double &xmin,
         continue;
       }
       double sum = m_specIntegrs[i];
-      if (boost::math::isinf(sum) || boost::math::isnan(sum)) {
+      if (!std::isfinite(sum)) {
         throw std::runtime_error(
             "The workspace contains values that cannot be displayed (infinite "
             "or NaN).\n"
@@ -1248,6 +1248,13 @@ bool SetVisibleComponentVisitor::visit(RectangularDetectorActor *actor) {
   return on;
 }
 
+bool SetVisibleComponentVisitor::visit(StructuredDetectorActor *actor) {
+  bool on = actor->getComponent()->getComponentID() == m_id ||
+            actor->isChildDetector(m_id);
+  actor->setVisibility(on);
+  return on;
+}
+
 //-------------------------------------------------------------------------//
 /**
 * Visits an actor and if it is a "non-detector" sets its visibility.
@@ -1273,6 +1280,40 @@ bool FindComponentVisitor::visit(GLActor *actor) {
     }
   }
   return false;
+}
+
+/**
+ * Save the state of the instrument actor to a project file.
+ * @return string representing the current state of the instrumet actor.
+ */
+std::string InstrumentActor::saveToProject() const {
+  API::TSVSerialiser tsv;
+  const std::string currentColorMap = getCurrentColorMap().toStdString();
+
+  if (!currentColorMap.empty())
+    tsv.writeLine("FileName") << currentColorMap;
+
+  tsv.writeSection("binmasks", m_maskBinsData.saveToProject());
+  return tsv.outputLines();
+}
+
+/**
+ * Load the state of the instrument actor from a project file.
+ * @param lines :: string representing the current state of the instrumet actor.
+ */
+void InstrumentActor::loadFromProject(const std::string &lines) {
+  API::TSVSerialiser tsv(lines);
+  if (tsv.selectLine("FileName")) {
+    QString filename;
+    tsv >> filename;
+    loadColorMap(filename);
+  }
+
+  if (tsv.selectSection("binmasks")) {
+    std::string binMaskLines;
+    tsv >> binMaskLines;
+    m_maskBinsData.loadFromProject(binMaskLines);
+  }
 }
 
 } // MantidWidgets

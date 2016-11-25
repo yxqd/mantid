@@ -17,13 +17,16 @@ class QTimer;
 namespace MantidQt {
 namespace CustomInterfaces {
 
+class TomoPathsConfig;
+class TomoToolConfigDialogBase;
+
 /**
 Tomography GUI. Presenter for the GUI (as in the MVP
 (Model-View-Presenter) pattern). In principle, in a strict MVP setup,
 signals from the model should always be handled through this presenter
 and never go directly to the view, and viceversa.
 
-Copyright &copy; 2014,2015 ISIS Rutherford Appleton Laboratory, NScD
+Copyright &copy; 2014-2016 ISIS Rutherford Appleton Laboratory, NScD
 Oak Ridge National Laboratory & European Spallation Source
 
 This file is part of Mantid.
@@ -63,17 +66,16 @@ protected:
   /// clean shut down of model, view, etc.
   void cleanup();
 
-  void processSetup();
-  void processCompResourceChange();
-  void processToolChange();
+  void processSystemSettingsUpdated();
+  void processSetupResourcesAndTools();
+  void processCompResourceChanged();
+  void processToolChanged();
   void processTomoPathsChanged();
+  void processTomoPathsEditedByUser();
   void processLogin();
   void processLogout();
   void processSetupReconTool();
   void processRunRecon();
-
-  void subprocessRunReconRemote();
-  void subprocessRunReconLocal();
 
 protected slots:
   /// It may be run on user request, or periodically from a timer/thread
@@ -84,25 +86,63 @@ protected:
   void processVisualizeJobs();
   void processViewImg();
   void processLogMsg();
+  void processAggregateEnergyBands();
   void processShutDown();
 
   void doVisualize(const std::vector<std::string> &ids);
 
+  /// To prepare a local run
+  void makeRunnableWithOptionsLocal(const std::string &comp, std::string &run,
+                                    std::string &opt);
+
+  /// auto-guess additional directories when the user gives the samples path
+  void findFlatsDarksFromSampleGivenByUser(TomoPathsConfig &cfg);
+
+  bool
+  usableEnergyBandsPaths(const std::map<std::string, std::string> &algParams);
+
   /// Starts a periodic query just to keep sessions alive when logged in
   void startKeepAliveMechanism(int period);
+
   /// Stops/kills the periodic query (for example if the user logs out)
   void killKeepAliveMechanism();
 
+  bool isLocalResourceSelected() const;
+
 private:
+  /// creates the correct dialog pointer and sets it to the member variable
+  void createConfigDialogUsingToolName(const std::string &toolName);
+
+  /// sets up the dialog and uses the settings to update the model
+  void
+  setupConfigDialogSettingsAndUpdateModel(TomoToolConfigDialogBase *dialog);
+
+  /// configures up the dialog using the view
+  void setupConfigDialogSettings(TomoToolConfigDialogBase &dialog);
+
+  /// does the actual path configuration for local resource
+  void setupConfigDialogSettingsForLocal(TomoToolConfigDialogBase &dialog);
+
+  /// does the actual path configuration for remote resource
+  void setupConfigDialogSettingsForRemote(TomoToolConfigDialogBase &dialog);
+
+  /// update all the model information after the tool's been changed
+  void updateModelAfterToolChanged(const TomoToolConfigDialogBase &dialog);
+
+  /// update the model's current tool name using the dialog
+  void updateModelCurrentToolName(const TomoToolConfigDialogBase &dialog);
+
+  /// update the model's current tool method using the dialog
+  void updateModelCurrentToolMethod(const TomoToolConfigDialogBase &dialog);
+
+  /// update the model's current tool settings using the dialog
+  void updateModelCurrentToolSettings(const TomoToolConfigDialogBase &dialog);
+
   /// Associated view for this presenter (MVP pattern)
   ITomographyIfaceView *const m_view;
 
   /// Associated model for this presenter (MVP pattern)
   const boost::scoped_ptr<TomographyIfaceModel> m_model;
-
-  /// To prepare a local run
-  void makeRunnableWithOptionsLocal(const std::string &comp, std::string &run,
-                                    std::string &opt);
 
   // TODO: replace this with an std::mutex. Also below for threads.
   // mutex for the job status info update operations on the view
@@ -111,6 +151,11 @@ private:
   // for periodic update of the job status table/tree
   QTimer *m_keepAliveTimer;
   QThread *m_keepAliveThread;
+
+  std::unique_ptr<TomoToolConfigDialogBase> m_configDialog;
+
+  static const std::string g_defOutPathLocal;
+  static const std::string g_defOutPathRemote;
 };
 
 } // namespace CustomInterfaces

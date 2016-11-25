@@ -20,16 +20,6 @@ std::string PeaksIntersection::qSampleFrame() { return "Q (sample frame)"; }
 std::string PeaksIntersection::hklFrame() { return "HKL"; }
 
 //----------------------------------------------------------------------------------------------
-/** Constructor
- */
-PeaksIntersection::PeaksIntersection() : m_peakRadius(0.) {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
- */
-PeaksIntersection::~PeaksIntersection() {}
-
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void PeaksIntersection::initBaseProperties() {
@@ -114,7 +104,7 @@ void PeaksIntersection::executePeaksIntersection(const bool checkPeakExtents) {
   }
   Progress prog(this, 0, 1, 100);
 
-  PARALLEL_FOR2(ws, outputWorkspace)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*ws, *outputWorkspace))
   for (int i = 0; i < nPeaks; ++i) {
     PARALLEL_START_INTERUPT_REGION
     IPeak *peak = ws->getPeakPtr(i);

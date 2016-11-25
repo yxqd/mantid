@@ -2,6 +2,8 @@
 
 #include "MantidAPI/HistogramValidator.h"
 #include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/Run.h"
+#include "MantidAPI/Sample.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/CompositeValidator.h"
@@ -25,17 +27,6 @@ namespace MDAlgorithms {
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(ConvertToMDMinMaxGlobal)
 
-//----------------------------------------------------------------------------------------------
-/** Constructor
- */
-ConvertToMDMinMaxGlobal::ConvertToMDMinMaxGlobal() {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
- */
-ConvertToMDMinMaxGlobal::~ConvertToMDMinMaxGlobal() {}
-
-//----------------------------------------------------------------------------------------------
 /// Algorithm's name for identification. @see Algorithm::name
 const std::string ConvertToMDMinMaxGlobal::name() const {
   return "ConvertToMDMinMaxGlobal";
@@ -49,9 +40,6 @@ const std::string ConvertToMDMinMaxGlobal::category() const {
   return "MDAlgorithms\\Creation";
 }
 
-//----------------------------------------------------------------------------------------------
-
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void ConvertToMDMinMaxGlobal::init() {
@@ -245,7 +233,7 @@ void ConvertToMDMinMaxGlobal::exec() {
       } else // HKL
       {
         if (!ws->sample().hasOrientedLattice()) {
-          g_log.error() << "Sample has no oriented lattice" << std::endl;
+          g_log.error() << "Sample has no oriented lattice\n";
           throw std::invalid_argument("No UB set");
         }
         Mantid::Geometry::OrientedLattice ol =
@@ -270,7 +258,7 @@ void ConvertToMDMinMaxGlobal::exec() {
   for (auto &OtherDimension : OtherDimensions) {
     if (!ws->run().hasProperty(OtherDimension)) {
       g_log.error() << "The workspace does not have a property "
-                    << OtherDimension << std::endl;
+                    << OtherDimension << '\n';
       throw std::invalid_argument("Property not found. Please see error log.");
     }
     Kernel::Property *pProperty = (ws->run().getProperty(OtherDimension));

@@ -1,14 +1,18 @@
-﻿
+
+from __future__ import (absolute_import, division, print_function)
 import unittest
 # Need to import mantid before we import SANSUtility
 import mantid
 from mantid.simpleapi import *
-from mantid.api import mtd, WorkspaceGroup
-from mantid.kernel import DateAndTime, time_duration, FloatTimeSeriesProperty,BoolTimeSeriesProperty,StringTimeSeriesProperty,StringPropertyWithValue
+from mantid.api import (mtd, WorkspaceGroup, AlgorithmManager)
+from mantid.kernel import (DateAndTime, time_duration, FloatTimeSeriesProperty,
+                           BoolTimeSeriesProperty,StringTimeSeriesProperty,
+                           StringPropertyWithValue, V3D, Quat)
 import SANSUtility as su
 import re
 import random
 import numpy as np
+
 
 TEST_STRING_DATA = 'SANS2D0003434-add' + su.ADDED_EVENT_DATA_TAG
 TEST_STRING_MON = 'SANS2D0003434-add_monitors' + su.ADDED_EVENT_DATA_TAG
@@ -82,7 +86,7 @@ def provide_workspace_with_x_errors(workspace_name,use_xerror = True, nspec = 1,
                                     x_in = [1,2,3,4,5,6,7,8,9,10],
                                     y_in = [2,2,2,2,2,2,2,2,2],
                                     e_in = [1,1,1,1,1,1,1,1,1],
-                                    x_error = [1.1,2.2,3.3,4.4,5.5,6.6,7.7,8.8,9.9, 10.1]):
+                                    x_error = [1.1,2.2,3.3,4.4,5.5,6.6,7.7,8.8,9.9]):
     x = []
     y = []
     e = []
@@ -128,7 +132,7 @@ class SANSUtilityTest(unittest.TestCase):
     #    ]
     #    for singlevalues in values:
     #        self.checkValues(singlevalues, singlevalues)
-    
+
     #def test_parse_strings(self):
     #    inputs = { '1-2':[[1,2]],         # single period syntax  min < x < max
     #               '1.3-5.6':[[1.3,5.6]], # float
@@ -136,15 +140,15 @@ class SANSUtilityTest(unittest.TestCase):
     #               '>1':[[1, -1]],       # just lower bound
     #               '<5':[[-1, 5]],      # just upper bound
     #               '<5,8-9': [[-1, 5], [8,9]],
-    #               '1:2:5': [[1,3], [3,5]] # sintax: start, step, stop                   
+    #               '1:2:5': [[1,3], [3,5]] # sintax: start, step, stop
     #        }
 
-    #    for (k, v) in inputs.items(): 
+    #    for (k, v) in inputs.items():
     #        self.checkValues(su.sliceParser(k),v)
 
     #def test_accept_spaces(self):
     #    self.checkValues(su.sliceParser("1 - 2, 3 - 4"), [[1,2],[3,4]])
-        
+
     #def test_invalid_values_raise(self):
     #    invalid_strs = ["5>6", ":3:", "MAX<min"]
     #    for val in invalid_strs:
@@ -165,15 +169,15 @@ class SANSUtilityTest(unittest.TestCase):
         # workspace in the ADS, and NOTHING else?
         self.assertTrue("result" in mtd)
         self.assertTrue("ws" in mtd)
-        self.assertEquals(2, len(mtd))
+        self.assertEqual(2, len(mtd))
 
-        self.assertEquals(result.getNumberHistograms(), len(det_ids))
-        self.assertEquals(result.getDetector(0).getID(), 100)
-        self.assertEquals(result.getDetector(1).getID(), 102)
-        self.assertEquals(result.getDetector(2).getID(), 104)
+        self.assertEqual(result.getNumberHistograms(), len(det_ids))
+        self.assertEqual(result.getDetector(0).getID(), 100)
+        self.assertEqual(result.getDetector(1).getID(), 102)
+        self.assertEqual(result.getDetector(2).getID(), 104)
 
         ws = CreateSampleWorkspace("Histogram", "Multiple Peaks")
-        det_ids = range(100, 299, 2)
+        det_ids = list(range(100, 299, 2))
         result = su.extract_spectra(ws, det_ids, "result")
 
     def test_get_masked_det_ids(self):
@@ -186,13 +190,13 @@ class SANSUtilityTest(unittest.TestCase):
         self.assertTrue(100 in masked_det_ids)
         self.assertTrue(102 in masked_det_ids)
         self.assertTrue(104 in masked_det_ids)
-        self.assertEquals(len(masked_det_ids), 3)
+        self.assertEqual(len(masked_det_ids), 3)
 
     def test_merge_to_ranges(self):
-        self.assertEquals([[1, 4]],                 su._merge_to_ranges([1, 2, 3, 4]))
-        self.assertEquals([[1, 3], [5, 7]],         su._merge_to_ranges([1, 2, 3, 5, 6, 7]))
-        self.assertEquals([[1, 3], [5, 5], [7, 9]], su._merge_to_ranges([1, 2, 3, 5, 7, 8, 9]))
-        self.assertEquals([[1, 1]],                 su._merge_to_ranges([1]))
+        self.assertEqual([[1, 4]],                 su._merge_to_ranges([1, 2, 3, 4]))
+        self.assertEqual([[1, 3], [5, 7]],         su._merge_to_ranges([1, 2, 3, 5, 6, 7]))
+        self.assertEqual([[1, 3], [5, 5], [7, 9]], su._merge_to_ranges([1, 2, 3, 5, 7, 8, 9]))
+        self.assertEqual([[1, 1]],                 su._merge_to_ranges([1]))
 
 class TestBundleAddedEventDataFilesToGroupWorkspaceFile(unittest.TestCase):
     def _prepare_workspaces(self, names):
@@ -227,7 +231,7 @@ class TestBundleAddedEventDataFilesToGroupWorkspaceFile(unittest.TestCase):
 
         # Act
         group_ws_name = 'g_ws'
-        output_group_file_name = su.bundle_added_event_data_as_group(file_names[0], file_names[1])
+        output_group_file_name = su.bundle_added_event_data_as_group(file_names[0], file_names[1], False)
 
         Load(Filename = output_group_file_name, OutputWorkspace = group_ws_name)
         group_ws = mtd[group_ws_name]
@@ -280,18 +284,18 @@ class TestLoadingAddedEventWorkspaceNameParsing(unittest.TestCase):
 
     def test_regexes_do_not_clash(self):
         # Check when there is no special ending
-        self.assertEqual(None, re.search(su.REG_DATA_NAME, TEST_STRING_MON)) 
+        self.assertEqual(None, re.search(su.REG_DATA_NAME, TEST_STRING_MON))
         self.assertEqual(None, re.search(su.REG_DATA_MONITORS_NAME, TEST_STRING_DATA))
         # Check when there is a _1 ending
-        self.assertEqual(None, re.search(su.REG_DATA_NAME, TEST_STRING_MON1)) 
+        self.assertEqual(None, re.search(su.REG_DATA_NAME, TEST_STRING_MON1))
         self.assertEqual(None, re.search(su.REG_DATA_MONITORS_NAME, TEST_STRING_DATA1))
         # Check when there is a _2 ending
-        self.assertEqual(None, re.search(su.REG_DATA_NAME, TEST_STRING_MON2)) 
+        self.assertEqual(None, re.search(su.REG_DATA_NAME, TEST_STRING_MON2))
         self.assertEqual(None, re.search(su.REG_DATA_MONITORS_NAME, TEST_STRING_DATA2))
         # Check when there is a multiple ending
-        self.assertEqual(None, re.search(su.REG_DATA_NAME, TEST_STRING_MON3)) 
+        self.assertEqual(None, re.search(su.REG_DATA_NAME, TEST_STRING_MON3))
         self.assertEqual(None, re.search(su.REG_DATA_MONITORS_NAME, TEST_STRING_DATA3))
-    
+
     def test_check_child_file_names_for_valid_names(self):
         # Check when there is no special ending
         event_name = TEST_STRING_DATA
@@ -338,9 +342,6 @@ class TestLoadingAddedEventWorkspaceExtraction(unittest.TestCase):
     def test_extract_data_and_monitor_child_ws(self):
         # Check when there is no special ending
         self.do_test_extraction(TEST_STRING_DATA, TEST_STRING_MON)
-
-
-
 
 
 class AddOperationTest(unittest.TestCase):
@@ -394,7 +395,7 @@ class AddOperationTest(unittest.TestCase):
         for time in times1:
             if time in times2:
                 overlap_times.append(time)
-        # Now go through all those overlap times and check that the value of the 
+        # Now go through all those overlap times and check that the value of the
         # first workspace is recorded in the output
         for overlap_time in overlap_times:
             times1_list = list(times1)
@@ -534,7 +535,7 @@ class TestOverlayWorkspaces(unittest.TestCase):
         expected_time_difference = time_duration.total_nanoseconds(DateAndTime(start_time_1)- DateAndTime(start_time_2))/1e9
         self.assertEqual(time_difference, expected_time_difference)
 
-        # Clean up 
+        # Clean up
         self._clean_up(names)
         self._clean_up(out_ws_name)
 
@@ -560,7 +561,7 @@ class TestOverlayWorkspaces(unittest.TestCase):
         expected_time_difference -= optional_time_shift # Need to subtract as we add the time shift to the subtrahend
         self.assertEqual(time_difference, expected_time_difference)
 
-        # Clean up 
+        # Clean up
         self._clean_up(names)
         self._clean_up(out_ws_name)
 
@@ -582,7 +583,7 @@ class TestOverlayWorkspaces(unittest.TestCase):
         kwargs = {}
         self.assertRaises(RuntimeError, overlayWorkspaces._extract_time_difference_in_seconds, *args, **kwargs)
 
-        # Clean up 
+        # Clean up
         self._clean_up(names)
         self._clean_up(out_ws_name)
 
@@ -668,7 +669,7 @@ class TestZeroErrorFreeWorkspace(unittest.TestCase):
         message, complete = su.create_zero_error_free_workspace(input_workspace_name = ws_name, output_workspace_name = ws_clone_name)
         # Assert
         message.strip()
-        print message
+        print(message)
        # self.assertTrue(not message)
         #self.assertTrue(complete)
         self.assertTrue(mtd[ws_name] != mtd[ws_clone_name])
@@ -916,7 +917,7 @@ class TestExtractionOfQRange(unittest.TestCase):
         rear_q_min = 1
         rear_q_max =30
         rear_name = "rear_ws"
-        bin_width = 1 
+        bin_width = 1
         provide_histo_workspace_with_one_spectrum(rear_name, rear_q_min, rear_q_max, bin_width)
         provide_histo_workspace_with_one_spectrum(front_name, front_q_min, front_q_max, bin_width)
         rescale_shift = HelperRescaleShift(True, 15, 17)
@@ -939,7 +940,7 @@ class TestExtractionOfQRange(unittest.TestCase):
         rear_q_min = 1
         rear_q_max =30
         rear_name = "rear_ws"
-        bin_width = 1 
+        bin_width = 1
         provide_histo_workspace_with_one_spectrum(rear_name, rear_q_min, rear_q_max, bin_width)
         provide_histo_workspace_with_one_spectrum(front_name, front_q_min, front_q_max, bin_width)
         rescale_shift = HelperRescaleShift(False, 1, 2)
@@ -962,7 +963,7 @@ class TestExtractionOfQRange(unittest.TestCase):
         rear_q_min = 1
         rear_q_max =9
         rear_name = "rear_ws"
-        bin_width = 1 
+        bin_width = 1
         provide_histo_workspace_with_one_spectrum(rear_name, rear_q_min, rear_q_max, bin_width)
         provide_histo_workspace_with_one_spectrum(front_name, front_q_min, front_q_max, bin_width)
         rescale_shift = HelperRescaleShift(False, 1, 2)
@@ -1002,7 +1003,7 @@ class TestErrorPropagationFitAndRescale(unittest.TestCase):
 
         x_min = 3
         x_max = 7
-        # Act 
+        # Act
         f_return, r_return = su.get_error_corrected_front_and_rear_data_sets(front, rear,x_min, x_max)
 
         # Assert
@@ -1137,11 +1138,11 @@ class TestGetQResolutionForMergedWorkspaces(unittest.TestCase):
         x1 = [1,2,3]
         e1 = [1,1]
         y1 = [2,2]
-        dx1 = [1.,2.,3.]
+        dx1 = [1.,2.]
         x2 = [1,2,3,4]
         e2 = [1,1, 1]
         y2 = [2,2, 2]
-        dx2 = [1.,2.,3.,4.]
+        dx2 = [1.,2.,3.]
         provide_workspace_with_x_errors(front_name, True, 1, x1, y1, e1, dx1)
         provide_workspace_with_x_errors(rear_name, True, 1, x2, y2, e2, dx2)
         provide_workspace_with_x_errors(result_name, False, 1)
@@ -1163,9 +1164,9 @@ class TestGetQResolutionForMergedWorkspaces(unittest.TestCase):
         x = [1,2,3]
         e = [1,1]
         y_front = [2,2]
-        dx_front = [1.,2.,3.]
+        dx_front = [1.,2.]
         y_rear = [1.5,1.5]
-        dx_rear = [3.,2.,1.]
+        dx_rear = [3.,2.]
         front_name = "front"
         rear_name = "rear"
         result_name = "result"
@@ -1183,12 +1184,10 @@ class TestGetQResolutionForMergedWorkspaces(unittest.TestCase):
 
         dx_expected_0 = (dx_front[0]*y_front[0]*scale + dx_rear[0]*y_rear[0])/(y_front[0]*scale + y_rear[0])
         dx_expected_1 = (dx_front[1]*y_front[1]*scale + dx_rear[1]*y_rear[1])/(y_front[1]*scale + y_rear[1])
-        dx_expected_2 = dx_expected_1
         dx_result = result.readDx(0)
-        self.assertTrue(len(dx_result) == 3)
+        self.assertTrue(len(dx_result) == 2)
         self.assertEqual(dx_result[0], dx_expected_0)
         self.assertEqual(dx_result[1], dx_expected_1)
-        self.assertEqual(dx_result[2], dx_expected_2)
 
         # Clean up
         DeleteWorkspace(front)
@@ -1233,7 +1232,7 @@ class TestCorrectingCummulativeSampleLogs(unittest.TestCase):
             self.assertTrue(larger_or_equal)
 
     def _check_that_values_of_series_are_the_same(self, series1, series2):
-        zipped = zip(series1, series2)
+        zipped = list(zip(series1, series2))
         areEqual = True
         for e1, e2 in zipped:
             isEqual = e1 == e2
@@ -1404,7 +1403,7 @@ class TestCorrectingCummulativeSampleLogs(unittest.TestCase):
 
         out_ref = CloneWorkspace(InputWorkspace = out)
 
-        # Act 
+        # Act
         # Shift the time -15.5 s into the past
         converter = su.CummulativeTimeSeriesPropertyAdder(total_time_shift_seconds = -15.5)
         converter.extract_sample_logs_from_workspace(lhs, rhs)
@@ -1474,6 +1473,117 @@ class TestCorrectingCummulativeSampleLogs(unittest.TestCase):
 
         # Clean up
         self._clean_up_workspaces()
+
+
+class TestBenchRotDetection(unittest.TestCase):
+    def _get_sample_workspace(self, has_bench_rot=True):
+        sample_alg = AlgorithmManager.createUnmanaged("CreateSampleWorkspace")
+        sample_alg.setChild(True)
+        sample_alg.initialize()
+        sample_alg.setProperty("OutputWorkspace", "dummy")
+        sample_alg.execute()
+        ws = sample_alg.getProperty("OutputWorkspace").value
+
+        if has_bench_rot:
+            log_alg = AlgorithmManager.createUnmanaged("AddSampleLog")
+            log_alg.setChild(True)
+            log_alg.initialize()
+            log_alg.setProperty("Workspace", ws)
+            log_alg.setProperty("LogName", "Bench_Rot")
+            log_alg.setProperty("LogType", "Number")
+            log_alg.setProperty("LogText", str(123.5))
+            log_alg.execute()
+        return ws
+
+    def _do_test(self, expected_raise, workspace, log_dict):
+        has_raised = False
+        try:
+            su.check_has_bench_rot(workspace, log_dict)
+        except RuntimeError:
+            has_raised = True
+        self.assertTrue(has_raised == expected_raise)
+
+    def test_workspace_with_bench_rot_does_not_raise(self):
+        # Arrange
+        ws = self._get_sample_workspace(has_bench_rot=True)
+        # Act + Assert
+        expected_raise = False
+        log_dict = {"sdfsdf": "sdfsdf"}
+        self._do_test(expected_raise, ws, log_dict)
+
+    def test_workspace_without_bench_raises(self):
+        # Arrange
+        import time
+        time.sleep(10)
+        ws = self._get_sample_workspace(has_bench_rot=False)
+        # Act + Assert
+        expected_raise = True
+        log_dict = {"sdfsdf": "sdfsdf"}
+        self._do_test(expected_raise, ws, log_dict)
+
+    def test_workspace_without_bench_but_no_log_dict_does_not_raise(self):
+        # Arrange
+        import time
+        time.sleep(10)
+        ws = self._get_sample_workspace(has_bench_rot=False)
+        # Act + Assert
+        expected_raise = False
+        log_dict = None
+        self._do_test(expected_raise, ws, log_dict)
+
+
+class TestQuaternionToAngleAndAxis(unittest.TestCase):
+    def _do_test_quaternion(self, angle, axis, expected_axis=None):
+        # Act
+        quaternion = Quat(angle, axis)
+        converted_angle, converted_axis = su.quaternion_to_angle_and_axis(quaternion)
+
+        # Assert
+        if expected_axis is not None:
+            axis = expected_axis
+        self.assertAlmostEqual(angle, converted_angle)
+        self.assertAlmostEqual(axis[0], converted_axis[0])
+        self.assertAlmostEqual(axis[1], converted_axis[1])
+        self.assertAlmostEqual(axis[2], converted_axis[2])
+
+    def test_that_quaternion_can_be_converted_to_axis_and_angle_for_regular(self):
+        # Arrange
+        angle = 23.0
+        axis = V3D(0.0, 1.0, 0.0)
+        self._do_test_quaternion(angle, axis)
+
+    def test_that_quaternion_can_be_converted_to_axis_and_angle_for_0_degree(self):
+        # Arrange
+        angle = 0.0
+        axis = V3D(1.0, 0.0, 0.0)
+        # There shouldn't be an axis for angle 0
+        expected_axis = V3D(0.0, 0.0, 0.0)
+        self._do_test_quaternion(angle, axis, expected_axis)
+
+    def test_that_quaternion_can_be_converted_to_axis_and_angle_for_180_degree(self):
+        # Arrange
+        angle = 180.0
+        axis = V3D(0.0, 1.0, 0.0)
+        # There shouldn't be an axis for angle 0
+        self._do_test_quaternion(angle, axis)
+
+class TestTransmissionName(unittest.TestCase):
+    def test_that_suffix_is_added_if_not_exists(self):
+        # Arrange
+        workspace_name = "test_workspace_name"
+        # Act
+        unfitted_workspace_name = su.get_unfitted_transmission_workspace_name(workspace_name)
+        # Assert
+        expected = workspace_name + "_unfitted"
+        self.assertTrue(unfitted_workspace_name == expected)
+    def test_that_suffix_is_not_added_if_exists(self):
+        # Arrange
+        workspace_name = "test_workspace_name_unfitted"
+        # Act
+        unfitted_workspace_name = su.get_unfitted_transmission_workspace_name(workspace_name)
+        # Assert
+        expected = workspace_name
+        self.assertTrue(unfitted_workspace_name == expected)
 
 if __name__ == "__main__":
     unittest.main()

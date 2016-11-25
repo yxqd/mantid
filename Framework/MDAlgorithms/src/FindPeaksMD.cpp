@@ -4,8 +4,9 @@
 #include "MantidDataObjects/MDEventFactory.h"
 #include "MantidDataObjects/MDHistoWorkspace.h"
 #include "MantidKernel/VMD.h"
+#include "MantidAPI/Run.h"
 
-#include <boost/math/special_functions/fpclassify.hpp>
+#include <cmath>
 #include <boost/type_traits/integral_constant.hpp>
 
 #include <map>
@@ -111,13 +112,6 @@ FindPeaksMD::FindPeaksMD()
       m_runNumber(-1), dimType(), m_goniometer() {}
 
 //----------------------------------------------------------------------------------------------
-/** Destructor
- */
-FindPeaksMD::~FindPeaksMD() {}
-
-//----------------------------------------------------------------------------------------------
-
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void FindPeaksMD::init() {
@@ -185,8 +179,8 @@ void FindPeaksMD::readExperimentInfo(const ExperimentInfo_sptr &ei,
     m_goniometer = ei->mutableRun().getGoniometerMatrix();
   } catch (std::exception &e) {
     g_log.warning() << "Error finding goniometer matrix. It will not be set in "
-                       "the peaks found." << std::endl;
-    g_log.warning() << e.what() << std::endl;
+                       "the peaks found.\n";
+    g_log.warning() << e.what() << '\n';
   }
 }
 
@@ -203,7 +197,7 @@ void FindPeaksMD::addPeak(const V3D &Q, const double binCount) {
       peakWS->addPeak(*p);
   } catch (std::exception &e) {
     g_log.notice() << "Error creating peak at " << Q << " because of '"
-                   << e.what() << "'. Peak will be skipped." << std::endl;
+                   << e.what() << "'. Peak will be skipped.\n";
   }
 }
 
@@ -276,16 +270,14 @@ void FindPeaksMD::findPeaks(typename MDEventWorkspace<MDE, nd>::sptr ws) {
     // peak.
     signal_t thresholdDensity = ws->getBox()->getSignalNormalized() *
                                 DensityThresholdFactor * m_densityScaleFactor;
-    if (boost::math::isnan(thresholdDensity) ||
-        (thresholdDensity == std::numeric_limits<double>::infinity()) ||
-        (thresholdDensity == -std::numeric_limits<double>::infinity())) {
+    if (!std::isfinite(thresholdDensity)) {
       g_log.warning()
           << "Infinite or NaN overall density found. Your input data "
-             "may be invalid. Using a 0 threshold instead." << std::endl;
+             "may be invalid. Using a 0 threshold instead.\n";
       thresholdDensity = 0;
     }
-    g_log.notice() << "Threshold signal density: " << thresholdDensity
-                   << std::endl;
+    g_log.information() << "Threshold signal density: " << thresholdDensity
+                        << '\n';
 
     typedef API::IMDNode *boxPtr;
     // We will fill this vector with pointers to all the boxes (up to a given
@@ -368,8 +360,7 @@ void FindPeaksMD::findPeaks(typename MDEventWorkspace<MDE, nd>::sptr ws) {
       if (!badBox) {
         if (numBoxesFound++ >= m_maxPeaks) {
           g_log.notice() << "Number of peaks found exceeded the limit of "
-                         << m_maxPeaks << ". Stopping peak finding."
-                         << std::endl;
+                         << m_maxPeaks << ". Stopping peak finding.\n";
           break;
         }
 
@@ -377,7 +368,7 @@ void FindPeaksMD::findPeaks(typename MDEventWorkspace<MDE, nd>::sptr ws) {
         g_log.debug() << "Found box at ";
         for (size_t d = 0; d < nd; d++)
           g_log.debug() << (d > 0 ? "," : "") << boxCenter[d];
-        g_log.debug() << "; Density = " << density << std::endl;
+        g_log.debug() << "; Density = " << density << '\n';
         // Report progres for each box found.
         prog->report("Finding Peaks");
       }
@@ -421,7 +412,7 @@ void FindPeaksMD::findPeaks(typename MDEventWorkspace<MDE, nd>::sptr ws) {
         }
       } catch (std::exception &e) {
         g_log.notice() << "Error creating peak at " << Q << " because of '"
-                       << e.what() << "'. Peak will be skipped." << std::endl;
+                       << e.what() << "'. Peak will be skipped.\n";
       }
 
       // Report progress for each box found.
@@ -430,7 +421,7 @@ void FindPeaksMD::findPeaks(typename MDEventWorkspace<MDE, nd>::sptr ws) {
     } // for each box found
   }
   g_log.notice() << "Number of peaks found: " << peakWS->getNumberPeaks()
-                 << std::endl;
+                 << '\n';
 }
 
 //----------------------------------------------------------------------------------------------
@@ -476,16 +467,14 @@ void FindPeaksMD::findPeaksHisto(
     double thresholdDensity =
         (totalSignal * ws->getInverseVolume() / double(numBoxes)) *
         DensityThresholdFactor * m_densityScaleFactor;
-    if ((thresholdDensity != thresholdDensity) ||
-        (thresholdDensity == std::numeric_limits<double>::infinity()) ||
-        (thresholdDensity == -std::numeric_limits<double>::infinity())) {
+    if (!std::isfinite(thresholdDensity)) {
       g_log.warning()
           << "Infinite or NaN overall density found. Your input data "
-             "may be invalid. Using a 0 threshold instead." << std::endl;
+             "may be invalid. Using a 0 threshold instead.\n";
       thresholdDensity = 0;
     }
-    g_log.notice() << "Threshold signal density: " << thresholdDensity
-                   << std::endl;
+    g_log.information() << "Threshold signal density: " << thresholdDensity
+                        << '\n';
 
     // -------------- Sort and Filter by Density -----------------------------
     progress(0.20, "Sorting Boxes by Density");
@@ -536,14 +525,13 @@ void FindPeaksMD::findPeaksHisto(
       if (!badBox) {
         if (numBoxesFound++ >= m_maxPeaks) {
           g_log.notice() << "Number of peaks found exceeded the limit of "
-                         << m_maxPeaks << ". Stopping peak finding."
-                         << std::endl;
+                         << m_maxPeaks << ". Stopping peak finding.\n";
           break;
         }
 
         peakBoxes.push_back(index);
         g_log.debug() << "Found box at index " << index;
-        g_log.debug() << "; Density = " << density << std::endl;
+        g_log.debug() << "; Density = " << density << '\n';
         // Report progres for each box found.
         prog->report("Finding Peaks");
       }
@@ -568,7 +556,7 @@ void FindPeaksMD::findPeaksHisto(
     } // for each box found
   }
   g_log.notice() << "Number of peaks found: " << peakWS->getNumberPeaks()
-                 << std::endl;
+                 << '\n';
 }
 
 //----------------------------------------------------------------------------------------------

@@ -1,12 +1,16 @@
 # pylint: disable=no-init, too-many-instance-attributes
+from __future__ import (absolute_import, division, print_function)
+from six import iteritems
+
 from mantid.kernel import *
 from mantid.api import *
 from vesuvio.base import VesuvioBase, TableWorkspaceDictionaryFacade
 from vesuvio.fitting import parse_fit_options
-
 import mantid.simpleapi as ms
+import math
 
 #----------------------------------------------------------------------------------------
+
 
 def create_cuboid_xml(height, width, depth):
     """
@@ -18,19 +22,20 @@ def create_cuboid_xml(height, width, depth):
     """
     half_height, half_width, half_thick = 0.5*height, 0.5*width, 0.5*depth
     xml_str = \
-      " <cuboid id=\"sample-shape\"> " \
-      + "<left-front-bottom-point " \
-      + "x=\"%f\" y=\"%f\" z=\"%f\" /> " % (half_width, -half_height, half_thick) \
-      + "<left-front-top-point " \
-      + "x=\"%f\" y=\"%f\" z=\"%f\" /> " % (half_width, half_height, half_thick) \
-      + "<left-back-bottom-point " \
-      + "x=\"%f\" y=\"%f\" z=\"%f\" /> " % (half_width, -half_height, -half_thick) \
-      + "<right-front-bottom-point " \
-      + "x=\"%f\" y=\"%f\" z=\"%f\" /> " % (-half_width, -half_height, half_thick) \
-      + "</cuboid>"
+        " <cuboid id=\"sample-shape\"> " \
+        + "<left-front-bottom-point " \
+        + "x=\"%f\" y=\"%f\" z=\"%f\" /> " % (half_width, -half_height, half_thick) \
+        + "<left-front-top-point " \
+        + "x=\"%f\" y=\"%f\" z=\"%f\" /> " % (half_width, half_height, half_thick) \
+        + "<left-back-bottom-point " \
+        + "x=\"%f\" y=\"%f\" z=\"%f\" /> " % (half_width, -half_height, -half_thick) \
+        + "<right-front-bottom-point " \
+        + "x=\"%f\" y=\"%f\" z=\"%f\" /> " % (-half_width, -half_height, half_thick) \
+        + "</cuboid>"
     return xml_str
 
 #----------------------------------------------------------------------------------------
+
 
 class VesuvioCorrections(VesuvioBase):
 
@@ -304,7 +309,7 @@ class VesuvioCorrections(VesuvioBase):
 
         for idx, wsn in enumerate(fit_workspaces):
             tie = ''
-            for param, value in fixed_parameters.iteritems():
+            for param, value in iteritems(fixed_parameters):
                 if param in wsn:
                     tie = 'Scaling=%f,' % value
             function_str = "name=TabulatedFunction,Workspace=%s," % (wsn) \
@@ -319,7 +324,7 @@ class VesuvioCorrections(VesuvioBase):
         fit.setChild(True)
         fit.setLogging(True)
         fit.setProperty("Function", ";".join(functions))
-        fit.setProperty("InputWorkspace", self._input_ws)
+        fit.setProperty("InputWorkspace", self._output_ws)
         fit.setProperty("Output", param_table_name)
         fit.setProperty("CreateOutput", True)
         fit.execute()
@@ -362,10 +367,10 @@ class VesuvioCorrections(VesuvioBase):
         params_dict = TableWorkspaceDictionaryFacade(mtd[params_ws_name])
         func_str = fit_opts.create_function_str(params_dict)
 
-        ms.CalculateGammaBackground(InputWorkspace=self._output_ws,
-                                    ComptonFunction=func_str,
-                                    BackgroundWorkspace=correction_background_ws,
-                                    CorrectedWorkspace='__corrected_dummy')
+        ms.VesuvioCalculateGammaBackground(InputWorkspace=self._output_ws,
+                                           ComptonFunction=func_str,
+                                           BackgroundWorkspace=correction_background_ws,
+                                           CorrectedWorkspace='__corrected_dummy')
         ms.DeleteWorkspace('__corrected_dummy')
 
         return correction_background_ws
@@ -412,7 +417,20 @@ class VesuvioCorrections(VesuvioBase):
             # The program THICK also uses sigma/int_sum to be consistent with the prgram
             # DINSMS_BATCH
 
-            width = params_dict['f%d.Width' % i]
+            width_prop = 'f%d.Width' % i
+            sigma_x_prop = 'f%d.SigmaX' % i
+            sigma_y_prop = 'f%d.SigmaY' % i
+            sigma_z_prop = 'f%d.SigmaZ' % i
+
+            if width_prop in params_dict:
+                width = params_dict['f%d.Width' % i]
+            elif sigma_x_prop in params_dict:
+                sigma_x = float(params_dict[sigma_x_prop])
+                sigma_y = float(params_dict[sigma_y_prop])
+                sigma_z = float(params_dict[sigma_z_prop])
+                width = math.sqrt((sigma_x**2 + sigma_y**2 + sigma_z**2) / 3.0)
+            else:
+                continue
 
             atom_props.append(mass)
             atom_props.append(intentisy)
@@ -441,20 +459,20 @@ class VesuvioCorrections(VesuvioBase):
         # 1-exp(-n*dens*sigma) = measured scattering power of the sample.
         # For this, a program like THICK must be used.
         # The program THICK also uses sigma/int_sum to be consistent with the prgram DINSMS_BATCH
-        # The algorithm CalculateMsVesuvio called by the algorithm VesuvioCorrections takes the
+        # The algorithm VesuvioCalculateMs called by the algorithm VesuvioCorrections takes the
         # parameter AtomicProperties with the absolute intensities, contraty to DINSMS_BATCH which
         # takes in relative intensities.
         # To compensate for this, the thickness parameter, dens (SampleDensity),  is divided in by
         # the sum of absolute intensities in VesuvioCorrections before being passed to
-        # CalculateMsVesuvio.
+        # VesuvioCalculateMs.
         # Then, for the modified VesuvioCorrection algorithm one can use the thickenss parameter is
         # as is from the THICK command, i.e. 43.20552
         # This works, however, only in the thin sample limit, contrary to the THICK program. Thus,
         # for some detectors (detector banks) the SampleDensiy parameter may be over(under)
         # estimated.
 
-        ms.CalculateMSVesuvio(InputWorkspace=self._output_ws,
-                              NoOfMasses=len(atom_props)/3,
+        ms.VesuvioCalculateMS(InputWorkspace=self._output_ws,
+                              NoOfMasses=int(len(atom_props)/3),
                               SampleDensity=self.getProperty("SampleDensity").value/intensity_sum,
                               AtomicProperties=atom_props,
                               BeamRadius=self.getProperty("BeamRadius").value,

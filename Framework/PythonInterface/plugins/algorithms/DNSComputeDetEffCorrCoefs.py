@@ -1,3 +1,4 @@
+from __future__ import (absolute_import, division, print_function)
 import mantid.simpleapi as api
 from mantid.api import PythonAlgorithm, AlgorithmFactory, WorkspaceProperty, WorkspaceGroup
 from mantid.kernel import Direction, StringArrayProperty, StringArrayLengthValidator, FloatBoundedValidator
@@ -86,7 +87,6 @@ class DNSComputeDetEffCorrCoefs(PythonAlgorithm):
             else:
                 workspaces.append(wsname)
         return workspaces
-
 
     def cleanup(self, wslist):
         """
@@ -185,7 +185,6 @@ class DNSComputeDetEffCorrCoefs(PythonAlgorithm):
             result[angle] = wsname
         return result
 
-
     def PyExec(self):
         # Input
         vana_input = self.getProperty("VanadiumWorkspaces").value
@@ -215,7 +214,7 @@ class DNSComputeDetEffCorrCoefs(PythonAlgorithm):
         total = self._sum_signal(sfv, nsfv, deterota)
 
         # compute vmean
-        _mean_ws_ = api.Mean(",".join(total.values()))     # Mean takes string
+        _mean_ws_ = api.Mean(",".join(list(total.values())))     # Mean takes string
         self.toremove.append(_mean_ws_.getName())
         num =  self._get_notmasked_detectors_number(_mean_ws_)
         if num == 0:
@@ -228,7 +227,7 @@ class DNSComputeDetEffCorrCoefs(PythonAlgorithm):
         outws_name = self.getPropertyValue("OutputWorkspace")
         # for only one detector position only one workspace will be created
         if len(deterota) == 1:
-            api.Divide(total.values()[0], _vana_mean_, OutputWorkspace=outws_name)
+            api.Divide(list(total.values())[0], _vana_mean_, OutputWorkspace=outws_name)
         else:
             # for many detector positions group of workspaces will be created
             results = []

@@ -1,6 +1,7 @@
 #include "MantidAlgorithms/CalculateResolution.h"
 #include "MantidAPI/InstrumentValidator.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/Run.h"
 #include "MantidGeometry/IComponent.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidKernel/TimeSeriesProperty.h"
@@ -18,18 +19,6 @@ using namespace Mantid::Kernel;
 
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(CalculateResolution)
-
-//----------------------------------------------------------------------------------------------
-/** Constructor
-*/
-CalculateResolution::CalculateResolution() {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
-*/
-CalculateResolution::~CalculateResolution() {}
-
-//----------------------------------------------------------------------------------------------
 
 /// Algorithm's name for identification. @see Algorithm::name
 const std::string CalculateResolution::name() const {
@@ -50,7 +39,6 @@ const std::string CalculateResolution::summary() const {
          "workspace.";
 }
 
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
 */
 void CalculateResolution::init() {
@@ -104,7 +92,7 @@ void CalculateResolution::exec() {
           "Value for two theta could not be found in log.");
     }
     g_log.notice() << "Found '" << twoTheta
-                   << "' as value for two theta in log." << std::endl;
+                   << "' as value for two theta in log.\n";
   }
 
   Instrument_const_sptr instrument = ws->getInstrument();

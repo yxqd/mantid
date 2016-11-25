@@ -23,10 +23,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 File change history is stored at: <https://github.com/mantidproject/mantid>
 Code Documentation is available at: <http://doxygen.mantidproject.org>
 '''
-
-from mantid.api import IFunction1D, FunctionFactory
+from __future__ import (absolute_import, division, print_function)
 import math
 import numpy as np
+from mantid.api import IFunction1D, FunctionFactory
+
 
 class Guinier(IFunction1D):
     """
@@ -34,6 +35,7 @@ class Guinier(IFunction1D):
 
         I(q) = I(0) exp(-R^2 q^2 / 3)
     """
+
     def category(self):
         return "SANS"
 

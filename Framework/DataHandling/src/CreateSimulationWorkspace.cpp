@@ -42,6 +42,8 @@ StartAndEndTime getStartAndEndTimesFromRawFile(std::string filename) {
       Mantid::DataHandling::LoadRawHelper::extractStartTime(&isisRaw);
   startAndEndTime.endTime =
       Mantid::DataHandling::LoadRawHelper::extractEndTime(&isisRaw);
+
+  fclose(rawFile);
   return startAndEndTime;
 }
 
@@ -69,6 +71,7 @@ namespace DataHandling {
 DECLARE_ALGORITHM(CreateSimulationWorkspace)
 
 using namespace API;
+using namespace HistogramData;
 
 //----------------------------------------------------------------------------------------------
 /// Algorithm's name for identification. @see Algorithm::name
@@ -167,8 +170,8 @@ void CreateSimulationWorkspace::createInstrument() {
  */
 void CreateSimulationWorkspace::createOutputWorkspace() {
   const size_t nhistograms = createDetectorMapping();
-  const MantidVecPtr binBoundaries = createBinBoundaries();
-  const size_t xlength = binBoundaries->size();
+  const auto binBoundaries = createBinBoundaries();
+  const size_t xlength = binBoundaries.size();
   const size_t ylength = xlength - 1;
 
   m_outputWS = WorkspaceFactory::Instance().create("Workspace2D", nhistograms,
@@ -181,14 +184,11 @@ void CreateSimulationWorkspace::createOutputWorkspace() {
 
   m_progress = boost::make_shared<Progress>(this, 0.5, 0.75, nhistograms);
 
-  PARALLEL_FOR1(m_outputWS)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*m_outputWS))
   for (int64_t i = 0; i < static_cast<int64_t>(nhistograms); ++i) {
-    m_outputWS->setX(i, binBoundaries);
-    MantidVec &yOut = m_outputWS->dataY(i);
-    for (size_t j = 0; j < ylength; ++j) {
-      yOut[j] = 1.0; // Set everything to a value so that you can visualize the
-                     // output sensibly
-    }
+    m_outputWS->setBinEdges(i, binBoundaries);
+    m_outputWS->mutableY(i) = 1.0;
+
     m_progress->report("Setting X values");
   }
   applyDetectorMapping();
@@ -332,19 +332,18 @@ void CreateSimulationWorkspace::createGroupingsFromTables(int *specTable,
 /**
  * @returns The bin bounadries for the new workspace
  */
-MantidVecPtr CreateSimulationWorkspace::createBinBoundaries() const {
+BinEdges CreateSimulationWorkspace::createBinBoundaries() const {
   const std::vector<double> rbparams = getProperty("BinParams");
-  MantidVecPtr binsPtr;
-  MantidVec &newBins = binsPtr.access();
+  MantidVec newBins;
   const int numBoundaries =
       Mantid::Kernel::VectorHelper::createAxisFromRebinParams(rbparams,
                                                               newBins);
   if (numBoundaries <= 2) {
     throw std::invalid_argument(
         "Error in BinParams - Gave invalid number of bin boundaries: " +
-        boost::lexical_cast<std::string>(numBoundaries));
+        std::to_string(numBoundaries));
   }
-  return binsPtr;
+  return BinEdges(std::move(newBins));
 }
 
 /**
@@ -353,11 +352,11 @@ MantidVecPtr CreateSimulationWorkspace::createBinBoundaries() const {
 void CreateSimulationWorkspace::applyDetectorMapping() {
   size_t wsIndex(0);
   for (auto &detGroup : m_detGroups) {
-    ISpectrum *spectrum = m_outputWS->getSpectrum(wsIndex);
-    spectrum->setSpectrumNo(
+    auto &spectrum = m_outputWS->getSpectrum(wsIndex);
+    spectrum.setSpectrumNo(
         static_cast<specnum_t>(wsIndex + 1)); // Ensure a contiguous mapping
-    spectrum->clearDetectorIDs();
-    spectrum->addDetectorIDs(detGroup.second);
+    spectrum.clearDetectorIDs();
+    spectrum.addDetectorIDs(detGroup.second);
     ++wsIndex;
   }
 }
@@ -368,7 +367,7 @@ void CreateSimulationWorkspace::applyDetectorMapping() {
  */
 void CreateSimulationWorkspace::adjustInstrument(const std::string &filename) {
   // If requested update the instrument to positions in the raw file
-  const Geometry::ParameterMap &pmap = m_outputWS->instrumentParameters();
+  const auto &pmap = m_outputWS->constInstrumentParameters();
   Geometry::Instrument_const_sptr instrument = m_outputWS->getInstrument();
   boost::shared_ptr<Geometry::Parameter> updateDets =
       pmap.get(instrument->getComponentID(), "det-pos-source");

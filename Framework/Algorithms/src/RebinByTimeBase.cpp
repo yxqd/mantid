@@ -1,5 +1,6 @@
 #include "MantidAlgorithms/RebinByTimeBase.h"
 #include "MantidAPI/Axis.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidKernel/ArrayProperty.h"
@@ -33,17 +34,6 @@ public:
   }
 };
 
-//----------------------------------------------------------------------------------------------
-/** Constructor
- */
-RebinByTimeBase::RebinByTimeBase() {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
- */
-RebinByTimeBase::~RebinByTimeBase() {}
-
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void RebinByTimeBase::init() {
@@ -157,8 +147,6 @@ void RebinByTimeBase::exec() {
 
   // Go through all the histograms and set the data
   doHistogramming(inWS, outputWS, XValues_new, OutXValues_scaled, prog);
-
-  return;
 }
 
 } // namespace Algorithms

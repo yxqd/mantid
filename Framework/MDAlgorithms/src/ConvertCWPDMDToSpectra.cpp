@@ -5,6 +5,7 @@
 #include "MantidAPI/IMDEventWorkspace.h"
 #include "MantidAPI/IMDIterator.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceProperty.h"
 #include "MantidGeometry/Instrument.h"
@@ -22,17 +23,6 @@ DECLARE_ALGORITHM(ConvertCWPDMDToSpectra)
 
 const double BIGNUMBER = 1.0E100;
 
-//----------------------------------------------------------------------------------------------
-/** Constructor
- */
-ConvertCWPDMDToSpectra::ConvertCWPDMDToSpectra() : m_infitesimal(1.0E-10) {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
- */
-ConvertCWPDMDToSpectra::~ConvertCWPDMDToSpectra() {}
-
-//----------------------------------------------------------------------------------------------
 void ConvertCWPDMDToSpectra::init() {
 
   declareProperty(make_unique<WorkspaceProperty<IMDEventWorkspace>>(
@@ -86,7 +76,6 @@ void ConvertCWPDMDToSpectra::init() {
                   "is applied to the case that the bin size is small. ");
 }
 
-//----------------------------------------------------------------------------------------------
 void ConvertCWPDMDToSpectra::exec() {
   // Process input workspaces
   // input data workspace
@@ -598,8 +587,6 @@ void ConvertCWPDMDToSpectra::binMD(API::IMDEventWorkspace_const_sptr mdws,
       scancell = false;
     }
   } // ENDOF(while)
-
-  return;
 }
 
 //----------------------------------------------------------------------------------------------
@@ -673,8 +660,6 @@ void ConvertCWPDMDToSpectra::linearInterpolation(
 
     return;
   }
-
-  return;
 }
 
 //----------------------------------------------------------------------------------------------
@@ -701,8 +686,6 @@ void ConvertCWPDMDToSpectra::setupSampleLogs(
     targetrun.addProperty(p->clone());
     g_log.debug() << "Cloned property " << p->name() << "\n";
   }
-
-  return;
 }
 
 //----------------------------------------------------------------------------------------------
@@ -728,8 +711,6 @@ void ConvertCWPDMDToSpectra::scaleMatrixWorkspace(
       }
     }
   } // FOR(iws)
-
-  return;
 }
 
 //----------------------------------------------------------------------------------------------

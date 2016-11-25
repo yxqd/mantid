@@ -2,9 +2,6 @@
 // @author Freddie Akeroyd, STFC ISIS Faility
 // @author Ronald Fowler, STFC eScience. Modified to fit with
 // SaveToSNSHistogramNexusProcessed
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidDataHandling/SaveToSNSHistogramNexus.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidGeometry/IComponent.h"
@@ -13,7 +10,6 @@
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/Timer.h"
 #include "MantidKernel/Memory.h"
-#include "MantidAPI/MemoryManager.h"
 #include "MantidAPI/Progress.h"
 #include "MantidAPI/FileProperty.h"
 
@@ -22,11 +18,10 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_array.hpp>
 #include <Poco/File.h>
-//#include <hdf5.h> //This is troublesome on multiple platforms.
 
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
 
 namespace Mantid {
 namespace DataHandling {
@@ -232,8 +227,7 @@ int SaveToSNSHistogramNexus::WriteOutDataOrErrors(
     // field.
     NXname attrName = "errors";
     std::string attrBuffer = errors_field_name;
-    if (NXputattr(outId, attrName,
-                  static_cast<void *>(const_cast<char *>(attrBuffer.c_str())),
+    if (NXputattr(outId, attrName, attrBuffer.c_str(),
                   static_cast<int>(attrBuffer.size()), NX_CHAR) != NX_OK)
       return NX_ERROR;
   }
@@ -262,7 +256,7 @@ int SaveToSNSHistogramNexus::WriteOutDataOrErrors(
     //      strcpy(link->targetPath, targetPath.c_str());
     //      if (NXmakelink(outId,link) != NX_OK)
     //        g_log.debug() << "Error while making link to " << targetPath <<
-    //        std::endl;
+    //        '\n';
 
     if (WriteAttributes(is_definition) != NX_OK)
       return NX_ERROR;
@@ -293,7 +287,7 @@ int SaveToSNSHistogramNexus::WriteOutDataOrErrors(
     Timer tim1;
     int ypixels = static_cast<int>(det->ypixels());
 
-    PARALLEL_FOR1(inputWorkspace)
+    PARALLEL_FOR_IF(Kernel::threadSafe(*inputWorkspace))
     for (int y = 0; y < ypixels; y++) {
       PARALLEL_START_INTERUPT_REGION
       // Get the workspace index for the detector ID at this spot
@@ -453,10 +447,6 @@ int SaveToSNSHistogramNexus::WriteDataGroup(std::string bank,
     size_t memory_required = size_t(det->xpixels() * det->ypixels()) *
                              size_t(inputWorkspace->blocksize()) * 2 *
                              sizeof(float);
-    // Make sure you free as much memory as possible if you need a huge block.
-    if (memory_required > 1000000000)
-      API::MemoryManager::Instance().releaseFreeMemory();
-
     Kernel::MemoryStats mem;
     mem.update();
     size_t memory_available = mem.availMem() * 1024;
@@ -556,7 +546,7 @@ int SaveToSNSHistogramNexus::WriteGroup(int is_definition) {
         if (!strcmp(current_path, link.targetPath)) {
           // Look for the bank name
           std::string path(current_path);
-          std::string bank("");
+          std::string bank;
 
           size_t a = path.rfind('/');
           if (a != std::string::npos && a > 0) {
@@ -658,15 +648,28 @@ int SaveToSNSHistogramNexus::WriteAttributes(int is_definition) {
   (void)is_definition;
 
   int status, i, attrLen, attrType;
+#ifndef NEXUS43
+  int rank;
+  int dims[4];
+#endif
   NXname attrName;
   void *attrBuffer;
 
   i = 0;
   do {
+#ifdef NEXUS43
     status = NXgetnextattr(inId, attrName, &attrLen, &attrType);
+#else
+    status = NXgetnextattra(inId, attrName, &rank, dims, &attrType);
+#endif
     if (status == NX_ERROR)
       return NX_ERROR;
     if (status == NX_OK) {
+#ifndef NEXUS43
+      if (rank != 1)
+        return NX_ERROR;
+      attrLen = dims[0];
+#endif
       if (strcmp(attrName, "NeXus_version") &&
           strcmp(attrName, "XML_version") && strcmp(attrName, "HDF_version") &&
           strcmp(attrName, "HDF5_Version") && strcmp(attrName, "file_name") &&
@@ -726,8 +729,6 @@ void SaveToSNSHistogramNexus::exec() {
 
   if (ret == NX_ERROR)
     throw std::runtime_error("Nexus error while copying the file.");
-
-  return;
 }
 
 } // namespace NeXus

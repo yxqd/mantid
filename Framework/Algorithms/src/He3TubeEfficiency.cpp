@@ -101,7 +101,7 @@ void He3TubeEfficiency::exec() {
   }
 
   // Get the detector parameters
-  this->paraMap = &(this->inputWS->instrumentParameters());
+  this->paraMap = &(this->inputWS->constInstrumentParameters());
 
   // Store some information about the instrument setup that will not change
   this->samplePos = this->inputWS->getInstrument()->getSample()->getPos();
@@ -117,7 +117,7 @@ void He3TubeEfficiency::exec() {
   std::size_t numHists = this->inputWS->getNumberHistograms();
   this->progress = new API::Progress(this, 0.0, 1.0, numHists);
 
-  PARALLEL_FOR2(inputWS, outputWS)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*inputWS, *outputWS))
   for (int i = 0; i < static_cast<int>(numHists); ++i) {
     PARALLEL_START_INTERUPT_REGION
 
@@ -191,8 +191,6 @@ void He3TubeEfficiency::correctForEfficiency(std::size_t spectraIndex) {
     ++einItr;
     ++xItr;
   }
-
-  return;
 }
 
 /**
@@ -257,7 +255,7 @@ void He3TubeEfficiency::getDetectorGeometry(
   if (!shape_sptr) {
     throw std::runtime_error(
         "Detector geometry error: detector with id: " +
-        boost::lexical_cast<std::string>(det->getID()) +
+        std::to_string(det->getID()) +
         " does not have shape. Is this a detectors group?\n"
         "The algorithm works for instruments with one-to-one "
         "spectra-to-detector maps only!");
@@ -375,7 +373,7 @@ void He3TubeEfficiency::logErrors() const {
     for (size_t i = 0; i < nspecs; ++i) {
       this->g_log.debug() << this->spectraSkipped[i] << " ";
     }
-    this->g_log.debug() << std::endl;
+    this->g_log.debug() << '\n';
   }
 }
 
@@ -416,8 +414,7 @@ void He3TubeEfficiency::execEvent() {
   // generate the output workspace pointer
   API::MatrixWorkspace_sptr matrixOutputWS = getProperty("OutputWorkspace");
   if (matrixOutputWS != matrixInputWS) {
-    matrixOutputWS =
-        API::MatrixWorkspace_sptr(matrixInputWS->clone().release());
+    matrixOutputWS = matrixInputWS->clone();
     setProperty("OutputWorkspace", matrixOutputWS);
   }
   auto outputWS =
@@ -425,7 +422,7 @@ void He3TubeEfficiency::execEvent() {
 
   std::size_t numHistograms = outputWS->getNumberHistograms();
   this->progress = new API::Progress(this, 0.0, 1.0, numHistograms);
-  PARALLEL_FOR1(outputWS)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*outputWS))
   for (int i = 0; i < static_cast<int>(numHistograms); ++i) {
     PARALLEL_START_INTERUPT_REGION
 
@@ -446,17 +443,17 @@ void He3TubeEfficiency::execEvent() {
     }
 
     // Do the correction
-    DataObjects::EventList *evlist = outputWS->getEventListPtr(i);
-    switch (evlist->getEventType()) {
+    auto &evlist = outputWS->getSpectrum(i);
+    switch (evlist.getEventType()) {
     case API::TOF:
       // Switch to weights if needed.
-      evlist->switchTo(API::WEIGHTED);
+      evlist.switchTo(API::WEIGHTED);
     // Fall through
     case API::WEIGHTED:
-      eventHelper(evlist->getWeightedEvents(), exp_constant);
+      eventHelper(evlist.getWeightedEvents(), exp_constant);
       break;
     case API::WEIGHTED_NOTIME:
-      eventHelper(evlist->getWeightedEventsNoTime(), exp_constant);
+      eventHelper(evlist.getWeightedEventsNoTime(), exp_constant);
       break;
     }
 

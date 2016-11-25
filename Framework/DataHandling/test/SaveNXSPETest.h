@@ -11,7 +11,6 @@
 #include "MantidDataHandling/LoadInstrument.h"
 #include "MantidTestHelpers/ComponentCreationHelper.h"
 
-#include <boost/math/special_functions/fpclassify.hpp>
 #include <boost/shared_array.hpp>
 #include "boost/tuple/tuple.hpp"
 
@@ -73,7 +72,7 @@ public:
     TS_ASSERT_DELTA(9.0, signal[9], tolerance);
     TS_ASSERT_DELTA(18.0, error[9], tolerance);
     // element 1,2 in 2D flat buffer
-    TS_ASSERT(boost::math::isnan(signal[1 * dims[1] + 2]));
+    TS_ASSERT(std::isnan(signal[1 * dims[1] + 2]));
     TS_ASSERT_DELTA(0.0, error[1 * dims[1] + 2], tolerance);
     // final element
     TS_ASSERT_DELTA(29.0, signal[dims[0] * dims[1] - 1], tolerance);
@@ -99,7 +98,7 @@ public:
     TS_ASSERT_DELTA(99.0, signal[99], tolerance);
     TS_ASSERT_DELTA(198.0, error[99], tolerance);
     // element 1,2 in 2D flat buffer
-    TS_ASSERT(boost::math::isnan(signal[1 * dims[1] + 2]));
+    TS_ASSERT(std::isnan(signal[1 * dims[1] + 2]));
     TS_ASSERT_DELTA(0.0, error[1 * dims[1] + 2], tolerance);
     // final element
     TS_ASSERT_DELTA(524999.0, signal[dims[0] * dims[1] - 1], tolerance);
@@ -157,7 +156,7 @@ private:
     for (size_t j = 0; j < inputWS->getNumberHistograms(); ++j) {
       // Just set the spectrum number to match the index
       inputWS->getSpectrum(j)
-          ->setSpectrumNo(static_cast<Mantid::specnum_t>(j + 1));
+          .setSpectrumNo(static_cast<Mantid::specnum_t>(j + 1));
     }
 
     // mask the detector
@@ -168,7 +167,7 @@ private:
     m_Pmap->addBool(toMask.get(), "masked", true);
 
     // required to get it passed the algorthms validator
-    inputWS->isDistribution(true);
+    inputWS->setDistribution(true);
 
     return inputWS;
   }

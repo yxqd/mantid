@@ -1,19 +1,18 @@
-//---------------------------------------------------
-// Includes
-//---------------------------------------------------
 #include "MantidDataHandling/SaveGSS.h"
 
 #include "MantidAPI/AlgorithmHistory.h"
 #include "MantidAPI/FileProperty.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidKernel/TimeSeriesProperty.h"
 #include "MantidKernel/ListValidator.h"
+#include "MantidKernel/PhysicalConstants.h"
 
-#include <boost/math/special_functions/fpclassify.hpp>
 #include <Poco/File.h>
 #include <Poco/Path.h>
 #include <fstream>
+#include <cmath>
 
 namespace Mantid {
 namespace DataHandling {
@@ -48,9 +47,6 @@ bool isConstantDelta(const MantidVec &xAxis) {
   return true;
 }
 
-//---------------------------------------------------
-// Private member functions
-//---------------------------------------------------
 /** Initialise the algorithm
   */
 void SaveGSS::init() {
@@ -92,7 +88,6 @@ void SaveGSS::init() {
       "otherwise, the continous bank IDs are applied. ");
 }
 
-//----------------------------------------------------------------------------------------------
 /** Determine the focused position for the supplied spectrum. The position
  * (l1, l2, tth) is returned via the references passed in.
  */
@@ -122,15 +117,12 @@ void getFocusedPos(MatrixWorkspace_const_sptr wksp, const int spectrum,
     throw std::runtime_error(errss.str());
   }
   l2 = det->getDistance(*sample);
-  tth = wksp->detectorTwoTheta(det);
+  tth = wksp->detectorTwoTheta(*det);
 
-  difc = ((2.0 * PhysicalConstants::NeutronMass * sin(tth / 2.0) * (l1 + l2)) /
-          (PhysicalConstants::h * 1e4));
-
-  return;
+  difc = ((2.0 * PhysicalConstants::NeutronMass * sin(tth * 0.5) * (l1 + l2)) /
+          (PhysicalConstants::h * 1.e4));
 }
 
-//----------------------------------------------------------------------------------------------
 /** Execute the algorithm
   */
 void SaveGSS::exec() {
@@ -150,7 +142,7 @@ void SaveGSS::exec() {
     errss << "Number of Spectra (" << nHist
           << ") cannot be larger than 99 for GSAS file";
     g_log.error(errss.str());
-    throw new std::invalid_argument(errss.str());
+    throw std::invalid_argument(errss.str());
   }
 
   std::string filename = getProperty("Filename");
@@ -186,11 +178,8 @@ void SaveGSS::exec() {
 
   writeGSASFile(filename, append, bank, MultiplyByBinWidth, split,
                 outputFormat);
-
-  return;
 }
 
-//----------------------------------------------------------------------------------------------
 /** Write GSAS file based on user-specified request
   */
 void SaveGSS::writeGSASFile(const std::string &outfilename, bool append,
@@ -252,7 +241,7 @@ void SaveGSS::writeGSASFile(const std::string &outfilename, bool append,
                   << "\n";
 
     bool writeheader = false;
-    std::string splitfilename("");
+    std::string splitfilename;
     if (!split && iws == 0 && !append) {
       // Non-split mode and first spectrum and in non-append mode
       writeheader = true;
@@ -291,7 +280,7 @@ void SaveGSS::writeGSASFile(const std::string &outfilename, bool append,
     // Determine bank number into GSAS file
     int bankid;
     if (m_useSpecAsBank) {
-      bankid = static_cast<int>(inputWS->getSpectrum(iws)->getSpectrumNo());
+      bankid = static_cast<int>(inputWS->getSpectrum(iws).getSpectrumNo());
     } else {
       bankid = basebanknumber + iws;
     }
@@ -332,11 +321,8 @@ void SaveGSS::writeGSASFile(const std::string &outfilename, bool append,
     out.write(outbuffer.str().c_str(), outbuffer.str().length());
     out.close();
   }
-
-  return;
 }
 
-//----------------------------------------------------------------------------------------------
 /** Ensures that when a workspace group is passed as output to this workspace
    *  everything is saved to one file and the bank number increments for each
    *  group member.
@@ -363,7 +349,6 @@ void SaveGSS::setOtherProperties(IAlgorithm *alg,
     Algorithm::setOtherProperties(alg, propertyName, propertyValue, periodNum);
 }
 
-//----------------------------------------------------------------------------------------------
 /** Write value from a RunInfo property (i.e., log) to a stream
     */
 void writeLogValue(std::ostream &os, const Run &runinfo,
@@ -399,8 +384,6 @@ void writeLogValue(std::ostream &os, const Run &runinfo,
   std::string units = prop->units();
   if (!units.empty())
     os << " " << units;
-
-  return;
 }
 
 //--------------------------------------------------------------------------------------------
@@ -487,11 +470,8 @@ void SaveGSS::writeHeaders(const std::string &format, std::stringstream &os,
   }
 
   os.flags(fflags);
-
-  return;
 }
 
-//----------------------------------------------------------------------------------------------
 /** Write a single line for bank
   */
 inline void writeBankLine(std::stringstream &out, const std::string &bintype,
@@ -504,18 +484,16 @@ inline void writeBankLine(std::stringstream &out, const std::string &bintype,
   out.flags(fflags);
 }
 
-//----------------------------------------------------------------------------------------------
 /** Fix error if value is less than zero or infinity
   */
 inline double fixErrorValue(const double value) {
-  if (value <= 0. || boost::math::isnan(value) ||
-      boost::math::isinf(value)) // Negative errors cannot be read by GSAS
+  if (value <= 0. ||
+      !std::isfinite(value)) // Negative errors cannot be read by GSAS
     return 0.;
   else
     return value;
 }
 
-//--------------------------------------------------------------------------------------------
 /**
   */
 void SaveGSS::writeRALFdata(const int bank, const bool MultiplyByBinWidth,
@@ -526,7 +504,7 @@ void SaveGSS::writeRALFdata(const int bank, const bool MultiplyByBinWidth,
   double bc2 = (X[1] - X[0]) * 32;
   // Logarithmic step
   double bc4 = (X[1] - X[0]) / X[0];
-  if (boost::math::isnan(fabs(bc4)) || boost::math::isinf(bc4))
+  if (!std::isfinite(bc4))
     bc4 = 0; // If X is zero for BANK
 
   // Write out the data header
@@ -535,7 +513,7 @@ void SaveGSS::writeRALFdata(const int bank, const bool MultiplyByBinWidth,
       << std::fixed << " " << std::setprecision(0) << std::setw(8) << bc2
       << std::fixed << " " << std::setprecision(0) << std::setw(8) << bc1
       << std::fixed << " " << std::setprecision(5) << std::setw(7) << bc4
-      << " FXYE" << std::endl;
+      << " FXYE\n";
 
   // Do each Y entry
   for (size_t j = 0; j < datasize; j++) {
@@ -561,8 +539,6 @@ void SaveGSS::writeRALFdata(const int bank, const bool MultiplyByBinWidth,
     // The error
     out << std::fixed << std::setprecision(8) << std::setw(18) << Epos << "\n";
   }
-
-  return;
 }
 
 //--------------------------------------------------------------------------------------------
@@ -587,13 +563,13 @@ void SaveGSS::writeSLOGdata(const int bank, const bool MultiplyByBinWidth,
                       *(X.rbegin() + 1));      // maximum TOF (in microseconds?)
   double bc3 = (*(X.begin() + 1) - bc1) / bc1; // deltaT/T
 
-  g_log.debug() << "SaveGSS(): Min TOF = " << bc1 << std::endl;
+  g_log.debug() << "SaveGSS(): Min TOF = " << bc1 << '\n';
 
   writeBankLine(out, "SLOG", bank, datasize);
   out << std::fixed << " " << std::setprecision(0) << std::setw(10) << bc1
       << std::fixed << " " << std::setprecision(0) << std::setw(10) << bc2
       << std::fixed << " " << std::setprecision(7) << std::setw(10) << bc3
-      << std::fixed << " 0 FXYE" << std::endl;
+      << std::fixed << " 0 FXYE\n";
 
   for (size_t i = 0; i < datasize; i++) {
     double y = Y[i];
@@ -613,8 +589,6 @@ void SaveGSS::writeSLOGdata(const int bank, const bool MultiplyByBinWidth,
         << "\n"; // let it flush its own buffer
   }
   out << std::flush;
-
-  return;
 }
 
 } // namespace DataHandling

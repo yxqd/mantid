@@ -1,8 +1,10 @@
 ﻿#pylint: disable=no-init,invalid-name
+from __future__ import (absolute_import, division, print_function)
 import mantid.simpleapi
 import mantid.kernel
 import mantid.api
 import numpy
+
 
 class MaskAngle(mantid.api.PythonAlgorithm):
     """ Class to generate grouping file
@@ -60,7 +62,6 @@ class MaskAngle(mantid.api.PythonAlgorithm):
             raise ValueError("MinAngle > MaxAngle, please check angle range for masking")
 
         detlist=[]
-
 
         numspec = ws.getNumberHistograms()
         source=ws.getInstrument().getSource().getPos()

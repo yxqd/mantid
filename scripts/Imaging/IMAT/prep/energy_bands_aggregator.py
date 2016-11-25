@@ -24,25 +24,6 @@ import re
 import sys
 import time
 
-# alternative for when other plugins are not available. It can be distributed
-# and copied on remote machines where there are no other options
-_USING_PLUGIN_TIFFFILE = False
-
-try:
-    import pyfits
-except ImportError:
-    # In Anaconda python, the pyfits package is in a different place, and this is what you frequently
-    # find on windows.
-    try:
-        import astropy.io.fits as pyfits
-    except ImportError:
-        raise ImportError("Cannot find the package 'pyfits' which is required to read/write FITS image files")
-
-try:
-    import numpy as np
-except ImportError:
-    raise ImportError("Cannot find the package 'numpy' which is required to calculate aggregated images")
-
 try:
     from skimage import io as skio
 except ImportError:
@@ -78,13 +59,35 @@ except RuntimeError:
             _USING_PLUGIN_TIFFFILE = True
         except ImportError:
             try:
-                import tifffile
+                import tifffile # noqa
                 _USING_PLUGIN_TIFFFILE = True
             except ImportError:
                 raise ImportError("Cannot find the package 'tifffile' in the system or together with this "
                                   "module. It is required to read/write TIFF image files. " + FREEIMG_ERR_MSG)
 
+
+try:
+    import pyfits
+except ImportError:
+    # In Anaconda python, the pyfits package is in a different place, and this is what you frequently
+    # find on windows.
+    try:
+        import astropy.io.fits as pyfits
+    except ImportError:
+        raise ImportError("Cannot find the package 'pyfits' which is required to read/write FITS image files")
+
+try:
+    import numpy as np
+except ImportError:
+    raise ImportError("Cannot find the package 'numpy' which is required to calculate aggregated images")
+
+# alternative for when other plugins are not available. It can be distributed
+# and copied on remote machines where there are no other options
+_USING_PLUGIN_TIFFFILE = False
+
 #pylint: disable=too-many-instance-attributes
+
+
 class EnergyBandsAggregator(object):
     """
     Combines energy bands, producing stacks of images with one image per projection angle from
@@ -197,14 +200,13 @@ class EnergyBandsAggregator(object):
 
         Returns :: result from aggregating (sum, average, etc.) the new image
         """
-        if None == agg_method:
+        if agg_method is None:
             agg_method = self._default_agg_method
 
         if 'sum' == agg_method:
             acc = np.add(acc, img_data)
         elif 'average' == agg_method:
             acc = np.add((index-1)*acc/index, img_data/index)
-            __img_idx += 1
 
         return acc
 
@@ -245,10 +247,6 @@ class EnergyBandsAggregator(object):
             data_dtype = np.uint16
         accum = np.zeros((imgs[0].shape[0], imgs[0].shape[1]), dtype=data_dtype)
 
-        # methods that require incremental calculations should remember to do this
-        if 'average' == agg_method:
-            __img_idx = 1
-
         # filter, keep only the files between min and max indices given
         if band_indices:
             img_files = [f for idx,f in enumerate(img_files) if
@@ -283,12 +281,12 @@ class EnergyBandsAggregator(object):
         if not in_path:
             raise ValueError("The input path cannot be empty")
 
-        if None == output_path:
+        if output_path is None:
             output_path = self.default_out_path
 
         if out_format:
             self._out_format = out_format
-        if not isinstance(self._out_format, str) or not self._out_format in self.supported_out_formats:
+        if not isinstance(self._out_format, str) or self._out_format not in self.supported_out_formats:
             raise ValueError("Only the following output formats are supported: {0}. Format requested: {1}".
                              format(self.supported_out_formats, self._out_format))
 

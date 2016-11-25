@@ -79,7 +79,7 @@ void Rebunch::exec() {
   int progress_step = histnumber / 100;
   if (progress_step == 0)
     progress_step = 1;
-  PARALLEL_FOR2(inputW, outputW)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*inputW, *outputW))
   for (int hist = 0; hist < histnumber; hist++) {
     PARALLEL_START_INTERUPT_REGION
 
@@ -109,7 +109,7 @@ void Rebunch::exec() {
     PARALLEL_END_INTERUPT_REGION
   }
   PARALLEL_CHECK_INTERUPT_REGION
-  outputW->isDistribution(dist);
+  outputW->setDistribution(dist);
 
   // Copy units
   if (outputW->getAxis(0)->unit().get())
@@ -123,8 +123,6 @@ void Rebunch::exec() {
 
   // Assign it to the output workspace property
   setProperty("OutputWorkspace", outputW);
-
-  return;
 }
 
 /** Rebunches histogram data data according to n_bunch input

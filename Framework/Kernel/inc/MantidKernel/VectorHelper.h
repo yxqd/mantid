@@ -70,17 +70,33 @@ convertToBinBoundary(const std::vector<double> &bin_centers,
 
 bool MANTID_KERNEL_DLL isConstantValue(const std::vector<double> &arra);
 
+/**
+ * A convenience function to "flatten" the given vector of vectors
+ * into a single vector.  For example:
+ *
+ * ((1), (2, 3), (4), (5, 6)) becomes (1, 2, 3, 4, 5, 6)
+ *
+ * @param v :: the vector of vectors to be flattened.
+ * @return a single vector containing all elements in v.
+ */
+template <typename T>
+std::vector<T> flattenVector(const std::vector<std::vector<T>> &v) {
+  std::vector<T> flattened;
+
+  for (const auto &subVector : v) {
+    flattened.insert(flattened.end(), subVector.begin(), subVector.end());
+  }
+
+  return flattened;
+}
+
 template <typename NumT>
 MANTID_KERNEL_DLL std::vector<NumT>
 splitStringIntoVector(std::string listString);
 
 MANTID_KERNEL_DLL int getBinIndex(const std::vector<double> &bins,
                                   const double value);
-// Linearly interpolate between a set of Y values. Assumes the values are set
-// for the calculated nodes
-MANTID_KERNEL_DLL void linearlyInterpolateY(const std::vector<double> &x,
-                                            std::vector<double> &y,
-                                            const double stepSize);
+
 // Do running average of input vector within specified range, considering
 // heterogeneous bin-boundaries
 // if such boundaries are provided

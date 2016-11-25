@@ -5,7 +5,6 @@
 # Key Words: FUTURE
 #
 ############################################################################
-import sys
 import os
 import urllib2
 import math
@@ -15,22 +14,19 @@ import numpy
 import HfirUtility as hutil
 
 # Import mantid
-curdir = os.getcwd()
-libpath = os.path.join(curdir.split('Code')[0], 'Code/debug/bin')
-if os.path.exists(libpath) is False:
-    libpath = os.path.join(curdir.split('Code')[0], 'Code/release/bin')
-sys.path.append(libpath)
 import mantid.simpleapi as api
 from mantid.simpleapi import AnalysisDataService
 #from mantid.kernel import ConfigService
 
 
 VanadiumPeakPositions = [0.5044,0.5191,0.5350,0.5526,0.5936,0.6178,0.6453,0.6768,
-        0.7134,0.7566,0.8089,0.8737,0.9571,1.0701,1.2356,1.5133,2.1401]
+                         0.7134,0.7566,0.8089,0.8737,0.9571,1.0701,1.2356,1.5133,2.1401]
+
 
 class PDRManager(object):
     """ Powder diffraction reduction workspace manager
     """
+
     def __init__(self, exp, scan):
         """ Initialization
         """
@@ -57,6 +53,9 @@ class PDRManager(object):
         self._vanadiumPeakPosList = []
 
         self._wavelength = None
+
+        #register startup
+        mantid.UsageService.registerFeatureUsage("Interface","HfirPowderReduction",False)
 
         return
 
@@ -95,7 +94,6 @@ class PDRManager(object):
 
         return float(totalcounts)/float(numpts)
 
-
     def getProcessedVanadiumWS(self):
         """
         """
@@ -106,24 +104,20 @@ class PDRManager(object):
         """
         return self._processedVanWSTemp
 
-
     def getRawSpiceTable(self):
         """
         """
         return self._rawSpiceTableWS
-
 
     def getRawInfoMatrixWS(self):
         """
         """
         return self._rawLogInfoWS
 
-
     def getVanadiumPeaks(self):
         """
         """
         return self._vanadiumPeakPosList[:]
-
 
     def getWavelength(self):
         """
@@ -210,7 +204,6 @@ class PDRManager(object):
 
         return
 
-
     def setWavelength(self, wavelength):
         """ Set wavelength for this run
         """
@@ -221,9 +214,12 @@ class PDRManager(object):
         return
 
 #pylint: disable=too-many-public-methods
+
+
 class HFIRPDRedControl(object):
     """ Class for controlling HFIR powder reduction
     """
+
     def __init__(self):
         """ Initialization
         """
@@ -240,7 +236,7 @@ class HFIRPDRedControl(object):
     def applySmoothVanadium(self, expno, scanno, applysmooth):
         """ Apply smoothed vanadium
         """
-        if self._myWorkspaceDict.has_key((expno, scanno)) is False:
+        if ((expno, scanno) in self._myWorkspaceDict) is False:
             raise NotImplementedError("Exp %d Scan %d does not have reduced \
                     workspace." % (exp, scan))
         else:
@@ -263,7 +259,7 @@ class HFIRPDRedControl(object):
         scan = int(scan)
         detid = int(detid)
 
-        if self._myWorkspaceDict.has_key((exp, scan)) is False:
+        if ((exp, scan) in self._myWorkspaceDict) is False:
             raise NotImplementedError("Exp %d Scan %d does not have reduced \
                     workspace." % (exp, scan))
         else:
@@ -288,12 +284,12 @@ class HFIRPDRedControl(object):
         else:
             print "Plot detector %d's counts vs. sample log %s."%(detid, xlabel)
             tempoutws = \
-                    api.GetSpiceDataRawCountsFromMD(InputWorkspace=datamdws,
-                                                    MonitorWorkspace=monitormdws,
-                                                    Mode='Detector',
-                                                    DetectorID = detid,
-                                                    XLabel=xlabel,
-                                                    NormalizeByMonitorCounts=normalized)
+                api.GetSpiceDataRawCountsFromMD(InputWorkspace=datamdws,
+                                                MonitorWorkspace=monitormdws,
+                                                Mode='Detector',
+                                                DetectorID = detid,
+                                                XLabel=xlabel,
+                                                NormalizeByMonitorCounts=normalized)
 
         vecx = tempoutws.readX(0)[:]
         vecy = tempoutws.readY(0)[:]
@@ -307,7 +303,7 @@ class HFIRPDRedControl(object):
         exp = int(exp)
         scan = int(scan)
 
-        if self._myWorkspaceDict.has_key((exp, scan)) is False:
+        if ((exp, scan) in self._myWorkspaceDict) is False:
             raise NotImplementedError("Exp %d Scan %d does not have reduced \
                     workspace." % (exp, scan))
         else:
@@ -340,13 +336,12 @@ class HFIRPDRedControl(object):
 
         return rlist
 
-
     def getSampleLogNames(self, expno, scanno):
         """ Get the list of sample logs' names if they are
         of float data type
         """
         # check
-        if self._myWorkspaceDict.has_key((expno, scanno)) is False:
+        if ((expno, scanno) in self._myWorkspaceDict) is False:
             raise NotImplementedError("Exp %d Scan %d does not have reduced \
                     workspace." % (exp, scan))
 
@@ -364,7 +359,6 @@ class HFIRPDRedControl(object):
 
         return lognamelist
 
-
     def getSampleLogValue(self, expno, scanno, samplelogname, xlabel):
         """ Get vecx and vecy for sample log
         """
@@ -372,7 +366,7 @@ class HFIRPDRedControl(object):
         exp = int(expno)
         scan = int(scanno)
 
-        if self._myWorkspaceDict.has_key((exp, scan)) is False:
+        if ((exp, scan) in self._myWorkspaceDict) is False:
             raise NotImplementedError("Exp %d Scan %d does not have reduced \
                     workspace." % (exp, scan))
         else:
@@ -400,8 +394,6 @@ class HFIRPDRedControl(object):
 
         return (vecx, vecy)
 
-
-
     def getVectorToPlot(self, exp, scan):
         """ Get vec x and vec y of the reduced workspace to plot
         """
@@ -421,7 +413,6 @@ class HFIRPDRedControl(object):
 
         # get vectors
         return outws.readX(0), outws.readY(0)
-
 
     def getVectorProcessVanToPlot(self, exp, scan, tempdata=False):
         """ Get vec x and y for the processed vanadium spectrum
@@ -449,11 +440,10 @@ class HFIRPDRedControl(object):
         # get vectors
         return outws.readX(0), outws.readY(0)
 
-
     def getMergedVector(self, mkey):
         """ Get vector X and Y from merged scans
         """
-        if self._myMergedWSDict.has_key(mkey) is True:
+        if (mkey in self._myMergedWSDict) is True:
             wksp = self._myMergedWSDict[mkey]
 
             # convert to point data if necessary
@@ -468,7 +458,6 @@ class HFIRPDRedControl(object):
             raise NotImplementedError("No merged workspace for key = %s." % (str(mkey)))
 
         return (vecx, vecy)
-
 
     def getVanadiumPeaksPos(self, exp, scan):
         """ Convert vanadium peaks from d-spacing to 2theta
@@ -520,12 +509,11 @@ class HFIRPDRedControl(object):
 
         return wslist
 
-
     def getWorkspace(self, exp, scan, raiseexception):
         """
         """
         # get on hold of data
-        if self._myWorkspaceDict.has_key((exp, scan)) is False:
+        if ((exp, scan) in self._myWorkspaceDict) is False:
             if raiseexception is True:
                 raise NotImplementedError("Exp %d Scan %d has not been processed. " % (exp, scan))
             else:
@@ -534,21 +522,19 @@ class HFIRPDRedControl(object):
 
         return self._myWorkspaceDict[(exp, scan)]
 
-
     def hasDataLoaded(self, exp, scan):
         """ Check whether an experiment data set (defined by exp No. and scan No.)
         has been loaded or not.
         """
-        if self._myWorkspaceDict.has_key((exp, scan)):
+        if (exp, scan) in self._myWorkspaceDict:
             return True
         else:
             return False
 
-
     def hasReducedWS(self, exp, scan):
         """ Check whether an Exp/Scan has a reduced workspace
         """
-        if self._myWorkspaceDict.has_key((exp, scan)) is False:
+        if ((exp, scan) in self._myWorkspaceDict) is False:
             print self._myWorkspaceDict.keys()
             return False
 
@@ -556,7 +542,6 @@ class HFIRPDRedControl(object):
             return False
 
         return True
-
 
     def loadSpicePDData(self, expno, scanno, datafilename):
         """ Load SPICE powder diffraction data to MDEventsWorkspaces
@@ -571,7 +556,7 @@ class HFIRPDRedControl(object):
         tablewsname = basewsname + "_RawTable"
         infowsname  = basewsname + "ExpInfo"
         api.LoadSpiceAscii(Filename=datafilename,
-                OutputWorkspace=tablewsname, RunInfoWorkspace=infowsname)
+                           OutputWorkspace=tablewsname, RunInfoWorkspace=infowsname)
 
         tablews = AnalysisDataService.retrieve(tablewsname)
         infows  = AnalysisDataService.retrieve(infowsname)
@@ -585,7 +570,6 @@ class HFIRPDRedControl(object):
         self._myWorkspaceDict[(int(expno), int(scanno))] = wsmanager
 
         return
-
 
     def mergeReduceSpiceData(self, expno, scannolist, unit, xmin, xmax, binsize):
         """ Merge and reduce SPICE data files
@@ -650,7 +634,6 @@ class HFIRPDRedControl(object):
 
         return key
 
-
     def parseDetEffCorrFile(self, instrument, vancorrfname):
         """ Parse detector efficiency correction file='HB2A
 
@@ -668,7 +651,6 @@ class HFIRPDRedControl(object):
 
         return (detefftablews, errmsg)
 
-
     def parseExcludedDetFile(self, instrument, excldetfname):
         """ Parse excluded detectors file
 
@@ -681,7 +663,6 @@ class HFIRPDRedControl(object):
 
         return excldetlist, errmsg
 
-
     def parseSpiceData(self, expno, scanno, detefftablews=None):
         """ Load SPICE data to MDWorkspaces from raw table workspace
         """
@@ -689,8 +670,7 @@ class HFIRPDRedControl(object):
         try:
             wsmanager = self._myWorkspaceDict[ (int(expno), int(scanno) )]
         except KeyError:
-            raise NotImplementedError("Exp %d Scan %d has not been loaded yet." % (int(expno),
-                int(scanno)))
+            raise NotImplementedError("Exp %d Scan %d has not been loaded yet." % (int(expno),int(scanno)))
 
         # Convert to MDWorkspace
         tablews = wsmanager.getRawSpiceTable()
@@ -836,13 +816,13 @@ class HFIRPDRedControl(object):
         basewsname = datamdws.name().split("_DataMD")[0]
         outwsname = basewsname + "_Reduced"
         api.ConvertCWPDMDToSpectra(InputWorkspace=datamdws,
-                InputMonitorWorkspace=monitormdws,
-                OutputWorkspace=outwsname,
-                BinningParams=binpar,
-                UnitOutput = unit,
-                NeutronWaveLength=wavelength,
-                ExcludedDetectorIDs=numpy.array(excludeddetlist),
-                ScaleFactor=scalefactor)
+                                   InputMonitorWorkspace=monitormdws,
+                                   OutputWorkspace=outwsname,
+                                   BinningParams=binpar,
+                                   UnitOutput = unit,
+                                   NeutronWaveLength=wavelength,
+                                   ExcludedDetectorIDs=numpy.array(excludeddetlist),
+                                   ScaleFactor=scalefactor)
 
         print "[DB] Reduction is finished.  Data is in workspace %s. " % (outwsname)
 
@@ -852,7 +832,7 @@ class HFIRPDRedControl(object):
             raise NotImplementedError("Failed to bin the MDEventWorkspaces to MatrixWorkspace.")
 
         # Manager:
-        if self._myWorkspaceDict.has_key((exp, scan)) is False:
+        if ((exp, scan) in self._myWorkspaceDict) is False:
             raise NotImplementedError('Exp %d Scan %d has not been initialized.  ' % (exp, scan))
         # wsmanager = PDRManager(exp, scan)
         ws_manager = self._myWorkspaceDict[(exp, scan)]
@@ -862,7 +842,6 @@ class HFIRPDRedControl(object):
         # self._myWorkspaceDict[(exp, scan)] = wsmanager
 
         return True
-
 
     def retrieveCorrectionData(self, instrument, exp, scan, localdatadir):
         """ Retrieve including dowloading and/or local locating
@@ -924,14 +903,12 @@ class HFIRPDRedControl(object):
             # Other instruments
             raise NotImplementedError("Instrument %s is not supported to retrieve correction file." % (instrument))
 
-
         return (True, [wavelength, localdetefffname, localexcldetfname])
-
 
     def saveMergedScan(self, sfilename, mergeindex):
         """ Save the current merged scan
         """
-        if self._myMergedWSDict.has_key(mergeindex) is True:
+        if (mergeindex in self._myMergedWSDict) is True:
             wksp = self._myMergedWSDict[mergeindex]
         else:
             raise NotImplementedError('Unable to locate the merged scan workspace.')
@@ -941,7 +918,6 @@ class HFIRPDRedControl(object):
                            Filename=sfilename)
 
         return
-
 
     def savePDFile(self, exp, scan, filetype, sfilename):
         """ Save a reduced workspace to gsas/fullprof/topaz data file
@@ -988,7 +964,6 @@ class HFIRPDRedControl(object):
 
         return
 
-
     def saveProcessedVanadium(self, expno, scanno, savefilename):
         """ Save processed vanadium data
         """
@@ -1002,24 +977,22 @@ class HFIRPDRedControl(object):
 
         # Save
         api.SaveFocusedXYE(InputWorkspace=wksp,
-                   StartAtBankNumber=1,
-                   Filename=savefilename)
+                           StartAtBankNumber=1,
+                           Filename=savefilename)
 
         return
-
 
     def setWavelength(self, exp, scan, wavelength):
         """ Set wavelength for a specific scan
         """
         exp = int(exp)
         scan = int(scan)
-        if wavelength == None:
+        if wavelength is None:
             self._myWavelengthDict[(exp, scan)] = None
         else:
             self._myWavelengthDict[(exp, scan)] = float(wavelength)
 
         return
-
 
     def smoothVanadiumSpectrum(self, expno, scanno, smoothparams_str):
         """
@@ -1040,7 +1013,6 @@ class HFIRPDRedControl(object):
             wsmanager.setProcessedVanadiumDataTemp(outws, "FFT smooth")
 
         return True
-
 
     def stripVanadiumPeaks(self, exp, scan, binparams, vanpeakposlist=None):
         """ Strip vanadium peaks
@@ -1082,7 +1054,6 @@ class HFIRPDRedControl(object):
 
         return True
 
-
     def _generateTableWS(self, vancorrdict):
         """ Create table workspace
         """
@@ -1094,7 +1065,6 @@ class HFIRPDRedControl(object):
             tablews.addRow( [detid, vancorrdict[detid]] )
 
         return tablews
-
 
     def _getRunNumberList(self, datamdws):
         """ Get list of run number (i.e., Pt) from an MDEventWorkspace
@@ -1113,7 +1083,6 @@ class HFIRPDRedControl(object):
 
         return sorted(ptnolist)
 
-
     def _getValueFromTable(self, tablews, colname, rowindex=0):
         """ Get value from a table workspace
         """
@@ -1129,6 +1098,8 @@ class HFIRPDRedControl(object):
 #-------------------------------------------------------------------------------
 # External Methods
 #-------------------------------------------------------------------------------
+
+
 def downloadFile(url, localfilepath):
     """
     Test: 'http://neutron.ornl.gov/user_data/hb2a/exp400/Datafiles/HB2A_exp0400_scan0001.dat'
@@ -1156,5 +1127,3 @@ def downloadFile(url, localfilepath):
     ofile.close()
 
     return (True, "")
-
-

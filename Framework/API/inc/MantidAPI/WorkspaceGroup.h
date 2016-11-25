@@ -62,6 +62,8 @@ public:
 
   /// The collection itself is considered to take up no space
   size_t getMemorySize() const override { return 0; }
+  /// Sort the internal data structure according to member name
+  void sortMembersByName();
   /// Adds a workspace to the group.
   void addWorkspace(Workspace_sptr workspace);
   /// Return the number of entries within the group
@@ -89,6 +91,11 @@ public:
   /// @name Wrapped ADS calls
   //@{
 
+  /// Invokes the ADS to sort group members by orkspace name
+  void sortByName() {
+    AnalysisDataService::Instance().sortGroupByName(this->name());
+  }
+
   /// Adds a workspace to the group.
   void add(const std::string &wsName) {
     AnalysisDataService::Instance().addToGroup(this->name(), wsName);
@@ -110,11 +117,8 @@ public:
 
   //@}
 
-protected:
-  /// Protected, unimplemented copy constructor
-  WorkspaceGroup(const WorkspaceGroup &ref);
-  /// Protected, unimplemented copy assignment operator
-  const WorkspaceGroup &operator=(const WorkspaceGroup &);
+  WorkspaceGroup(const WorkspaceGroup &ref) = delete;
+  WorkspaceGroup &operator=(const WorkspaceGroup &) = delete;
 
 private:
   WorkspaceGroup *doClone() const override {
@@ -127,19 +131,22 @@ private:
   void observeADSNotifications(const bool observeADS);
   /// Check if a workspace is included in any child groups and groups in them.
   bool isInChildGroup(const Workspace &workspaceToCheck) const;
+
   /// Callback when a delete notification is received
   void workspaceDeleteHandle(
       Mantid::API::WorkspacePostDeleteNotification_ptr notice);
-  /// Observer for workspace delete notfications
+
+  /// Callback when a before-replace notification is received
+  void workspaceBeforeReplaceHandle(
+      Mantid::API::WorkspaceBeforeReplaceNotification_ptr notice);
+
+  /// Observer for workspace delete notifications
   Poco::NObserver<WorkspaceGroup, Mantid::API::WorkspacePostDeleteNotification>
       m_deleteObserver;
-  /// Callback when a before-replace notification is received
-  void workspaceReplaceHandle(
-      Mantid::API::WorkspaceBeforeReplaceNotification_ptr notice);
-  /// Observer for workspace before-replace notfications
+  /// Observer for workspace before-replace notifications
   Poco::NObserver<WorkspaceGroup,
                   Mantid::API::WorkspaceBeforeReplaceNotification>
-      m_replaceObserver;
+      m_beforeReplaceObserver;
   /// The list of workspace pointers in the group
   std::vector<Workspace_sptr> m_workspaces;
   /// Flag as to whether the observers have been added to the ADS

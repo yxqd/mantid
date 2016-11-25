@@ -5,6 +5,7 @@ from mantid.api import FileFinder
 
 import os
 
+
 def _skip_test():
     """Helper function to determine if we run the test"""
     import platform
@@ -12,9 +13,11 @@ def _skip_test():
     # Only runs on RHEL6 at the moment
     return "Linux" not in platform.platform()
 
+
 def getSaveDir():
     """determine where to save - the current working directory"""
     return os.path.abspath(os.path.curdir)
+
 
 def do_cleanup():
     Files = ["PG3_9829.getn",
@@ -32,6 +35,7 @@ def do_cleanup():
         if os.path.exists(absfile):
             os.remove(absfile)
     return True
+
 
 class PG3Analysis(stresstesting.MantidStressTest):
     ref_file  = 'PG3_4844_reference.gsa'
@@ -56,7 +60,7 @@ class PG3Analysis(stresstesting.MantidStressTest):
         savedir = getSaveDir()
 
         # run the actual code
-        SNSPowderReduction(Instrument="PG3", RunNumber=4844, Extension="_event.nxs",
+        SNSPowderReduction(Filename="PG3_4844",
                            PreserveEvents=True,
                            CalibrationFile=self.cal_file,
                            CharacterizationRunsFile=self.char_file,
@@ -64,7 +68,6 @@ class PG3Analysis(stresstesting.MantidStressTest):
                            Binning=-0.0004, BinInDspace=True, FilterBadPulses=95,
                            SaveAs="gsas and fullprof and pdfgetn", OutputDirectory=savedir,
                            FinalDataUnits="dSpacing")
-
 
         # load output gsas file and the golden one
         LoadGSS(Filename="PG3_4844.gsa", OutputWorkspace="PG3_4844")
@@ -77,6 +80,7 @@ class PG3Analysis(stresstesting.MantidStressTest):
     def validate(self):
         self.tolerance = 1.0e-2
         return ('PG3_4844','PG3_4844_golden')
+
 
 class PG3StripPeaks(stresstesting.MantidStressTest):
     ref_file = 'PG3_4866_reference.gsa'
@@ -183,6 +187,7 @@ class PG3StripPeaks(stresstesting.MantidStressTest):
         self.tolerance = 1.0e-2
         return ('PG3_4866','PG3_4866_golden')
 
+
 class SeriesAndConjoinFilesTest(stresstesting.MantidStressTest):
     cal_file   = "PG3_FERNS_d4832_2011_08_24.cal"
     char_file  = "PG3_characterization_2012_02_23-HR-ILL.txt"
@@ -207,7 +212,7 @@ class SeriesAndConjoinFilesTest(stresstesting.MantidStressTest):
         savedir = getSaveDir()
 
         # reduce a sum of runs - and drop it
-        SNSPowderReduction(Instrument="PG3", RunNumber=[9829,9830], Extension="_event.nxs",
+        SNSPowderReduction(Filename="PG3_9829,9830",
                            Sum=True, # This is the difference with the next call
                            PreserveEvents=True, VanadiumNumber=-1,
                            CalibrationFile=self.cal_file,
@@ -218,7 +223,7 @@ class SeriesAndConjoinFilesTest(stresstesting.MantidStressTest):
                            FinalDataUnits="dSpacing")
 
         # reduce a series of runs
-        SNSPowderReduction(Instrument="PG3", RunNumber=[9829,9830], Extension="_event.nxs",
+        SNSPowderReduction(Filename="PG3_9829,PG3_9830",
                            PreserveEvents=True, VanadiumNumber=-1,
                            CalibrationFile=self.cal_file,
                            CharacterizationRunsFile=self.char_file,
@@ -250,6 +255,7 @@ class SeriesAndConjoinFilesTest(stresstesting.MantidStressTest):
         self.tolerance = 1.0e-2
         return ('PG3_9829','PG3_9829_golden')
         #return ('PG3_9830','PG3_9830_golden') # can only validate one workspace
+
 
 class ToPDFgetNTest(stresstesting.MantidStressTest):
     cal_file   = "PG3_FERNS_d4832_2011_08_24.cal"

@@ -185,6 +185,20 @@ public:
     TS_ASSERT_EQUALS(vals.size(), 1)
   }
 
+  void testInvalidAllowedValues() {
+    std::vector<std::string> vals;
+    WorkspaceProperty<TableWorkspaceTester> testTblProperty(
+        "Table Mismatch test", "ws3", Direction::Input);
+    WorkspaceProperty<WorkspaceGroup> testGroupProperty(
+        "Group Mismatch test", "ws1", Direction::Input);
+
+    TS_ASSERT_THROWS_NOTHING(vals = testTblProperty.allowedValues());
+    TS_ASSERT_EQUALS(vals.size(), 0);
+
+    TS_ASSERT_THROWS_NOTHING(vals = testGroupProperty.allowedValues());
+    TS_ASSERT_EQUALS(vals.size(), 0);
+  }
+
   void testCreateHistory() {
     PropertyHistory history = wsp1->createHistory();
     TS_ASSERT_EQUALS(history.name(), "workspace1")
@@ -317,6 +331,27 @@ public:
     WorkspaceProperty<Workspace> p1("workspace1", "", Direction::Input);
     p1 = ws1;
     TS_ASSERT_EQUALS(p1.value(), "");
+  }
+
+  void test_trimmming() {
+    // trimming on
+    Workspace_sptr ws1 =
+        WorkspaceFactory::Instance().create("WorkspacePropertyTest", 1, 1, 1);
+    AnalysisDataService::Instance().add("space1", ws1);
+    WorkspaceProperty<Workspace> p1("workspace1", "", Direction::Input);
+    p1.setValue("  space1\t\n");
+    TS_ASSERT_EQUALS(p1.value(), "space1");
+
+    // turn trimming off
+    Workspace_sptr ws2 =
+        WorkspaceFactory::Instance().create("WorkspacePropertyTest", 1, 1, 1);
+    AnalysisDataService::Instance().add("  space1\t\n", ws2);
+    WorkspaceProperty<Workspace> p2("workspace1", "", Direction::Input);
+    p2.setAutoTrim(false);
+    p2.setValue("  space1\t\n");
+    TS_ASSERT_EQUALS(p2.value(), "  space1\t\n");
+
+    AnalysisDataService::Instance().clear();
   }
 
 private:

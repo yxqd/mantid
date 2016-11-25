@@ -42,6 +42,16 @@ Kernel::Logger g_log("Run");
 // Public member functions
 //----------------------------------------------------------------------
 
+boost::shared_ptr<Run> Run::clone() {
+  auto clone = boost::make_shared<Run>();
+  for (auto property : this->m_manager.getProperties()) {
+    clone->addProperty(property->clone());
+  }
+  clone->m_goniometer = this->m_goniometer;
+  clone->m_histoBins = this->m_histoBins;
+  return clone;
+}
+
 //-----------------------------------------------------------------------------------------------
 /**
  * Filter out a run by time. Takes out any TimeSeriesProperty log entries
@@ -148,8 +158,7 @@ double Run::getProtonCharge() const {
     charge = m_manager.getProperty(PROTON_CHARGE_LOG_NAME);
   } else {
     g_log.warning() << PROTON_CHARGE_LOG_NAME
-                    << " log was not found. Proton Charge set to 0.0"
-                    << std::endl;
+                    << " log was not found. Proton Charge set to 0.0\n";
   }
   return charge;
 }
@@ -433,7 +442,8 @@ void Run::calculateGoniometerMatrix() {
     const double maxAngle =
         getLogAsSingleValue(axisName, Kernel::Math::Maximum);
     const double angle = getLogAsSingleValue(axisName, Kernel::Math::Mean);
-    if (minAngle != maxAngle) {
+    if (minAngle != maxAngle &&
+        !(std::isnan(minAngle) && std::isnan(maxAngle))) {
       const double lastAngle =
           getLogAsSingleValue(axisName, Kernel::Math::LastValue);
       g_log.warning("Goniometer angle changed in " + axisName + " log from " +
@@ -474,7 +484,7 @@ void Run::mergeMergables(Mantid::Kernel::PropertyManager &sum,
                          const Mantid::Kernel::PropertyManager &toAdd) {
   // get pointers to all the properties on the right-handside and prepare to
   // loop through them
-  const std::vector<Property *> inc = toAdd.getProperties();
+  const std::vector<Property *> &inc = toAdd.getProperties();
   for (auto ptr : inc) {
     const std::string &rhs_name = ptr->name();
     try {

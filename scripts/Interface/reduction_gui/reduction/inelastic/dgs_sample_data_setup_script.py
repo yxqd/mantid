@@ -5,10 +5,10 @@
     be used independently of the interface implementation
 """
 import os
-import time
 import xml.dom.minidom
 
 from reduction_gui.reduction.scripter import BaseScriptElement
+
 
 class SampleSetupScript(BaseScriptElement):
 
@@ -137,9 +137,9 @@ class SampleSetupScript(BaseScriptElement):
             self.sample_file = BaseScriptElement.getStringElement(instrument_dom,
                                                                   "sample_input_file",
                                                                   default=SampleSetupScript.sample_file)
-            self.live_button = BaseScriptElement.getBoolElement(instrument_dom,\
-                                                                  "live_button",\
-                                                                  default=SampleSetupScript.live_button)
+            self.live_button = BaseScriptElement.getBoolElement(instrument_dom,
+                                                                "live_button",
+                                                                default=SampleSetupScript.live_button)
             self.output_wsname = BaseScriptElement.getStringElement(instrument_dom,
                                                                     "output_wsname",
                                                                     default=SampleSetupScript.output_wsname)
@@ -159,11 +159,11 @@ class SampleSetupScript(BaseScriptElement):
                                                                  "tzero_guess",
                                                                  default=SampleSetupScript.tzero_guess)
             self.monitor1_specid = BaseScriptElement.getStringElement(instrument_dom,
-                                                                   "monitor1_specid",
-                                                                   default=SampleSetupScript.monitor1_specid)
+                                                                      "monitor1_specid",
+                                                                      default=SampleSetupScript.monitor1_specid)
             self.monitor2_specid = BaseScriptElement.getStringElement(instrument_dom,
-                                                                   "monitor2_specid",
-                                                                   default=SampleSetupScript.monitor2_specid)
+                                                                      "monitor2_specid",
+                                                                      default=SampleSetupScript.monitor2_specid)
             self.et_range_low = BaseScriptElement.getStringElement(instrument_dom,
                                                                    "et_range/low",
                                                                    default=SampleSetupScript.et_range_low)
@@ -185,9 +185,9 @@ class SampleSetupScript(BaseScriptElement):
             self.show_workspaces = BaseScriptElement.getBoolElement(instrument_dom,
                                                                     "show_workspaces",
                                                                     default=SampleSetupScript.show_workspaces)
-            self.savedir = BaseScriptElement.getStringElement(instrument_dom,\
-                                                                    "savedir",\
-                                                                    default=SampleSetupScript.savedir)
+            self.savedir = BaseScriptElement.getStringElement(instrument_dom,
+                                                              "savedir",
+                                                              default=SampleSetupScript.savedir)
 
     def reset(self):
         """
@@ -212,4 +212,3 @@ class SampleSetupScript(BaseScriptElement):
         self.grouping_file = SampleSetupScript.grouping_file
         self.show_workspaces = SampleSetupScript.show_workspaces
         self.savedir = SampleSetupScript.savedir
-

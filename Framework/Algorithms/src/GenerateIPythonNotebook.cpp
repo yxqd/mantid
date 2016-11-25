@@ -40,6 +40,7 @@ void GenerateIPythonNotebook::init() {
   declareProperty("NotebookText", std::string(""),
                   "Saves the history of the workspace to a variable.",
                   Direction::Output);
+  getPointerToProperty("NotebookText")->setAutoTrim(false);
 
   declareProperty("UnrollAll", false,
                   "Unroll all algorithms to show just their child algorithms.",
@@ -73,7 +74,7 @@ void GenerateIPythonNotebook::exec() {
   // Get the algorithm histories of the workspace.
   const WorkspaceHistory wsHistory = ws->getHistory();
   g_log.information() << "Number of history items: " << wsHistory.size()
-                      << std::endl;
+                      << '\n';
 
   auto view = wsHistory.createView();
 
@@ -100,7 +101,7 @@ void GenerateIPythonNotebook::exec() {
     versionSpecificity = "all";
 
   NotebookBuilder builder(view, versionSpecificity);
-  std::string generatedNotebook = "";
+  std::string generatedNotebook;
   generatedNotebook +=
       builder.build(ws->getName(), ws->getTitle(), ws->getComment());
 

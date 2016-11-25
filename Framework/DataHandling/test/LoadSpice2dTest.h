@@ -1,10 +1,6 @@
 #ifndef LOADSPICE2DTEST_H
 #define LOADSPICE2DTEST_H
 
-//------------------------------------------------
-// Includes
-//------------------------------------------------
-
 #include <cxxtest/TestSuite.h>
 
 #include "MantidDataHandling/LoadSpice2D.h"
@@ -13,6 +9,7 @@
 #include "MantidGeometry/Instrument/ParameterMap.h"
 #include "MantidGeometry/Instrument/Parameter.h"
 #include "MantidKernel/PropertyWithValue.h"
+#include "MantidAPI/Run.h"
 #include <Poco/Path.h>
 #include <vector>
 
@@ -106,9 +103,6 @@ public:
     TS_ASSERT_DELTA(ws2d->dataY(1)[0], 3600.0, tolerance);
     TS_ASSERT_DELTA(ws2d->dataE(1)[0], 0.0, tolerance);
 
-    // First non-monitor spectrum is detector ID 1 million
-    TS_ASSERT_EQUALS(ws2d->getDetector(0 + nmon)->getID(), 1000000);
-
     // Check instrument
     //----------------------------------------------------------------------
     // Tests taken from LoadInstrumentTest to check Child Algorithm is running
@@ -127,8 +121,7 @@ public:
     TS_ASSERT_EQUALS(sample_aperture->getNumberParameter("Size")[0], 14.0);
 
     // Check parameter map access
-    const Mantid::Geometry::ParameterMap *m_paraMap =
-        &(ws2d->instrumentParameters());
+    const auto *m_paraMap = &(ws2d->constInstrumentParameters());
 
     // Check that we can get a parameter
     boost::shared_ptr<Mantid::Geometry::Parameter> sample_aperture_size =
@@ -140,6 +133,8 @@ public:
     Mantid::Geometry::ParameterMap &pmap_nonconst =
         ws2d->instrumentParameters();
     pmap_nonconst.addDouble(sample_aperture.get(), "Size", 15.0);
+    // The parameter map was copied by the non-const access, get new reference.
+    m_paraMap = &(ws2d->constInstrumentParameters());
     sample_aperture_size = m_paraMap->get(sample_aperture.get(), "Size");
     TS_ASSERT_EQUALS(sample_aperture_size->value<double>(), 15.0);
 
@@ -152,8 +147,10 @@ public:
     TS_ASSERT_EQUALS(*dp, 6000.0);
 
     prop = ws2d->run().getProperty("beam-trap-diameter");
-    dp = dynamic_cast<Mantid::Kernel::PropertyWithValue<double> *>(prop);
-    TS_ASSERT_EQUALS(*dp, 76.2);
+    TS_ASSERT_EQUALS(prop->type(), "number");
+    double beam_trap_diameter =
+        ws2d->run().getPropertyValueAsType<double>("beam-trap-diameter");
+    TS_ASSERT_DELTA(beam_trap_diameter, 76.2, tolerance);
 
     prop = ws2d->run().getProperty("source-aperture-diameter");
     dp = dynamic_cast<Mantid::Kernel::PropertyWithValue<double> *>(prop);

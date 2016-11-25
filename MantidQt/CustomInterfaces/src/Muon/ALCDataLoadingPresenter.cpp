@@ -2,13 +2,17 @@
 
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/Run.h"
+#include "MantidKernel/Strings.h"
+#include "MantidGeometry/Instrument.h"
 
 #include "MantidQtCustomInterfaces/Muon/ALCHelper.h"
 #include "MantidQtCustomInterfaces/Muon/MuonAnalysisHelper.h"
 #include "MantidQtAPI/AlgorithmInputHistory.h"
+#include "MantidQtCustomInterfaces/Muon/ALCLatestFileFinder.h"
 
 #include <Poco/ActiveResult.h>
-#include <Poco/DirectoryIterator.h>
+#include <Poco/Path.h>
 
 #include <QApplication>
 #include <QFileInfo>
@@ -20,44 +24,10 @@ using namespace Mantid::API;
 
 using namespace MantidQt::API;
 
-// free functions
-namespace {
-/**
- * Gets the most recently modified Nexus file in the given directory
- * @param path :: [input] Path to any file in the directory
- * @returns Path to most recently modified file
- */
-std::string getMostRecentFile(const std::string &path) {
-  Poco::Path givenPath(path);
-  Poco::File latestFile(givenPath);
-  try {
-    // Directory iterator - check if we were passed a file or a directory
-    Poco::DirectoryIterator iter(latestFile.isDirectory() ? givenPath
-                                                          : givenPath.parent());
-    Poco::DirectoryIterator end; // the end iterator
-    Poco::Timestamp lastModified = iter->getLastModified();
-    while (iter != end) {
-      if (Poco::Path(iter->path()).getExtension() == "nxs") {
-        if (iter->getLastModified() > lastModified) {
-          latestFile = *iter;
-          lastModified = iter->getLastModified();
-        }
-        ++iter;
-      }
-    }
-  } catch (const Poco::Exception &) {
-    // There was some problem iterating through the directory.
-    // Return the file we were given.
-    return givenPath.toString();
-  }
-  return latestFile.path();
-}
-}
-
 namespace MantidQt {
 namespace CustomInterfaces {
 ALCDataLoadingPresenter::ALCDataLoadingPresenter(IALCDataLoadingView *view)
-    : m_view(view), m_directoryChanged(false), m_timerID() {}
+    : m_view(view), m_directoryChanged(false), m_timerID(), m_numDetectors(0) {}
 
 void ALCDataLoadingPresenter::initialize() {
   m_view->initialize();
@@ -84,7 +54,8 @@ void ALCDataLoadingPresenter::handleLoadRequested() {
     // Add path to watcher
     changeWatchState(true);
     // and get the most recent file in the directory to be lastFile
-    lastFile = getMostRecentFile(m_view->firstRun());
+    ALCLatestFileFinder finder(m_view->firstRun());
+    lastFile = finder.getMostRecentFile();
     m_view->setCurrentAutoFile(lastFile);
   }
   // Now perform the load
@@ -111,8 +82,8 @@ void ALCDataLoadingPresenter::timerEvent(QTimerEvent *timeup) {
   // Check flag for changes
   if (m_directoryChanged.load()) {
     // Most recent file in directory
-    Poco::Path filePath(m_view->firstRun());
-    std::string lastFile = getMostRecentFile(filePath.parent().toString());
+    ALCLatestFileFinder finder(m_view->firstRun());
+    std::string lastFile = finder.getMostRecentFile();
     // Load file and update view
     load(lastFile);
     m_view->setCurrentAutoFile(lastFile);
@@ -161,6 +132,16 @@ void ALCDataLoadingPresenter::load(const std::string &lastFile) {
   // Use Path.toString() to ensure both are in same (native) format
   Poco::Path firstRun(m_view->firstRun());
   Poco::Path lastRun(lastFile);
+
+  // Before loading, check custom grouping (if used) is sensible
+  const bool groupingOK = checkCustomGrouping();
+  if (!groupingOK) {
+    m_view->displayError(
+        "Custom grouping not valid (bad format or detector numbers)");
+    m_view->enableAll();
+    return;
+  }
+
   try {
     IAlgorithm_sptr alg =
         AlgorithmManager::Instance().create("PlotAsymmetryByLogValue");
@@ -239,6 +220,7 @@ void ALCDataLoadingPresenter::load(const std::string &lastFile) {
 
 void ALCDataLoadingPresenter::updateAvailableInfo() {
   Workspace_sptr loadedWs;
+  double firstGoodData = 0, timeZero = 0;
 
   try //... to load the first run
   {
@@ -254,6 +236,8 @@ void ALCDataLoadingPresenter::updateAvailableInfo() {
     load->execute();
 
     loadedWs = load->getProperty("OutputWorkspace");
+    firstGoodData = load->getProperty("FirstGoodData");
+    timeZero = load->getProperty("TimeZero");
   } catch (...) {
     m_view->setAvailableLogs(std::vector<std::string>()); // Empty logs list
     m_view->setAvailablePeriods(
@@ -282,10 +266,16 @@ void ALCDataLoadingPresenter::updateAvailableInfo() {
   }
   m_view->setAvailablePeriods(periods);
 
-  // Set time limits
-  m_view->setTimeLimits(ws->readX(0).front(), ws->readX(0).back());
-  // Set allowed time range
-  m_view->setTimeRange(ws->readX(0).front(), ws->readX(0).back());
+  // Set time limits if this is the first data loaded (will both be zero)
+  if (auto timeLimits = m_view->timeRange()) {
+    if (std::abs(timeLimits->first) < 0.0001 &&
+        std::abs(timeLimits->second) < 0.0001) {
+      m_view->setTimeLimits(firstGoodData - timeZero, ws->readX(0).back());
+    }
+  }
+
+  // Update number of detectors for this new first run
+  m_numDetectors = ws->getInstrument()->getNumberDetectors();
 }
 
 MatrixWorkspace_sptr ALCDataLoadingPresenter::exportWorkspace() {
@@ -311,6 +301,28 @@ void ALCDataLoadingPresenter::setData(MatrixWorkspace_const_sptr data) {
   } else {
     std::invalid_argument("Cannot load an empty workspace");
   }
+}
+
+/**
+ * If custom grouping is supplied, check all detector numbers are valid
+ * @returns :: True if grouping OK, false if bad
+ */
+bool ALCDataLoadingPresenter::checkCustomGrouping() {
+  bool groupingOK = true;
+  if (m_view->detectorGroupingType() == "Custom") {
+    auto detectors =
+        Mantid::Kernel::Strings::parseRange(m_view->getForwardGrouping());
+    const auto backward =
+        Mantid::Kernel::Strings::parseRange(m_view->getBackwardGrouping());
+    detectors.insert(detectors.end(), backward.begin(), backward.end());
+    for (const int det : detectors) {
+      if (det < 0 || det > static_cast<int>(m_numDetectors)) {
+        groupingOK = false;
+        break;
+      }
+    }
+  }
+  return groupingOK;
 }
 } // namespace CustomInterfaces
 } // namespace MantidQt

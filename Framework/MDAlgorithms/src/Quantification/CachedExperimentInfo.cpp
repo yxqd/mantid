@@ -1,12 +1,10 @@
-//
-// Includes
-//
 #include "MantidMDAlgorithms/Quantification/CachedExperimentInfo.h"
 #include "MantidGeometry/Crystal/OrientedLattice.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidGeometry/Instrument/ReferenceFrame.h"
 #include "MantidGeometry/Instrument/Goniometer.h"
 #include "MantidGeometry/Instrument/DetectorGroup.h"
+#include "MantidAPI/Sample.h"
 
 namespace Mantid {
 namespace MDAlgorithms {
@@ -182,10 +180,10 @@ void CachedExperimentInfo::initCaches(
     throw std::invalid_argument("CachedExperimentInfo::initCaches - Detector "
                                 "has no bounding box, cannot sample from it. "
                                 "ID:" +
-                                boost::lexical_cast<std::string>(det->getID()));
+                                std::to_string(det->getID()));
   }
 
-  const double rad2deg = 180. / M_PI;
+  constexpr double rad2deg = 180. / M_PI;
   const double thetaInDegs = twoTheta() * rad2deg;
   const double phiInDegs = phi() * rad2deg;
 

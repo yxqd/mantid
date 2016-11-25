@@ -1,4 +1,5 @@
 #include "MantidDataObjects/PeaksWorkspace.h"
+#include "MantidAPI/Sample.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceProperty.h"
 #include "MantidCrystal/ShowPeakHKLOffsets.h"
@@ -24,9 +25,6 @@ namespace Mantid {
 namespace Crystal {
 
 DECLARE_ALGORITHM(ShowPeakHKLOffsets)
-
-ShowPeakHKLOffsets::ShowPeakHKLOffsets() : Algorithm() {}
-ShowPeakHKLOffsets::~ShowPeakHKLOffsets() {}
 
 void ShowPeakHKLOffsets::init() {
   declareProperty(Kernel::make_unique<WorkspaceProperty<PeaksWorkspace>>(

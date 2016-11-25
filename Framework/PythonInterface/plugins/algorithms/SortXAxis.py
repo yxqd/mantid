@@ -1,30 +1,28 @@
 #pylint: disable=no-init,invalid-name
+from __future__ import (absolute_import, division, print_function)
 import mantid.simpleapi as api
 
 from mantid.api import *
 from mantid.kernel import *
 import numpy as np
 
+
 class SortXAxis(PythonAlgorithm):
 
     def category(self):
         return "Transforms\\Axes;Utility\\Sorting"
 
-
     def name(self):
         return "SortXAxis"
 
-
     def summary(self):
         return "Clones the input MatrixWorkspace(s) and orders the x-axis in an ascending fashion."
-
 
     def PyInit(self):
         self.declareProperty(MatrixWorkspaceProperty("InputWorkspace", defaultValue="", direction=Direction.Input),
                              doc="Input workspace")
         self.declareProperty(MatrixWorkspaceProperty("OutputWorkspace", defaultValue="", direction=Direction.Output),
                              doc="Sorted Output Workspace")
-
 
     def PyExec(self):
         input_ws = self.getProperty('InputWorkspace').value

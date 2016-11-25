@@ -1,5 +1,5 @@
-﻿# pylint: disable=too-many-lines, invalid-name, super-on-old-class, protected-access, too-few-public-methods,
-# too-few-public-methods
+# pylint: disable=too-many-lines, too-many-branches, invalid-name, super-on-old-class, protected-access,
+# pylint: disable=too-few-public-methods,too-few-public-methods, too-many-arguments, too-many-instance-attributes
 """
     This file defines what happens in each step in the data reduction, it's
     the guts of the reduction. See ISISReducer for order the steps are run
@@ -8,15 +8,15 @@
     Most of this code is a copy-paste from SANSReduction.py, organized to be used with
     ReductionStep objects. The guts needs refactoring.
 """
+from __future__ import (absolute_import, division, print_function)
 import os
 import re
 import math
+from collections import namedtuple
 from mantid.kernel import Logger
 
-sanslog = Logger("SANS")
-
-from mantid.simpleapi import *
 from mantid.api import WorkspaceGroup, Workspace, IEventWorkspace
+from mantid.simpleapi import *
 from SANSUtility import (GetInstrumentDetails, MaskByBinRange,
                          isEventWorkspace, getFilePathFromWorkspace,
                          getWorkspaceReference, slice2histogram, getFileAndName,
@@ -25,13 +25,13 @@ from SANSUtility import (GetInstrumentDetails, MaskByBinRange,
                          extract_child_ws_for_added_eventdata, load_monitors_for_multiperiod_event_data,
                          MaskWithCylinder, get_masked_det_ids, get_masked_det_ids_from_mask_file, INCIDENT_MONITOR_TAG,
                          can_load_as_event_workspace, is_convertible_to_float, correct_q_resolution_for_can,
-                          is_valid_user_file_extension, ADD_TAG, ADD_MONITORS_TAG)
+                         is_valid_user_file_extension, ADD_TAG)
 import DarkRunCorrection as DarkCorr
 
 import SANSUserFileParser as UserFileParser
-from collections import namedtuple
-
 from reducer_singleton import ReductionStep
+
+sanslog = Logger("SANS")
 
 DEBUG = False
 
@@ -39,12 +39,13 @@ DEBUG = False
 QRESOLUTION_WORKSPACE_NAME = "Q_Resolution_ISIS_SANS"
 QRESOLUTION_MODERATOR_WORKSPACE_NAME = "Q_Resolution_MODERATOR_ISIS_SANS"
 
+
 def _issueWarning(msg):
     """
         Prints a message to the log marked as warning
         @param msg: message to be issued
     """
-    print msg
+    print(msg)
     sanslog.warning(msg)
 
 
@@ -53,7 +54,7 @@ def _issueInfo(msg):
         Prints a message to the log
         @param msg: message to be issued
     """
-    print msg
+    print(msg)
     sanslog.notice(msg)
 
 
@@ -106,12 +107,14 @@ class LoadRun(object):
 
     wksp_name = property(get_wksp_name, None, None, None)
 
-    def _load_transmission(self, inst=None, is_can=False, extra_options=dict()):
+    def _load_transmission(self, inst=None, is_can=False, extra_options=None):
+        if extra_options is None:
+            extra_options = dict()
         if '.raw' in self._data_file or '.RAW' in self._data_file:
             self._load(inst, is_can, extra_options)
             return
 
-        # the intension of the code below is a good idea. Hence the reason why
+        # the intention of the code below is a good idea. Hence the reason why
         # I have left in the code but commented it out. As of this writing
         # LoadNexusMonitors throws an error if LoadNexusMonitors is a histogram
         # i.e. this algorithm only works for event files at present. The error
@@ -143,7 +146,7 @@ class LoadRun(object):
                     # except:
                     # self._load(inst, is_can, extra_options)
 
-    def _load(self, inst=None, is_can=False, extra_options=dict()):
+    def _load(self, inst=None, is_can=False, extra_options=None):
         """
             Load a workspace and read the logs into the passed instrument reference
             @param inst: a reference to the current instrument
@@ -151,6 +154,8 @@ class LoadRun(object):
             @param extra_options: arguments to pass on to the Load Algorithm.
             @return: number of periods in the workspace
         """
+        if extra_options is None:
+            extra_options = dict()
         if self._period != self.UNSET_PERIOD:
             workspace = self._get_workspace_name(self._period)
             if not can_load_as_event_workspace(self._data_file):
@@ -180,7 +185,7 @@ class LoadRun(object):
             if isinstance(outWs, IEventWorkspace):
                 try:
                     LoadNexusMonitors(self._data_file, OutputWorkspace=monitor_ws_name)
-                except ValueError, details:
+                except ValueError as details:
                     sanslog.warning('The file does not contain monitors. \n' +
                                     'The normalization might behave differently than you expect.\n'
                                     ' Further details: ' + str(details) + '\n')
@@ -190,7 +195,9 @@ class LoadRun(object):
 
         # Handle Multi-period Event data
         if not added_event_data_flag:
-            if isinstance(outWs, WorkspaceGroup) and len(outWs) > 0 and isinstance(outWs[0], IEventWorkspace):
+            if isinstance(outWs, WorkspaceGroup) and len(outWs) > 0 and check_child_ws_for_name_and_type_for_added_eventdata(outWs):
+                pass
+            elif isinstance(outWs, WorkspaceGroup) and len(outWs) > 0 and isinstance(outWs[0], IEventWorkspace):
                 load_monitors_for_multiperiod_event_data(workspace=outWs, data_file=self._data_file,
                                                          monitor_appendix=appendix)
 
@@ -198,7 +205,7 @@ class LoadRun(object):
         try:
             last_algorithm = outWs.getHistory().lastAlgorithm()
             loader_name = last_algorithm.getProperty('LoaderName').value
-        except RuntimeError, details:
+        except RuntimeError as details:
             sanslog.warning(
                 'Tried to get a loader name. But it seems that there is no loader name. Further info: ' + str(details))
 
@@ -321,7 +328,7 @@ class LoadRun(object):
             else:
                 # the spectrum_limits is not the default only for transmission data
                 self._load(reducer.instrument, extra_options=spectrum_limits)
-        except RuntimeError, details:
+        except RuntimeError as details:
             sanslog.warning(str(details))
             self._wksp_name = ''
             return
@@ -335,11 +342,11 @@ class LoadRun(object):
             return workspace
         if len(groupW) < period:
             raise ValueError('Period number ' + str(period) + ' doesn\'t exist in workspace ' + groupW.getName())
-        ws_name = groupW[period].name()
+        ws_name = groupW[period - 1].name()
 
         # If we are dealing with event data, then we also want to extract and rename the according monitor data set
         monitor_name = ""
-        if isEventWorkspace(groupW[period]):
+        if isEventWorkspace(groupW[period - 1]):
             # Check if the monitor ws exists and extract it
             expected_mon_name = ws_name + appendix
             expected_mon_group_name = groupW.name() + appendix
@@ -388,7 +395,7 @@ class LoadRun(object):
         return numPeriods
 
     def _getHistory(self, wk_name):
-        _ws = getWorkspaceReference(wk_name)
+        getWorkspaceReference(wk_name)
 
         if isinstance(wk_name, Workspace):
             ws_h = wk_name.getHistory()
@@ -423,7 +430,7 @@ class LoadRun(object):
                 'There is a mismatch in the number of periods (entries) in the file between the sample and another run')
 
 
-class LoadTransmissions():
+class LoadTransmissions(object):
     """
         Loads the file used to apply the transmission correction to the
         sample or can
@@ -511,7 +518,7 @@ class CanSubtraction(ReductionStep):
 
         # clean up the workspaces ready users to see them if required
         if reducer.to_Q.output_type == '1D':
-            _rem_nans = StripEndNans()
+            StripEndNans()
 
         self._keep_partial_results(tmp_smp, tmp_can)
 
@@ -545,7 +552,7 @@ class CanSubtraction(ReductionStep):
         if not original_ws.hasDx(0):
             return
         for index in range(0, original_ws.getNumHistograms()):
-            subtraced_ws.setDx(index, original_ws.dataDX(index))
+            subtracted_ws.setDx(index, original_ws.dataDX(index))
 
 
 class Mask_ISIS(ReductionStep):
@@ -621,10 +628,6 @@ class Mask_ISIS(ReductionStep):
             @param complement: mask in the direction of the normal or away
             @return the xml string
         """
-        if complement:
-            _addition = '#'
-        else:
-            _addition = ''
         return '<infinite-plane id="' + str(id) + '">' + \
                '<point-in-plane x="' + str(plane_pt[0]) + '" y="' + str(plane_pt[1]) + '" z="' + \
                str(plane_pt[2]) + '" />' + \
@@ -760,7 +763,7 @@ class Mask_ISIS(ReductionStep):
                 if 'S' in typeSplit[1].upper():
                     _issueWarning('MASK command of type ' + details +
                                   ' deprecated. Please use instead MASK Ssp1[>Ssp2]')
-                if 'REAR' != typeSplit[0].upper() and instName == 'LOQ':
+                if typeSplit[0].upper() != 'REAR' and instName == 'LOQ':
                     _issueWarning('MASK command of type ' + details +
                                   ' can, until otherwise requested, only be used for the REAR (default) Main detector of LOQ. ' +
                                   'Default to the Main detector of LOQ for this mask command')
@@ -858,7 +861,7 @@ class Mask_ISIS(ReductionStep):
                     ydim = abs(upp2 - low2) + 1
                     speclist += detector.spectrum_block(low2, low, ydim, xdim) + ','
                 else:
-                    print "error in mask, ignored:  " + x
+                    print("error in mask, ignored:  " + x)
             elif '>' in x:  # Commands: MASK Ssp1>Ssp2, MASK Hn1>Hn2 and MASK Vn1>Vn2
                 pieces = x.split('>')
                 low = int(pieces[0].lstrip('hvs'))
@@ -948,7 +951,7 @@ class Mask_ISIS(ReductionStep):
             @param angle: angle of line in xy-plane in units of degrees
             @return: return xml shape string
         '''
-        return self._finite_cylinder(startPoint, width / 2000.0, length, \
+        return self._finite_cylinder(startPoint, width / 2000.0, length,
                                      [math.cos(angle * math.pi / 180.0), math.sin(angle * math.pi / 180.0), 0.0], "arm")
 
     def get_phi_limits_tag(self):
@@ -1017,9 +1020,9 @@ class Mask_ISIS(ReductionStep):
         # reset the xml, as execute can be run more than once
         self._xml = []
 
-        if (not self.min_radius is None) and (self.min_radius > 0.0):
+        if (self.min_radius is not None) and (self.min_radius > 0.0):
             self.add_cylinder(self.min_radius, 0, 0, 'beam_stop')
-        if (not self.max_radius is None) and (self.max_radius > 0.0):
+        if (self.max_radius is not None) and (self.max_radius > 0.0):
             self.add_outside_cylinder(self.max_radius, 0, 0, 'beam_area')
         # now do the masking
         for shape in self._xml:
@@ -1045,13 +1048,16 @@ class Mask_ISIS(ReductionStep):
             MaskDetectorsInShape(Workspace=workspace, ShapeXML=self._lim_phi_xml)
 
         if self.arm_width and self.arm_angle:
-            if instrument.name() == "SANS2D":
+            # Currently SANS2D and LOQ are supported
+            instrument_name = instrument.name()
+            if instrument_name == "SANS2D" or instrument_name == "LOQ":
+                component_name = 'rear-detector' if instrument_name == "SANS2D" else 'main-detector-bank'
                 ws = mtd[str(workspace)]
-                det = ws.getInstrument().getComponentByName('rear-detector')
+                det = ws.getInstrument().getComponentByName(component_name)
                 det_Z = det.getPos().getZ()
                 start_point = [self.arm_x, self.arm_y, det_Z]
-                MaskDetectorsInShape(Workspace=workspace, ShapeXML= \
-                    self._mask_line(start_point, 1e6, self.arm_width, self.arm_angle))
+                MaskDetectorsInShape(Workspace=workspace, ShapeXML=
+                                     self._mask_line(start_point, 1e6, self.arm_width, self.arm_angle))
 
         _output_ws, detector_list = ExtractMask(InputWorkspace=workspace, OutputWorkspace="__mask")
         _issueInfo("Mask check %s: %g masked pixels" % (workspace, len(detector_list)))
@@ -1066,13 +1072,13 @@ class Mask_ISIS(ReductionStep):
         instrum.load_empty(wksp_name)
 
         # apply masking to the current detector
-        self.execute(None, wksp_name, instrum)
+        self.execute(None, wksp_name)
 
         # now the other detector
         other = instrum.other_detector().name()
         original = instrum.cur_detector().name()
         instrum.setDetector(other)
-        self.execute(None, wksp_name, instrum)
+        self.execute(None, wksp_name)
         # reset the instrument to mask the currecnt detector
         instrum.setDetector(original)
 
@@ -1155,6 +1161,7 @@ class Mask_ISIS(ReductionStep):
                '    rear time mask: ', str(self.time_mask_r) + '\n' + \
                '    front time mask: ', str(self.time_mask_f) + '\n'
 
+
 class LoadSample(LoadRun):
     """
         Handles loading the sample run, this is the main experimental run with data
@@ -1177,7 +1184,7 @@ class LoadSample(LoadRun):
             raise RuntimeError('Unable to load SANS sample run, cannot continue.')
 
         if self.periods_in_file > 1:
-            self.entries = range(0, self.periods_in_file)
+            self.entries = list(range(0, self.periods_in_file))
 
         # applies on_load_sample for all the workspaces (single or groupworkspace)
         num = 0
@@ -1296,7 +1303,7 @@ class DarkRunSubtraction(object):
         @param workspace: a transmission workspace (histogram!). We need to have a separate method
                           for transmission since we the format slightly different to the scattering
                           workspaces.
-        @param transmission_ids: a list of transmission spectrum ids
+        @param transmission_ids: a list of transmission workspace indexes
         @returns a subtracted transmission workspace
         '''
         if not self.has_dark_runs():
@@ -1602,7 +1609,7 @@ class DarkRunSubtraction(object):
         if dark_run_ws.getNumberHistograms() != (end_spec_index - start_spec_index + 1):
             start_ws_index, end_ws_index = self._get_start_and_end_ws_index(start_spec_index,
                                                                             end_spec_index,
-                                                                             workspace_index_offset)
+                                                                            workspace_index_offset)
             # Now crop the workspace to the correct size
             cropped_name = dark_run_ws_name + "_cropped"
             alg_crop = AlgorithmManager.createUnmanaged("CropWorkspace")
@@ -1749,20 +1756,24 @@ class DarkRunSubtraction(object):
             run_number.append(setting.run_number)
 
         # Get the indices with settings which correspond to the individual settings
-        get_indices = lambda time_flag, mon_flag : [i for i, val in enumerate(use_time)
-                                                    if use_time[i] == time_flag and use_mon[i] == mon_flag]
+        def get_indices(time_flag, mon_flag):
+            return [i for i, use_time_i in enumerate(use_time) if use_time_i == time_flag and use_mon[i] == mon_flag]
+
         indices_time_detector = get_indices(True, False)
         indices_time_monitor = get_indices(True, True)
         indices_uamp_detector = get_indices(False, False)
         indices_uamp_monitor = get_indices(False, True)
 
         # Check that for each of these settings we only have one run number specified, else raise an error
-        has_max_one_run_number = lambda indices : len(set([run_number[index] for index in indices])) < 2
-        if (not has_max_one_run_number(indices_time_detector) or
-            not has_max_one_run_number(indices_time_monitor) or
-            not has_max_one_run_number(indices_uamp_detector) or
-            not has_max_one_run_number(indices_uamp_monitor) ) :
-            raise RuntimeError("DarkRunSubtraction: More background correction runs have been specified than are allowed. "
+        def has_max_one_run_number(indices):
+            return len(set([run_number[index] for index in indices])) < 2
+
+        if not has_max_one_run_number(indices_time_detector) or \
+           not has_max_one_run_number(indices_time_monitor) or \
+           not has_max_one_run_number(indices_uamp_detector) or \
+           not has_max_one_run_number(indices_uamp_monitor):
+            raise RuntimeError("DarkRunSubtraction: More background correction runs have been "
+                               "specified than are allowed. "
                                "There can be maximally one run number for each time-based detector, "
                                "uamp-based detector, time-based monitor and uamp-based monitor settings.\n")
 
@@ -1774,9 +1785,9 @@ class DarkRunSubtraction(object):
 
         # handle monitors
         self._dark_run_time_monitor_setting = self._get_final_setting_monitors(run_number, use_mean,
-                                                                                 use_time, mon_number, indices_time_monitor)
+                                                                               use_time, mon_number, indices_time_monitor)
         self._dark_run_uamp_monitor_setting = self._get_final_setting_monitors(run_number, use_mean,
-                                                                                 use_time, mon_number, indices_uamp_monitor)
+                                                                               use_time, mon_number, indices_uamp_monitor)
 
     def _get_final_setting_detectors(self, run_number, use_mean, use_time, indices):
         '''
@@ -1797,7 +1808,7 @@ class DarkRunSubtraction(object):
         detector_mean = [use_mean[index] for index in indices]
         detector_time = [use_time[index] for index in indices]
 
-        if len(detector_runs) == 0 or detector_runs[0] == None:
+        if len(detector_runs) == 0 or detector_runs[0] is None:
             return None
         else:
             return DarkRunSubtraction.DarkRunSubtractionSettings(run_number = detector_runs[0],
@@ -1807,6 +1818,7 @@ class DarkRunSubtraction(object):
                                                                  mon = False,
                                                                  mon_numbers = None)
     #pylint: disable=too-many-arguments
+
     def _get_final_setting_monitors(self, run_number, use_mean, use_time, mon_numbers, indices):
         '''
         Get the final settings for monitors
@@ -1837,15 +1849,14 @@ class DarkRunSubtraction(object):
                     monitor_mon_numbers.append(mon_numbers[index])
 
         # Check if the mean value is identical for all entries
-        are_all_same = lambda a_list : all([a_list[0] == a_list[i] for i in range(0, len(a_list))])
         if len(monitor_mean) > 0:
-            if not are_all_same(monitor_mean):
+            if len(set(monitor_mean)) != 1:
                 raise RuntimeError("DarkRunSubtraction: If several monitors are specified for a certain type "
                                    "of subtraction, it is required to use either all MEAN or all TOF.")
 
         # If the runs are empty or None then we don't have any settings here
         unique_runs = list(set(monitor_runs))
-        if len(unique_runs) == 0 or monitor_runs[0] == None:
+        if len(unique_runs) == 0 or monitor_runs[0] is None:
             return None
         else:
             return DarkRunSubtraction.DarkRunSubtractionSettings(run_number = monitor_runs[0],
@@ -1854,6 +1865,7 @@ class DarkRunSubtraction(object):
                                                                  detector = False,
                                                                  mon = True,
                                                                  mon_numbers = monitor_mon_numbers)
+
 
 class CropDetBank(ReductionStep):
     """
@@ -1886,7 +1898,6 @@ class CropDetBank(ReductionStep):
             monitor_ws = reducer.get_sample().get_monitor()
             monitor_name = monitor_ws.name()
 
-
             # Run the subtraction
             was_event_workspace = reducer.is_based_on_event()
             scatter_ws, monitor_ws = reducer.dark_run_subtraction.execute(scatter_ws, monitor_ws,
@@ -1896,6 +1907,7 @@ class CropDetBank(ReductionStep):
             # We need to replace the workspaces in the ADS
             mtd.addOrReplace(scatter_name, scatter_ws)
             mtd.addOrReplace(monitor_name, monitor_ws)
+
 
 class NormalizeToMonitor(ReductionStep):
     """
@@ -2032,7 +2044,7 @@ class TransmissionCalc(ReductionStep):
             return
         select += "::"
 
-        if not override and self.fit_settings.has_key(select + FITMETHOD) and self.fit_settings[select + FITMETHOD]:
+        if not override and select + FITMETHOD in self.fit_settings and self.fit_settings[select + FITMETHOD]:
             # it was already configured and this request does not want to override
             return
 
@@ -2053,7 +2065,7 @@ class TransmissionCalc(ReductionStep):
         # get variables for this selector
         sel_settings = dict()
         for prop in self.fit_props:
-            sel_settings[prop] = self.fit_settings[select + prop] if self.fit_settings.has_key(select + prop) else \
+            sel_settings[prop] = self.fit_settings[select + prop] if select + prop in self.fit_settings else \
                 self.fit_settings['both::' + prop]
 
         # copy fit_method
@@ -2064,7 +2076,7 @@ class TransmissionCalc(ReductionStep):
         if max_:
             sel_settings[LAMBDAMAX] = float(max_) if fit_method not in ['OFF', 'CLEAR'] else None
 
-        # apply the propertis to self.fit_settings
+        # apply the properties to self.fit_settings
         for prop in self.fit_props:
             self.fit_settings[select + prop] = sel_settings[prop]
 
@@ -2073,12 +2085,12 @@ class TransmissionCalc(ReductionStep):
             for selector_ in ['sample::', 'can::']:
                 for prop_ in self.fit_props:
                     prop_name = selector_ + prop_
-                    if self.fit_settings.has_key(prop_name):
+                    if prop_name in self.fit_settings:
                         del self.fit_settings[prop_name]
 
     def isSeparate(self):
         """ Returns true if the can or sample was given and false if just both was used"""
-        return self.fit_settings.has_key('sample::fit_method') or self.fit_settings.has_key('can::fit_method')
+        return 'sample::fit_method' in self.fit_settings or 'can::fit_method' in self.fit_settings
 
     def setup_wksp(self, inputWS, inst, wavbining, trans_det_ids, reducer):
         """
@@ -2115,40 +2127,44 @@ class TransmissionCalc(ReductionStep):
         tmp = mtd[tmpWS]
         # We perform a FlatBackground correction. We do this in two parts.
         # First we find the workspace indices which correspond to monitors
-        # and perform the correction on these indicies.
+        # and perform the correction on these indices.
         # Second we perform the correction on all indices which are not
         # monitors
-        for ws_index in range(tmp.getNumberHistograms()):
-            if tmp.getDetector(ws_index).isMonitor():
-                spectrum_number = tmp.getSpectrum(ws_index).getSpectrumNo()
-                back_start_mon, back_end_mon = inst.get_TOFs(spectrum_number)
-                if back_start_mon and back_end_mon:
-                    CalculateFlatBackground(
-                        InputWorkspace=tmpWS,
-                        OutputWorkspace=tmpWS,
-                        StartX=back_start_mon,
-                        EndX=back_end_mon,
-                        WorkspaceIndexList=ws_index,
-                        Mode='Mean')
+        if tmp.getNumberHistograms() > 0:
+            ws_index = 0
+            for ws_index in range(tmp.getNumberHistograms()):
+                if tmp.getDetector(ws_index).isMonitor():
+                    spectrum_number = tmp.getSpectrum(ws_index).getSpectrumNo()
+                    back_start_mon, back_end_mon = inst.get_TOFs(spectrum_number)
+                    if back_start_mon and back_end_mon:
+                        CalculateFlatBackground(
+                            InputWorkspace=tmpWS,
+                            OutputWorkspace=tmpWS,
+                            StartX=back_start_mon,
+                            EndX=back_end_mon,
+                            WorkspaceIndexList=ws_index,
+                            Mode='Mean')
 
-        back_start_roi, back_end_roi = inst.get_TOFs_for_ROI()
-        if back_start_roi and back_end_roi:
-            CalculateFlatBackground(
-                InputWorkspace=tmpWS,
-                OutputWorkspace=tmpWS,
-                StartX=back_start_roi,
-                EndX=back_end_roi,
-                WorkspaceIndexList=ws_index,
-                Mode='Mean',
-                SkipMonitors=True)
+            back_start_roi, back_end_roi = inst.get_TOFs_for_ROI()
+            if back_start_roi and back_end_roi:
+                CalculateFlatBackground(
+                    InputWorkspace=tmpWS,
+                    OutputWorkspace=tmpWS,
+                    StartX=back_start_roi,
+                    EndX=back_end_roi,
+                    WorkspaceIndexList=ws_index,
+                    Mode='Mean',
+                    SkipMonitors=True)
 
-        ConvertUnits(InputWorkspace=tmpWS, OutputWorkspace=tmpWS, Target="Wavelength")
+            ConvertUnits(InputWorkspace=tmpWS, OutputWorkspace=tmpWS, Target="Wavelength")
 
-        if self.interpolate:
-            InterpolatingRebin(InputWorkspace=tmpWS, OutputWorkspace=tmpWS, Params=wavbining)
+            if self.interpolate:
+                InterpolatingRebin(InputWorkspace=tmpWS, OutputWorkspace=tmpWS, Params=wavbining)
+            else:
+                Rebin(InputWorkspace=tmpWS, OutputWorkspace=tmpWS, Params=wavbining)
+            return tmpWS
         else:
-            Rebin(InputWorkspace=tmpWS, OutputWorkspace=tmpWS, Params=wavbining)
-        return tmpWS
+            raise RuntimeError('The number of histograms in the workspace must be greater than 0')
 
     def _get_index(self, number):
         """
@@ -2253,7 +2269,7 @@ class TransmissionCalc(ReductionStep):
         # get variables for this selector
         sel_settings = dict()
         for prop in self.fit_props:
-            sel_settings[prop] = self.fit_settings[select + prop] if self.fit_settings.has_key(select + prop) else \
+            sel_settings[prop] = self.fit_settings[select + prop] if select + prop in self.fit_settings else \
                 self.fit_settings['both::' + prop]
 
         pre_sample = reducer.instrument.incid_mon_4_trans_calc
@@ -2292,10 +2308,10 @@ class TransmissionCalc(ReductionStep):
         wavbin += ',' + str(translambda_max)
 
         # set up the input workspaces
-        trans_tmp_out = self.setup_wksp(trans_raw, reducer.instrument, \
-            wavbin, trans_det_ids, reducer)
-        direct_tmp_out = self.setup_wksp(direct_raw, reducer.instrument, \
-            wavbin, trans_det_ids, reducer)
+        trans_tmp_out = self.setup_wksp(trans_raw, reducer.instrument,
+                                        wavbin, trans_det_ids, reducer)
+        direct_tmp_out = self.setup_wksp(direct_raw, reducer.instrument,
+                                         wavbin, trans_det_ids, reducer)
 
         # Where a ROI has been specified, it is useful to keep a copy of the
         # summed ROI spectra around for the scientists to look at, so that they
@@ -2309,7 +2325,7 @@ class TransmissionCalc(ReductionStep):
                        OutputWorkspace=direct_raw + "_den",
                        StartWorkspaceIndex=EXCLUDE_INIT_BEAM)
 
-        fittedtransws, unfittedtransws = self.get_wksp_names( \
+        fittedtransws, unfittedtransws = self.get_wksp_names(
             trans_raw, translambda_min, translambda_max, reducer)
 
         # If no fitting is required just use linear and get unfitted data from CalculateTransmission algorithm
@@ -2375,7 +2391,7 @@ class TransmissionCalc(ReductionStep):
         return fitted_name, unfitted
 
     def _get_fit_property(self, selector, property_name):
-        if self.fit_settings.has_key(selector + '::' + property_name):
+        if selector + '::' + property_name in self.fit_settings:
             return self.fit_settings[selector + '::' + property_name]
         else:
             return self.fit_settings['both::' + property_name]
@@ -2389,7 +2405,7 @@ class TransmissionCalc(ReductionStep):
     def fitMethod(self, selector):
         """It will return LINEAR, LOGARITHM, POLYNOMIALx for x in 2,3,4,5"""
         resp = self._get_fit_property(selector.lower(), 'fit_method')
-        if 'POLYNOMIAL' == resp:
+        if resp == 'POLYNOMIAL':
             resp += str(self._get_fit_property(selector.lower(), 'order'))
         if resp in ['LIN', 'STRAIGHT']:
             resp = 'LINEAR'
@@ -2409,6 +2425,7 @@ class TransmissionCalc(ReductionStep):
             trans_ws = mtd[workspace_name]
             trans_ws = reducer.dark_run_subtraction.execute_transmission(trans_ws, trans_det_ids)
             mtd.addOrReplace(workspace_name, trans_ws)
+
 
 class AbsoluteUnitsISIS(ReductionStep):
     DEFAULT_SCALING = 100.0
@@ -2442,7 +2459,9 @@ class CalculateNormISIS(object):
     WAVE_CORR_NAME = '__Q_WAVE_conversion_temp'
     PIXEL_CORR_NAME = '__Q_pixel_conversion_temp'
 
-    def __init__(self, wavelength_deps=[]):
+    def __init__(self, wavelength_deps=None):
+        if wavelength_deps is None:
+            wavelength_deps = []
         super(CalculateNormISIS, self).__init__()
         self._wave_steps = wavelength_deps
         self._high_angle_pixel_file = ""
@@ -2521,13 +2540,15 @@ class CalculateNormISIS(object):
         else:
             return False
 
-    def calculate(self, reducer, wave_wks=[]):
+    def calculate(self, reducer, wave_wks=None):
         """
             Multiplies all the wavelength scalings into one workspace and all the detector
             dependent scalings into another workspace that can be used by ConvertToQ
             @param reducer: settings used for this reduction
             @param wave_wks: additional wavelength dependent correction workspaces to include
         """
+        if wave_wks is None:
+            wave_wks = []
         # use the instrument's correction file
         corr_file = reducer.instrument.cur_detector().correction_file
         if corr_file:
@@ -2647,7 +2668,7 @@ class ConvertToQISIS(ReductionStep):
         else:
             msg = "User file can't override previous gravity setting, do gravity correction remains " + str(
                 self._use_gravity)
-            print msg
+            print(msg)
             sanslog.warning(msg)
 
     def get_extra_length(self):
@@ -2668,7 +2689,7 @@ class ConvertToQISIS(ReductionStep):
         else:
             msg = ("User file can't override previous extra length setting for" +
                    " gravity correction; extra length remains " + str(self._grav_extra_length))
-            print msg
+            print(msg)
             sanslog.warning(msg)
 
     def execute(self, reducer, workspace):
@@ -2679,8 +2700,8 @@ class ConvertToQISIS(ReductionStep):
         if reducer.wide_angle_correction and reducer.transmission_calculator.output_wksp:
             # calculate the transmission wide angle correction
             _issueWarning("sans solid angle correction execution")
-            SANSWideAngleCorrection(SampleData=workspace, \
-                                    TransmissionData=reducer.transmission_calculator.output_wksp, \
+            SANSWideAngleCorrection(SampleData=workspace,
+                                    TransmissionData=reducer.transmission_calculator.output_wksp,
                                     OutputWorkspace='transmissionWorkspace')
             wavepixeladj = 'transmissionWorkspace'
         # create normalization workspaces
@@ -2708,7 +2729,7 @@ class ConvertToQISIS(ReductionStep):
             sanslog.warning("W2 : %s" % str(self._q_resolution_w2))
             sanslog.warning("LCol: %s" % str(self._q_resolution_collimation_length))
             sanslog.warning("DR : %s" % str(self._q_resolution_delta_r))
-            sanslog.warning("Exists: %s" % str(qResolution != None))
+            sanslog.warning("Exists: %s" % str(qResolution is not None))
 
         try:
             if self._Q_alg == 'Q1D':
@@ -2760,13 +2781,13 @@ class ConvertToQISIS(ReductionStep):
         reducer.deleteWorkspaces([wave_adj, pixel_adj, wavepixeladj])
 
     def _get_q_resolution_workspace(self, det_bank_workspace):
-        '''
+        """
         Calculates the QResolution workspace if this is required
-        @param det_bank_workspace: the main worspace which is being reduced
+        @param det_bank_workspace: the main workspace which is being reduced
         @returns the QResolution workspace or None
-        '''
+        """
         # Check if the a calculation is asked for by the user
-        if self.use_q_resolution == False:
+        if self.use_q_resolution is False:
             return None
 
         # Make sure that all parameters that are needed are available
@@ -2775,7 +2796,7 @@ class ConvertToQISIS(ReductionStep):
         # Run a consistency check
         try:
             self.run_consistency_check()
-        except RuntimeError, details:
+        except RuntimeError as details:
             sanslog.warning("ConverToQISIS: There was something wrong with the Q Resolution"
                             " settings. Running the reduction without the Q Resolution"
                             " Setting. See details %s" % str(details))
@@ -2793,10 +2814,10 @@ class ConvertToQISIS(ReductionStep):
             return self._create_q_resolution(det_bank_workspace=det_bank_workspace)
 
     def _create_q_resolution(self, det_bank_workspace):
-        '''
+        """
         Creates the Q Resolution workspace
         @returns the q resolution workspace
-        '''
+        """
         sigma_moderator = self._get_sigma_moderator_workspace()
 
         # We need the radius, not the diameter in the TOFSANSResolutionByPixel algorithm
@@ -2849,7 +2870,6 @@ class ConvertToQISIS(ReductionStep):
         '''
         # Here we need to check if the binning has changed, ie if the
         # existing
-        dummy_ws = det_bank_workspace
         raise RuntimeError("The QResolution optimization has not been implemented yet")
 
     def set_q_resolution_moderator(self, file_name):
@@ -2922,10 +2942,10 @@ class ConvertToQISIS(ReductionStep):
         return self.use_q_resolution
 
     def run_consistency_check(self):
-        '''
+        """
         Provides the consistency check for the ConvertTOQISIS
-        '''
-        # Make sure that everythign for the QResolution calculation is setup correctly
+        """
+        # Make sure that everything for the QResolution calculation is setup correctly
         if self.use_q_resolution:
             self._check_q_settings_complete()
 
@@ -2935,7 +2955,7 @@ class ConvertToQISIS(ReductionStep):
         We need a moderator file path. And the other settings have to be self consistent
         '''
         try:
-            dummy_file_path, dummy_suggested_name = getFileAndName(self._q_resolution_moderator_file_name)
+            _dummy_file_path, _dummy_suggested_name = getFileAndName(self._q_resolution_moderator_file_name)
         except:
             raise RuntimeError(
                 "The specified moderator file is not valid. Please make sure that that it exists in your search directory.")
@@ -3021,7 +3041,7 @@ class UnitsConvert(ReductionStep):
             bin_alg = self.rebin_alg
 
         rebin_com = bin_alg + '(workspace, "' + \
-                    self._get_rebin(low_wav, self.wav_step, high_wav) + '", OutputWorkspace=workspace)'
+            self._get_rebin(low_wav, self.wav_step, high_wav) + '", OutputWorkspace=workspace)'
         eval(rebin_com)
 
     def _get_rebin(self, low, step, high):
@@ -3047,13 +3067,13 @@ class UnitsConvert(ReductionStep):
             @param w_step: bin width
             @param w_high: high bin boundary
         """
-        if not w_low is None:
+        if w_low is not None:
             if self.wav_low is None or override:
                 self.wav_low = float(w_low)
-        if not w_step is None:
+        if w_step is not None:
             if self.wav_step is None or override:
                 self.wav_step = float(w_step)
-        if not w_high is None:
+        if w_high is not None:
             if self.wav_high is None or override:
                 self.wav_high = float(w_high)
 
@@ -3107,6 +3127,7 @@ class SliceEvent(ReductionStep):
         _hist, (_tot_t, tot_c, _part_t, part_c) = slice2histogram(ws_pointer, start, stop, _monitor, binning)
         self.scale = part_c / tot_c
 
+
 class BaseBeamFinder(ReductionStep):
     """
         Base beam finder. Holds the position of the beam center
@@ -3141,11 +3162,11 @@ class BaseBeamFinder(ReductionStep):
         return "Beam Center set at: %s %s" % (str(self._beam_center_x), str(self._beam_center_y))
 
     def update_beam_center(self, beam_center_x, beam_center_y):
-        '''
+        """
         Update the beam center position of the BeamBaseFinder
         @param beam_center_x: The first position
         @param beam_center_y: The second position
-        '''
+        """
         self._beam_center_x = beam_center_x
         self._beam_center_y = beam_center_y
 
@@ -3204,7 +3225,7 @@ class UserFile(ReductionStep):
             if not os.path.isfile(user_file):
                 user_file = FileFinder.getFullPath(self.filename)
                 if not os.path.isfile(user_file):
-                    raise RuntimeError, "Cannot read mask. File path '%s' does not exist or is not in the user path." % self.filename
+                    raise RuntimeError("Cannot read mask. File path '%s' does not exist or is not in the user path." % self.filename)
 
         reducer.user_file_path = os.path.dirname(user_file)
         # Re-initializes default values
@@ -3216,7 +3237,7 @@ class UserFile(ReductionStep):
         for line in file_handle:
             try:
                 self.read_line(line, reducer)
-            except:
+            except IOError:
                 # Close the handle
                 file_handle.close()
                 raise RuntimeError("%s was specified in the MASK file (%s) but the file cannot be found." % (
@@ -3277,7 +3298,7 @@ class UserFile(ReductionStep):
                 y_pos = float(values[1]) / YSF
             elif hab_str_pos > 0:
                 values = upper_line[hab_str_pos + 4:].split()  # remove the SET CENTRE/HAB
-                print ' convert values ', values
+                print(' convert values ', values)
                 x_pos = float(values[0]) / XSF
                 y_pos = float(values[1]) / YSF
             else:
@@ -3285,7 +3306,7 @@ class UserFile(ReductionStep):
                 x_pos = float(values[2]) / XSF
                 y_pos = float(values[3]) / YSF
             if hab_str_pos > 0:
-                print 'Front values = ', x_pos, y_pos
+                print('Front values = ', x_pos, y_pos)
                 reducer.set_beam_finder(BaseBeamFinder(x_pos, y_pos), 'front')
             else:
                 reducer.set_beam_finder(BaseBeamFinder(x_pos, y_pos))
@@ -3351,11 +3372,11 @@ class UserFile(ReductionStep):
                 elif nparams == 3:
                     fit_type, lambdamin, lambdamax = params
                 else:
-                    raise 1
+                    raise IOError
                 reducer.transmission_calculator.set_trans_fit(min_=lambdamin, max_=lambdamax,
                                                               fit_method=fit_type, override=True,
                                                               selector=selector)
-            except:
+            except IOError:
                 _issueWarning('Incorrectly formatted FIT/TRANS line, %s, line ignored' % upper_line)
 
         elif upper_line.startswith('FIT/MONITOR'):
@@ -3434,7 +3455,7 @@ class UserFile(ReductionStep):
             return
 
         rebin_str = None
-        if not ',' in limit_line:
+        if ',' not in limit_line:
             # Split with no arguments defaults to any whitespace character and in particular
             # multiple spaces are include
             elements = limits.split()
@@ -3473,7 +3494,7 @@ class UserFile(ReductionStep):
                 _issueWarning("General wave re-bin lines are not implemented, line ignored \"" + limit_line + "\"")
                 return
             else:
-                reducer.to_wavelen.set_rebin( \
+                reducer.to_wavelen.set_rebin(
                     minval, step_type + step_size, maxval, override=False)
         elif limit_type.upper() == 'Q':
             if rebin_str:
@@ -3631,7 +3652,7 @@ class UserFile(ReductionStep):
         elif det_axis == 'YTILT':
             detector.y_tilt = shift
         else:
-            raise NotImplemented('Detector correction on "' + det_axis + '" is not supported')
+            raise NotImplementedError('Detector correction on "' + det_axis + '" is not supported')
 
     def _readFrontRescaleShiftSetup(self, details, reducer):
         """
@@ -3694,7 +3715,7 @@ class UserFile(ReductionStep):
             dark_run_setting = back_parser.parse_and_set(arguments)
             reducer.add_dark_run_setting(dark_run_setting)
         else:
-        # a list of the key words this function can read and the functions it calls in response
+            # a list of the key words this function can read and the functions it calls in response
             keys = ['MON/TIMES', 'M', 'TRANS']
             funcs = [self._read_default_back_region, self._read_back_region, self._read_back_trans_roi]
             self._process(keys, funcs, arguments, reducer)
@@ -3731,7 +3752,7 @@ class UserFile(ReductionStep):
             # parse the words after 'TIME' as first the start time and then the end
             reducer.inst.set_TOFs(int(times[0]), int(times[1]), monitor)
             return ''
-        except Exception, reason:
+        except Exception as reason:
             # return a description of any problems and then continue to read the next line
             return str(reason) + ' on line: '
 
@@ -3766,7 +3787,7 @@ class UserFile(ReductionStep):
                 reducer.inst.set_TOFs_for_ROI(int(times[0]), int(times[1]))
                 return ''
             raise ValueError('Expected two times for BACK/TRANS')
-        except Exception, reason:
+        except ValueError as reason:
             # return a description of any problems and then continue to read the next line
             return str(reason) + ' on line: '
 
@@ -3918,7 +3939,7 @@ class UserFile(ReductionStep):
     def _check_instrument(self, inst_name, reducer):
         if reducer.instrument is None:
             raise RuntimeError('Use SANS2D() or LOQ() to set the instrument before Maskfile()')
-        if not inst_name == reducer.instrument.name():
+        if inst_name != reducer.instrument.name():
             raise RuntimeError(
                 'User settings file not compatible with the selected instrument ' + reducer.instrument.name())
 
@@ -3950,8 +3971,8 @@ class UserFile(ReductionStep):
             reducer.instrument.setCalibrationWorkspace(__calibrationWs)
         except:
             # If we throw a runtime here, then we cannot execute 'Load Data'.
-            raise RuntimeError("Invalid input for tube calibration file (" + path2file + " ).\n" \
-                   "Please do not run a reduction as it will not successfully complete.\n")
+            raise RuntimeError("Invalid input for tube calibration file (" + path2file + " ).\n"
+                               "Please do not run a reduction as it will not successfully complete.\n")
 
     def _read_maskfile_line(self, line, reducer):
         try:
@@ -4153,7 +4174,7 @@ class GetSampleGeom(ReductionStep):
         self._use_wksp_height = False
 
         # For a cylinder and sphere the height=width=radius
-        if (not self._shape is None) and (self._shape.startswith('cylinder')):
+        if (self._shape is not None) and (self._shape.startswith('cylinder')):
             self._width = self._height
         self._use_wksp_width = False
 
@@ -4250,7 +4271,7 @@ class SampleGeomCor(ReductionStep):
                 volume = geo.thickness * math.pi
                 volume *= math.pow(geo.width, 2) / 4.0
             else:
-                raise NotImplemented('Shape "' + geo.shape + '" is not in the list of supported shapes')
+                raise NotImplementedError('Shape "' + geo.shape + '" is not in the list of supported shapes')
         except TypeError:
             raise TypeError('Error calculating sample volume with width=' + str(geo.width) + ' height=' + str(
                 geo.height) + 'and thickness=' + str(geo.thickness))

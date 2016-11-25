@@ -4,6 +4,7 @@
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/IMDIterator.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/MDEventFactory.h"
 #include "MantidDataObjects/MDEventInserter.h"
@@ -32,18 +33,6 @@ using namespace Mantid::DataObjects;
 
 DECLARE_ALGORITHM(ConvertSpiceDataToRealSpace)
 
-//------------------------------------------------------------------------------------------------
-/** Constructor
- */
-ConvertSpiceDataToRealSpace::ConvertSpiceDataToRealSpace()
-    : m_instrumentName(""), m_numSpec(0), m_nDimensions(3) {}
-
-//------------------------------------------------------------------------------------------------
-/** Destructor
- */
-ConvertSpiceDataToRealSpace::~ConvertSpiceDataToRealSpace() {}
-
-//------------------------------------------------------------------------------------------------
 /** Init
  */
 void ConvertSpiceDataToRealSpace::init() {
@@ -101,7 +90,6 @@ void ConvertSpiceDataToRealSpace::init() {
       "Name of a table workspace containing the detectors' efficiency.");
 }
 
-//------------------------------------------------------------------------------------------------
 /** Exec
  */
 void ConvertSpiceDataToRealSpace::exec() {
@@ -282,8 +270,6 @@ void ConvertSpiceDataToRealSpace::parseSampleLogs(
 
     logvecmap.emplace(logname, logvec);
   }
-
-  return;
 }
 
 //------------------------------------------------------------------------------------------------
@@ -451,8 +437,6 @@ void ConvertSpiceDataToRealSpace::readTableInfo(
 
   // Sort out anode id index list;
   std::sort(anodelist.begin(), anodelist.end());
-
-  return;
 }
 
 //------------------------------------------------------------------------------------------------
@@ -539,8 +523,6 @@ void ConvertSpiceDataToRealSpace::appendSampleLogs(
     // Add log to experiment info
     eilast->mutableRun().addLogData(templog);
   }
-
-  return;
 }
 
 //------------------------------------------------------------------------------------------------
@@ -573,8 +555,6 @@ void ConvertSpiceDataToRealSpace::addExperimentInfos(
   combine_expinfo->mutableRun().addProperty(
       new PropertyWithValue<int>("run_number", -1));
   mdws->addExperimentInfo(combine_expinfo);
-
-  return;
 }
 
 //------------------------------------------------------------------------------------------------
@@ -790,8 +770,6 @@ void ConvertSpiceDataToRealSpace::correctByDetectorEfficiency(
         ws->dataY(iws)[0] /= detiter->second;
     }
   }
-
-  return;
 }
 
 } // namespace DataHandling

@@ -1,11 +1,8 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidDataHandling/LoadNexusLogs.h"
 #include <nexus/NeXusException.hpp>
 #include "MantidKernel/TimeSeriesProperty.h"
-//#include "MantidKernel/LogParser.h"
 #include "MantidAPI/FileProperty.h"
+#include "MantidAPI/Run.h"
 #include <cctype>
 
 #include <Poco/Path.h>
@@ -91,8 +88,11 @@ void LoadNexusLogs::init() {
   declareProperty(
       make_unique<PropertyWithValue<bool>>("OverwriteLogs", true,
                                            Direction::Input),
-      "If true then existing logs will be overwritten, if false they will "
+      "If true then some existing logs will be overwritten, if false they will "
       "not.");
+  declareProperty(make_unique<PropertyWithValue<std::string>>("NXentryName", "",
+                                                              Direction::Input),
+                  "Entry in the nexus file from which to read the logs");
 }
 
 /** Executes the algorithm. Reading in the file and creating and populating
@@ -106,17 +106,20 @@ void LoadNexusLogs::exec() {
   std::string filename = getPropertyValue("Filename");
   MatrixWorkspace_sptr workspace = getProperty("Workspace");
 
+  std::string entry_name = getPropertyValue("NXentryName");
   // Find the entry name to use (normally "entry" for SNS, "raw_data_1" for
-  // ISIS)
-  std::string entry_name = LoadTOFRawNexus::getEntryName(filename);
-
+  // ISIS) if entry name is empty
+  if (entry_name.empty()) {
+    entry_name = LoadTOFRawNexus::getEntryName(filename);
+  }
   ::NeXus::File file(filename);
   // Find the root entry
   try {
     file.openGroup(entry_name, "NXentry");
   } catch (::NeXus::Exception &) {
     throw std::invalid_argument("Unknown NeXus file format found in file '" +
-                                filename + "'");
+                                filename + "', or '" + entry_name +
+                                "' is not a valid NXentry");
   }
 
   /// Use frequency start for Monitor19 and Special1_19 logs with "No Time" for
@@ -186,8 +189,7 @@ void LoadNexusLogs::exec() {
   if (workspace->mutableRun().hasProperty("proton_log")) {
     std::vector<int> event_frame_number;
     this->getLogger().notice()
-        << "Using old ISIS proton_log and event_frame_number indirection..."
-        << std::endl;
+        << "Using old ISIS proton_log and event_frame_number indirection...\n";
     try {
       // Find the bank/name corresponding to the first event data entry, i.e.
       // one with type NXevent_data.
@@ -209,9 +211,9 @@ void LoadNexusLogs::exec() {
                     "/event_frame_number");
       file.getData(event_frame_number);
     } catch (const ::NeXus::Exception &) {
-      this->getLogger().warning() << "Unable to load event_frame_number - "
-                                     "filtering events by time will not work "
-                                  << std::endl;
+      this->getLogger().warning()
+          << "Unable to load event_frame_number - "
+             "filtering events by time will not work \n";
     }
     file.openPath("/" + entry_name);
     if (!event_frame_number.empty()) // ISIS indirection - see above comments
@@ -549,7 +551,7 @@ LoadNexusLogs::createTimeSeries(::NeXus::File &file,
   // Now the values: Could be a string, int or double
   file.openData("value");
   // Get the units of the property
-  std::string value_units("");
+  std::string value_units;
   try {
     file.getAttr("units", value_units);
   } catch (::NeXus::Exception &) {

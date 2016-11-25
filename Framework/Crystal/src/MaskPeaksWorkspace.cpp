@@ -26,11 +26,7 @@ using std::string;
 
 /// Constructor
 MaskPeaksWorkspace::MaskPeaksWorkspace()
-    : m_inputW(), m_xMin(0), m_xMax(0), m_yMin(0), m_yMax(0), m_tofMin(0),
-      m_tofMax(0) {}
-
-/// Destructor
-MaskPeaksWorkspace::~MaskPeaksWorkspace() {}
+    : m_xMin{0}, m_xMax{0}, m_yMin{0}, m_yMax{0}, m_tofMin{0}, m_tofMax{0} {}
 
 /** Initialisation method. Declares properties to be used in algorithm.
  *
@@ -76,7 +72,6 @@ void MaskPeaksWorkspace::init() {
 void MaskPeaksWorkspace::exec() {
   retrieveProperties();
 
-  MantidVecPtr XValues;
   PeaksWorkspace_const_sptr peaksW = getProperty("InPeaksWorkspace");
 
   // To get the workspace index from the detector ID
@@ -94,7 +89,7 @@ void MaskPeaksWorkspace::exec() {
 
   // Loop over peaks
   const std::vector<Peak> &peaks = peaksW->getPeaks();
-  PARALLEL_FOR3(m_inputW, peaksW, tablews)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*m_inputW, *peaksW, *tablews))
   for (int i = 0; i < static_cast<int>(peaks.size()); i++) { // NOLINT
     PARALLEL_START_INTERUPT_REGION
     const Peak &peak = peaks[i];
@@ -124,7 +119,7 @@ void MaskPeaksWorkspace::exec() {
     size_t wi = this->getWkspIndex(pixel_to_wi, comp, xPeak, yPeak);
     if (wi !=
         static_cast<size_t>(EMPTY_INT())) { // scope limit the workspace index
-      this->getTofRange(x0, xf, peak.getTOF(), m_inputW->readX(wi));
+      this->getTofRange(x0, xf, peak.getTOF(), m_inputW->x(wi));
       tofRangeSet = true;
     }
 
@@ -139,7 +134,7 @@ void MaskPeaksWorkspace::exec() {
           continue;
         spectra.insert(wj);
         if (!tofRangeSet) { // scope limit the workspace index
-          this->getTofRange(x0, xf, peak.getTOF(), m_inputW->readX(wj));
+          this->getTofRange(x0, xf, peak.getTOF(), m_inputW->x(wj));
           tofRangeSet = true;
         }
       }
@@ -171,8 +166,6 @@ void MaskPeaksWorkspace::exec() {
   maskbinstb->setPropertyValue("OutputWorkspace", m_inputW->getName());
   maskbinstb->setProperty("MaskingInformation", tablews);
   maskbinstb->execute();
-
-  return;
 }
 
 void MaskPeaksWorkspace::retrieveProperties() {
@@ -261,7 +254,7 @@ size_t MaskPeaksWorkspace::getWkspIndex(const detid2index_map &pixel_to_wi,
  */
 void MaskPeaksWorkspace::getTofRange(double &tofMin, double &tofMax,
                                      const double tofPeak,
-                                     const MantidVec &tof) {
+                                     const HistogramData::HistogramX &tof) {
   tofMin = tof.front();
   tofMax = tof.back() - 1;
   if (!isEmpty(m_tofMin)) {

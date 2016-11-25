@@ -1,6 +1,7 @@
 #include "MantidDataHandling/LoadLogsForSNSPulsedMagnet.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/Run.h"
 #include "MantidKernel/BinaryFile.h"
 #include "MantidKernel/ConfigService.h"
 #include "MantidKernel/System.h"
@@ -21,7 +22,6 @@ DECLARE_ALGORITHM(LoadLogsForSNSPulsedMagnet)
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
 
-//----------------------------------------------------------------------------------------------
 /** Constructor
  */
 LoadLogsForSNSPulsedMagnet::LoadLogsForSNSPulsedMagnet()
@@ -29,7 +29,6 @@ LoadLogsForSNSPulsedMagnet::LoadLogsForSNSPulsedMagnet()
       m_delayfileinoldformat(false), m_numpulses(0), m_numchoppers(0),
       m_delaytimes(nullptr), m_pulseidseconds(), m_pulseidnanoseconds(), WS() {}
 
-//----------------------------------------------------------------------------------------------
 /** Destructor
  */
 LoadLogsForSNSPulsedMagnet::~LoadLogsForSNSPulsedMagnet() {
@@ -38,9 +37,6 @@ LoadLogsForSNSPulsedMagnet::~LoadLogsForSNSPulsedMagnet() {
   delete[] m_delaytimes;
 }
 
-//----------------------------------------------------------------------------------------------
-
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void LoadLogsForSNSPulsedMagnet::init() {
@@ -101,7 +97,7 @@ void LoadLogsForSNSPulsedMagnet::exec() {
   WS = getProperty("Workspace");
 
   g_log.information() << "Input Files: " << m_delaytimefilename << " , "
-                      << m_pulseidfilename << std::endl;
+                      << m_pulseidfilename << '\n';
 
   // 2. Parse delaytime file
   ParseDelayTimeLogFile();
@@ -111,8 +107,6 @@ void LoadLogsForSNSPulsedMagnet::exec() {
 
   // 4. Integrate answer
   addProperty();
-
-  return;
 }
 
 void LoadLogsForSNSPulsedMagnet::ParseDelayTimeLogFile() {
@@ -138,7 +132,7 @@ void LoadLogsForSNSPulsedMagnet::ParseDelayTimeLogFile() {
     numpulses = filesize / (4 + 4) / m_numchoppers;
   }
   g_log.debug() << "Number of Pulses = " << numpulses
-                << " Old format = " << m_delayfileinoldformat << std::endl;
+                << " Old format = " << m_delayfileinoldformat << '\n';
 
   // 3. Build data structure
   auto delaytimes = new unsigned int *[numpulses];
@@ -171,7 +165,7 @@ void LoadLogsForSNSPulsedMagnet::ParseDelayTimeLogFile() {
       if (delaytime != 0) {
         g_log.debug() << "Pulse Index =  " << index
                       << "  Chopper = " << chopperindex
-                      << "   Delay Time = " << delaytime << std::endl;
+                      << "   Delay Time = " << delaytime << '\n';
       }
       localdelaytimes[i] = delaytime;
     }
@@ -187,8 +181,6 @@ void LoadLogsForSNSPulsedMagnet::ParseDelayTimeLogFile() {
 
   m_numpulses = numpulses;
   m_delaytimes = delaytimes;
-
-  return;
 }
 
 #pragma pack(push, 4) // Make sure the structure is 16 bytes.
@@ -211,15 +203,14 @@ struct Pulse {
 #pragma pack(pop)
 
 void LoadLogsForSNSPulsedMagnet::ParsePulseIDLogFile() {
-  std::vector<Pulse> *pulses;
+  std::vector<Pulse> pulses;
   BinaryFile<Pulse> pulseFile(m_pulseidfilename);
   this->m_numpulses = pulseFile.getNumElements();
   pulses = pulseFile.loadAll();
-  for (auto &pulse : *pulses) {
+  for (const auto &pulse : pulses) {
     this->m_pulseidseconds.push_back(pulse.seconds);
     this->m_pulseidnanoseconds.push_back(pulse.nanoseconds);
   }
-  delete pulses;
 }
 
 void LoadLogsForSNSPulsedMagnet::addProperty() {
@@ -254,8 +245,6 @@ void LoadLogsForSNSPulsedMagnet::addProperty() {
 
   // Clean memory
   delete[] property;
-
-  return;
 }
 
 } // namespace Mantid

@@ -1,8 +1,6 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAlgorithms/ModeratorTzeroLinear.h"
 #include "MantidAPI/Axis.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidDataObjects/EventWorkspace.h"
@@ -105,7 +103,7 @@ void ModeratorTzeroLinear::exec() {
           inputWS->getTitle());
     m_intercept = interceptParam[0]; //[intercept]=microsecond
     g_log.debug() << "Moderator Time Zero: gradient=" << m_gradient
-                  << "intercept=" << m_intercept << std::endl;
+                  << "intercept=" << m_intercept << '\n';
   } catch (Exception::NotFoundError &) {
     g_log.error("Unable to retrieve Moderator Time Zero parameters (gradient "
                 "and intercept)");
@@ -133,28 +131,23 @@ void ModeratorTzeroLinear::exec() {
   // do the shift in X
   const size_t numHists = inputWS->getNumberHistograms();
   Progress prog(this, 0.0, 1.0, numHists); // report progress of algorithm
-  PARALLEL_FOR2(inputWS, outputWS)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*inputWS, *outputWS))
   for (int i = 0; i < static_cast<int>(numHists); ++i) {
     PARALLEL_START_INTERUPT_REGION
     double t_f, L_i;
     size_t wsIndex = static_cast<size_t>(i);
     calculateTfLi(inputWS, wsIndex, t_f, L_i);
+
+    outputWS->setHistogram(i, inputWS->histogram(i));
     // shift the time of flights
     if (t_f >= 0) // t_f < 0 when no detector info is available
     {
       const double scaling = L_i / (L_i + m_gradient);
       const double offset = (1 - scaling) * t_f - scaling * m_intercept;
-      const MantidVec &inbins = inputWS->readX(i);
-      MantidVec &outbins = outputWS->dataX(i);
-      for (unsigned int j = 0; j < inbins.size(); j++) {
-        outbins[j] = scaling * inbins[j] + offset;
-      }
-    } else {
-      outputWS->dataX(i) = inputWS->readX(i);
+      auto &outbins = outputWS->mutableX(i);
+      outbins *= scaling;
+      outbins += offset;
     }
-    // Copy y and e data
-    outputWS->dataY(i) = inputWS->readY(i);
-    outputWS->dataE(i) = inputWS->readE(i);
     prog.report();
     PARALLEL_END_INTERUPT_REGION
   }
@@ -185,7 +178,7 @@ void ModeratorTzeroLinear::execEvent() {
   // generate the output workspace pointer
   MatrixWorkspace_sptr matrixOutputWS = getProperty("OutputWorkspace");
   if (matrixOutputWS != matrixInputWS) {
-    matrixOutputWS = MatrixWorkspace_sptr(matrixInputWS->clone().release());
+    matrixOutputWS = matrixInputWS->clone();
     setProperty("OutputWorkspace", matrixOutputWS);
   }
   auto outputWS = boost::dynamic_pointer_cast<EventWorkspace>(matrixOutputWS);
@@ -193,11 +186,11 @@ void ModeratorTzeroLinear::execEvent() {
   // Loop over the spectra
   const size_t numHists = outputWS->getNumberHistograms();
   Progress prog(this, 0.0, 1.0, numHists); // report progress of algorithm
-  PARALLEL_FOR1(outputWS)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*outputWS))
   for (int i = 0; i < static_cast<int>(numHists); ++i) {
     size_t wsIndex = static_cast<size_t>(i);
     PARALLEL_START_INTERUPT_REGION
-    EventList &evlist = outputWS->getEventList(wsIndex);
+    EventList &evlist = outputWS->getSpectrum(wsIndex);
     if (evlist.getNumberEvents() > 0) // don't bother with empty lists
     {
       // Calculate the time from sample to detector 'i'
@@ -256,7 +249,7 @@ void ModeratorTzeroLinear::calculateTfLi(MatrixWorkspace_const_sptr inputWS,
         double L_f = det->getDistance(*sample);
         t_f = L_f / v_f;
         // g_log.debug() << "detector: " << i << " L_f=" << L_f << " t_f=" <<
-        // t_f << std::endl;
+        // t_f << '\n';
       } catch (Exception::NotFoundError &) {
         g_log.error("Unable to calculate detector-sample distance");
         throw Exception::InstrumentDefinitionError(
@@ -264,7 +257,7 @@ void ModeratorTzeroLinear::calculateTfLi(MatrixWorkspace_const_sptr inputWS,
             inputWS->getTitle());
       }
     } else {
-      g_log.debug() << "Efixed not found for detector " << i << std::endl;
+      g_log.debug() << "Efixed not found for detector " << i << '\n';
       t_f = TfError;
     }
   }

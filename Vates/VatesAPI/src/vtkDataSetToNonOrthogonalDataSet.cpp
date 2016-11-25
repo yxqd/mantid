@@ -2,6 +2,8 @@
 #include "MantidAPI/CoordTransform.h"
 #include "MantidAPI/IMDEventWorkspace.h"
 #include "MantidAPI/IMDHistoWorkspace.h"
+#include "MantidAPI/Run.h"
+#include "MantidAPI/Sample.h"
 #include "MantidGeometry/Crystal/UnitCell.h"
 #include "MantidGeometry/Crystal/OrientedLattice.h"
 #include "MantidKernel/Matrix.h"
@@ -80,11 +82,10 @@ namespace VATES {
  */
 void vtkDataSetToNonOrthogonalDataSet::exec(
     vtkDataSet *dataset, std::string name,
-    std::unique_ptr<WorkspaceProvider> workspaceProvider)
-{
-    vtkDataSetToNonOrthogonalDataSet temp(dataset, name,
-                                          std::move(workspaceProvider));
-    temp.execute();
+    std::unique_ptr<WorkspaceProvider> workspaceProvider) {
+  vtkDataSetToNonOrthogonalDataSet temp(dataset, name,
+                                        std::move(workspaceProvider));
+  temp.execute();
 }
 
 /**
@@ -99,19 +100,17 @@ vtkDataSetToNonOrthogonalDataSet::vtkDataSetToNonOrthogonalDataSet(
     : m_dataSet(dataset), m_wsName(name), m_numDims(3), m_skewMat(),
       m_basisNorm(), m_basisX(1, 0, 0), m_basisY(0, 1, 0), m_basisZ(0, 0, 1),
       m_coordType(Kernel::HKL),
-      m_workspaceProvider(std::move(workspaceProvider))
-{
-    if (NULL == m_dataSet) {
-        throw std::runtime_error(
-            "Cannot construct "
-            "vtkDataSetToNonOrthogonalDataSet with null VTK "
-            "dataset");
-    }
-    if (name.empty()) {
-        throw std::runtime_error("Cannot construct "
-                                 "vtkDataSetToNonOrthogonalDataSet without "
-                                 "associated workspace name");
-    }
+      m_workspaceProvider(std::move(workspaceProvider)) {
+  if (NULL == m_dataSet) {
+    throw std::runtime_error("Cannot construct "
+                             "vtkDataSetToNonOrthogonalDataSet with null VTK "
+                             "dataset");
+  }
+  if (name.empty()) {
+    throw std::runtime_error("Cannot construct "
+                             "vtkDataSetToNonOrthogonalDataSet without "
+                             "associated workspace name");
+  }
 }
 
 /**
@@ -286,11 +285,7 @@ void vtkDataSetToNonOrthogonalDataSet::createSkewInformation(
   m_skewMat *= scaleMat;
 
   // Setup basis normalisation array
-  // Intel and MSBuild can't handle this
-  // m_basisNorm = {ol.astar(), ol.bstar(), ol.cstar()};
-  m_basisNorm.push_back(ol.astar());
-  m_basisNorm.push_back(ol.bstar());
-  m_basisNorm.push_back(ol.cstar());
+  m_basisNorm = {ol.astar(), ol.bstar(), ol.cstar()};
 
   // Expand matrix to 4 dimensions if necessary
   if (4 == m_numDims) {

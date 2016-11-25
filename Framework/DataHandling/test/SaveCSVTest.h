@@ -14,6 +14,7 @@ using namespace Mantid::API;
 using namespace Mantid::Kernel;
 using namespace Mantid::DataHandling;
 using namespace Mantid::DataObjects;
+using Mantid::HistogramData::HistogramDx;
 
 // Notice, the SaveCSV algorithm currently does not create
 // an output workspace and therefore no tests related to the
@@ -134,7 +135,7 @@ private:
       }
       ws->dataY(j).assign(nBins, double(j));
       ws->dataE(j).assign(nBins, sqrt(double(j)));
-      ws->dataDx(j).assign(nBins + 1, sqrt(double(j)));
+      ws->setPointStandardDeviations(j, nBins, sqrt(double(j)));
     }
     return ws;
   }
@@ -248,13 +249,12 @@ private:
       dataStream.clear();
       dataStream.str(line);
       dataStream >> indexMarker >> d1 >> separator >> d2 >> separator >> d3 >>
-          separator >> dEnd >> separator;
+          separator;
       TS_ASSERT_EQUALS(indexMarker, spec);
       TS_ASSERT_EQUALS(separator, ",");
       TS_ASSERT_DELTA(d1, sqrt(double(spec)), 1e-5);
       TS_ASSERT_DELTA(d2, sqrt(double(spec)), 1e-5);
       TS_ASSERT_DELTA(d3, sqrt(double(spec)), 1e-5);
-      TS_ASSERT_DELTA(dEnd, sqrt(double(spec)), 1e-5);
     }
     stream.close();
   }

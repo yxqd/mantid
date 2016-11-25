@@ -4,11 +4,13 @@
 //----------------------------------------------------------------------
 // Includes
 //----------------------------------------------------------------------
-#include "MantidKernel/DllConfig.h"
 #include "MantidKernel/DateAndTime.h"
+#include "MantidKernel/DllConfig.h"
 #include "MantidKernel/ITimeSeriesProperty.h"
 #include "MantidKernel/Property.h"
+#include "MantidKernel/PropertyNexus.h"
 #include "MantidKernel/Statistics.h"
+#include <cstdint>
 #include <utility>
 
 namespace Mantid {
@@ -121,6 +123,8 @@ public:
   /// property
   std::unique_ptr<TimeSeriesProperty<double>> getDerivative() const;
 
+  void saveProperty(::NeXus::File *file) override;
+
   /// "Virtual" copy constructor with a time shift in seconds
   Property *cloneWithTimeShift(const double timeShift) const override;
   /// Return the memory used by the property, in bytes
@@ -166,6 +170,10 @@ public:
       const std::vector<SplittingInterval> &filter) const override;
   /// Calculate the time-weighted average of a property
   double timeAverageValue() const;
+  /// generate constant time-step histogram from the property values
+  void histogramData(const Kernel::DateAndTime &tMin,
+                     const Kernel::DateAndTime &tMax,
+                     std::vector<double> &counts) const;
 
   ///  Return the time series as a correct C++ map<DateAndTime, TYPE>. All
   ///  values
@@ -289,6 +297,9 @@ public:
   void reserve(size_t size) { m_values.reserve(size); };
 
 private:
+  //----------------------------------------------------------------------------------------------
+  /// Saves the time vector has time + start attribute
+  void saveTimeVector(::NeXus::File *file);
   /// Sort the property into increasing times
   void sort() const;
   ///  Find the index of the entry of time t in the mP vector (sorted)

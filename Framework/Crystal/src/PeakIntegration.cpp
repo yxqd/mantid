@@ -1,11 +1,8 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
-#include "MantidAPI/MemoryManager.h"
 #include "MantidAPI/InstrumentValidator.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/FunctionFactory.h"
 #include "MantidAPI/IPeakFunction.h"
+#include "MantidAPI/Sample.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidCrystal/PeakIntegration.h"
 #include "MantidDataObjects/EventWorkspace.h"
@@ -15,7 +12,7 @@
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/VisibleWhenProperty.h"
 
-#include <boost/math/special_functions/fpclassify.hpp>
+#include <cmath>
 #include <boost/math/special_functions/round.hpp>
 
 namespace Mantid {
@@ -28,12 +25,6 @@ using namespace Kernel;
 using namespace Geometry;
 using namespace API;
 using namespace DataObjects;
-
-/// Constructor
-PeakIntegration::PeakIntegration() : API::Algorithm(), m_IC(false) {}
-
-/// Destructor
-PeakIntegration::~PeakIntegration() {}
 
 /** Initialisation method. Declares properties to be used in algorithm.
  *
@@ -75,7 +66,7 @@ void PeakIntegration::exec() {
   /// Output peaks workspace, create if needed
   PeaksWorkspace_sptr peaksW = getProperty("OutPeaksWorkspace");
   if (peaksW != inPeaksW)
-    peaksW.reset(inPeaksW->clone().release());
+    peaksW = inPeaksW->clone();
 
   double qspan = 0.12;
   m_IC = getProperty("IkedaCarpenterTOF");
@@ -133,7 +124,7 @@ void PeakIntegration::exec() {
   }
 
   Progress prog(this, MinPeaks, 1.0, NumberPeaks);
-  PARALLEL_FOR3(inputW, peaksW, outputW)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*inputW, *peaksW, *outputW))
   for (int i = MinPeaks; i < NumberPeaks; i++) {
 
     PARALLEL_START_INTERUPT_REGION
@@ -161,21 +152,19 @@ void PeakIntegration::exec() {
     TOFmax =
         fitneighbours(i, bankName, XPeak, YPeak, i, qspan, peaksW, pixel_to_wi);
 
-    MantidVec &X0 = outputW->dataX(i);
-    TOFPeak = VectorHelper::getBinIndex(X0, TOFPeakd);
-
     double I = 0., sigI = 0.;
     // Find point of peak centre
     // Get references to the current spectrum
-    const MantidVec &X = outputW->readX(i);
-    const MantidVec &Y = outputW->readY(i);
-    const MantidVec &E = outputW->readE(i);
+    const auto &X = outputW->x(i);
+    const auto &Y = outputW->y(i);
+    const auto &E = outputW->e(i);
     int numbins = static_cast<int>(Y.size());
     if (TOFmin > numbins)
       TOFmin = numbins;
     if (TOFmax > numbins)
       TOFmax = numbins;
 
+    TOFPeak = VectorHelper::getBinIndex(X.rawData(), TOFPeakd);
     const double peakLoc = X[TOFPeak];
     int iTOF;
     for (iTOF = TOFmin; iTOF < TOFmax; iTOF++) {
@@ -256,11 +245,11 @@ void PeakIntegration::exec() {
     */
 
       // Evaluate fit at points
-      const Mantid::MantidVec &y = fitWS->readY(1);
+      const auto &y = fitWS->y(1);
 
       // Calculate intensity
       for (iTOF = 0; iTOF < n; iTOF++)
-        if (!boost::math::isnan(y[iTOF]) && !boost::math::isinf(y[iTOF]))
+        if (std::isfinite(y[iTOF]))
           I += y[iTOF];
     } else
       for (iTOF = TOFmin; iTOF <= TOFmax; iTOF++)
@@ -290,7 +279,7 @@ void PeakIntegration::exec() {
 
 void PeakIntegration::retrieveProperties() {
   inputW = getProperty("InputWorkspace");
-  if (inputW->readY(0).size() <= 1)
+  if (inputW->y(0).size() <= 1)
     throw std::runtime_error("Must Rebin data with more than 1 bin");
   // Check if detectors are RectangularDetectors
   Instrument_const_sptr inst = inputW->getInstrument();
@@ -328,11 +317,10 @@ int PeakIntegration::fitneighbours(int ipeak, std::string det_name, int x0,
 
   slice_alg->setProperty("NBadEdgePixels", nPixels);
   slice_alg->executeAsChildAlg();
-  Mantid::API::MemoryManager::Instance().releaseFreeMemory();
 
-  MantidVec &Xout = outputW->dataX(idet);
-  MantidVec &Yout = outputW->dataY(idet);
-  MantidVec &Eout = outputW->dataE(idet);
+  auto &Xout = outputW->mutableX(idet);
+  auto &Yout = outputW->mutableY(idet);
+  auto &Eout = outputW->mutableE(idet);
   TableWorkspace_sptr logtable = slice_alg->getProperty("OutputWorkspace");
 
   peak.setIntensity(slice_alg->getProperty("Intensity"));
@@ -353,7 +341,7 @@ int PeakIntegration::fitneighbours(int ipeak, std::string det_name, int x0,
     }
   }
 
-  outputW->getSpectrum(idet)->clearDetectorIDs();
+  outputW->getSpectrum(idet).clearDetectorIDs();
   // Find the pixel ID at that XY position on the rectangular detector
   int pixelID = peak.getDetectorID(); // det->getAtXY(x0,y0)->getID();
 
@@ -363,7 +351,7 @@ int PeakIntegration::fitneighbours(int ipeak, std::string det_name, int x0,
     size_t wi = wiEntry->second;
     // Set detectorIDs
     outputW->getSpectrum(idet)
-        ->addDetectorIDs(inputW->getSpectrum(wi)->getDetectorIDs());
+        .addDetectorIDs(inputW->getSpectrum(wi).getDetectorIDs());
   }
 
   return TOFmax - 1;

@@ -4,6 +4,7 @@
 #include <cxxtest/TestSuite.h>
 
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/Run.h"
 #include "MantidAlgorithms/EstimateResolutionDiffraction.h"
 #include "MantidDataHandling/LoadEmptyInstrument.h"
 #include "MantidKernel/DateAndTime.h"
@@ -66,7 +67,7 @@ public:
     TS_ASSERT_EQUALS(numspec, 25873);
 
     for (size_t i = 0; i < numspec; ++i)
-      TS_ASSERT(outputws->readY(i)[0] < 0.03);
+      TS_ASSERT(outputws->y(i)[0] < 0.03);
   }
 
   /** Create an instrument

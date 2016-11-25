@@ -1,6 +1,4 @@
-//----------------------------------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------------------------------
+#include "MantidKernel/Logger.h"
 #include "MantidAPI/FileBackedExperimentInfo.h"
 
 #include <sstream>
@@ -38,7 +36,12 @@ ExperimentInfo *FileBackedExperimentInfo::cloneExperimentInfo() const {
 
 /// @returns A human-readable description of the object
 const std::string FileBackedExperimentInfo::toString() const {
-  populateIfNotLoaded();
+  try {
+    populateIfNotLoaded();
+  } catch (std::exception &) {
+    // Catch any errors so that the string returned has as much information
+    // as possible
+  }
   return ExperimentInfo::toString();
 }
 
@@ -55,7 +58,7 @@ FileBackedExperimentInfo::getInstrument() const {
 const Geometry::ParameterMap &
 FileBackedExperimentInfo::instrumentParameters() const {
   populateIfNotLoaded();
-  return ExperimentInfo::instrumentParameters();
+  return ExperimentInfo::constInstrumentParameters();
 }
 
 /**

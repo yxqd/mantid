@@ -208,6 +208,9 @@ public:
   */
   std::string setValue(const std::string &value) override {
     m_workspaceName = value;
+    if (Kernel::PropertyWithValue<boost::shared_ptr<TYPE>>::autoTrim()) {
+      boost::trim(m_workspaceName);
+    }
     // Try and get the workspace from the ADS, but don't worry if we can't
     try {
       Kernel::PropertyWithValue<boost::shared_ptr<TYPE>>::m_value =
@@ -250,7 +253,7 @@ public:
   */
   std::string isValid() const override {
     // start with the no error condition
-    std::string error = "";
+    std::string error;
 
     // If an output workspace it must have a name, although it might not exist
     // in the ADS yet
@@ -319,23 +322,24 @@ public:
     if (this->direction() == Kernel::Direction::Input ||
         this->direction() == Kernel::Direction::InOut) {
       // If an input workspace, get the list of workspaces currently in the ADS
-      auto vals = AnalysisDataService::Instance().getObjectNames();
+      auto vals = AnalysisDataService::Instance().getObjectNames(
+          Mantid::Kernel::DataServiceSort::Sorted);
       if (isOptional()) // Insert an empty option
       {
-        vals.insert("");
+        vals.push_back("");
       }
       // Copy-construct a temporary workspace property to test the validity of
       // each workspace
       WorkspaceProperty<TYPE> tester(*this);
-      for (auto it = vals.begin(); it != vals.end();) {
-        // Remove any workspace that's not valid for this algorithm
-        if (!tester.setValue(*it).empty()) {
-          vals.erase(
-              it++); // Post-fix so that it erase the previous when returned
-        } else
-          ++it;
-      }
-      return std::vector<std::string>(vals.begin(), vals.end());
+
+      // Remove any workspace that's not valid for this algorithm
+      auto eraseIter = remove_if(vals.begin(), vals.end(),
+                                 [&tester](const std::string &wsName) {
+                                   return !tester.setValue(wsName).empty();
+                                 });
+      // Erase everything past returned iterator afterwards for readability
+      vals.erase(eraseIter, vals.end());
+      return vals;
     } else {
       // For output workspaces, just return an empty set
       return std::vector<std::string>();
@@ -393,7 +397,7 @@ private:
   *  @returns A user level description of the problem or "" if it is valid.
   */
   std::string isValidGroup(boost::shared_ptr<WorkspaceGroup> wsGroup) const {
-    g_log.debug() << " Input WorkspaceGroup found " << std::endl;
+    g_log.debug() << " Input WorkspaceGroup found \n";
 
     std::vector<std::string> wsGroupNames = wsGroup->getNames();
     std::string error;
@@ -409,7 +413,7 @@ private:
                                               "will therefore be ignored as "
                                               "part of the GroupedWorkspace.";
 
-        g_log.debug() << error << std::endl;
+        g_log.debug() << error << '\n';
       } else {
         // ... and if it is a workspace of incorrect type, exclude the group by
         // returning an error.
@@ -418,7 +422,7 @@ private:
                   Kernel::PropertyWithValue<boost::shared_ptr<TYPE>>::type() +
                   ".";
 
-          g_log.debug() << error << std::endl;
+          g_log.debug() << error << '\n';
 
           return error;
         }
@@ -442,7 +446,7 @@ private:
   *  @returns A user level description of the problem or "" if it is valid.
   */
   std::string isValidOutputWs() const {
-    std::string error("");
+    std::string error;
     const std::string value = this->value();
     if (!value.empty()) {
       // Will the ADS accept it

@@ -8,10 +8,13 @@
 	src/FilePropertyWidget.cpp
 	src/GenericDialog.cpp
 	src/HelpWindow.cpp
+	src/FlowLayout.cpp
 	src/InterfaceFactory.cpp
 	src/InterfaceManager.cpp
+	src/ListPropertyWidget.cpp
 	src/ManageUserDirectories.cpp
 	src/MantidColorMap.cpp
+	src/MantidDesktopServices.cpp
 	src/MantidDialog.cpp
 	src/MantidHelpInterface.cpp
 	src/MantidQwtIMDWorkspaceData.cpp
@@ -22,6 +25,7 @@
 	src/MdSettings.cpp
 	src/Message.cpp
 	src/OptionsPropertyWidget.cpp
+	src/pixmaps.cpp
 	src/PlotAxis.cpp
 	src/PowerScaleEngine.cpp
 	src/PropertyWidget.cpp
@@ -41,10 +45,12 @@
 	src/SignalRange.cpp
 	src/SyncedCheckboxes.cpp
 	src/TextPropertyWidget.cpp
+  src/TSVSerialiser.cpp
 	src/UserSubWindow.cpp
 	src/VatesViewerInterface.cpp
         src/WidgetScrollbarDecorator.cpp
 	src/WorkspaceObserver.cpp
+	src/WorkspaceIcons.cpp
 )
 
 set ( MOC_FILES
@@ -55,6 +61,7 @@ set ( MOC_FILES
   inc/MantidQtAPI/BoolPropertyWidget.h
   inc/MantidQtAPI/FilePropertyWidget.h
   inc/MantidQtAPI/GenericDialog.h
+  inc/MantidQtAPI/ListPropertyWidget.h
   inc/MantidQtAPI/ManageUserDirectories.h
   inc/MantidQtAPI/MantidDialog.h
   inc/MantidQtAPI/MantidHelpInterface.h
@@ -83,18 +90,22 @@ set ( INC_FILES
 	inc/MantidQtAPI/BatchAlgorithmRunner.h
 	inc/MantidQtAPI/DllOption.h
 	inc/MantidQtAPI/FileDialogHandler.h
+	inc/MantidQtAPI/FlowLayout.h
 	inc/MantidQtAPI/GraphOptions.h
         inc/MantidQtAPI/DistributionOptions.h
 	inc/MantidQtAPI/HelpWindow.h
 	inc/MantidQtAPI/InterfaceFactory.h
 	inc/MantidQtAPI/InterfaceManager.h
+  inc/MantidQtAPI/IProjectSerialisable.h
 	inc/MantidQtAPI/MantidColorMap.h
+	inc/MantidQtAPI/MantidDesktopServices.h
 	inc/MantidQtAPI/MantidQwtIMDWorkspaceData.h
 	inc/MantidQtAPI/MantidQwtWorkspaceData.h
 	inc/MantidQtAPI/MantidAlgorithmMetatype.h
 	inc/MantidQtAPI/MdConstants.h
 	inc/MantidQtAPI/MdPlottingCmapsProvider.h
 	inc/MantidQtAPI/MdSettings.h
+	inc/MantidQtAPI/pixmaps.h
 	inc/MantidQtAPI/PlotAxis.h
 	inc/MantidQtAPI/PowerScaleEngine.h
 	inc/MantidQtAPI/PropertyWidgetFactory.h
@@ -109,8 +120,10 @@ set ( INC_FILES
 	inc/MantidQtAPI/SelectionNotificationService.h
 	inc/MantidQtAPI/SignalBlocker.h
 	inc/MantidQtAPI/SignalRange.h
+  inc/MantidQtAPI/TSVSerialiser.h
 	inc/MantidQtAPI/qwt_compat.h
         inc/MantidQtAPI/WidgetScrollbarDecorator.h
+		inc/MantidQtAPI/WorkspaceIcons.h
 )
 
 set ( UI_FILES
@@ -150,7 +163,7 @@ add_library ( MantidQtAPI ${ALL_SRC} ${INC_FILES} ${UI_HDRS} )
 set_target_properties ( MantidQtAPI PROPERTIES COMPILE_DEFINITIONS IN_MANTIDQT_API )
 
 if (OSX_VERSION VERSION_GREATER 10.8)
-  set_target_properties ( MantidQtAPI PROPERTIES INSTALL_RPATH "@loader_path/../MacOS")
+  set_target_properties ( MantidQtAPI PROPERTIES INSTALL_RPATH "@loader_path/../MacOS;@loader_path/../Libraries")
 endif ()
 
 target_link_libraries ( MantidQtAPI LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME}

@@ -2,7 +2,7 @@
 #include "MantidAPI/HistogramValidator.h"
 #include "MantidKernel/BoundedValidator.h"
 
-#include <boost/math/special_functions/fpclassify.hpp>
+#include <cmath>
 
 namespace Mantid {
 namespace Algorithms {
@@ -116,7 +116,7 @@ void MedianDetectorTest::exec() {
 
   // 1. Calculate the median
   std::vector<double> median =
-      calculateMedian(countsWS, excludeZeroes, specmap);
+      calculateMedian(*countsWS, excludeZeroes, specmap);
   std::vector<double>::iterator medit;
   for (medit = median.begin(); medit != median.end(); ++medit) {
     g_log.debug() << "Median value = " << (*medit) << "\n";
@@ -125,7 +125,7 @@ void MedianDetectorTest::exec() {
   int numFailed = maskOutliers(median, countsWS, specmap);
 
   // 3. Recalulate the median
-  median = calculateMedian(countsWS, excludeZeroes, specmap);
+  median = calculateMedian(*countsWS, excludeZeroes, specmap);
   for (medit = median.begin(); medit != median.end(); ++medit) {
     g_log.information() << "Median value with outliers removed = " << (*medit)
                         << "\n";
@@ -251,12 +251,11 @@ int MedianDetectorTest::maskOutliers(
     std::vector<size_t> &hists = indexmap[i];
     double median = medianvec[i];
 
-    PARALLEL_FOR1(countsWS)
+    PARALLEL_FOR_IF(Kernel::threadSafe(*countsWS))
     for (int j = 0; j < static_cast<int>(hists.size()); ++j) { // NOLINT
-      const double value = countsWS->readY(hists[j])[0];
+      const double value = countsWS->y(hists[j])[0];
       if ((value == 0.) && checkForMask) {
-        const std::set<detid_t> &detids =
-            countsWS->getSpectrum(hists[j])->getDetectorIDs();
+        const auto &detids = countsWS->getSpectrum(hists[j]).getDetectorIDs();
         if (instrument->isDetectorMasked(detids)) {
           numFailed -= 1; // it was already masked
         }
@@ -315,7 +314,7 @@ int MedianDetectorTest::doDetectorTests(
                     (instrument->getSample() != nullptr));
   }
 
-  PARALLEL_FOR2(countsWS, maskWS)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*countsWS, *maskWS))
   for (int j = 0; j < static_cast<int>(indexmap.size()); ++j) {
     std::vector<size_t> hists = indexmap.at(j);
     double median = medianvec.at(j);
@@ -323,7 +322,7 @@ int MedianDetectorTest::doDetectorTests(
     g_log.debug() << "new component with " << nhist << " spectra.\n";
     for (size_t i = 0; i < nhist; ++i) {
       g_log.debug() << "Counts workspace index=" << i
-                    << ", Mask workspace index=" << hists.at(i) << std::endl;
+                    << ", Mask workspace index=" << hists.at(i) << '\n';
       PARALLEL_START_INTERUPT_REGION
       ++steps;
       // update the progressbar information
@@ -333,10 +332,10 @@ int MedianDetectorTest::doDetectorTests(
       }
 
       if (checkForMask) {
-        const std::set<detid_t> &detids =
-            countsWS->getSpectrum(hists.at(i))->getDetectorIDs();
+        const auto &detids =
+            countsWS->getSpectrum(hists.at(i)).getDetectorIDs();
         if (instrument->isDetectorMasked(detids)) {
-          maskWS->dataY(hists.at(i))[0] = deadValue;
+          maskWS->mutableY(hists.at(i))[0] = deadValue;
           continue;
         }
         if (instrument->isMonitor(detids)) {
@@ -345,21 +344,21 @@ int MedianDetectorTest::doDetectorTests(
         }
       }
 
-      const double signal = countsWS->dataY(hists.at(i))[0];
+      const double signal = countsWS->y(hists.at(i))[0];
 
       // Mask out NaN and infinite
-      if (boost::math::isinf(signal) || boost::math::isnan(signal)) {
-        maskWS->dataY(hists.at(i))[0] = deadValue;
+      if (!std::isfinite(signal)) {
+        maskWS->mutableY(hists.at(i))[0] = deadValue;
         PARALLEL_ATOMIC
         ++numFailed;
         continue;
       }
 
-      const double error = minSigma * countsWS->readE(hists.at(i))[0];
+      const double error = minSigma * countsWS->e(hists.at(i))[0];
 
       if ((signal < median * m_loFrac && (signal - median < -error)) ||
           (signal > median * m_hiFrac && (signal - median > error))) {
-        maskWS->dataY(hists.at(i))[0] = deadValue;
+        maskWS->mutableY(hists.at(i))[0] = deadValue;
         PARALLEL_ATOMIC
         ++numFailed;
       }

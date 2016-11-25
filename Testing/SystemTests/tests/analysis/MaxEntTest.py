@@ -2,6 +2,7 @@
 import stresstesting
 from mantid.simpleapi import *
 
+
 class MaxEntTest(stresstesting.MantidStressTest):
     '''Tests the MaxEnt algorithm on a MUSR workspace'''
 
@@ -15,5 +16,5 @@ class MaxEntTest(stresstesting.MantidStressTest):
                         OutputWorkspace='MaxEntResults')
 
     def validate(self):
-        self.tolerance = 1E-2
+        self.tolerance = 5E-2
         return ('MaxEntResults','MaxEntMUSR00022725.nxs')

@@ -1,10 +1,8 @@
-//---------------------------------------------------
-// Includes
-//---------------------------------------------------
 #include "MantidDataHandling/SaveOpenGenieAscii.h"
 
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/Run.h"
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/Exception.h"
 #include "MantidKernel/VisibleWhenProperty.h"
@@ -30,9 +28,6 @@ DECLARE_ALGORITHM(SaveOpenGenieAscii)
 /// Empty constructor
 SaveOpenGenieAscii::SaveOpenGenieAscii() : Mantid::API::Algorithm() {}
 
-//---------------------------------------------------
-// Private member functions
-//---------------------------------------------------
 /**
  * Initialise the algorithm
  */
@@ -131,7 +126,6 @@ void SaveOpenGenieAscii::exec() {
   writeSampleLogs(outfile);
 
   progress.report();
-  return;
 }
 
 // -----------------------------------------------------------------------------
@@ -146,11 +140,9 @@ void SaveOpenGenieAscii::writeFileHeader(std::ofstream &outfile) {
   auto samplenumber = (&log)->size();
   samplenumber += 3; // x, y, e
 
-  outfile << "# Open Genie ASCII File #" << std::endl
-          << "# label " << std::endl
-          << "GXWorkspace" << std::endl
+  outfile << "# Open Genie ASCII File #\n# label \nGXWorkspace\n"
           // number of entries
-          << samplenumber << std::endl;
+          << samplenumber << '\n';
 }
 
 //------------------------------------------------------------------------------
@@ -165,7 +157,7 @@ std::string SaveOpenGenieAscii::getAxisHeader(const std::string alpha,
                                               const std::string singleSpc,
                                               const std::string fourspc,
                                               int nBins) {
-  std::string outStr = "";
+  std::string outStr;
   const std::string GXR = "GXRealarray";
   const std::string banknum = "1";
   const std::string twospc = " ";
@@ -173,7 +165,7 @@ std::string SaveOpenGenieAscii::getAxisHeader(const std::string alpha,
   outStr += twospc + singleSpc + alpha + "\n";
   outStr += fourspc + GXR + "\n";
   outStr += fourspc + banknum + "\n";
-  outStr += fourspc + boost::lexical_cast<std::string>(nBins) + "\n";
+  outStr += fourspc + std::to_string(nBins) + "\n";
 
   return outStr;
 }
@@ -218,7 +210,7 @@ void SaveOpenGenieAscii::axisToFile(const std::string alpha,
    */
 std::string SaveOpenGenieAscii::getAxisValues(std::string alpha, int bin,
                                               const std::string singleSpc) {
-  std::string output = "";
+  std::string output;
   if (alpha == "\"e\"") {
     output += boost::lexical_cast<std::string>(ws->readE(0)[bin]) + singleSpc;
   }
@@ -328,11 +320,11 @@ void SaveOpenGenieAscii::writeSampleLogs(std::ofstream &outfile) {
    *  @param nBins ::  Number of bins
    */
 void SaveOpenGenieAscii::addNtc(const std::string fourspc, int nBins) {
-  std::string outStr = "";
+  std::string outStr;
   std::string ntc = "ntc";
 
   outStr += ("  \"" + ntc + "\"" + "\n" + fourspc + "Integer" + "\n" + fourspc +
-             boost::lexical_cast<std::string>(nBins) + "\n");
+             std::to_string(nBins) + "\n");
 
   logVector.push_back(outStr);
 }

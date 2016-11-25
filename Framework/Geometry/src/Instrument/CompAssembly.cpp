@@ -1,5 +1,6 @@
 #include "MantidGeometry/Instrument/CompAssembly.h"
 #include "MantidGeometry/Instrument/RectangularDetector.h"
+#include "MantidGeometry/Instrument/StructuredDetector.h"
 #include "MantidGeometry/Instrument/ParComponentFactory.h"
 #include "MantidGeometry/IObjComponent.h"
 #include "MantidGeometry/Objects/BoundingBox.h"
@@ -305,12 +306,19 @@ CompAssembly::getComponentByName(const std::string &cname, int nlevels) const {
     }
 
     auto rectDet = boost::dynamic_pointer_cast<const RectangularDetector>(node);
+    auto structDet =
+        boost::dynamic_pointer_cast<const StructuredDetector>(node);
+
     if (bool(rectDet) && (node != thisNode)) {
       // for rectangular detectors search the depth rather than siblings
       // as there
       // is a specific naming convention to speed things along
       auto child = rectDet->getComponentByName(cname, nlevels);
       if (child)
+        return child;
+    } else if (bool(structDet) && (node != thisNode)) {
+      auto child = rectDet->getComponentByName(cname, nlevels);
+      if (child != nullptr)
         return child;
     } else {
       // loop over the children
@@ -322,7 +330,8 @@ CompAssembly::getComponentByName(const std::string &cname, int nlevels) const {
         } else {
           // only add things if max-recursion depth hasn't been reached
           if ((!limitSearch) || (depth + 1 < nlevels)) {
-            // don't bother adding things to the queue that aren't assemblies
+            // don't bother adding things to the queue that aren't
+            // assemblies
             boost::shared_ptr<const ICompAssembly> compAssembly =
                 boost::dynamic_pointer_cast<const ICompAssembly>(comp);
             if (bool(compAssembly)) {
@@ -418,7 +427,7 @@ void CompAssembly::testIntersectionWithChildren(
 void CompAssembly::printChildren(std::ostream &os) const {
   for (int i = 0; i < nelements(); i++) {
     boost::shared_ptr<IComponent> it = (*this)[i];
-    os << "Component " << i << " : **********" << std::endl;
+    os << "Component " << i << " : **********\n";
     it->printSelf(os);
   }
 }
@@ -435,11 +444,11 @@ void CompAssembly::printTree(std::ostream &os) const {
     const CompAssembly *test = dynamic_cast<CompAssembly *>(it.get());
     os << "Element " << i << " from " << nelements() << " in the assembly : ";
     if (test) {
-      os << test->getName() << std::endl;
-      os << "Children :******** " << std::endl;
+      os << test->getName() << '\n';
+      os << "Children :******** \n";
       test->printTree(os);
     } else
-      os << it->getName() << std::endl;
+      os << it->getName() << '\n';
   }
 }
 
@@ -491,8 +500,8 @@ const Quat CompAssembly::getRotation() const {
  */
 std::ostream &operator<<(std::ostream &os, const CompAssembly &ass) {
   ass.printSelf(os);
-  os << "************************" << std::endl;
-  os << "Number of children :" << ass.nelements() << std::endl;
+  os << "************************\n";
+  os << "Number of children :" << ass.nelements() << '\n';
   ass.printChildren(os);
   return os;
 }

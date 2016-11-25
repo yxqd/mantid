@@ -302,8 +302,8 @@ mxArray *ixbcreateclassarray(const char *class_name, int *n) {
   */
 int CreateFrameworkManager(int nlhs, mxArray *plhs[], int nrhs,
                            const mxArray *prhs[]) {
-  mwSize dims[2] = {1, 1};
   try {
+    mwSize dims[2] = {1, 1};
     FrameworkManagerImpl &fmgr = FrameworkManager::Instance();
     plhs[0] = mxCreateNumericArray(2, dims, mxUINT64_CLASS, mxREAL);
     uint64_t *data = (uint64_t *)mxGetData(plhs[0]);
@@ -750,7 +750,7 @@ int CreateSimpleAPI(int, mxArray **, int nrhs, const mxArray *prhs[]) {
     std::string name = key.substr(0, key.find("|"));
     VersionMap::iterator vIter = vMap.find(name);
     if (vIter == vMap.end())
-      vMap.insert(make_pair(name, 1));
+      vMap.emplace(name, 1);
     else
       ++(vIter->second);
   }

@@ -1,6 +1,3 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAlgorithms/SofQWCentre.h"
 #include "MantidDataObjects/Histogram1D.h"
 #include "MantidAPI/BinEdgeAxis.h"
@@ -17,6 +14,7 @@
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/ListValidator.h"
+#include "MantidKernel/PhysicalConstants.h"
 #include "MantidKernel/RebinParamsValidator.h"
 #include "MantidKernel/UnitFactory.h"
 #include "MantidKernel/VectorHelper.h"
@@ -82,6 +80,10 @@ void SofQWCentre::createInputProperties(API::Algorithm &alg) {
                       "The value of fixed energy: :math:`E_i` (EMode=Direct) "
                       "or :math:`E_f` (EMode=Indirect) (meV).\nMust be set "
                       "here if not available in the instrument definition.");
+  alg.declareProperty("ReplaceNaNs", false,
+                      "If true, replaces all NaNs in output workspace with "
+                      "zeroes.",
+                      Direction::Input);
 }
 
 void SofQWCentre::exec() {
@@ -106,7 +108,7 @@ void SofQWCentre::exec() {
   std::vector<specnum_t> specNumberMapping;
   std::vector<detid_t> detIDMapping;
 
-  m_EmodeProperties.initCachedValues(inputWorkspace, this);
+  m_EmodeProperties.initCachedValues(*inputWorkspace, this);
   int emode = m_EmodeProperties.m_emode;
 
   // Get a pointer to the instrument contained in the workspace
@@ -120,7 +122,7 @@ void SofQWCentre::exec() {
 
   try {
     double l1 = source->getDistance(*sample);
-    g_log.debug() << "Source-sample distance: " << l1 << std::endl;
+    g_log.debug() << "Source-sample distance: " << l1 << '\n';
   } catch (Exception::NotFoundError &) {
     g_log.error("Unable to calculate source-sample distance");
     throw Exception::InstrumentDefinitionError(
@@ -145,7 +147,7 @@ void SofQWCentre::exec() {
       if (spectrumDet->isMonitor())
         continue;
 
-      const double efixed = m_EmodeProperties.getEFixed(spectrumDet);
+      const double efixed = m_EmodeProperties.getEFixed(*spectrumDet);
 
       // For inelastic scattering the simple relationship q=4*pi*sinTheta/lambda
       // does not hold. In order to
@@ -162,11 +164,11 @@ void SofQWCentre::exec() {
       }
 
       const size_t numDets = detectors.size();
-      const double numDets_d = static_cast<double>(
-          numDets); // cache to reduce number of static casts
-      const MantidVec &Y = inputWorkspace->readY(i);
-      const MantidVec &E = inputWorkspace->readE(i);
-      const MantidVec &X = inputWorkspace->readX(i);
+      // cache to reduce number of static casts
+      const double numDets_d = static_cast<double>(numDets);
+      const auto &Y = inputWorkspace->y(i);
+      const auto &E = inputWorkspace->e(i);
+      const auto &X = inputWorkspace->x(i);
 
       // Loop over the detectors and for each bin calculate Q
       for (size_t idet = 0; idet < numDets; ++idet) {
@@ -185,9 +187,8 @@ void SofQWCentre::exec() {
               std::string mess =
                   "Energy transfer requested in Direct mode exceeds incident "
                   "energy.\n Found for det ID: " +
-                  boost::lexical_cast<std::string>(idet) + " bin No " +
-                  boost::lexical_cast<std::string>(j) + " with Ei=" +
-                  boost::lexical_cast<std::string>(efixed) +
+                  std::to_string(idet) + " bin No " + std::to_string(j) +
+                  " with Ei=" + boost::lexical_cast<std::string>(efixed) +
                   " and energy transfer: " +
                   boost::lexical_cast<std::string>(deltaE);
               throw std::runtime_error(mess);
@@ -199,9 +200,8 @@ void SofQWCentre::exec() {
               std::string mess =
                   "Incident energy of a neutron is negative. Are you trying to "
                   "process Direct data in Indirect mode?\n Found for det ID: " +
-                  boost::lexical_cast<std::string>(idet) + " bin No " +
-                  boost::lexical_cast<std::string>(j) + " with efied=" +
-                  boost::lexical_cast<std::string>(efixed) +
+                  std::to_string(idet) + " bin No " + std::to_string(j) +
+                  " with efied=" + boost::lexical_cast<std::string>(efixed) +
                   " and energy transfer: " +
                   boost::lexical_cast<std::string>(deltaE);
               throw std::runtime_error(mess);
@@ -226,15 +226,15 @@ void SofQWCentre::exec() {
 
           // Add this spectra-detector pair to the mapping
           specNumberMapping.push_back(
-              outputWorkspace->getSpectrum(qIndex)->getSpectrumNo());
+              outputWorkspace->getSpectrum(qIndex).getSpectrumNo());
           detIDMapping.push_back(det->getID());
 
           // And add the data and it's error to that bin, taking into account
           // the number of detectors contributing to this bin
-          outputWorkspace->dataY(qIndex)[j] += Y[j] / numDets_d;
+          outputWorkspace->mutableY(qIndex)[j] += Y[j] / numDets_d;
           // Standard error on the average
-          outputWorkspace->dataE(qIndex)[j] =
-              sqrt((pow(outputWorkspace->readE(qIndex)[j], 2) + pow(E[j], 2)) /
+          outputWorkspace->mutableE(qIndex)[j] =
+              sqrt((pow(outputWorkspace->e(qIndex)[j], 2) + pow(E[j], 2)) /
                    numDets_d);
         }
       }
@@ -255,6 +255,19 @@ void SofQWCentre::exec() {
   // Set the output spectrum-detector mapping
   SpectrumDetectorMapping outputDetectorMap(specNumberMapping, detIDMapping);
   outputWorkspace->updateSpectraUsing(outputDetectorMap);
+
+  // Replace any NaNs in outputWorkspace with zeroes
+  if (this->getProperty("ReplaceNaNs")) {
+    auto replaceNans = this->createChildAlgorithm("ReplaceSpecialValues");
+    replaceNans->setChild(true);
+    replaceNans->initialize();
+    replaceNans->setProperty("InputWorkspace", outputWorkspace);
+    replaceNans->setProperty("OutputWorkspace", outputWorkspace);
+    replaceNans->setProperty("NaNValue", 0.0);
+    replaceNans->setProperty("InfinityValue", 0.0);
+    replaceNans->setProperty("BigNumberThreshold", DBL_MAX);
+    replaceNans->execute();
+  }
 }
 
 /** Creates the output workspace, setting the axes according to the input
@@ -269,9 +282,8 @@ API::MatrixWorkspace_sptr SofQWCentre::setUpOutputWorkspace(
     API::MatrixWorkspace_const_sptr inputWorkspace,
     const std::vector<double> &binParams, std::vector<double> &newAxis) {
   // Create vector to hold the new X axis values
-  MantidVecPtr xAxis;
-  xAxis.access() = inputWorkspace->readX(0);
-  const int xLength = static_cast<int>(xAxis->size());
+  HistogramData::BinEdges xAxis(inputWorkspace->sharedX(0));
+  const int xLength = static_cast<int>(xAxis.size());
   // Create a vector to temporarily hold the vertical ('y') axis and populate
   // that
   const int yLength = static_cast<int>(
@@ -286,7 +298,7 @@ API::MatrixWorkspace_sptr SofQWCentre::setUpOutputWorkspace(
 
   // Now set the axis values
   for (int i = 0; i < yLength - 1; ++i) {
-    outputWorkspace->setX(i, xAxis);
+    outputWorkspace->setBinEdges(i, xAxis);
   }
 
   // Set the axis units
@@ -313,8 +325,8 @@ void SofQWCentre::makeDistribution(API::MatrixWorkspace_sptr outputWS,
 
   const size_t numQBins = outputWS->getNumberHistograms();
   for (size_t i = 0; i < numQBins; ++i) {
-    MantidVec &Y = outputWS->dataY(i);
-    MantidVec &E = outputWS->dataE(i);
+    auto &Y = outputWS->mutableY(i);
+    auto &E = outputWS->mutableE(i);
     std::transform(Y.begin(), Y.end(), Y.begin(),
                    std::bind2nd(std::divides<double>(), widths[i + 1]));
     std::transform(E.begin(), E.end(), E.begin(),

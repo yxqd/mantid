@@ -1,11 +1,15 @@
 #pylint: disable=no-init,invalid-name
+from __future__ import (absolute_import, division, print_function)
+from six.moves import range #pylint: disable=redefined-builtin
 import mantid.simpleapi as api
 from mantid.api import *
 from mantid.kernel import *
 
+
 class SaveVulcanGSS(PythonAlgorithm):
     """ Save GSS file for VULCAN
     """
+
     def category(self):
         """
         """
@@ -24,17 +28,17 @@ class SaveVulcanGSS(PythonAlgorithm):
     def PyInit(self):
         """ Declare properties
         """
-        self.declareProperty(MatrixWorkspaceProperty("InputWorkspace", "", Direction.Input),\
-                "Focussed diffraction workspace to be exported to GSAS file. ")
+        self.declareProperty(MatrixWorkspaceProperty("InputWorkspace", "", Direction.Input),
+                             "Focussed diffraction workspace to be exported to GSAS file. ")
 
-        self.declareProperty(FileProperty("BinFilename","", FileAction.Load, ['.dat']),\
-                "Name of a data file containing the bin boundaries in Log(TOF). ")
+        self.declareProperty(FileProperty("BinFilename","", FileAction.Load, ['.dat']),
+                             "Name of a data file containing the bin boundaries in Log(TOF). ")
 
-        self.declareProperty(MatrixWorkspaceProperty("OutputWorkspace", "", Direction.Output),\
-                "Name of rebinned matrix workspace. ")
+        self.declareProperty(MatrixWorkspaceProperty("OutputWorkspace", "", Direction.Output),
+                             "Name of rebinned matrix workspace. ")
 
-        self.declareProperty(FileProperty("GSSFilename","", FileAction.Save, ['.gda']),\
-                "Name of the output GSAS file. ")
+        self.declareProperty(FileProperty("GSSFilename","", FileAction.Save, ['.gda']),
+                             "Name of the output GSAS file. ")
 
         self.declareProperty("IPTS", 0, "IPTS number")
 
@@ -80,7 +84,6 @@ class SaveVulcanGSS(PythonAlgorithm):
 
         return
 
-
     def _loadRefLogBinFile(self, logbinfilename):
         """ Create a vector of bin in TOF value
         Arguments:
@@ -101,19 +104,18 @@ class SaveVulcanGSS(PythonAlgorithm):
                 continue
 
             terms = line.split()
-            for it in xrange(len(terms)):
+            for it in range(len(terms)):
                 x = float(terms[it])
                 vecX.append(x)
             # ENDFOR
         # ENDFOR
 
         vecPow10X = []
-        for i in xrange(len(vecX)):
+        for i in range(len(vecX)):
             p10x = math.pow(10, vecX[i])
             vecPow10X.append(p10x)
 
         return vecPow10X
-
 
     def _rebinVdrive(self, inputws, vec_refT, outputwsname):
         """ Rebin to match VULCAN's VDRIVE-generated GSAS file
@@ -123,7 +125,7 @@ class SaveVulcanGSS(PythonAlgorithm):
         """
         # Create a complicated bin parameter
         params = []
-        for ibin in xrange(len(vec_refT)-1):
+        for ibin in range(len(vec_refT)-1):
             x0 = vec_refT[ibin]
             xf = vec_refT[ibin+1]
             dx = xf-x0
@@ -143,22 +145,21 @@ class SaveVulcanGSS(PythonAlgorithm):
         newvecx = []
         newvecy = []
         newvece = []
-        for iws in xrange(numhist):
+        for iws in range(numhist):
             vecx = tempws.readX(iws)
             vecy = tempws.readY(iws)
             vece = tempws.readE(iws)
-            for i in xrange( len(vecx)-1 ):
+            for i in range( len(vecx)-1 ):
                 newvecx.append(int(vecx[i]*10)/10.)
                 newvecy.append(vecy[i])
                 newvece.append(vece[i])
             # ENDFOR (i)
         # ENDFOR (iws)
         api.DeleteWorkspace(Workspace=tempws)
-        gsaws = api.CreateWorkspace(DataX=newvecx, DataY=newvecy, DataE=newvece, NSpec=numhist,\
-                UnitX="TOF", ParentWorkspace=inputws, OutputWorkspace=outputwsname)
+        gsaws = api.CreateWorkspace(DataX=newvecx, DataY=newvecy, DataE=newvece, NSpec=numhist,
+                                    UnitX="TOF", ParentWorkspace=inputws, OutputWorkspace=outputwsname)
 
         return gsaws
-
 
     def _saveGSAS(self, gsaws, gdafilename):
         """ Save file
@@ -167,11 +168,10 @@ class SaveVulcanGSS(PythonAlgorithm):
         gsaws = api.ConvertToHistogram(InputWorkspace=gsaws, OutputWorkspace=str(gsaws))
 
         # Save
-        api.SaveGSS(InputWorkspace=gsaws, Filename=gdafilename, SplitFiles=False, Append=False,\
-                Format="SLOG", MultiplyByBinWidth=False, ExtendedHeader=False, UseSpectrumNumberAsBankID=True)
+        api.SaveGSS(InputWorkspace=gsaws, Filename=gdafilename, SplitFiles=False, Append=False,
+                    Format="SLOG", MultiplyByBinWidth=False, ExtendedHeader=False, UseSpectrumNumberAsBankID=True)
 
         return gsaws
-
 
     def _rewriteGSSFile(self, gssfilename, newheader):
         """ Re-write GSAS file including header and header for each bank
@@ -222,7 +222,6 @@ class SaveVulcanGSS(PythonAlgorithm):
         ofile.close()
 
         return
-
 
     def _genVulcanGSSHeader(self, ws, gssfilename, ipts, parmfname):
         """
@@ -288,7 +287,6 @@ class SaveVulcanGSS(PythonAlgorithm):
 
         return newheader
 
-
     def _rewriteOneBankData(self, banklines):
         """ first line is for bank information
         """
@@ -311,7 +309,7 @@ class SaveVulcanGSS(PythonAlgorithm):
         wbuf = "%-80s\n" % (newbankline)
 
         # data
-        for i in xrange(1, len(banklines)):
+        for i in range(1, len(banklines)):
             cline = banklines[i]
 
             terms = cline.split()
@@ -333,7 +331,6 @@ class SaveVulcanGSS(PythonAlgorithm):
         # ENDFOR
 
         return wbuf
-
 
 
 # Register algorithm with Mantid

@@ -5,6 +5,8 @@
 #include "MantidKernel/DeltaEMode.h"
 #include "MantidGeometry/Crystal/OrientedLattice.h"
 #include "MantidGeometry/Instrument/ReferenceFrame.h"
+#include "MantidAPI/Run.h"
+#include "MantidAPI/Sample.h"
 
 #include "MantidTestHelpers/ComponentCreationHelper.h"
 #include <cxxtest/TestSuite.h>
@@ -162,8 +164,8 @@ public:
                                        DeltaEMode::Direct, V3D(1, 1, 1));
     const double sintheta = std::sqrt(2. / 3.);
     const double costheta = 1. / std::sqrt(3.);
-    const double sinphi = 0.5 * std::sqrt(2.);
-    const double cosphi = 0.5 * std::sqrt(2.);
+    const double sinphi = 0.5 * M_SQRT2;
+    const double cosphi = 0.5 * M_SQRT2;
     double expectedMatrix[3][3] = {{costheta * cosphi, -sinphi, costheta},
                                    {costheta * cosphi, cosphi, costheta},
                                    {-sintheta, 0.0, costheta}};

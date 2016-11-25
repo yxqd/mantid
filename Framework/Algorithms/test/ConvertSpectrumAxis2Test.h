@@ -3,6 +3,7 @@
 
 #include <cxxtest/TestSuite.h>
 #include "MantidTestHelpers/WorkspaceCreationHelper.h"
+#include "MantidTestHelpers/HistogramDataTestHelper.h"
 #include "MantidAlgorithms/ConvertSpectrumAxis2.h"
 #include "MantidAPI/AnalysisDataService.h"
 #include "MantidAPI/Axis.h"
@@ -10,13 +11,15 @@
 #include "MantidKernel/UnitFactory.h"
 
 using namespace Mantid::API;
+using namespace Mantid::HistogramData::detail;
 
 class ConvertSpectrumAxis2Test : public CxxTest::TestSuite {
 private:
   void do_algorithm_run(std::string target, std::string inputWS,
-                        std::string outputWS, bool startYNegative = true) {
+                        std::string outputWS, bool startYNegative = true,
+                        bool isHistogram = true) {
     auto testWS = WorkspaceCreationHelper::create2DWorkspaceWithFullInstrument(
-        3, 1, false, startYNegative);
+        3, 1, false, startYNegative, isHistogram);
     AnalysisDataService::Instance().addOrReplace(inputWS, testWS);
 
     Mantid::Algorithms::ConvertSpectrumAxis2 conv;
@@ -77,12 +80,12 @@ private:
     TS_ASSERT_DELTA((*thetaAxis)(1), 1.1458, 0.0001);
 
     // Data in the workspaces should be swapped over.
-    TS_ASSERT_EQUALS(input->readX(0), output->readX(2));
-    TS_ASSERT_EQUALS(input->readY(0), output->readY(2));
-    TS_ASSERT_EQUALS(input->readE(0), output->readE(2));
-    TS_ASSERT_EQUALS(input->readX(1), output->readX(1));
-    TS_ASSERT_EQUALS(input->readY(1), output->readY(1));
-    TS_ASSERT_EQUALS(input->readE(1), output->readE(1));
+    TS_ASSERT_EQUALS(input->x(0), output->x(2));
+    TS_ASSERT_EQUALS(input->y(0), output->y(2));
+    TS_ASSERT_EQUALS(input->e(0), output->e(2));
+    TS_ASSERT_EQUALS(input->x(1), output->x(1));
+    TS_ASSERT_EQUALS(input->y(1), output->y(1));
+    TS_ASSERT_EQUALS(input->e(1), output->e(1));
 
     // Check workspace axes are of correct length.
     TS_ASSERT_THROWS((*thetaAxis)(3), Mantid::Kernel::Exception::IndexError);
@@ -116,13 +119,31 @@ public:
     const std::string outputSignedThetaAxisWS("outSignedThetaWS");
     const std::string outputSignedThetaAxisWS2("outSignedThetaWS2");
 
+    // Histogram
     do_algorithm_run("signed_theta", inputWS, outputSignedThetaAxisWS);
 
     // Check output values for the workspace then clean up.
     check_output_values_for_signed_theta_conversion(outputSignedThetaAxisWS);
     clean_up_workspaces(inputWS, outputSignedThetaAxisWS);
 
+    // No histogram
+    do_algorithm_run("signed_theta", inputWS, outputSignedThetaAxisWS, true,
+                     false);
+
+    // Check output values for the workspace then clean up.
+    check_output_values_for_signed_theta_conversion(outputSignedThetaAxisWS);
+    clean_up_workspaces(inputWS, outputSignedThetaAxisWS);
+
+    // Histogram
     do_algorithm_run("SignedTheta", inputWS, outputSignedThetaAxisWS2);
+
+    // Check output values for the workspace then clean up.
+    check_output_values_for_signed_theta_conversion(outputSignedThetaAxisWS2);
+    clean_up_workspaces(inputWS, outputSignedThetaAxisWS2);
+
+    // No histogram
+    do_algorithm_run("SignedTheta", inputWS, outputSignedThetaAxisWS2, true,
+                     false);
 
     // Check output values for the workspace then clean up.
     check_output_values_for_signed_theta_conversion(outputSignedThetaAxisWS2);
@@ -154,7 +175,7 @@ public:
     const std::string target("ElasticQ");
 
     auto testWS = WorkspaceCreationHelper::create2DWorkspaceWithFullInstrument(
-        3, 1, false, true);
+        3, 1, false);
     AnalysisDataService::Instance().addOrReplace(inputWS, testWS);
 
     Mantid::Algorithms::ConvertSpectrumAxis2 conv;
@@ -200,15 +221,15 @@ public:
     // Check axis is correct length
     TS_ASSERT_THROWS((*qAxis)(3), Mantid::Kernel::Exception::IndexError);
 
-    TS_ASSERT_EQUALS(input->readX(0), output->readX(0));
-    TS_ASSERT_EQUALS(input->readY(0), output->readY(0));
-    TS_ASSERT_EQUALS(input->readE(0), output->readE(0));
-    TS_ASSERT_EQUALS(input->readX(1), output->readX(1));
-    TS_ASSERT_EQUALS(input->readY(1), output->readY(1));
-    TS_ASSERT_EQUALS(input->readE(1), output->readE(1));
-    TS_ASSERT_EQUALS(input->readX(2), output->readX(2));
-    TS_ASSERT_EQUALS(input->readY(2), output->readY(2));
-    TS_ASSERT_EQUALS(input->readE(2), output->readE(2));
+    TS_ASSERT_EQUALS(input->x(0), output->x(0));
+    TS_ASSERT_EQUALS(input->y(0), output->y(0));
+    TS_ASSERT_EQUALS(input->e(0), output->e(0));
+    TS_ASSERT_EQUALS(input->x(1), output->x(1));
+    TS_ASSERT_EQUALS(input->y(1), output->y(1));
+    TS_ASSERT_EQUALS(input->e(1), output->e(1));
+    TS_ASSERT_EQUALS(input->x(2), output->x(2));
+    TS_ASSERT_EQUALS(input->y(2), output->y(2));
+    TS_ASSERT_EQUALS(input->e(2), output->e(2));
 
     // Clean up workspaces.
     clean_up_workspaces(inputWS, outputWS);
@@ -242,15 +263,15 @@ public:
     // Check axis is correct length
     TS_ASSERT_THROWS((*q2Axis)(3), Mantid::Kernel::Exception::IndexError);
 
-    TS_ASSERT_EQUALS(input->readX(0), output->readX(0));
-    TS_ASSERT_EQUALS(input->readY(0), output->readY(0));
-    TS_ASSERT_EQUALS(input->readE(0), output->readE(0));
-    TS_ASSERT_EQUALS(input->readX(1), output->readX(1));
-    TS_ASSERT_EQUALS(input->readY(1), output->readY(1));
-    TS_ASSERT_EQUALS(input->readE(1), output->readE(1));
-    TS_ASSERT_EQUALS(input->readX(2), output->readX(2));
-    TS_ASSERT_EQUALS(input->readY(2), output->readY(2));
-    TS_ASSERT_EQUALS(input->readE(2), output->readE(2));
+    TS_ASSERT_EQUALS(input->x(0), output->x(0));
+    TS_ASSERT_EQUALS(input->y(0), output->y(0));
+    TS_ASSERT_EQUALS(input->e(0), output->e(0));
+    TS_ASSERT_EQUALS(input->x(1), output->x(1));
+    TS_ASSERT_EQUALS(input->y(1), output->y(1));
+    TS_ASSERT_EQUALS(input->e(1), output->e(1));
+    TS_ASSERT_EQUALS(input->x(2), output->x(2));
+    TS_ASSERT_EQUALS(input->y(2), output->y(2));
+    TS_ASSERT_EQUALS(input->e(2), output->e(2));
 
     // Clean up workspaces.
     clean_up_workspaces(inputWS, outputWS);

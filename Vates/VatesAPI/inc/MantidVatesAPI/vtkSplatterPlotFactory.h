@@ -148,7 +148,8 @@ private:
   mutable std::unique_ptr<bool[]> sliceMask;
 
   /// Implicit function to define which boxes to render.
-  mutable boost::shared_ptr<Mantid::Geometry::MDImplicitFunction> sliceImplicitFunction;
+  mutable boost::shared_ptr<Mantid::Geometry::MDImplicitFunction>
+      sliceImplicitFunction;
 
   /// Variable to hold sorted list, so sort doesn't have to be repeated
   mutable std::vector<Mantid::API::IMDNode *> m_sortedBoxes;
@@ -175,8 +176,7 @@ private:
   boost::scoped_ptr<VatesConfigurations> m_vatesConfigurations;
 
   /// Sort boxes by normalized signal value
-  virtual void sortBoxesByDecreasingSignal(SigFuncIMDNodePtr getSignalFunction,
-                                           const bool VERBOSE) const;
+  virtual void sortBoxesByDecreasingSignal(const bool VERBOSE) const;
 };
 }
 }

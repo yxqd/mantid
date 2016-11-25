@@ -2,6 +2,7 @@
 #include "MantidKernel/System.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidGeometry/Crystal/AngleUnits.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidKernel/BoundedValidator.h"
 
@@ -38,17 +39,6 @@ namespace DataHandling {
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(GenerateGroupingPowder)
 
-//----------------------------------------------------------------------------------------------
-/** Constructor
- */
-GenerateGroupingPowder::GenerateGroupingPowder() {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
- */
-GenerateGroupingPowder::~GenerateGroupingPowder() {}
-
-//----------------------------------------------------------------------------------------------
 /// Algorithm's name for identification. @see Algorithm::name
 const std::string GenerateGroupingPowder::name() const {
   return "GenerateGroupingPowder";
@@ -62,9 +52,6 @@ const std::string GenerateGroupingPowder::category() const {
   return "DataHandling\\Grouping;Transforms\\Grouping;Diffraction\\Utility";
 }
 
-//----------------------------------------------------------------------------------------------
-
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void GenerateGroupingPowder::init() {
@@ -82,7 +69,6 @@ void GenerateGroupingPowder::init() {
       "be created as well.");
 }
 
-//----------------------------------------------------------------------------------------------
 /** Execute the algorithm.
  */
 void GenerateGroupingPowder::exec() {
@@ -177,7 +163,7 @@ void GenerateGroupingPowder::exec() {
     throw Exception::FileError("Unable to create file: ", PARfilename);
   }
   // Write the number of detectors to the file.
-  outPAR_file << " " << goodGroups << std::endl;
+  outPAR_file << " " << goodGroups << '\n';
 
   for (size_t i = 0; i < numSteps; ++i) {
     size_t gSize = groups.at(i).size();
@@ -195,7 +181,7 @@ void GenerateGroupingPowder::exec() {
       outPAR_file.width(10);
       outPAR_file << 0.01;
       outPAR_file.width(10);
-      outPAR_file << (groups.at(i)).at(0) << std::endl;
+      outPAR_file << (groups.at(i)).at(0) << '\n';
     }
   }
 

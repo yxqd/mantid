@@ -1,5 +1,6 @@
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/Run.h"
 #include "MantidCrystal/SaveIsawPeaks.h"
 #include "MantidDataObjects/Peak.h"
 #include "MantidDataObjects/PeaksWorkspace.h"
@@ -20,19 +21,6 @@ namespace Crystal {
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(SaveIsawPeaks)
 
-//----------------------------------------------------------------------------------------------
-/** Constructor
- */
-SaveIsawPeaks::SaveIsawPeaks() {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
- */
-SaveIsawPeaks::~SaveIsawPeaks() {}
-
-//----------------------------------------------------------------------------------------------
-
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void SaveIsawPeaks::init() {
@@ -55,7 +43,6 @@ void SaveIsawPeaks::init() {
       "An optional Workspace2D of profiles from integrating cylinder.");
 }
 
-//----------------------------------------------------------------------------------------------
 /** Execute the algorithm.
  */
 void SaveIsawPeaks::exec() {
@@ -77,7 +64,7 @@ void SaveIsawPeaks::exec() {
   // workspace indices of it
   typedef std::map<int, std::vector<size_t>> bankMap_t;
   typedef std::map<int, bankMap_t> runMap_t;
-  std::unordered_set<int> uniqueBanks;
+  std::set<int, std::less<int>> uniqueBanks;
   runMap_t runMap;
   for (size_t i = 0; i < peaks.size(); ++i) {
     Peak &p = peaks[i];
@@ -141,9 +128,9 @@ void SaveIsawPeaks::exec() {
     // For now, this allows the proper instrument to be loaded back after
     // saving.
     Kernel::DateAndTime expDate = inst->getValidFromDate() + 1.0;
-    out << expDate.toISO8601String() << std::endl;
+    out << expDate.toISO8601String() << '\n';
 
-    out << "6         L1    T0_SHIFT" << std::endl;
+    out << "6         L1    T0_SHIFT\n";
     out << "7 " << std::setw(10);
     out << std::setprecision(4) << std::fixed << (l1 * 100);
     out << std::setw(12) << std::setprecision(3) << std::fixed;
@@ -154,17 +141,17 @@ void SaveIsawPeaks::exec() {
       Kernel::Property *prop = run.getProperty("T0");
       T0 = boost::lexical_cast<double, std::string>(prop->value());
       if (T0 != 0) {
-        g_log.notice() << "T0 = " << T0 << std::endl;
+        g_log.notice() << "T0 = " << T0 << '\n';
       }
     }
-    out << T0 << std::endl;
+    out << T0 << '\n';
 
     // ============================== Save .detcal info
     // =========================================
     if (true) {
       out << "4 DETNUM  NROWS  NCOLS   WIDTH   HEIGHT   DEPTH   DETD   CenterX "
              "  CenterY   CenterZ    BaseX    BaseY    BaseZ      UpX      UpY "
-             "     UpZ" << std::endl;
+             "     UpZ\n";
       // Here would save each detector...
       for (const auto bank : uniqueBanks) {
         // Build up the bank name
@@ -234,7 +221,7 @@ void SaveIsawPeaks::exec() {
               << " " << std::setw(8) << std::right << std::fixed
               << std::setprecision(5) << up.Y() << " " << std::setw(8)
               << std::right << std::fixed << std::setprecision(5) << up.Z()
-              << " " << std::endl;
+              << " \n";
 
         } else
           g_log.warning() << "Information about detector module " << bankName
@@ -268,8 +255,7 @@ void SaveIsawPeaks::exec() {
 
       if (!ids.empty()) {
         // Write the bank header
-        out << "0  NRUN DETNUM     CHI      PHI    OMEGA       MONCNT"
-            << std::endl;
+        out << "0  NRUN DETNUM     CHI      PHI    OMEGA       MONCNT\n";
         out << "1 " << std::setw(5) << run << std::setw(7) << std::right
             << bank;
 
@@ -292,9 +278,9 @@ void SaveIsawPeaks::exec() {
         size_t first_peak_index = ids[0];
         Peak &first_peak = peaks[first_peak_index];
         double monct = first_peak.getMonitorCount();
-        out << std::setw(12) << static_cast<int>(monct) << std::endl;
+        out << std::setw(12) << static_cast<int>(monct) << '\n';
 
-        out << header << std::endl;
+        out << header << '\n';
 
         // Go through each peak at this run / bank
         for (auto wi : ids) {
@@ -359,16 +345,16 @@ void SaveIsawPeaks::exec() {
           int thisReflag = 310;
           out << std::setw(5) << thisReflag;
 
-          out << std::endl;
+          out << '\n';
 
           Workspace2D_sptr wsProfile2D = getProperty("ProfileWorkspace");
           if (wsProfile2D) {
             out << "8";
-            const Mantid::MantidVec &yValues = wsProfile2D->readY(wi);
+            const auto &yValues = wsProfile2D->y(wi);
             for (size_t j = 0; j < yValues.size(); j++) {
               out << std::setw(8) << static_cast<int>(yValues[j]);
               if ((j + 1) % 10 == 0) {
-                out << std::endl;
+                out << '\n';
                 if (j + 1 != yValues.size())
                   out << "8";
               }

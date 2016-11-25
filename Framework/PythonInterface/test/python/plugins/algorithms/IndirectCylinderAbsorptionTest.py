@@ -1,10 +1,11 @@
+from __future__ import (absolute_import, division, print_function)
+
 import unittest
 from mantid.simpleapi import *
 from mantid.api import *
 
 
 class IndirectCylinderAbsorptionTest(unittest.TestCase):
-
     def setUp(self):
         """
         Loads the reduced container and sample files.
@@ -15,7 +16,6 @@ class IndirectCylinderAbsorptionTest(unittest.TestCase):
 
         self._can_ws = can_ws
         self._red_ws = red_ws
-
 
     def _test_workspaces(self, corrected, factor_group):
         """
@@ -37,7 +37,6 @@ class IndirectCylinderAbsorptionTest(unittest.TestCase):
             y_unit = ws.YUnitLabel()
             self.assertEqual(y_unit, 'Attenuation factor')
 
-
     def test_sample_corrections_only(self):
         """
         Tests corrections for the sample only.
@@ -49,7 +48,6 @@ class IndirectCylinderAbsorptionTest(unittest.TestCase):
 
         self.assertEqual(fact.size(), 1)
         self._test_workspaces(corrected, fact)
-
 
     def test_sample_and_can_subtraction(self):
         """
@@ -64,7 +62,6 @@ class IndirectCylinderAbsorptionTest(unittest.TestCase):
 
         self.assertEqual(fact.size(), 1)
         self._test_workspaces(corrected, fact)
-
 
     def test_sample_and_can_subtraction_with_scale(self):
         """
@@ -82,7 +79,6 @@ class IndirectCylinderAbsorptionTest(unittest.TestCase):
         self.assertEqual(fact.size(), 1)
         self._test_workspaces(corrected, fact)
 
-
     def test_sample_and_can_corrections(self):
         """
         Tests corrections for the sample and container.
@@ -94,6 +90,44 @@ class IndirectCylinderAbsorptionTest(unittest.TestCase):
                                                      CanChemicalFormula='V',
                                                      UseCanCorrections=True,
                                                      Events=500)
+
+        self.assertEqual(fact.size(), 2)
+        self._test_workspaces(corrected, fact)
+
+    def test_number_density_for_sample_can(self):
+        """
+        Test simple run with sample and can workspace and number density for both
+        """
+
+        corrected, fact = IndirectCylinderAbsorption(SampleWorkspace=self._red_ws,
+                                                     SampleChemicalFormula='H2-O',
+                                                     SampleDensityType='Number Density',
+                                                     SampleDensity=0.5,
+                                                     CanWorkspace=self._can_ws,
+                                                     CanChemicalFormula='V',
+                                                     CanDensityType='Number Density',
+                                                     CanDensity=0.5,
+                                                     Events=200,
+                                                     UseCanCorrections=True)
+
+        self.assertEqual(fact.size(), 2)
+        self._test_workspaces(corrected, fact)
+
+    def test_mass_density_for_sample_can(self):
+        """
+        Test simple run with sample and can workspace and number density for both
+        """
+
+        corrected, fact = IndirectCylinderAbsorption(SampleWorkspace=self._red_ws,
+                                                     SampleChemicalFormula='H2-O',
+                                                     SampleDensityType='Mass Density',
+                                                     SampleDensity=0.5,
+                                                     CanWorkspace=self._can_ws,
+                                                     CanChemicalFormula='V',
+                                                     CanDensityType='Mass Density',
+                                                     CanDensity=0.5,
+                                                     Events=200,
+                                                     UseCanCorrections=True)
 
         self.assertEqual(fact.size(), 2)
         self._test_workspaces(corrected, fact)

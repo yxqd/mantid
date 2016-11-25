@@ -4,7 +4,6 @@
 #include "MantidKernel/System.h"
 #include "MantidAPI/Algorithm.h"
 #include "MantidAPI/MatrixWorkspace_fwd.h"
-#include "MantidGeometry/Instrument.h"
 
 namespace Mantid {
 namespace Algorithms {
@@ -33,9 +32,6 @@ namespace Algorithms {
 */
 class DLLExport EstimateResolutionDiffraction : public API::Algorithm {
 public:
-  EstimateResolutionDiffraction();
-  ~EstimateResolutionDiffraction() override;
-
   /// Algorithm's name for identification overriding a virtual method
   const std::string name() const override;
 
@@ -72,8 +68,6 @@ private:
   /// Calculate detector resolution
   void estimateDetectorResolution();
 
-  //------------------------------------------------------
-
   /// Input workspace
   API::MatrixWorkspace_sptr m_inputWS;
 
@@ -81,13 +75,10 @@ private:
   API::MatrixWorkspace_sptr m_outputWS;
 
   /// Centre neutron velocity
-  double m_centreVelocity;
-
-  /// L1, source to sample
-  double m_L1;
+  double m_centreVelocity = 0.0;
 
   /// Delta T
-  double m_deltaT;
+  double m_deltaT = 0.0;
 };
 
 } // namespace Algorithms

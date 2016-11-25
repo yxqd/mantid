@@ -1,10 +1,10 @@
-
 #include "MantidQtCustomInterfaces/Reflectometry/ReflNexusMeasurementItemSource.h"
 #include <Poco/File.h>
 #include <Poco/Exception.h>
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/Workspace.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidKernel/TimeSeriesProperty.h"
 #include <iostream>
@@ -18,12 +18,10 @@ using namespace Mantid::Kernel;
 namespace MantidQt {
 namespace CustomInterfaces {
 
-//----------------------------------------------------------------------------------------------
 /** Constructor
  */
 ReflNexusMeasurementItemSource::ReflNexusMeasurementItemSource() {}
 
-//----------------------------------------------------------------------------------------------
 /** Destructor
  */
 ReflNexusMeasurementItemSource::~ReflNexusMeasurementItemSource() {}
@@ -96,8 +94,7 @@ ReflNexusMeasurementItemSource::obtain(const std::string &definedPath,
 
   } catch (std::invalid_argument &ex) {
     std::stringstream buffer;
-    buffer << "Meta-data load attemped a load using: " << filenameArg
-           << std::endl;
+    buffer << "Meta-data load attemped a load using: " << filenameArg << '\n';
     buffer << ex.what();
     const std::string message = buffer.str();
     return MeasurementItem::InvalidMeasurementItem(message);

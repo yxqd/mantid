@@ -1,10 +1,8 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
-#include "MantidKernel/LogFilter.h"
-#include "MantidKernel/ArrayProperty.h"
+#include "MantidAPI/Run.h"
 #include "MantidAlgorithms/NormaliseByCurrent.h"
 #include "MantidDataObjects/EventWorkspace.h"
+#include "MantidKernel/ArrayProperty.h"
+#include "MantidKernel/LogFilter.h"
 
 namespace Mantid {
 namespace Algorithms {
@@ -15,12 +13,6 @@ DECLARE_ALGORITHM(NormaliseByCurrent)
 using namespace Kernel;
 using namespace API;
 using namespace DataObjects;
-
-/// Default constructor
-NormaliseByCurrent::NormaliseByCurrent() : Algorithm() {}
-
-// Destructor
-NormaliseByCurrent::~NormaliseByCurrent() {}
 
 void NormaliseByCurrent::init() {
   declareProperty(make_unique<WorkspaceProperty<MatrixWorkspace>>(
@@ -112,8 +104,7 @@ void NormaliseByCurrent::exec() {
   // Get the good proton charge and check it's valid
   double charge = extractCharge(inputWS);
 
-  g_log.information() << "Normalisation current: " << charge << " uamps"
-                      << std::endl;
+  g_log.information() << "Normalisation current: " << charge << " uamps\n";
 
   double invcharge = 1.0 / charge; // Inverse of the charge to be multiplied by
 

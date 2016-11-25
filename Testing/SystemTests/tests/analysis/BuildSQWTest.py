@@ -8,12 +8,12 @@
     repository & required to be accessible from any machine that wishes to run the test.
 """
 import stresstesting
-from mantid.simpleapi import *
-
 import os
+from mantid.simpleapi import *
 
 # allow for multiple locations
 FILE_LOCATIONS = ["/isis/mantid/localtestdata/"]#,"d:/Data/MantidSystemTests/BigData/Dropbox/LoadSQW"]
+
 
 class BuildSQWTest(stresstesting.MantidStressTest):
 
@@ -88,7 +88,7 @@ class BuildSQWTest(stresstesting.MantidStressTest):
 
         # Do the final merge
         sqw_file = os.path.join(config["defaultsave.directory"],"BuildSQWTestCurrent.nxs")
-        dummy_finalSQW = MergeMDFiles(",".join(self._created_files),OutputFilename=sqw_file,Parallel='0')
+        MergeMDFiles(",".join(self._created_files),OutputFilename=sqw_file,Parallel='0',OutputWorkspace='dummy_finalSQW')
         self._created_files.append(sqw_file)
 
     def validate(self):
@@ -104,6 +104,7 @@ class BuildSQWTest(stresstesting.MantidStressTest):
             except OSError:
                 mantid.logger.warning("Unable to remove created file '%s'" % filename)
 
+
 class LoadSQW_FileBasedTest(BuildSQWTest):
     """ The test checks loading MD workspace from SQW file when target file is file based"""
 
@@ -116,10 +117,9 @@ class LoadSQW_FileBasedTest(BuildSQWTest):
         MDws_file = os.path.join(config["defaultsave.directory"],"LoadSQWTestFileBased.nxs")
         sqw_file = os.path.join(self._input_location,self._input_data[0])
 
-        dummy_wsMD=LoadSQW(Filename=sqw_file, OutputFilename=MDws_file)
+        LoadSQW(Filename=sqw_file, OutputFilename=MDws_file, OutputWorkspace='dummy_wsMD')
 
         self._created_files=MDws_file
-
 
     def validate(self):
         """Compare file-based MD files """
@@ -130,6 +130,7 @@ class LoadSQW_FileBasedTest(BuildSQWTest):
         DeleteWorkspace("dummy_wsMD")
 
         return rez[0]
+
 
 class LoadSQW_MemBasedTest(BuildSQWTest):
     """ The test checks loading MD workspace from SQW file when target file is file based"""
@@ -142,10 +143,9 @@ class LoadSQW_MemBasedTest(BuildSQWTest):
 
         sqw_file = os.path.join(self._input_location,self._input_data[0])
 
-        dummy_wsMD=LoadSQW(Filename=sqw_file)
+        LoadSQW(Filename=sqw_file, OutputWorkspace='dummy_wsMD')
 
         self._created_files=[]
-
 
     def validate(self):
         """Compare memory-based vs file based MD workspaces """

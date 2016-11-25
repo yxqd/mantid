@@ -3,6 +3,7 @@
 #include "MantidGeometry/Crystal/IndexingUtils.h"
 #include "MantidGeometry/Crystal/OrientedLattice.h"
 #include "MantidKernel/BoundedValidator.h"
+#include "MantidAPI/Sample.h"
 
 namespace Mantid {
 namespace Crystal {
@@ -14,17 +15,6 @@ using namespace Mantid::API;
 using namespace Mantid::DataObjects;
 using namespace Mantid::Geometry;
 
-//--------------------------------------------------------------------------
-/** Constructor
- */
-FindUBUsingLatticeParameters::FindUBUsingLatticeParameters() {}
-
-//--------------------------------------------------------------------------
-/** Destructor
- */
-FindUBUsingLatticeParameters::~FindUBUsingLatticeParameters() {}
-
-//--------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void FindUBUsingLatticeParameters::init() {
@@ -58,7 +48,6 @@ void FindUBUsingLatticeParameters::init() {
                         "Indexing Tolerance (0.15)");
 }
 
-//--------------------------------------------------------------------------
 /** Execute the algorithm.
  */
 void FindUBUsingLatticeParameters::exec() {
@@ -92,8 +81,8 @@ void FindUBUsingLatticeParameters::exec() {
                                         gamma, tolerance, base_index,
                                         num_initial, degrees_per_step);
 
-  std::cout << "Error = " << error << std::endl;
-  std::cout << "UB = " << UB << std::endl;
+  std::cout << "Error = " << error << '\n';
+  std::cout << "UB = " << UB << '\n';
 
   if (!IndexingUtils::CheckUB(UB)) // UB not found correctly
   {
