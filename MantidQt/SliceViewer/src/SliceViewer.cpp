@@ -155,6 +155,7 @@ SliceViewer::SliceViewer(QWidget *parent)
   updateDisplay();
 
   m_nonOrthogonalOverlay = new NonOrthogonalOverlay(m_plot, m_plot->canvas());
+  m_nonOrthogonalOverlay->disable();
 
   // -------- Line Overlay ----------------
   m_lineOverlay = new LineOverlay(m_plot, m_plot->canvas());
@@ -567,8 +568,6 @@ void SliceViewer::initZoomer() {
   // Hook-up listener to rescaled event
   QObject::connect(magnif, SIGNAL(rescaled(double)), this,
                    SLOT(magnifierRescaled(double)));
-  QObject::connect(magnif, SIGNAL(rescaled(double)), this,
-                   SLOT(updateNonOrthogonalOverlay()));
   // Pan using the right mouse button + drag
   QwtPlotPanner *panner = new QwtPlotPanner(m_plot->canvas());
   panner->setMouseButton(Qt::RightButton);
@@ -689,8 +688,6 @@ void SliceViewer::updateDimensionSliceWidgets() {
 void SliceViewer::switchQWTRaster(bool useNonOrthogonal) {
   if (useNonOrthogonal && ui.btnNonOrthogonalToggle->isChecked()) {
     m_data = Kernel::make_unique<API::QwtRasterDataMDNonOrthogonal>();
-    updateNonOrthogonalOverlay();
-
   } else {
     m_data = Kernel::make_unique<API::QwtRasterDataMD>();
   }
@@ -706,17 +703,6 @@ void SliceViewer::switchQWTRaster(bool useNonOrthogonal) {
   updateDisplay();
 }
 
-void SliceViewer::updateNonOrthogonalOverlay() {
-
-  if (ui.btnNonOrthogonalToggle->isChecked()) {
-	  std::cout << "currently doing nothing!" << std::endl;
-    QwtDoubleInterval xint = m_plot->axisScaleDiv(m_spect->xAxis())->interval();
-    QwtDoubleInterval yint = m_plot->axisScaleDiv(m_spect->yAxis())->interval();
-//    m_nonOrthogonalOverlay->zoomChanged(xint, yint);
-  } else {
-    m_nonOrthogonalOverlay->m_showLine = false;
-  }
-}
 //------------------------------------------------------------------------------
 /** Set the displayed workspace. Updates UI.
  *
@@ -733,8 +719,6 @@ void SliceViewer::setWorkspace(Mantid::API::IMDWorkspace_sptr ws) {
                    SLOT(switchQWTRaster(bool)));
   QObject::connect(ui.btnNonOrthogonalToggle, SIGNAL(toggled(bool)), this,
                    SLOT(setNonOrthogonalbtn()));
-  QObject::connect(this, SIGNAL(changedShownDim(size_t, size_t)), this,
-                   SLOT(updateNonOrthogonalOverlay()));
   emit setNonOrthogonalbtn();
   m_firstNonOrthogonalWorkspaceOpen = true;
   m_data->setWorkspace(ws);
@@ -1241,7 +1225,6 @@ void SliceViewer::resetZoom() {
   m_plot->replot();
   autoRebinIfRequired();
   updatePeaksOverlay();
-  updateNonOrthogonalOverlay();
 }
 
 //------------------------------------------------------------------------------
@@ -1653,6 +1636,9 @@ void SliceViewer::updateDisplay(bool resetAxes) {
 
   // Peaks overlays may need redrawing
   updatePeaksOverlay();
+
+  // Set the SlicePoint on the nonOrthogonal overlay
+  m_nonOrthogonalOverlay->setSlicePoint(m_slicePoint);
 
   // Send out a signal
   emit changedSlicePoint(m_slicePoint);
@@ -2351,7 +2337,6 @@ void SliceViewer::panned(int, int) {
   autoRebinIfRequired();
 
   applyColorScalingForCurrentSliceIfRequired();
-  updateNonOrthogonalOverlay();
   this->updatePeaksOverlay();
 
 }
@@ -2390,7 +2375,6 @@ void SliceViewer::autoRebinIfRequired() { // probably rename this if forcing it
   if (isAutoRebinSet()) {
     rebinParamsChanged();
   }
-  updateNonOrthogonalOverlay();
 }
 /** NON ORTHOGONAL STUFF **/
 
@@ -2402,12 +2386,11 @@ void SliceViewer::setNonOrthogonalbtn() {
   ui.btnNonOrthogonalToggle->setDisabled(!canShowSkewedWS);
   // Orthogonal Overlay axes calculated and appear.
   if (canShowSkewedWS) {
-    m_nonOrthogonalOverlay->calculateAxesSkew(&m_ws, m_dimX, m_dimY);
-	QwtDoubleInterval xint = m_plot->axisScaleDiv(m_spect->xAxis())->interval();
-	QwtDoubleInterval yint = m_plot->axisScaleDiv(m_spect->yAxis())->interval();
-	m_nonOrthogonalOverlay->zoomChanged(xint, yint);
+    m_nonOrthogonalOverlay->enable();
+    auto slicePoint = getSlicePoint();
+    m_nonOrthogonalOverlay->calculateAxesSkew(&m_ws, m_dimX, m_dimY, slicePoint);
   } else {
-    m_nonOrthogonalOverlay->m_showLine = false;
+   m_nonOrthogonalOverlay->disable();
   }
   emit disableOrthogonalAnalysisTools(ui.btnNonOrthogonalToggle->isChecked());
 }
@@ -2419,7 +2402,13 @@ void SliceViewer::disableOrthogonalAnalysisTools(bool checked) {
   if (ui.btnRebinMode->isChecked()) {
     ui.btnRebinMode->toggle();
   }
-  m_nonOrthogonalOverlay->m_showLine = checked; // not perm soln
+
+  if (checked) {
+    m_nonOrthogonalOverlay->enable();
+  } else {
+    m_nonOrthogonalOverlay->disable();
+  }
+
   ui.btnDoLine->setDisabled(checked);
   ui.btnSnapToGrid->setDisabled(checked);
   ui.btnClearLine->setDisabled(checked);

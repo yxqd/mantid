@@ -168,7 +168,6 @@ public slots:
   void helpPeaksViewer();
   void setFastRender(bool fast);
   void showInfoAt(double, double);
-  void updateNonOrthogonalOverlay();
   // Change in view slots
   void checkForHKLDimension();
   void switchQWTRaster(bool useNonOrthogonal);
@@ -263,6 +262,8 @@ private:
 
   /// Extracts and applies the color scaling for the current slice
   void applyColorScalingForCurrentSliceIfRequired();
+
+
 
 private:
   // -------------------------- Widgets ----------------------------
