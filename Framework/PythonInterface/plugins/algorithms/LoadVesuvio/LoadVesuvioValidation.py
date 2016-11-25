@@ -66,3 +66,21 @@ def _raise_error_mode_scatter(mode, back_scattering):
     if mode == "DoubleDifference" or mode == "ThickDifference":
         if not back_scattering:
             raise RuntimeError("%s can only be used for back scattering spectra" % mode)
+
+# ----------------------------------------------------------------------------------------
+
+def _raise_error_if_mix_fwd_back(self, spectra):
+    """
+    Checks that in input spectra are all in the forward or all in the backward
+    scattering range
+    Assumes that the spectra is sorted sorted
+    """
+    if len(spectra) == 1:
+        self._back_scattering = self._is_back_scattering(spectra[0])
+        return
+    all_back = self._is_back_scattering(spectra[0])
+    for spec_no in spectra[1:]:
+        if all_back and self._is_fwd_scattering(spec_no):
+            raise RuntimeError("Mixing backward and forward spectra is not permitted. "
+                               "Please correct the SpectrumList property.")
+    self._back_scattering = all_back

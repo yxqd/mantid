@@ -209,7 +209,7 @@ class LoadVesuvio(LoadEmptyVesuvio):
         """
         try:
             all_spectra = [item for sublist in self._spectra for item in sublist]
-            self._raise_error_if_mix_fwd_back(all_spectra)
+            validation._raise_error_if_mix_fwd_back(all_spectra)
             validation._raise_error_mode_scatter(self._diff_opt, self._back_scattering)
             self._set_spectra_type(all_spectra[0])
             self._setup_raw(all_spectra)
@@ -236,24 +236,6 @@ class LoadVesuvio(LoadEmptyVesuvio):
             self._store_results()
         finally: # Ensures it happens whether there was an error or not
             self._cleanup_raw()
-
-#----------------------------------------------------------------------------------------
-
-    def _raise_error_if_mix_fwd_back(self, spectra):
-        """
-        Checks that in input spectra are all in the forward or all in the backward
-        scattering range
-        Assumes that the spectra is sorted sorted
-        """
-        if len(spectra) == 1:
-            self._back_scattering = self._is_back_scattering(spectra[0])
-            return
-        all_back = self._is_back_scattering(spectra[0])
-        for spec_no in spectra[1:]:
-            if all_back and self._is_fwd_scattering(spec_no):
-                raise RuntimeError("Mixing backward and forward spectra is not permitted. "
-                                   "Please correct the SpectrumList property.")
-        self._back_scattering = all_back
 
 
 #----------------------------------------------------------------------------------------
