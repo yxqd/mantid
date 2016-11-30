@@ -541,7 +541,6 @@ def write_ENGINX_GSAS_iparam_file(output_file,
             "INS    CALIB",  # calibration run numbers (Vanadium and Ceria)
             "INS    INCBM"  # A his file for open genie (with ceria run number in the name)
         ]
-
         difa = 0.0
         # the ljust(80) ensures a length of 80 characters for the lines (GSAS rules...)
         replacements = [
