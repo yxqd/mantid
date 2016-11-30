@@ -10,13 +10,6 @@ import EnggUtils
 
 
 class IMATDifVanadiumCorrections(PythonAlgorithm):
-    # banks (or groups) to which the pixel-by-pixel correction should be
-    # applied
-    _ENGINX_BANKS_FOR_PIXBYPIX_CORR = [1, 2]
-    _IMAT_BANKS_FOR_PIXBYPIX_CORR = [1]
-    # -1 imat, 1 enginx
-    _IMAT_ENGINX_SWITCH = -1
-
     def category(self):
         return (
             "Diffraction\\Engineering;CorrectionFunctions\\BackgroundCorrections;"
@@ -91,6 +84,16 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
         self.setPropertyGroup('IntegrationWorkspace', in_vana_grp)
         self.setPropertyGroup('CurvesWorkspace', in_vana_grp)
 
+        self.declareProperty(
+            "Instrument",
+            '',
+            StringListValidator(EnggUtils.INSTRUMENTS),
+            direction=Direction.Input,
+            doc="Select which instrument the workspace is from")
+
+        instrument_grp = 'Instrument'
+        self.setPropertyGroup('Instrument', instrument_grp)
+
     def PyExec(self):
         """
         Vanadium correction as done for the EnginX instrument. This is in principle meant to be used
@@ -117,36 +120,48 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
         integWS = self.getProperty('IntegrationWorkspace').value
         curvesWS = self.getProperty('CurvesWorkspace').value
         spline_breaks = self.getProperty('SplineBreakPoints').value
-
-        if spline_breaks == 51:
-            # enginx
-            self._IMAT_ENGINX_SWITCH = 1
-            spline_breaks = 50
-        else:
-            # imat
-            self._IMAT_ENGINX_SWITCH = -1
-            spline_breaks = 50
+        instrument = self.getProperty('Instrument').value
 
         preports = 1
+
+        if instrument:
+            preports += 1
+        else:
+            raise ValueError("Instrument must be provided")
+
         if ws:
             preports += 1
             # apply normalise by current to in/out ws if provided
-            self._normalize_by_current(ws)
+            # self._normalize_by_current(ws)
         if openBeamWS:
             preports += 1
-            # apply normalise by current to open beam ws if provided
-            self._normalize_by_current(openBeamWS)
 
-            self._background_correction(ws, vanWS, openBeamWS)
+        # apply normalise by current to open beam ws if provided
+
+        # self._normalize_by_current(openBeamWS)
+
+        # self._background_correction(ws, vanWS, openBeamWS)
 
         prog = Progress(self, start=0, end=1, nreports=preports)
+        prog.report('Reading banks and indices for instrument' + instrument)
+
+        banksWsIndices = EnggUtils.getBanksAndWSIndicesFor(ws, instrument)
+        self.log().information("Found " + str(len(banksWsIndices)) +
+                               " banks for instrument " + instrument)
+
+        for b in range(len(banksWsIndices)):
+            if 0 == len(banksWsIndices[b]):
+                self.log().warning("No bank indices found for bank " + str(
+                    b + 1) + ". Please check the correct "
+                                   "instrument is selected, and "
+                                   "make sure the groupings file is correct.")
+
         prog.report('Applying background corrections on the input workspace')
 
         prog.report('Checking availability of vanadium correction features')
         # figure out if we are calculating or re-using pre-calculated
         # corrections
         if integWS and curvesWS:
-            # do nothing, just apply calibrations
             # TODO refactor properly
             pass
         elif vanWS:
@@ -155,16 +170,13 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
                 "corrections")
 
             # apply normalise by current to vanadium ws if provided
-            self._normalize_by_current(vanWS)
+            # self._normalize_by_current(vanWS)
 
-            integWS, curvesWS = self._calcVanadiumCorrection(vanWS,
-                                                             spline_breaks)
+            integWS, curvesWS = self._calcVanadiumCorrection(
+                vanWS, spline_breaks, banksWsIndices)
+
             self.setProperty('OutIntegrationWorkspace', integWS)
             self.setProperty('OutCurvesWorkspace', curvesWS)
-
-            # DEBUG
-            mtd['temp_integ_ws'] = integWS
-            mtd['temp_curves_ws'] = curvesWS
 
         elif not integWS or not curvesWS:
             raise ValueError(
@@ -174,7 +186,9 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
 
         prog.report('Applying corrections on the input workspace')
         if ws:
-            self._applyVanadiumCorrections(ws, integWS, curvesWS)
+            self._applyVanadiumCorrections(ws, integWS, curvesWS,
+                                           banksWsIndices)
+
             self.setProperty('Workspace', ws)
 
     def _normalize_by_current(self, wks):
@@ -220,7 +234,7 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
         alg.setProperty('OutputWorkspace', vanWS)
         alg.execute()
 
-    def _applyVanadiumCorrections(self, ws, integWS, curvesWS):
+    def _applyVanadiumCorrections(self, ws, integWS, curvesWS, banksWsIndices):
         """
         Applies the corrections on a workspace. The integration and curves workspaces may have
         been calculated from a Vanadium run or may have been passed from a previous calculation.
@@ -243,7 +257,7 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
         prog.report('Applying sensitivity correction')
         self._applySensitivityCorrection(ws, integWS, curvesWS)
         prog.report('Applying pixel-by-pixel correction')
-        self._applyPixByPixCorrection(ws, curvesWS)
+        self._applyPixByPixCorrection(ws, curvesWS, banksWsIndices)
 
     def _applySensitivityCorrection(self, ws, integWS, curvesWS):
         """
@@ -260,7 +274,7 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
 
             ws.setY(i, np.divide(ws.dataY(i), scaleFactor))
 
-    def _applyPixByPixCorrection(self, ws, curvesWS):
+    def _applyPixByPixCorrection(self, ws, curvesWS, banksWsIndices):
         """
         Applies the second step of the Vanadium correction on the given workspace: pixel by pixel
         divides by a curve fitted to the sum of the set of spectra of the corresponding bank.
@@ -270,9 +284,9 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
         """
         curvesDict = self._precalcWStoDict(curvesWS)
 
-        self._divideByCurves(ws, curvesDict)
+        self._divideByCurves(ws, curvesDict, banksWsIndices)
 
-    def _calcVanadiumCorrection(self, vanWS, spline_breaks):
+    def _calcVanadiumCorrection(self, vanWS, spline_breaks, banksWsIndices):
         """
         Calculates the features that are required to perform vanadium corrections: integration
         of the vanadium data spectra, and per-bank curves fitted to the summed spectra
@@ -288,12 +302,7 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
         integWS = self._calcIntegrationSpectra(vanWS)
 
         # Have to calculate curves. get one curve per bank, in d-spacing
-        if self._IMAT_ENGINX_SWITCH < 0:
-            curvesWS = self._fitCurvesPerBank(
-                vanWS, self._IMAT_BANKS_FOR_PIXBYPIX_CORR, spline_breaks)
-        else:
-            curvesWS = self._fitCurvesPerBank(
-                vanWS, self._ENGINX_BANKS_FOR_PIXBYPIX_CORR, spline_breaks)
+        curvesWS = self._fitCurvesPerBank(vanWS, spline_breaks, banksWsIndices)
 
         return integWS, curvesWS
 
@@ -319,7 +328,9 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
 
         integWS = self._integrateSpectra(vanWS)
 
-        if 1 != integWS.blocksize() or integWS.getNumberHistograms() < vanWS.getNumberHistograms():
+        if 1 != integWS.blocksize() or integWS.getNumberHistograms(
+        ) < vanWS.getNumberHistograms():
+
             raise RuntimeError(
                 "Error while integrating vanadium workspace, the Integration algorithm "
                 "produced a workspace with %d bins and %d spectra. The workspace "
@@ -335,7 +346,7 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
 
         return integTbl
 
-    def _fitCurvesPerBank(self, vanWS, banks, spline_breaks):
+    def _fitCurvesPerBank(self, vanWS, spline_breaks, banks):
         """
         Fits one curve to every bank (where for every bank the data fitted is the result of
         summing up all the spectra of the bank). The fitting is done in d-spacing.
@@ -348,10 +359,9 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
         are in dSpacing units.
         """
         curves = {}
-
-        for b in banks:
-            indices = EnggUtils.getWsIndicesForBank(vanWS, b,
-                                                    self._IMAT_ENGINX_SWITCH)
+        for b in range(len(banks)):
+            # gets the indices for bank
+            indices = banks[b]
             if not indices:
                 # no indices at all for this bank, not interested in it, don't add it to the dictionary
                 # (as when doing Calibrate (not-full)) which does CropData() the originabl workspace
@@ -366,11 +376,6 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
             fitWS = self._fitBankCurve(wsToFit, b, spline_breaks)
 
             curves.update({b: fitWS})
-
-            # DEBUG so we can test appendspectra with imaging WS
-            wsname = 'fitws_' + str(b)
-
-            mtd[wsname] = fitWS
 
         curvesWS = self._prepareCurvesWS(curves)
 
@@ -478,21 +483,23 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
             raise RuntimeError(
                 "Expecting a dictionary with fitting workspaces from 'Fit' but got an "
                 "empty dictionary")
+
         if 1 == len(curvesDict):
+            # returns fit for only one bank
             return list(curvesDict.values())[0]
 
         keys = sorted(curvesDict)
-
+        #  gets the fit for the first bank
         ws = curvesDict[keys[0]]
 
         for idx in range(1, len(keys)):
             nextWS = curvesDict[keys[idx]]
-
+            # append the fit for any consecutive banks into the same WS
             ws = self._appendSpec(ws, nextWS)
 
         return ws
 
-    def _divideByCurves(self, ws, curves):
+    def _divideByCurves(self, ws, curves, banksWsIndices):
         """
         Expects a workspace in ToF units. All operations are done in-place (the workspace is
         input/output). For every bank-curve pair, divides the corresponding spectra in the
@@ -522,23 +529,18 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
         for b in curves:
             # process all the spectra (indices) in one bank
             fittedCurve = curves[b]
-            idxs = EnggUtils.getWsIndicesForBank(ws, b,
-                                                 self._IMAT_ENGINX_SWITCH)
+            indices = banksWsIndices[b]
 
-            if not idxs:
+            if not indices:
                 pass
-
-            # DEBUG, the fitted curve workspace
-            mtd['fittedCurve'+str(b)] = fittedCurve
 
             # This RebinToWorkspace is required here: normal runs will have narrower range of X values,
             # and possibly different bin size, as compared to (long) Vanadium runs. Same applies to short
             # Ceria runs (for Calibrate -non-full) and even long Ceria runs
             # (for Calibrate-Full).
             rebinnedFitCurve = self._rebinToMatchWS(fittedCurve, ws)
-            mtd['rebinnedFitCurve'+str(b)] = fittedCurve
 
-            for i in idxs:
+            for i in indices:
                 # take values of the second spectrum of the workspace (fit
                 # simulation - fitted curve)
                 ws.setY(i, np.divide(ws.dataY(i), rebinnedFitCurve.readY(1)))
@@ -567,8 +569,7 @@ class IMATDifVanadiumCorrections(PythonAlgorithm):
 
         for wi in range(0, int(ws.getNumberHistograms() / 3)):
             indiv = EnggUtils.cropData(self, ws, [wi, wi + 2])
-            bankId = wi + 1  # we add + 1 because the range starts from 0
-            curves.update({bankId: indiv})
+            curves.update({wi: indiv})
 
         return curves
 

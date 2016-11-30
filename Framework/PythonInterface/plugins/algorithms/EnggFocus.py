@@ -10,80 +10,90 @@ class EnggFocus(PythonAlgorithm):
     INDICES_PROP_NAME = 'SpectrumNumbers'
     _IMAT_ENGINX_SWITCH = -1
 
-
     def category(self):
         return "Diffraction\\Engineering"
 
     def name(self):
-        return "EnggFocus" 
+        return "EnggFocus"
 
     def summary(self):
         return "Focuses a run by summing up all the spectra into a single one."
 
     def PyInit(self):
-        self.declareProperty(MatrixWorkspaceProperty("InputWorkspace", "", Direction.Input),
-                             "Workspace with the run to focus.")
+        self.declareProperty(
+            MatrixWorkspaceProperty("InputWorkspace", "", Direction.Input),
+            "Workspace with the run to focus.")
 
-        self.declareProperty(MatrixWorkspaceProperty("OutputWorkspace", "", Direction.Output),
-                             "A workspace with focussed data")
+        self.declareProperty(
+            MatrixWorkspaceProperty("OutputWorkspace", "", Direction.Output),
+            "A workspace with focussed data")
 
-        self.declareProperty(ITableWorkspaceProperty('DetectorPositions', '', Direction.Input,
-                                                     PropertyMode.Optional),
-                             "Calibrated detector positions. If not specified, default ones are used.")
+        self.declareProperty(
+            ITableWorkspaceProperty('DetectorPositions', '', Direction.Input,
+                                    PropertyMode.Optional),
+            "Calibrated detector positions. If not specified, default ones are used."
+        )
 
-        self.declareProperty(MatrixWorkspaceProperty("VanadiumWorkspace", "", Direction.Input,
-                                                     PropertyMode.Optional),
-                             doc = 'Workspace with the Vanadium (correction and calibration) run. '
-                             'Alternatively, when the Vanadium run has been already processed, '
-                             'the properties can be used')
+        self.declareProperty(
+            MatrixWorkspaceProperty("VanadiumWorkspace", "", Direction.Input,
+                                    PropertyMode.Optional),
+            doc='Workspace with the Vanadium (correction and calibration) run. '
+            'Alternatively, when the Vanadium run has been already processed, '
+            'the properties can be used')
 
-        self.declareProperty(ITableWorkspaceProperty('VanIntegrationWorkspace', '',
-                                                     Direction.Input, PropertyMode.Optional),
-                             doc = 'Results of integrating the spectra of a Vanadium run, with one column '
-                             '(integration result) and one row per spectrum. This can be used in '
-                             'combination with OutVanadiumCurveFits from a previous execution and '
-                             'VanadiumWorkspace to provide pre-calculated values for Vanadium correction.')
+        self.declareProperty(
+            ITableWorkspaceProperty('VanIntegrationWorkspace', '',
+                                    Direction.Input, PropertyMode.Optional),
+            doc='Results of integrating the spectra of a Vanadium run, with one column '
+            '(integration result) and one row per spectrum. This can be used in '
+            'combination with OutVanadiumCurveFits from a previous execution and '
+            'VanadiumWorkspace to provide pre-calculated values for Vanadium correction.'
+        )
 
-        self.declareProperty(MatrixWorkspaceProperty('VanCurvesWorkspace', '', Direction.Input,
-                                                     PropertyMode.Optional),
-                             doc = 'A workspace2D with the fitting workspaces corresponding to '
-                             'the instrument banks. This workspace has three spectra per bank, as produced '
-                             'by the algorithm Fit. This is meant to be used as an alternative input '
-                             'VanadiumWorkspace for testing and performance reasons. If not given, no '
-                             'workspace is generated.')
+        self.declareProperty(
+            MatrixWorkspaceProperty('VanCurvesWorkspace', '', Direction.Input,
+                                    PropertyMode.Optional),
+            doc='A workspace2D with the fitting workspaces corresponding to '
+            'the instrument banks. This workspace has three spectra per bank, as produced '
+            'by the algorithm Fit. This is meant to be used as an alternative input '
+            'VanadiumWorkspace for testing and performance reasons. If not given, no '
+            'workspace is generated.')
 
         vana_grp = 'Vanadium (open beam) properties'
         self.setPropertyGroup('VanadiumWorkspace', vana_grp)
         self.setPropertyGroup('VanIntegrationWorkspace', vana_grp)
         self.setPropertyGroup('VanCurvesWorkspace', vana_grp)
 
-        self.declareProperty("Bank", '', StringListValidator(EnggUtils.ENGINX_BANKS),
-                             direction=Direction.Input,
-                             doc = "Which bank to focus: It can be specified as 1 or 2, or "
-                             "equivalently, North or South. See also " + self.INDICES_PROP_NAME + " "
-                             "for a more flexible alternative to select specific detectors")
+        self.declareProperty(
+            "Instrument",
+            '',
+            StringListValidator(EnggUtils.INSTRUMENTS),
+            direction=Direction.Input,
+            doc="Select which instrument the workspace is from")
 
-        self.declareProperty(self.INDICES_PROP_NAME, '', direction=Direction.Input,
-                             doc = 'Sets the spectrum numbers for the detectors '
-                             'that should be considered in the focussing operation (all others will be '
-                             'ignored). This option cannot be used together with Bank, as they overlap. '
-                             'You can give multiple ranges, for example: "0-99", or "0-9, 50-59, 100-109".')
+        instrument_grp = 'Instrument'
+        self.setPropertyGroup('Instrument', instrument_grp)
 
-        banks_grp = 'Banks / spectra'
-        self.setPropertyGroup('Bank', banks_grp)
-        self.setPropertyGroup(self.INDICES_PROP_NAME, banks_grp)
+        self.declareProperty(
+            'NormaliseByCurrent',
+            True,
+            direction=Direction.Input,
+            doc='Normalize the input data by applying the NormaliseByCurrent algorithm '
+            'which use the log entry gd_proton_charge')
 
-        self.declareProperty('NormaliseByCurrent', True, direction=Direction.Input,
-                             doc='Normalize the input data by applying the NormaliseByCurrent algorithm '
-                             'which use the log entry gd_proton_charge')
+        self.declareProperty(
+            FloatArrayProperty(
+                'MaskBinsXMins',
+                EnggUtils.ENGINX_MASK_BIN_MINS,
+                direction=Direction.Input),
+            doc="List of minimum bin values to mask, separated by commas.")
 
-        self.declareProperty(FloatArrayProperty('MaskBinsXMins', EnggUtils.ENGINX_MASK_BIN_MINS,
-                                                direction=Direction.Input),
-                             doc="List of minimum bin values to mask, separated by commas.")
-
-        self.declareProperty(FloatArrayProperty('MaskBinsXMaxs', EnggUtils.ENGINX_MASK_BIN_MAXS,
-                                                direction=Direction.Input),
-                             doc="List of maximum bin values to mask, separated by commas.")
+        self.declareProperty(
+            FloatArrayProperty(
+                'MaskBinsXMaxs',
+                EnggUtils.ENGINX_MASK_BIN_MAXS,
+                direction=Direction.Input),
+            doc="List of maximum bin values to mask, separated by commas.")
 
         prep_grp = 'Data preparation/pre-processing'
         self.setPropertyGroup('NormaliseByCurrent', prep_grp)
@@ -95,7 +105,8 @@ class EnggFocus(PythonAlgorithm):
 
         if not self.getPropertyValue('MaskBinsXMins') and self.getPropertyValue('MaskBinsXMaxs') or\
            self.getPropertyValue('MaskBinsXMins') and not self.getPropertyValue('MaskBinsXMaxs'):
-            issues['MaskBinsXMins'] = "Both minimum and maximum values need to be given, or none"
+            issues[
+                'MaskBinsXMins'] = "Both minimum and maximum values need to be given, or none"
 
         min_list = self.getProperty('MaskBinsXMins').value
         max_list = self.getProperty('MaskBinsXMaxs').value
@@ -103,23 +114,20 @@ class EnggFocus(PythonAlgorithm):
             len_min = len(min_list)
             len_max = len(max_list)
             if len_min != len_max:
-                issues['MaskBinsXMins'] = ("The number of minimum and maximum values must match. Got "
-                                           "{0} and {1} for the minimum and maximum, respectively"
-                                           .format(len_min, len_max))
+                issues['MaskBinsXMins'] = (
+                    "The number of minimum and maximum values must match. Got "
+                    "{0} and {1} for the minimum and maximum, respectively"
+                    .format(len_min, len_max))
 
         return issues
 
     def PyExec(self):
         import pydevd
-        pydevd.settrace('localhost', port=49988, stdoutToServer=True, stderrToServer=True)
+        pydevd.settrace(
+            'localhost', port=50986, stdoutToServer=True, stderrToServer=True)
 
         # Get the run workspace
         wks = self.getProperty('InputWorkspace').value
-
-        # Get spectra indices either from bank or direct list of indices, checking for errors
-        bank = self.getProperty('Bank').value
-        spectra = self.getProperty(self.INDICES_PROP_NAME).value
-        indices = EnggUtils.getWsIndicesFromInProperties(wks, bank, spectra, self._IMAT_ENGINX_SWITCH)
 
         detPos = self.getProperty("DetectorPositions").value
         nreports = 5
@@ -128,18 +136,23 @@ class EnggFocus(PythonAlgorithm):
         prog = Progress(self, start=0, end=1, nreports=nreports)
 
         # Leave only the data for the bank/spectra list requested
-        prog.report('Selecting spectra from input workspace')
-        wks = EnggUtils.cropData(self, wks, indices)
+        # removed because we are now selecting all from groupings file
+        # prog.report('Selecting spectra from input workspace')
+        # wks = EnggUtils.cropData(self, wks, banksWsIndices)
 
         prog.report('Masking some bins if requested')
-        self._mask_bins(wks, self.getProperty('MaskBinsXMins').value, self.getProperty('MaskBinsXMaxs').value)
+        self._mask_bins(wks,
+                        self.getProperty('MaskBinsXMins').value,
+                        self.getProperty('MaskBinsXMaxs').value)
 
         prog.report('Preparing input workspace with vanadium corrections')
         # Leave data for the same bank in the vanadium workspace too
         vanWS = self.getProperty('VanadiumWorkspace').value
         vanIntegWS = self.getProperty('VanIntegrationWorkspace').value
         vanCurvesWS = self.getProperty('VanCurvesWorkspace').value
-        EnggUtils.applyVanadiumCorrections(self, wks, indices, vanWS, vanIntegWS, vanCurvesWS)
+        instrument = self.getProperty('Instrument').value
+        EnggUtils.applyVanadiumCorrections(self, wks, vanWS, vanIntegWS,
+                                           vanCurvesWS, instrument)
 
         # Apply calibration
         if detPos:
@@ -190,11 +203,13 @@ class EnggFocus(PythonAlgorithm):
         """
         p_charge = wks.getRun().getProtonCharge()
         if p_charge <= 0:
-            self.log().warning("Cannot normalize by current because the proton charge log value "
-                               "is not positive!")
+            self.log().warning(
+                "Cannot normalize by current because the proton charge log value "
+                "is not positive!")
 
-        self.log().notice("Normalizing by current with proton charge: {0} uamp".
-                          format(p_charge))
+        self.log().notice(
+            "Normalizing by current with proton charge: {0} uamp".format(
+                p_charge))
 
         alg = self.createChildAlgorithm('NormaliseByCurrent')
         alg.setProperty('InputWorkspace', wks)
@@ -222,5 +237,6 @@ class EnggFocus(PythonAlgorithm):
         alg = self.createChildAlgorithm('ConvertToDistribution')
         alg.setProperty('Workspace', wks)
         alg.execute()
+
 
 AlgorithmFactory.subscribe(EnggFocus)

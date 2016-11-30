@@ -5,9 +5,8 @@
 <!-- appears as ID1 because the indices of this bank appear first -->
 <detids>14-113,114-213</detids>
 </group>
-<group ID="2">
+<!--<group ID="2"> -->
 <!-- North Bank, currently 16PMT -->
-<!--<detids>14-113,114-213</detids>-->
 <!--<detids>416-443</detids>-->
-</group>
+<!--</group>-->
 </detector-grouping>
