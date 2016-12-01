@@ -101,7 +101,7 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         1. sensitivity correction
         2. pixel-by-pixel correction
 
-        1. is performed for very pixel/detector/spectrum: scale every spectrum/curve by a
+        1. is performed for every pixel/detector/spectrum: scale every spectrum/curve by a
         scale factor proportional to the number of neutrons in that spectrum
 
         2. Correct every pixel by dividing by a curve (spline) fitted on the summed spectra
@@ -546,7 +546,7 @@ class EnggVanadiumCorrections(PythonAlgorithm):
                 ws.setY(i, np.divide(ws.dataY(i), rebinnedFitCurve.readY(1)))
 
         # finally, convert back to ToF
-        EnggUtils.convertToToF(self, ws)
+        ws = EnggUtils.convertToToF(self, ws)
 
     def _precalcWStoDict(self, ws):
         """
@@ -570,8 +570,7 @@ class EnggVanadiumCorrections(PythonAlgorithm):
         for wi in range(0, int(ws.getNumberHistograms() / 3)):
             indiv = EnggUtils.cropData(self, ws, [wi, wi + 2])
             # the bank id is +1 because wi starts from 0
-            bankid = wi + 1
-            curves.update({bankid: indiv})
+            curves.update({wi: indiv})
 
         return curves
 

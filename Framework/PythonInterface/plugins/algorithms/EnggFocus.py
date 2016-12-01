@@ -141,30 +141,34 @@ class EnggFocus(PythonAlgorithm):
         # wks = EnggUtils.cropData(self, wks, banksWsIndices)
 
         prog.report('Masking some bins if requested')
-        self._mask_bins(wks,
-                        self.getProperty('MaskBinsXMins').value,
-                        self.getProperty('MaskBinsXMaxs').value)
+        # self._mask_bins(wks,
+        #                 self.getProperty('MaskBinsXMins').value,
+        #                 self.getProperty('MaskBinsXMaxs').value)
 
-        prog.report('Preparing input workspace with vanadium corrections')
-        # Leave data for the same bank in the vanadium workspace too
-        vanWS = self.getProperty('VanadiumWorkspace').value
-        vanIntegWS = self.getProperty('VanIntegrationWorkspace').value
-        vanCurvesWS = self.getProperty('VanCurvesWorkspace').value
-        instrument = self.getProperty('Instrument').value
-        EnggUtils.applyVanadiumCorrections(self, wks, vanWS, vanIntegWS,
-                                           vanCurvesWS, instrument)
+        # prog.report('Preparing input workspace with vanadium corrections')
+        # # Leave data for the same bank in the vanadium workspace too
+        # vanWS = self.getProperty('VanadiumWorkspace').value
+        # vanIntegWS = self.getProperty('VanIntegrationWorkspace').value
+        # vanCurvesWS = self.getProperty('VanCurvesWorkspace').value
+        # instrument = self.getProperty('Instrument').value
+        # EnggUtils.applyVanadiumCorrections(self, wks, vanWS, vanIntegWS,
+        #                                    vanCurvesWS, instrument)
 
         # Apply calibration
         if detPos:
             self._applyCalibration(wks, detPos)
 
+        mtd['pre-dspacing'] = wks
+
         # Convert to dSpacing
         wks = EnggUtils.convertToDSpacing(self, wks)
+        mtd['pre-SumSpectra'] = wks
 
         prog.report('Summing spectra')
         # Sum the values across spectra
         wks = EnggUtils.sumSpectra(self, wks)
 
+        mtd['pre-tof'] = wks
         prog.report('Preparing output workspace')
         # Convert back to time of flight
         wks = EnggUtils.convertToToF(self, wks)

@@ -346,7 +346,7 @@ def applyVanadiumCorrections(parent, ws, vanWS, vanIntegWS, vanCurvesWS,
     @param ws :: workspace to correct (modified in place)
     @param vanWS :: workspace with data from a Vanadium run
     @param vanIntegWS :: alternatively to vanWS, pre-calculated integration from Vanadium data
-    @param vanIntegWS :: alternatively to vanWS, pre-calculated bank curves from Vanadium data
+    @param vanCurvesWS :: alternatively to vanWS, pre-calculated bank curves from Vanadium data
     @param instrument :: the instrument for which the vanadium corrections will be calculated
     """
     # if vanWS and vanWS.getNumberHistograms() < len(indices):
