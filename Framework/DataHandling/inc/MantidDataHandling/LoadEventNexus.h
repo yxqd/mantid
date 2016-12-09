@@ -273,6 +273,9 @@ private:
   /// to open the nexus file with specific exception handling/message
   void safeOpenFile(const std::string fname);
 
+  /// Sets the output workspace(s)
+  void setOutputWorkspace(API::Workspace_sptr outputWorkspace);
+
   /// Was the instrument loaded?
   bool m_instrument_loaded_correctly;
 

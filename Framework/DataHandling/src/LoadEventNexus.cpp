@@ -973,8 +973,13 @@ void LoadEventNexus::exec() {
 
   // add filename
   m_ws->mutableRun().addProperty("Filename", m_filename);
-  // Save output
+
+  // Set the output.
   this->setProperty("OutputWorkspace", m_ws->combinedWorkspace());
+
+  //auto outputWorkspace =  m_ws->combinedWorkspace();
+  //setOutputWorkspace(outputWorkspace);
+
   // Load the monitors
   if (load_monitors) {
     prog.report("Loading monitors");
@@ -2523,6 +2528,37 @@ void LoadEventNexus::safeOpenFile(const std::string fname) {
                              fname);
   }
 }
+
+
+/**
+ * Sets the output workspace. In case of a WorkspaceGroup (ie multi-period data)
+ * we also set each workspace on its own outputs
+ *
+ * @param outputWorkspace the output workspace
+ */
+void LoadEventNexus::setOutputWorkspace(API::Workspace_sptr outputWorkspace) {
+  // Set it on the standard output
+  this->setProperty("OutputWorkspace", m_ws->combinedWorkspace());
+
+
+//  if (auto workspaceGroup = boost::dynamic_pointer_cast<API::WorkspaceGroup>(outputWorkspace)) {
+//    auto numberOfEntries = workspaceGroup->getNumberOfEntries();
+
+//    std::string outputWorkspaceName = this->getProperty("OutputWorkspace");
+//    outputWorkspaceName += "_";
+
+//    for (int i = 0; i < numberOfEntries; i++) {
+//      std::string outputWorkspaceNameForPeriod = outputWorkspaceName + std::to_string(i);
+//      std::string propertyNameForPeriod = "OutputWorkspace_" + std::to_string(i);
+//      this->declareProperty(
+//          Kernel::make_unique<WorkspaceProperty<MatrixWorkspace>>(
+//              propertyNameForPeriod, outputWorkspaceNameForPeriod, Direction::Output),
+//          "Period data from the Event NeXus file");
+//      this->setProperty(propertyNameForPeriod, workspaceGroup->getItem(i));
+//    }
+//  }
+}
+
 
 } // namespace DataHandling
 } // namespace Mantid
