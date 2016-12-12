@@ -8,9 +8,18 @@
 #include "MantidAPI/Progress.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidNexus/NexusFileIO.h"
+#include "MantidDataObjects/MDHistoWorkspace.h"
 #include <climits>
 
 namespace Mantid {
+// forward declaration
+namespace DataObjects {
+class MDBoxFlatTree {
+public:
+  static void saveAffineTransformMatricies(::NeXus::File *const file,
+                                           API::IMDWorkspace_const_sptr ws);
+};
+}
 namespace DataHandling {
 /** @class SaveNexusProcessed SaveNexusProcessed.h
 DataHandling/SaveNexusProcessed.h
@@ -53,7 +62,9 @@ public:
   /// Default constructor
   SaveNexusProcessed();
   /// Algorithm's name for identification overriding a virtual method
-  const std::string name() const override { return "SaveNexusProcessed"; };
+  const std::string name() const override {
+    return "SaveNexusProcessed";
+  };
   /// Summary of algorithms purpose
   const std::string summary() const override {
     return "The SaveNexusProcessed algorithm will write the given Mantid "
@@ -62,7 +73,9 @@ public:
   }
 
   /// Algorithm's version for identification overriding a virtual method
-  int version() const override { return 1; };
+  int version() const override {
+    return 1;
+  };
   /// Algorithm's category for identification overriding a virtual method
   const std::string category() const override { return "DataHandling\\Nexus"; }
 
@@ -84,6 +97,8 @@ private:
                                   double *tofs, float *weights,
                                   float *errorSquareds, int64_t *pulsetimes);
 
+  void execMDE(Mantid::NeXus::NexusFileIO *nexusFile);
+  void execMDH(Mantid::NeXus::NexusFileIO *nexusFile);
   void execEvent(Mantid::NeXus::NexusFileIO *nexusFile,
                  const bool uniformSpectra, const std::vector<int> spec);
   /// sets non workspace properties for the algorithm
@@ -107,6 +122,8 @@ private:
   API::MatrixWorkspace_const_sptr m_inputWorkspace;
   /// Pointer to the local workspace, cast to EventWorkspace
   DataObjects::EventWorkspace_const_sptr m_eventWorkspace;
+  // API::IMDEventWorkspace_sptr m_mdeWorkspace;
+  API::IMDHistoWorkspace_sptr m_mdhWorkspace;
   /// Proportion of progress time expected to write initial part
   double m_timeProgInit;
   /// Progress bar

@@ -27,6 +27,7 @@ using namespace Kernel;
 using namespace API;
 using namespace DataObjects;
 using Geometry::Instrument_const_sptr;
+using Geometry::IMDDimension_const_sptr;
 
 typedef NeXus::NexusFileIO::optional_size_t optional_size_t;
 
@@ -42,11 +43,11 @@ SaveNexusProcessed::SaveNexusProcessed()
  *
  */
 void SaveNexusProcessed::init() {
-  declareProperty(make_unique<WorkspaceProperty<Workspace>>(
+  declareProperty(make_unique<WorkspaceProperty<Workspace> >(
                       "InputWorkspace", "", Direction::Input),
                   "Name of the workspace to be saved");
   // Declare required input parameters for algorithm
-  const std::vector<std::string> fileExts{".nxs", ".nx5", ".xml"};
+  const std::vector<std::string> fileExts{ ".nxs", ".nx5", ".xml" };
   declareProperty(Kernel::make_unique<FileProperty>(
                       "Filename", "", FileProperty::Save, fileExts),
                   "The name of the Nexus file to write, as a full or relative\n"
@@ -55,7 +56,7 @@ void SaveNexusProcessed::init() {
   // Declare optional parameters (title now optional, was mandatory)
   declareProperty("Title", "", boost::make_shared<NullValidator>(),
                   "A title to describe the saved workspace");
-  auto mustBePositive = boost::make_shared<BoundedValidator<int>>();
+  auto mustBePositive = boost::make_shared<BoundedValidator<int> >();
   mustBePositive->setLower(0);
 
   declareProperty("WorkspaceIndexMin", 0, mustBePositive,
@@ -64,7 +65,7 @@ void SaveNexusProcessed::init() {
   declareProperty("WorkspaceIndexMax", Mantid::EMPTY_INT(), mustBePositive,
                   "Index of last spectrum to write, only for single period\n"
                   "data.");
-  declareProperty(make_unique<ArrayProperty<int>>("WorkspaceIndexList"),
+  declareProperty(make_unique<ArrayProperty<int> >("WorkspaceIndexList"),
                   "List of spectrum numbers to read, only for single period\n"
                   "data.");
 
@@ -77,7 +78,7 @@ void SaveNexusProcessed::init() {
       "If false, will save the 2D histogram version of the workspace with the "
       "current binning parameters.");
   setPropertySettings("PreserveEvents",
-                      make_unique<EnabledWhenWorkspaceIsType<EventWorkspace>>(
+                      make_unique<EnabledWhenWorkspaceIsType<EventWorkspace> >(
                           "InputWorkspace", true));
 
   declareProperty(
@@ -85,7 +86,7 @@ void SaveNexusProcessed::init() {
       "For EventWorkspaces, compress the Nexus data field (default False).\n"
       "This will make smaller files but takes much longer.");
   setPropertySettings("CompressNexus",
-                      make_unique<EnabledWhenWorkspaceIsType<EventWorkspace>>(
+                      make_unique<EnabledWhenWorkspaceIsType<EventWorkspace> >(
                           "InputWorkspace", true));
 }
 
@@ -167,18 +168,16 @@ void SaveNexusProcessed::doExec(Workspace_sptr inputWorkspace,
       boost::dynamic_pointer_cast<const OffsetsWorkspace>(inputWorkspace);
   if (peaksWorkspace)
     g_log.debug("We have a peaks workspace");
+
+  /*m_mdeWorkspace =
+      boost::dynamic_pointer_cast<API::IMDEventWorkspace_sptr>(inputWorkspace);*/
+  m_mdhWorkspace =
+      boost::dynamic_pointer_cast<IMDHistoWorkspace>(inputWorkspace);
+
   // check if inputWorkspace is something we know how to save
-  if (!matrixWorkspace && !tableWorkspace) {
+  if (!matrixWorkspace && !tableWorkspace && !m_mdhWorkspace) {
     // get the workspace name for the error message
     std::string name = getProperty("InputWorkspace");
-
-    // md workspaces should be saved using SaveMD
-    if (bool(boost::dynamic_pointer_cast<const IMDEventWorkspace>(
-            inputWorkspace)) ||
-        bool(boost::dynamic_pointer_cast<const IMDHistoWorkspace>(
-            inputWorkspace)))
-      g_log.warning() << name << " can be saved using SaveMD\n";
-
     // standard error message
     std::stringstream msg;
     msg << "Workspace \"" << name
@@ -191,7 +190,8 @@ void SaveNexusProcessed::doExec(Workspace_sptr inputWorkspace,
   const std::string workspaceID = inputWorkspace->id();
   if ((workspaceID.find("Workspace2D") == std::string::npos) &&
       (workspaceID.find("RebinnedOutput") == std::string::npos) &&
-      !m_eventWorkspace && !tableWorkspace && !offsetsWorkspace)
+      !m_eventWorkspace && !tableWorkspace && !offsetsWorkspace &&
+      !m_mdhWorkspace)
     throw Exception::NotImplementedError(
         "SaveNexusProcessed passed invalid workspaces. Must be Workspace2D, "
         "EventWorkspace, ITableWorkspace, or OffsetsWorkspace.");
@@ -248,7 +248,12 @@ void SaveNexusProcessed::doExec(Workspace_sptr inputWorkspace,
 
     prog_init.reportIncrement(1, "Writing data");
     // Write out the data (2D or event)
-    if (m_eventWorkspace && PreserveEvents) {
+    if (m_mdhWorkspace) {
+      this->execMDH(nexusFile.get());
+    } /*else if (m_mdeWorkspace) {
+      this->execMDE(nexusFile.get());
+    }*/ else if (m_eventWorkspace &&
+                                            PreserveEvents) {
       this->execEvent(nexusFile.get(), uniformSpectra, spec);
     } else if (offsetsWorkspace) {
       g_log.warning() << "Writing SpecialWorkspace2D ID=" << workspaceID
@@ -352,6 +357,133 @@ void SaveNexusProcessed::appendEventListData(std::vector<T> events,
       pulsetimes[i] = it->pulseTime().totalNanoseconds();
     i++;
   }
+}
+
+//-----------------------------------------------------------------------------------------------
+/** Execute the saving of MD histo data.
+ * */
+void SaveNexusProcessed::execMDH(Mantid::NeXus::NexusFileIO *nexusFile) {
+  prog = new Progress(this, m_timeProgInit, 1.0,
+                      m_mdhWorkspace->getDimension(0)->getNBins() * 2);
+
+  // The base entry. Named so as to distinguish from other workspace types.
+  auto file = new ::NeXus::File(nexusFile->fileID);
+  file->makeGroup("MDHistoWorkspace", "NXentry", true);
+  file->putAttr("SaveMDVersion", 2);
+
+  // Write out the coordinate system
+  file->writeData(
+      "coordinate_system",
+      static_cast<uint32_t>(m_mdhWorkspace->getSpecialCoordinateSystem()));
+
+  // Write out the Qconvention
+  // ki-kf for Inelastic convention; kf-ki for Crystallography convention
+  std::string m_QConvention =
+      Kernel::ConfigService::Instance().getString("Q.convention");
+  file->putAttr("QConvention", m_QConvention);
+
+  // Write out the visual normalization
+  file->writeData(
+      "visual_normalization",
+      static_cast<uint32_t>(m_mdhWorkspace->displayNormalization()));
+
+  // Save the algorithm history under "process"
+  m_mdhWorkspace->getHistory().saveNexus(file);
+
+  // Save all the ExperimentInfos
+  for (uint16_t i = 0; i < m_mdhWorkspace->getNumExperimentInfo(); i++) {
+    ExperimentInfo_sptr ei = m_mdhWorkspace->getExperimentInfo(i);
+    std::string groupName = "experiment" + Strings::toString(i);
+    if (ei) {
+      // Can't overwrite entries. Just add the new ones
+      file->makeGroup(groupName, "NXgroup", true);
+      file->putAttr("version", 1);
+      ei->saveExperimentInfoNexus(file);
+      file->closeGroup();
+    }
+  }
+
+  // Write out the affine matrices
+  DataObjects::MDBoxFlatTree::saveAffineTransformMatricies(
+      file, boost::dynamic_pointer_cast<const IMDWorkspace>(m_mdhWorkspace));
+
+  // Check that the typedef has not been changed. The NeXus types would need
+  // changing if it does!
+  assert(sizeof(signal_t) == sizeof(double));
+
+  file->makeGroup("data", "NXdata", true);
+
+  // Save each axis dimension as an array
+  size_t numDims = m_mdhWorkspace->getNumDims();
+  std::string axes_label;
+  for (size_t d = 0; d < numDims; d++) {
+    std::vector<double> axis;
+    IMDDimension_const_sptr dim = m_mdhWorkspace->getDimension(d);
+    for (size_t n = 0; n < dim->getNBins() + 1; n++)
+      axis.push_back(dim->getX(n));
+    file->makeData(dim->getDimensionId(), ::NeXus::FLOAT64,
+                   static_cast<int>(dim->getNBins() + 1), true);
+    file->putData(&axis[0]);
+    file->putAttr("units", std::string(dim->getUnits()));
+    file->putAttr("long_name", std::string(dim->getName()));
+    file->putAttr("frame", dim->getMDFrame().name());
+    file->closeData();
+    if (d != 0)
+      axes_label.insert(0, ":");
+    axes_label.insert(0, dim->getDimensionId());
+  }
+
+  // Number of data points
+  // Size in each dimension (in the "C" style order, so z,y,x
+  // That is, data[z][y][x] = etc.
+  std::vector<int> size(numDims);
+  for (size_t d = 0; d < numDims; d++) {
+    IMDDimension_const_sptr dim = m_mdhWorkspace->getDimension(d);
+    // Size in each dimension (reverse order for RANK)
+    size[numDims - 1 - d] = int(dim->getNBins());
+  }
+
+  std::vector<int> chunks = size;
+  chunks[0] = 1; // Drop the largest stride for chunking, I don't know
+                 // if this is the best but appears to work
+
+  file->makeCompData("signal", ::NeXus::FLOAT64, size, ::NeXus::LZW, chunks,
+                     true);
+  file->putData(m_mdhWorkspace->getSignalArray());
+  file->putAttr("signal", 1);
+  file->putAttr("axes", axes_label);
+  file->closeData();
+
+  file->makeCompData("errors_squared", ::NeXus::FLOAT64, size, ::NeXus::LZW,
+                     chunks, true);
+  file->putData(m_mdhWorkspace->getErrorSquaredArray());
+  file->closeData();
+
+  file->makeCompData("num_events", ::NeXus::FLOAT64, size, ::NeXus::LZW, chunks,
+                     true);
+  file->putData(m_mdhWorkspace->getNumEventsArray());
+  file->closeData();
+
+  file->makeCompData("mask", ::NeXus::INT8, size, ::NeXus::LZW, chunks, true);
+
+  /*auto ws =
+      boost::make_shared<Mantid::DataObjects::MDHistoWorkspace>(m_mdhWorkspace);
+  file->putData(ws->getMaskArray());*/
+  file->closeData();
+
+  file->closeGroup();
+
+  file->closeGroup();
+  // file->close();
+}
+
+//-----------------------------------------------------------------------------------------------
+/** Execute the saving of event data.
+ * This will make one long event list for all events contained.
+ * */
+void SaveNexusProcessed::execMDE(Mantid::NeXus::NexusFileIO *nexusFile) {
+  /*prog = new Progress(this, m_timeProgInit, 1.0,
+                      m_mdeWorkspace->getNumEventsArray() * 2);*/
 }
 
 //-----------------------------------------------------------------------------------------------

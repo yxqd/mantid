@@ -1,223 +1,180 @@
-#include "MantidAPI/CoordTransform.h"
-#include "MantidAPI/FileProperty.h"
-#include "MantidAPI/IMDEventWorkspace.h"
-#include "MantidAPI/WorkspaceHistory.h"
-#include "MantidKernel/Matrix.h"
-#include "MantidKernel/Strings.h"
-#include "MantidKernel/System.h"
-#include "MantidDataObjects/MDBoxIterator.h"
-#include "MantidDataObjects/MDEventFactory.h"
-#include "MantidDataObjects/MDEventWorkspace.h"
+// SaveMD2
+// @author Freddie Akeroyd, STFC ISIS Faility
+// @author Ronald Fowler, STFC eScience. Modified to fit with SaveNexusProcessed
 #include "MantidMDAlgorithms/SaveMD2.h"
-#include "MantidDataObjects/MDBox.h"
-#include "MantidAPI/Progress.h"
-#include "MantidKernel/EnabledWhenProperty.h"
+#include "MantidDataObjects/Workspace2D.h"
+#include "MantidKernel/ArrayProperty.h"
+#include "MantidAPI/FileProperty.h"
+#include "MantidAPI/WorkspaceHistory.h"
+#include "MantidKernel/BoundedValidator.h"
+
+#include <cmath>
+#include <boost/shared_ptr.hpp>
 #include <Poco/File.h>
-#include "MantidDataObjects/MDHistoWorkspace.h"
-#include "MantidDataObjects/MDBoxFlatTree.h"
-#include "MantidDataObjects/BoxControllerNeXusIO.h"
-#include "MantidKernel/ConfigService.h"
-
-typedef std::unique_ptr<::NeXus::File> file_holder_type;
-
-using namespace Mantid::Kernel;
-using namespace Mantid::API;
-using namespace Mantid::DataObjects;
-using namespace Mantid::Geometry;
 
 namespace Mantid {
 namespace MDAlgorithms {
 
-// Register the algorithm into the AlgorithmFactory
+// Register the algorithm into the algorithm factory
 DECLARE_ALGORITHM(SaveMD2)
 
-//----------------------------------------------------------------------------------------------
-/** Initialize the algorithm's properties.
+using namespace Kernel;
+using namespace API;
+using namespace DataObjects;
+
+/// Empty default constructor
+SaveMD2::SaveMD2() : Algorithm() {}
+
+/** Initialisation method.
+ *
  */
 void SaveMD2::init() {
-  declareProperty(make_unique<WorkspaceProperty<IMDWorkspace>>(
+  // Declare required parameters, filename with ext {.nxs,.nx5,.xml} and input
+  // workspace
+  declareProperty(make_unique<WorkspaceProperty<Workspace> >(
                       "InputWorkspace", "", Direction::Input),
-                  "An input MDEventWorkspace or MDHistoWorkspace.");
+                  "Name of the workspace to be saved");
 
+  const std::vector<std::string> fileExts{ ".nxs", ".nx5", ".xml" };
+  declareProperty(Kernel::make_unique<FileProperty>(
+                      "Filename", "", FileProperty::Save, fileExts),
+                  "The name of the Nexus file to write, as a full or relative\n"
+                  "path");
+  //
+  // Declare optional input parameters
+  // These are:
+  // Title       - string to describe data
+  // EntryNumber - integer >0 to be used in entry name "mantid_workspace_<n>"
+  //                          Within a file the entries will be sequential from
+  //                          1.
+  //                          This option should allow overwrite of existing
+  //                          entry,
+  //                          *not* addition of out-of-sequence entry numbers.
+  // spectrum_min, spectrum_max - range of "spectra" numbers to write
+  // spectrum_list            list of spectra values to write
+  //
+  declareProperty("Title", "", boost::make_shared<NullValidator>(),
+                  "A title to describe the saved workspace");
+
+  auto mustBePositive = boost::make_shared<BoundedValidator<int> >();
+  mustBePositive->setLower(0);
+  // declareProperty("EntryNumber", Mantid::EMPTY_INT(), mustBePositive,
+  //  "(Not implemented yet) The index number of the workspace within the Nexus
+  //  file\n"
+  // "(default leave unchanged)" );
   declareProperty(
-      make_unique<FileProperty>("Filename", "", FileProperty::OptionalSave,
-                                ".nxs"),
-      "The name of the Nexus file to write, as a full or relative path.\n"
-      "Optional if UpdateFileBackEnd is checked.");
-  // Filename is NOT used if UpdateFileBackEnd
-  setPropertySettings("Filename", make_unique<EnabledWhenProperty>(
-                                      "UpdateFileBackEnd", IS_EQUAL_TO, "0"));
-
+      "WorkspaceIndexMin", 0, mustBePositive,
+      "Number of first WorkspaceIndex to read, only for single period data.\n"
+      "Not yet implemented");
   declareProperty(
-      "UpdateFileBackEnd", false,
-      "Only for MDEventWorkspaces with a file back end: check this to update "
-      "the NXS file on disk\n"
-      "to reflect the current data structure. Filename parameter is ignored.");
-  setPropertySettings(
-      "UpdateFileBackEnd",
-      make_unique<EnabledWhenProperty>("MakeFileBacked", IS_EQUAL_TO, "0"));
-
-  declareProperty("MakeFileBacked", false,
-                  "For an MDEventWorkspace that was created in memory:\n"
-                  "This saves it to a file AND makes the workspace into a "
-                  "file-backed one.");
-  setPropertySettings(
-      "MakeFileBacked",
-      make_unique<EnabledWhenProperty>("UpdateFileBackEnd", IS_EQUAL_TO, "0"));
+      "WorkspaceIndexMax", Mantid::EMPTY_INT(), mustBePositive,
+      "Number of last WorkspaceIndex to read, only for single period data.\n"
+      "Not yet implemented.");
+  declareProperty(
+      make_unique<ArrayProperty<int> >("WorkspaceIndexList"),
+      "List of WorkspaceIndex numbers to read, only for single period data.\n"
+      "Not yet implemented");
+  declareProperty("Append", false, "Determines whether .nxs file needs to be\n"
+                                   "over written or appended");
+  // option which might be required in future - should be a choice e.g.
+  // MantidProcessed/Muon1
+  // declareProperty("Filetype","",new NullValidator<std::string>);
 }
 
-//----------------------------------------------------------------------------------------------
-/** Save a MDHistoWorkspace to a .nxs file
+/** Execute the algorithm. Currently just calls SaveNexusProcessed but could
+ *  call write other formats if support added
  *
- * @param ws :: MDHistoWorkspace to save
- */
-void SaveMD2::doSaveHisto(Mantid::DataObjects::MDHistoWorkspace_sptr ws) {
-  std::string filename = getPropertyValue("Filename");
-
-  // Erase the file if it exists
-  Poco::File oldFile(filename);
-  if (oldFile.exists())
-    oldFile.remove();
-
-  // Create a new file in HDF5 mode.
-  ::NeXus::File *file;
-  file = new ::NeXus::File(filename, NXACC_CREATE5);
-
-  // The base entry. Named so as to distinguish from other workspace types.
-  file->makeGroup("MDHistoWorkspace", "NXentry", true);
-  file->putAttr("SaveMDVersion", 2);
-
-  // Write out the coordinate system
-  file->writeData("coordinate_system",
-                  static_cast<uint32_t>(ws->getSpecialCoordinateSystem()));
-
-  // Write out the Qconvention
-  // ki-kf for Inelastic convention; kf-ki for Crystallography convention
-  std::string m_QConvention =
-      Kernel::ConfigService::Instance().getString("Q.convention");
-  file->putAttr("QConvention", m_QConvention);
-
-  // Write out the visual normalization
-  file->writeData("visual_normalization",
-                  static_cast<uint32_t>(ws->displayNormalization()));
-
-  // Save the algorithm history under "process"
-  ws->getHistory().saveNexus(file);
-
-  // Save all the ExperimentInfos
-  for (uint16_t i = 0; i < ws->getNumExperimentInfo(); i++) {
-    ExperimentInfo_sptr ei = ws->getExperimentInfo(i);
-    std::string groupName = "experiment" + Strings::toString(i);
-    if (ei) {
-      // Can't overwrite entries. Just add the new ones
-      file->makeGroup(groupName, "NXgroup", true);
-      file->putAttr("version", 1);
-      ei->saveExperimentInfoNexus(file);
-      file->closeGroup();
-    }
-  }
-
-  // Write out the affine matrices
-  MDBoxFlatTree::saveAffineTransformMatricies(
-      file, boost::dynamic_pointer_cast<const IMDWorkspace>(ws));
-
-  // Check that the typedef has not been changed. The NeXus types would need
-  // changing if it does!
-  assert(sizeof(signal_t) == sizeof(double));
-
-  file->makeGroup("data", "NXdata", true);
-
-  // Save each axis dimension as an array
-  size_t numDims = ws->getNumDims();
-  std::string axes_label;
-  for (size_t d = 0; d < numDims; d++) {
-    std::vector<double> axis;
-    IMDDimension_const_sptr dim = ws->getDimension(d);
-    for (size_t n = 0; n < dim->getNBins() + 1; n++)
-      axis.push_back(dim->getX(n));
-    file->makeData(dim->getDimensionId(), ::NeXus::FLOAT64,
-                   static_cast<int>(dim->getNBins() + 1), true);
-    file->putData(&axis[0]);
-    file->putAttr("units", std::string(dim->getUnits()));
-    file->putAttr("long_name", std::string(dim->getName()));
-    file->putAttr("frame", dim->getMDFrame().name());
-    file->closeData();
-    if (d != 0)
-      axes_label.insert(0, ":");
-    axes_label.insert(0, dim->getDimensionId());
-  }
-
-  // Number of data points
-  // Size in each dimension (in the "C" style order, so z,y,x
-  // That is, data[z][y][x] = etc.
-  std::vector<int> size(numDims);
-  for (size_t d = 0; d < numDims; d++) {
-    IMDDimension_const_sptr dim = ws->getDimension(d);
-    // Size in each dimension (reverse order for RANK)
-    size[numDims - 1 - d] = int(dim->getNBins());
-  }
-
-  std::vector<int> chunks = size;
-  chunks[0] = 1; // Drop the largest stride for chunking, I don't know
-                 // if this is the best but appears to work
-
-  file->makeCompData("signal", ::NeXus::FLOAT64, size, ::NeXus::LZW, chunks,
-                     true);
-  file->putData(ws->getSignalArray());
-  file->putAttr("signal", 1);
-  file->putAttr("axes", axes_label);
-  file->closeData();
-
-  file->makeCompData("errors_squared", ::NeXus::FLOAT64, size, ::NeXus::LZW,
-                     chunks, true);
-  file->putData(ws->getErrorSquaredArray());
-  file->closeData();
-
-  file->makeCompData("num_events", ::NeXus::FLOAT64, size, ::NeXus::LZW, chunks,
-                     true);
-  file->putData(ws->getNumEventsArray());
-  file->closeData();
-
-  file->makeCompData("mask", ::NeXus::INT8, size, ::NeXus::LZW, chunks, true);
-  file->putData(ws->getMaskArray());
-  file->closeData();
-
-  file->closeGroup();
-
-  // TODO: Links to original workspace???
-
-  file->closeGroup();
-  file->close();
-}
-
-//----------------------------------------------------------------------------------------------
-/** Execute the algorithm.
+ *  @throw runtime_error Thrown if algorithm cannot execute
  */
 void SaveMD2::exec() {
-  IMDWorkspace_sptr ws = getProperty("InputWorkspace");
-  IMDEventWorkspace_sptr eventWS =
-      boost::dynamic_pointer_cast<IMDEventWorkspace>(ws);
-  MDHistoWorkspace_sptr histoWS =
-      boost::dynamic_pointer_cast<MDHistoWorkspace>(ws);
+  // Retrieve the filename from the properties
+  m_filename = getPropertyValue("FileName");
+  m_inputWorkspace = getProperty("InputWorkspace");
 
-  if (eventWS) {
-    // If event workspace use SaveMD version 1.
-    IAlgorithm_sptr saveMDv1 = createChildAlgorithm("SaveMD", -1, -1, true, 1);
-    saveMDv1->setProperty<IMDWorkspace_sptr>("InputWorkspace", ws);
-    saveMDv1->setProperty<std::string>("Filename", getProperty("Filename"));
-    saveMDv1->setProperty<bool>("UpdateFileBackEnd",
-                                getProperty("UpdateFileBackEnd"));
-    saveMDv1->setProperty<bool>("MakeFileBacked",
-                                getProperty("MakeFileBacked"));
-    saveMDv1->execute();
-  } else if (histoWS) {
-    this->doSaveHisto(histoWS);
+  runSaveNexusProcessed();
+}
+/** virtual method to set the non workspace properties for this algorithm
+ *  @param alg :: pointer to the algorithm
+ *  @param propertyName :: name of the property
+ *  @param propertyValue :: value  of the property
+ *  @param perioidNum :: period number
+ */
+void SaveMD2::setOtherProperties(IAlgorithm *alg,
+                                 const std::string &propertyName,
+                                 const std::string &propertyValue,
+                                 int perioidNum) {
+  if (!propertyName.compare("Append")) {
+    if (perioidNum != 1) {
+      alg->setPropertyValue(propertyName, "1");
+    } else
+      alg->setPropertyValue(propertyName, propertyValue);
   } else
-    throw std::runtime_error("SaveMD can only save MDEventWorkspaces and "
-                             "MDHistoWorkspaces.\nPlease use SaveNexus or "
-                             "another algorithm appropriate for this workspace "
-                             "type.");
+    Algorithm::setOtherProperties(alg, propertyName, propertyValue, perioidNum);
+}
+void SaveMD2::runSaveNexusProcessed() {
+  IAlgorithm_sptr saveNexusPro =
+      createChildAlgorithm("SaveNexusProcessed", 0.0, 1.0, true);
+  // Pass through the same output filename
+  saveNexusPro->setPropertyValue("Filename", m_filename);
+  // Set the workspace property
+  std::string inputWorkspace = "InputWorkspace";
+  saveNexusPro->setProperty(inputWorkspace, m_inputWorkspace);
+  //
+  std::vector<int> specList = getProperty("WorkspaceIndexList");
+  if (!specList.empty())
+    saveNexusPro->setPropertyValue("WorkspaceIndexList",
+                                   getPropertyValue("WorkspaceIndexList"));
+  //
+  int specMax = getProperty("WorkspaceIndexMax");
+  if (specMax != Mantid::EMPTY_INT()) {
+    saveNexusPro->setPropertyValue("WorkspaceIndexMax",
+                                   getPropertyValue("WorkspaceIndexMax"));
+    saveNexusPro->setPropertyValue("WorkspaceIndexMin",
+                                   getPropertyValue("WorkspaceIndexMin"));
+  }
+  std::string title = getProperty("Title");
+  if (!title.empty())
+    saveNexusPro->setPropertyValue("Title", getPropertyValue("Title"));
+
+  // Pass through the append property
+  saveNexusPro->setProperty<bool>("Append", getProperty("Append"));
+
+  // If we're tracking history, add the entry before we save it to file
+  if (trackingHistory()) {
+    m_history->fillAlgorithmHistory(
+        this, Mantid::Kernel::DateAndTime::getCurrentTime(), 0,
+        Algorithm::g_execCount);
+    if (!isChild()) {
+      m_inputWorkspace->history().addHistory(m_history);
+    }
+    // this is a child algorithm, but we still want to keep the history.
+    else if (isRecordingHistoryForChild() && m_parentHistory) {
+      m_parentHistory->addChildHistory(m_history);
+    }
+  }
+  // Now execute the Child Algorithm. Catch and log any error, but don't stop.
+  try {
+    saveNexusPro->execute();
+  }
+  catch (std::runtime_error &) {
+    g_log.error(
+        "Unable to successfully run SaveNexusProcessed Child Algorithm");
+  }
+  if (!saveNexusPro->isExecuted())
+    g_log.error(
+        "Unable to successfully run SaveNexusProcessed Child Algorithm");
+  //
+  progress(1);
 }
 
+/**
+Overriden process groups.
+*/
+bool SaveMD2::processGroups() {
+  this->exec();
+
+  return true;
+}
+
+} // namespace MDAlgorithms
 } // namespace Mantid
-} // namespace DataObjects
