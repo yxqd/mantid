@@ -975,10 +975,8 @@ void LoadEventNexus::exec() {
   m_ws->mutableRun().addProperty("Filename", m_filename);
 
   // Set the output.
-  this->setProperty("OutputWorkspace", m_ws->combinedWorkspace());
-
-  //auto outputWorkspace =  m_ws->combinedWorkspace();
-  //setOutputWorkspace(outputWorkspace);
+  auto outputWorkspace =  m_ws->combinedWorkspace();
+  setOutputWorkspace(outputWorkspace);
 
   // Load the monitors
   if (load_monitors) {
@@ -2538,25 +2536,24 @@ void LoadEventNexus::safeOpenFile(const std::string fname) {
  */
 void LoadEventNexus::setOutputWorkspace(API::Workspace_sptr outputWorkspace) {
   // Set it on the standard output
-  this->setProperty("OutputWorkspace", m_ws->combinedWorkspace());
+  this->setProperty("OutputWorkspace", outputWorkspace);
 
+  if (auto workspaceGroup = boost::dynamic_pointer_cast<API::WorkspaceGroup>(outputWorkspace)) {
+    auto numberOfEntries = workspaceGroup->getNumberOfEntries();
 
-//  if (auto workspaceGroup = boost::dynamic_pointer_cast<API::WorkspaceGroup>(outputWorkspace)) {
-//    auto numberOfEntries = workspaceGroup->getNumberOfEntries();
+    std::string outputWorkspaceName = this->getProperty("OutputWorkspace");
+    outputWorkspaceName += "_";
 
-//    std::string outputWorkspaceName = this->getProperty("OutputWorkspace");
-//    outputWorkspaceName += "_";
-
-//    for (int i = 0; i < numberOfEntries; i++) {
-//      std::string outputWorkspaceNameForPeriod = outputWorkspaceName + std::to_string(i);
-//      std::string propertyNameForPeriod = "OutputWorkspace_" + std::to_string(i);
-//      this->declareProperty(
-//          Kernel::make_unique<WorkspaceProperty<MatrixWorkspace>>(
-//              propertyNameForPeriod, outputWorkspaceNameForPeriod, Direction::Output),
-//          "Period data from the Event NeXus file");
-//      this->setProperty(propertyNameForPeriod, workspaceGroup->getItem(i));
-//    }
-//  }
+    for (int i = 0; i < numberOfEntries; i++) {
+      std::string outputWorkspaceNameForPeriod = outputWorkspaceName + std::to_string(i);
+      std::string propertyNameForPeriod = "OutputWorkspace_" + std::to_string(i);
+      this->declareProperty(
+          Kernel::make_unique<WorkspaceProperty<MatrixWorkspace>>(
+              propertyNameForPeriod, outputWorkspaceNameForPeriod, Direction::Output),
+          "Period data from the Event NeXus file");
+      this->setProperty(propertyNameForPeriod, workspaceGroup->getItem(i));
+    }
+  }
 }
 
 

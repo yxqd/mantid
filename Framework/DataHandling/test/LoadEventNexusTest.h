@@ -737,6 +737,18 @@ public:
 
       isFirstChildWorkspace = false;
     }
+
+    // Ensure that we can access the OutputWorkspace_X property for group workspaces
+    // to have access to individual workspaces of the period file.
+    Workspace_sptr mon1 = loader.getProperty("MonitorWorkspace_1");
+    Workspace_sptr outWS1 = loader.getProperty("OutputWorkspace_1");
+    //Workspace_sptr outWS2 = loader.getProperty("OutputWorkspace_2");
+    //Workspace_sptr outWS3 = loader.getProperty("OutputWorkspace_3");
+    //Workspace_sptr outWS4 = loader.getProperty("OutputWorkspace_4");
+    TS_ASSERT(outWS1);
+    //TS_ASSERT(outWS2);
+    //TS_ASSERT(outWS3);
+    //TS_ASSERT(outWS4);
   }
 
 private:
