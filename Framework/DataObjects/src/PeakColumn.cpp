@@ -3,6 +3,7 @@
 #include "MantidKernel/Strings.h"
 #include "MantidKernel/ConfigService.h"
 #include "MantidKernel/Exception.h"
+#include "MantidKernel/MultiThreaded.h"
 
 #include <boost/variant/get.hpp>
 
@@ -194,6 +195,17 @@ void PeakColumn::read(size_t index, const std::string &text) {
     peak.setRunNumber(ival);
   else
     throw std::runtime_error("Unexpected column " + m_name + " being set.");
+}
+
+/** Read in from stream and convert to a number in the PeaksWorkspace
+ *
+ * @param index :: index of the peak to modify
+ * @param in :: input stream
+ */
+void PeakColumn::read(const size_t index, std::istream &in) {
+  std::string s;
+  in >> s;
+  read(index, s);
 }
 
 //-------------------------------------------------------------------------------------
