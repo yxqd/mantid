@@ -471,6 +471,13 @@ ASCII formats. The filenames are saved in the form [Prefix][Workspace Name].[ext
 
 .. _ISIS_Reflectomety-Options:
 
+Groups
+~~~~~~
+
+It is possible to perform reduction on different groups of runs in the interface.
+Each group will can have its own set of runs and settings associated with them.
+To switch to a different group, click on the group tab as shown below.
+
 Options
 -------
 
