@@ -286,12 +286,13 @@ public:
       // determine the range of pixel ids
       for (auto i = 0; i < m_loadSize[0]; ++i) {
         uint32_t temp = m_event_id[i];
-        if (temp < m_min_id)
-          m_min_id = temp;
-        if (temp > m_max_id)
-          m_max_id = temp;
+        if (temp > 0) {
+          if (temp < m_min_id)
+            m_min_id = temp;
+          if (temp > m_max_id)
+            m_max_id = temp;
+        }
       }
-
       if (m_min_id > static_cast<uint32_t>(alg->eventid_max)) {
         // All the detector IDs in the bank are higher than the highest 'known'
         // (from the IDF)
