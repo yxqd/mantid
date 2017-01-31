@@ -185,7 +185,17 @@ makeDetectorInfo(const Instrument &oldInstr, const Instrument &newInstr) {
     for (size_t i = 0; i < numDets; ++i)
       if (newInstr.isMonitorViaIndex(i))
         monitors.push_back(i);
-    return Kernel::make_unique<Beamline::DetectorInfo>(numDets, monitors);
+    auto detectorIds = newInstr.getDetectorIDs(false /*keep monitors*/);
+    auto detectors = newInstr.getDetectors(detectorIds);
+    std::vector<Mantid::Kernel::V3D> positions;
+    // std::vector<Mantid::Kernel::Quat> rotations;
+    for (auto detector : detectors) {
+      positions.push_back(detector->getPos());
+      // rotations.push_back(detector);
+    }
+
+    return Kernel::make_unique<Beamline::DetectorInfo>(numDets,
+                                                       monitors /*,positions*/);
   }
 }
 }

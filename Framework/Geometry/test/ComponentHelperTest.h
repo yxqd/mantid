@@ -5,6 +5,7 @@
 
 #include "MantidGeometry/Instrument/ComponentHelper.h"
 #include "MantidTestHelpers/ComponentCreationHelper.h"
+#include "MantidBeamline/DetectorInfo.h"
 
 #include <boost/make_shared.hpp>
 
@@ -105,6 +106,57 @@ public:
     TS_ASSERT_DELTA(newRot.imagI(), expectedRot.imagI(), 1e-12);
     TS_ASSERT_DELTA(newRot.imagJ(), expectedRot.imagJ(), 1e-12);
     TS_ASSERT_DELTA(newRot.imagK(), expectedRot.imagK(), 1e-12);
+  }
+
+  void test_moving_a_detector_with_a_DetetorInfo_throws() {
+    using namespace Mantid::Geometry;
+    auto parInst = createTestInstrument();
+    parInst->setDetectorInfo(
+        boost::make_shared<Mantid::Beamline::DetectorInfo>(9));
+    auto detectorId = parInst->getDetectorIDs().front();
+    const auto &det = parInst->getDetector(detectorId);
+
+    TSM_ASSERT_THROWS(
+        "Should NOT be able to write to detector positions in parameter map",
+        ComponentHelper::moveComponent(*det, *parInst->getParameterMap(),
+                                       Mantid::Kernel::V3D(1, 2, 3),
+                                       ComponentHelper::Absolute),
+        std::runtime_error &);
+  }
+
+  void test_moving_a_detector_on_instrument_without_detector_info_allowed() {
+
+    using namespace Mantid::Geometry;
+    auto paramInstr = createTestInstrument();
+    // No detectorInfo set on the instrument
+    auto detectorId = paramInstr->getDetectorIDs().front();
+    const auto &det = paramInstr->getDetector(detectorId);
+
+    Mantid::Kernel::V3D expectedDetectorPosition(1, 2, 3);
+
+    TSM_ASSERT_THROWS_NOTHING(
+        "Should be able to write to detector positions in parameter map",
+        ComponentHelper::moveComponent(*det, *paramInstr->getParameterMap(),
+                                       expectedDetectorPosition,
+                                       ComponentHelper::Absolute));
+
+    TS_ASSERT_EQUALS(det->getPos(), expectedDetectorPosition);
+  }
+
+  void test_moving_a_non_detector_with_a_DetetorInfo_allowed() {
+    using namespace Mantid::Geometry;
+    auto parInst = createTestInstrument();
+    parInst->setDetectorInfo(
+        boost::make_shared<Mantid::Beamline::DetectorInfo>(9));
+
+    const auto &source = parInst->getSource();
+
+    TSM_ASSERT_THROWS_NOTHING(
+        "Should be able to write to non-detector components with new positions "
+        "in parameter map directly",
+        ComponentHelper::moveComponent(*source, *parInst->getParameterMap(),
+                                       Mantid::Kernel::V3D(1, 2, 3),
+                                       ComponentHelper::Absolute));
   }
 
 private:

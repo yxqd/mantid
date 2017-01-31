@@ -82,6 +82,8 @@ public:
     return ObjComponent::getRelativePos();
   }
 
+  Mantid::Kernel::V3D getPos() const override;
+
   const ParameterMap &parameterMap() const override;
   size_t index() const override;
   void setIndex(const size_t index) override;

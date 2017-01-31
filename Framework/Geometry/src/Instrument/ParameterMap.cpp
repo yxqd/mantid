@@ -407,9 +407,10 @@ void ParameterMap::add(const IComponent *comp,
  * parameters
  * memory
   */
-void ParameterMap::addPositionCoordinate(
-    const IComponent *comp, const std::string &name, const double value,
-    const std::string *const pDescription) {
+void
+ParameterMap::addPositionCoordinate(const IComponent *comp,
+                                    const std::string &name, const double value,
+                                    const std::string *const pDescription) {
   Parameter_sptr param = get(comp, pos());
   V3D position;
   if (param) {
@@ -682,6 +683,18 @@ void ParameterMap::addV3D(const IComponent *comp, const std::string &name,
 void ParameterMap::addV3D(const IComponent *comp, const std::string &name,
                           const V3D &value,
                           const std::string *const pDescription) {
+  if (dynamic_cast<const IDetector *>(comp)) {
+
+    /* If there is a detectorInfo, then this parametermap is associated with an
+     * instrument and positions
+     * should be stored in the workspace detectorInfo vector, not in the
+     * parameter map.
+     */
+    if (hasDetectorInfo()) {
+      throw std::runtime_error("Position changes to Detectors attached to an "
+                               "instrument are forbidden");
+    }
+  }
   add(pV3D(), comp, name, value, pDescription);
   clearPositionSensitiveCaches();
 }

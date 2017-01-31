@@ -1,7 +1,7 @@
 #include "MantidGeometry/Instrument/Detector.h"
 #include "MantidGeometry/Instrument/ParameterMap.h"
 #include "MantidKernel/Logger.h"
-
+#include <iostream>
 namespace Mantid {
 namespace Geometry {
 namespace {
@@ -119,6 +119,16 @@ double Detector::getPhiOffset(const double &offset) const {
 det_topology Detector::getTopology(V3D &center) const {
   center = this->getPos();
   return rect;
+}
+
+Kernel::V3D Detector::getPos() const {
+  if (m_map) {
+    if (m_map->hasDetectorInfo()) {
+      // TODO should use the detectorInfo.position(size_t)
+      return Component::getPos(); // See comment above. This should be replaced.
+    }
+  }
+  return Component::getPos();
 }
 
 /// Helper for legacy access mode. Returns a reference to the ParameterMap.
