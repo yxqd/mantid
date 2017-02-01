@@ -54,7 +54,7 @@ void moveComponent(const IComponent &comp, ParameterMap &pmap,
   }
 
   // Add a parameter for the new position
-  pmap.addV3D(comp.getComponentID(), "pos", newPos);
+  pmap.forceUnsafeSetPosition(comp.getComponentID(), newPos);
 }
 
 /**
@@ -91,7 +91,7 @@ void rotateComponent(const IComponent &comp, ParameterMap &pmap,
   }
 
   // Add a parameter for the new rotation
-  pmap.addQuat(comp.getComponentID(), "rot", newRot);
+  pmap.forceUnsafeSetRotation(comp.getComponentID(), newRot);
 }
 
 /**

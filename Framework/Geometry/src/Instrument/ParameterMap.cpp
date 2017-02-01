@@ -5,6 +5,7 @@
 #include "MantidKernel/MultiThreaded.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidGeometry/Instrument/ParameterFactory.h"
+#include <algorithm>
 #include <cstring>
 #include <boost/algorithm/string.hpp>
 
@@ -44,6 +45,16 @@ Kernel::Logger g_log("ParameterMap");
 void checkIsNotMaskingParameter(const std::string &name) {
   if (name == std::string("masked"))
     throw std::runtime_error("Masking data (\"masked\") cannot be stored in "
+                             "ParameterMap. Use DetectorInfo instead");
+}
+
+void checkIsNotPositionParameter(const std::string &name) {
+  const std::string posParamNames[8] = {
+      POS_PARAM_NAME, POSX_PARAM_NAME, POSY_PARAM_NAME, POSZ_PARAM_NAME,
+      ROT_PARAM_NAME, ROTX_PARAM_NAME, ROTY_PARAM_NAME, ROTZ_PARAM_NAME};
+  if (std::any_of(std::begin(posParamNames), std::end(posParamNames),
+                  [name](const std::string &item) { return name == item; }))
+    throw std::runtime_error("Positions and rotations cannot be stored in "
                              "ParameterMap. Use DetectorInfo instead");
 }
 }
@@ -293,6 +304,8 @@ const std::string ParameterMap::diff(const ParameterMap &rhs,
  */
 void ParameterMap::clearParametersByName(const std::string &name) {
   checkIsNotMaskingParameter(name);
+  if (hasDetectorInfo())
+    checkIsNotPositionParameter(name);
   // Key is component ID so have to search through whole lot
   for (auto itr = m_map.begin(); itr != m_map.end();) {
     if (itr->second->name() == name) {
@@ -314,6 +327,8 @@ void ParameterMap::clearParametersByName(const std::string &name) {
 void ParameterMap::clearParametersByName(const std::string &name,
                                          const IComponent *comp) {
   checkIsNotMaskingParameter(name);
+  if (hasDetectorInfo())
+    checkIsNotPositionParameter(name);
   if (!m_map.empty()) {
     const ComponentID id = comp->getComponentID();
     auto itrs = m_map.equal_range(id);
@@ -365,6 +380,8 @@ void ParameterMap::add(const IComponent *comp,
                        const boost::shared_ptr<Parameter> &par,
                        const std::string *const pDescription) {
   checkIsNotMaskingParameter(par->name());
+  if (hasDetectorInfo())
+    checkIsNotPositionParameter(par->name());
   // can not add null pointer
   if (!par)
     return;
@@ -407,10 +424,9 @@ void ParameterMap::add(const IComponent *comp,
  * parameters
  * memory
   */
-void
-ParameterMap::addPositionCoordinate(const IComponent *comp,
-                                    const std::string &name, const double value,
-                                    const std::string *const pDescription) {
+void ParameterMap::addPositionCoordinate(
+    const IComponent *comp, const std::string &name, const double value,
+    const std::string *const pDescription) {
   Parameter_sptr param = get(comp, pos());
   V3D position;
   if (param) {
@@ -634,6 +650,46 @@ void ParameterMap::forceUnsafeSetMasked(const IComponent *comp, bool value) {
 #endif
 }
 
+void ParameterMap::forceUnsafeSetPosition(const IComponent *comp,
+                                          const Kernel::V3D &value) {
+  auto param = create(pV3D(), pos());
+  auto typedParam = boost::dynamic_pointer_cast<ParameterType<V3D>>(param);
+  typedParam->setValue(value);
+
+// When using Clang & Linux, TBB 4.4 doesn't detect C++11 features.
+// https://software.intel.com/en-us/forums/intel-threading-building-blocks/topic/641658
+#if defined(__clang__) && !defined(__APPLE__)
+#define CLANG_ON_LINUX true
+#else
+#define CLANG_ON_LINUX false
+#endif
+#if TBB_VERSION_MAJOR >= 4 && TBB_VERSION_MINOR >= 4 && !CLANG_ON_LINUX
+  m_map.emplace(comp->getComponentID(), param);
+#else
+  m_map.insert(std::make_pair(comp->getComponentID(), param));
+#endif
+}
+
+void ParameterMap::forceUnsafeSetRotation(const IComponent *comp,
+                                          const Kernel::Quat &value) {
+  auto param = create(pQuat(), rot());
+  auto typedParam = boost::dynamic_pointer_cast<ParameterType<Quat>>(param);
+  typedParam->setValue(value);
+
+// When using Clang & Linux, TBB 4.4 doesn't detect C++11 features.
+// https://software.intel.com/en-us/forums/intel-threading-building-blocks/topic/641658
+#if defined(__clang__) && !defined(__APPLE__)
+#define CLANG_ON_LINUX true
+#else
+#define CLANG_ON_LINUX false
+#endif
+#if TBB_VERSION_MAJOR >= 4 && TBB_VERSION_MINOR >= 4 && !CLANG_ON_LINUX
+  m_map.emplace(comp->getComponentID(), param);
+#else
+  m_map.insert(std::make_pair(comp->getComponentID(), param));
+#endif
+}
+
 /**
  * Adds a std::string value to the parameter map.
  * @param comp :: Component to which the new parameter is related
@@ -683,18 +739,11 @@ void ParameterMap::addV3D(const IComponent *comp, const std::string &name,
 void ParameterMap::addV3D(const IComponent *comp, const std::string &name,
                           const V3D &value,
                           const std::string *const pDescription) {
-  if (dynamic_cast<const IDetector *>(comp)) {
-
-    /* If there is a detectorInfo, then this parametermap is associated with an
-     * instrument and positions
-     * should be stored in the workspace detectorInfo vector, not in the
-     * parameter map.
-     */
-    if (hasDetectorInfo()) {
-      throw std::runtime_error("Position changes to Detectors attached to an "
-                               "instrument are forbidden");
-    }
-  }
+  /* If there is a detectorInfo, then this parametermap is associated with an
+   * instrument and positions
+   * should be stored in the workspace detectorInfo vector, not in the
+   * parameter map.
+   */
   add(pV3D(), comp, name, value, pDescription);
   clearPositionSensitiveCaches();
 }
@@ -742,6 +791,8 @@ bool ParameterMap::contains(const IComponent *comp, const std::string &name,
 bool ParameterMap::contains(const IComponent *comp, const char *name,
                             const char *type) const {
   checkIsNotMaskingParameter(name);
+  if (hasDetectorInfo() && !dynamic_cast<const IDetector *>(comp))
+    checkIsNotPositionParameter(name);
   if (m_map.empty())
     return false;
   const ComponentID id = comp->getComponentID();
@@ -765,6 +816,8 @@ bool ParameterMap::contains(const IComponent *comp, const char *name,
 bool ParameterMap::contains(const IComponent *comp,
                             const Parameter &parameter) const {
   checkIsNotMaskingParameter(parameter.name());
+  if (hasDetectorInfo() && !dynamic_cast<const IDetector *>(comp))
+    checkIsNotPositionParameter(parameter.name());
   if (m_map.empty() || !comp)
     return false;
 
@@ -807,6 +860,8 @@ boost::shared_ptr<Parameter> ParameterMap::get(const IComponent *comp,
                                                const char *name,
                                                const char *type) const {
   checkIsNotMaskingParameter(name);
+  if (hasDetectorInfo() && !dynamic_cast<const IDetector *>(comp))
+    checkIsNotPositionParameter(name);
   Parameter_sptr result;
   if (!comp)
     return result;
@@ -951,6 +1006,8 @@ Parameter_sptr ParameterMap::getRecursive(const IComponent *comp,
                                           const char *name,
                                           const char *type) const {
   checkIsNotMaskingParameter(name);
+  if (hasDetectorInfo() && !dynamic_cast<const IDetector *>(comp))
+    checkIsNotPositionParameter(name);
   Parameter_sptr result = this->get(comp->getComponentID(), name, type);
   if (result)
     return result;

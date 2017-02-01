@@ -203,6 +203,9 @@ public:
                const Kernel::Quat &value,
                const std::string *const pDescription = nullptr);
   void forceUnsafeSetMasked(const IComponent *comp, bool value);
+  void forceUnsafeSetPosition(const IComponent *comp, const Kernel::V3D &value);
+  void forceUnsafeSetRotation(const IComponent *comp,
+                              const Kernel::Quat &value);
   //@}
 
   /// Does the named parameter exist for the given component and type
