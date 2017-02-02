@@ -1,6 +1,6 @@
 from __future__ import (absolute_import, division, print_function)
 
-from mantid.simpleapi import SetBeam, SetSample, MonteCarloAbsorption, GroupWorkspaces
+from mantid.simpleapi import *
 from mantid.api import (DataProcessorAlgorithm, AlgorithmFactory, MatrixWorkspaceProperty,
                         PropertyMode, Progress, WorkspaceGroupProperty, mtd)
 from mantid.kernel import (StringMandatoryValidator, Direction, logger, IntBoundedValidator,
@@ -97,11 +97,11 @@ class IndirectAnnulusAbsorption(DataProcessorAlgorithm):
                              validator=FloatBoundedValidator(0.0),
                              doc='Width of the beam (cm)')
 
-        # General options
-        self.declareProperty(name='NumberWavelengths', defaultValue=10,
+        # Monte Carlo
+        self.declareProperty(name='NumberOfWavelengthPoints', defaultValue=10,
                              validator=IntBoundedValidator(1),
                              doc='Number of wavelengths for calculation')
-        self.declareProperty(name='Events', defaultValue=1000,
+        self.declareProperty(name='EventsPerPoint', defaultValue=1000,
                              validator=IntBoundedValidator(0),
                              doc='Number of neutron events')
 
@@ -135,33 +135,19 @@ class IndirectAnnulusAbsorption(DataProcessorAlgorithm):
         logger.information('Sample thickness: ' + str(sample_thickness))
 
         prog.report('Calculating sample corrections')
-        SetBeam(sample_wave_ws,
-                Geometry={'Shape': 'Slit',
-                          'Width': self._beam_width,
-                          'Height': self._beam_height})
-
-        if self._sample_density_type == 'Mass Density':
-            sample_mat_list = {'ChemicalFormula': self._sample_chemical_formula,
-                               'SampleMassDensity': self._sample_density}
-        if self._sample_density_type == 'Number Density':
-            sample_mat_list = {'ChemicalFormula': self._sample_chemical_formula,
-                               'SampleNumberDensity': self._sample_density}
-        SetSample(sample_wave_ws,
-                  Geometry={'Shape': 'HollowCylinder',
-                            'Height': self._sample_height,
-                            'InnerRadius': self._sample_inner_radius,
-                            'OuterRadius': self._sample_outer_radius,
-                            'Center': [0., 0., 0.],
-                            'Axis': 1},
-                  Material=sample_mat_list)
-
-        prog.report('Calculating sample corrections')
-        MonteCarloAbsorption(InputWorkspace=sample_wave_ws,
-                             OutputWorkspace=self._ass_ws,
-                             EventsPerPoint=self._events,
-                             NumberOfWavelengthPoints=self._number_wavelengths,
-                             Interpolation='CSpline')
-
+        AnnulusMonteCarloAbsorption(InputWorkspace=sample_wave_ws,
+                                    OutputWorkspace=self._ass_ws,
+                                    ChemicalFormula=self._sample_chemical_formula,
+                                    DensityType=self._sample_density_type,
+                                    Density=self._sample_density,
+                                    Height=self._sample_height,
+                                    InnerRadius=self._sample_inner_radius,
+                                    OuterRadius=self._sample_outer_radius,
+                                    BeamHeight=self._beam_height,
+                                    BeamWidth=self._beam_width,
+                                    EventsPerPoint=self._events,
+                                    NumberOfWavelengthPoints=self._number_wavelengths,
+                                    Interpolation=self._interpolation)
         group = self._ass_ws
 
         delete_alg = self.createChildAlgorithm("DeleteWorkspace", enableLogging=False)
@@ -213,45 +199,33 @@ class IndirectAnnulusAbsorption(DataProcessorAlgorithm):
                     container_mat_list = {'ChemicalFormula': self._can_chemical_formula,
                                           'SampleNumberDensity': self._can_density}
 
-                SetBeam(can1_wave_ws,
-                        Geometry={'Shape': 'Slit',
-                                  'Width': self._beam_width,
-                                  'Height': self._beam_height})
+                AnnulusMonteCarloAbsorption(InputWorkspace=can1_wave_ws,
+                                            OutputWorkspace='__Acc1',
+                                            ChemicalFormula=self._can_chemical_formula,
+                                            DensityType=self._can_density_type,
+                                            Density=self._can_density,
+                                            Height=self._sample_height,
+                                            InnerRadius=self._can_inner_radius,
+                                            OuterRadius=self._sample_inner_radius,
+                                            BeamHeight=self._beam_height,
+                                            BeamWidth=self._beam_width,
+                                            EventsPerPoint=self._events,
+                                            NumberOfWavelengthPoints=self._number_wavelengths,
+                                            Interpolation=self._interpolation)
 
-                SetSample(can1_wave_ws,
-                          Geometry={'Shape': 'HollowCylinder',
-                                    'Height': float(self._sample_height),
-                                    'InnerRadius': float(self._can_inner_radius),
-                                    'OuterRadius': float(self._sample_inner_radius),
-                                    'Center': [0., 0., 0.],
-                                    'Axis': 1},
-                          Material=container_mat_list)
-
-                MonteCarloAbsorption(InputWorkspace=can1_wave_ws,
-                                     OutputWorkspace='__Acc1',
-                                     EventsPerPoint=self._events,
-                                     NumberOfWavelengthPoints=self._number_wavelengths,
-                                     Interpolation='CSpline')
-
-                SetBeam(can2_wave_ws,
-                        Geometry={'Shape': 'Slit',
-                                  'Width': self._beam_width,
-                                  'Height': self._beam_height})
-
-                SetSample(can2_wave_ws,
-                          Geometry={'Shape': 'HollowCylinder',
-                                    'Height': float(self._sample_height),
-                                    'InnerRadius': float(self._sample_outer_radius),
-                                    'OuterRadius': float(self._can_outer_radius),
-                                    'Center': [0., 0., 0.],
-                                    'Axis': 1},
-                          Material=container_mat_list)
-
-                MonteCarloAbsorption(InputWorkspace=can2_wave_ws,
-                                     OutputWorkspace='__Acc2',
-                                     EventsPerPoint=self._events,
-                                     NumberOfWavelengthPoints=self._number_wavelengths,
-                                     Interpolation='CSpline')
+                AnnulusMonteCarloAbsorption(InputWorkspace=can2_wave_ws,
+                                            OutputWorkspace='__Acc2',
+                                            ChemicalFormula=self._can_chemical_formula,
+                                            DensityType=self._can_density_type,
+                                            Density=self._can_density,
+                                            Height=self._sample_height,
+                                            InnerRadius=self._sample_outer_radius,
+                                            OuterRadius=self._can_outer_radius,
+                                            BeamHeight=self._beam_height,
+                                            BeamWidth=self._beam_width,
+                                            EventsPerPoint=self._events,
+                                            NumberOfWavelengthPoints=self._number_wavelengths,
+                                            Interpolation=self._interpolation)
 
                 multiply_alg.setProperty("LHSWorkspace", '__Acc1')
                 multiply_alg.setProperty("RHSWorkspace", '__Acc2')
@@ -376,8 +350,9 @@ class IndirectAnnulusAbsorption(DataProcessorAlgorithm):
 
         self._emode = 'Indirect'
         self._efixed = self._getEfixed()
-        self._number_wavelengths = self.getProperty('NumberWavelengths').value
-        self._events = self.getPropertyValue('Events')
+        self._number_wavelengths = self.getProperty('NumberOfWavelengthPoints').value
+        self._events = self.getPropertyValue('EventsPerPoint')
+        self._interpolation	= 'CSpline'
 
         self._output_ws = self.getPropertyValue('OutputWorkspace')
 
