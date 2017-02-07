@@ -497,9 +497,6 @@ IDetector_const_sptr Instrument::getDetector(const detid_t &detector_id) const {
     return baseDet;
 
   auto det = ParComponentFactory::createDetector(baseDet.get(), m_map);
-  // Set the linear detector index, used for legacy accessors to obtain data
-  // from Beamline::DetectorInfo, which is stored in the ParameterMap.
-  det->setIndex(std::distance(baseInstr.m_detectorCache.cbegin(), it));
   return det;
 }
 
@@ -1303,8 +1300,17 @@ const Beamline::DetectorInfo &Instrument::detectorInfo() const {
 void Instrument::setDetectorInfo(
     boost::shared_ptr<const Beamline::DetectorInfo> detectorInfo) {
   if (m_map_nonconst)
-    m_map_nonconst->setDetectorInfo(detectorInfo);
+    m_map_nonconst->setDetectorInfo(
+        detectorInfo,
+        std::bind(&Instrument::detectorIndex, this, std::placeholders::_1));
   m_detectorInfo = std::move(detectorInfo);
+}
+
+/// Returns the index for a detector ID. Used for accesing DetectorInfo.
+size_t Instrument::detectorIndex(const detid_t detID) const {
+  const auto &baseInstr = m_map ? *m_instr : *this;
+  const auto it = find(baseInstr.m_detectorCache, detID);
+  return std::distance(baseInstr.m_detectorCache.cbegin(), it);
 }
 
 } // namespace Geometry

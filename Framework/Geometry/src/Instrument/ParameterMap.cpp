@@ -1162,12 +1162,19 @@ const Beamline::DetectorInfo &ParameterMap::detectorInfo() const {
   return *m_detectorInfo;
 }
 
+/// Only for use by Detector. Returns a detector index for a detector ID.
+size_t ParameterMap::detectorIndex(const detid_t detID) const {
+  return m_getDetectorIndex(detID);
+}
+
 /// Only for use by ExperimentInfo. Sets the pointer to the DetectorInfo.
 void ParameterMap::setDetectorInfo(
-    boost::shared_ptr<const Beamline::DetectorInfo> detectorInfo) {
+    boost::shared_ptr<const Beamline::DetectorInfo> detectorInfo,
+    std::function<size_t(const detid_t)> getDetectorIndex) {
   if (detectorInfo != m_detectorInfo) {
     PARALLEL_CRITICAL(ParameterMap_setDetectorInfo)
     m_detectorInfo = std::move(detectorInfo);
+    m_getDetectorIndex = std::move(getDetectorIndex);
   }
 }
 

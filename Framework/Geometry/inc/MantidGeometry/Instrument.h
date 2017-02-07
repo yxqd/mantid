@@ -258,6 +258,7 @@ public:
   setDetectorInfo(boost::shared_ptr<const Beamline::DetectorInfo> detectorInfo);
 
 private:
+  size_t detectorIndex(const detid_t detID) const;
   /// Save information about a set of detectors to Nexus
   void saveDetectorSetInfoToNexus(::NeXus::File *file,
                                   const std::vector<detid_t> &detIDs) const;

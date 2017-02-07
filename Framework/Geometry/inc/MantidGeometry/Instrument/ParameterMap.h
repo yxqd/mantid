@@ -9,6 +9,7 @@
 
 #include "tbb/concurrent_unordered_map.h"
 
+#include <functional>
 #include <memory>
 #include <vector>
 #include <typeinfo>
@@ -345,8 +346,10 @@ public:
 
   bool hasDetectorInfo() const;
   const Beamline::DetectorInfo &detectorInfo() const;
+  size_t detectorIndex(const detid_t detID) const;
   void
-  setDetectorInfo(boost::shared_ptr<const Beamline::DetectorInfo> detectorInfo);
+  setDetectorInfo(boost::shared_ptr<const Beamline::DetectorInfo> detectorInfo,
+                  std::function<size_t(const detid_t)> getDetectorIndex);
 
 private:
   boost::shared_ptr<Parameter> create(const std::string &className,
@@ -378,6 +381,9 @@ private:
   /// Pointer to the DetectorInfo object. NULL unless the instrument is
   /// associated with an ExperimentInfo object.
   boost::shared_ptr<const Beamline::DetectorInfo> m_detectorInfo{nullptr};
+  /// Pointer to a function for translating detector IDs into detector indices
+  /// for accessing the DetectorInfo object.
+  std::function<size_t(const detid_t)> m_getDetectorIndex;
 };
 
 /// ParameterMap shared pointer typedef
