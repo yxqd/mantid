@@ -3,9 +3,9 @@
 
 #include <cxxtest/TestSuite.h>
 
+#include "MantidAPI/FrameworkManager.h"
 #include "MantidMPIAlgorithms/BroadcastWorkspace.h"
 #include "MantidTestHelpers/WorkspaceCreationHelper.h"
-#include "MantidAPI/FrameworkManager.h"
 
 using namespace Mantid;
 
@@ -45,7 +45,7 @@ public:
     TS_ASSERT_THROWS_NOTHING(broadcaster.initialize());
     // Create a small workspace
     API::MatrixWorkspace_sptr inWS =
-        WorkspaceCreationHelper::Create2DWorkspace154(1, 5);
+        WorkspaceCreationHelper::create2DWorkspace154(1, 5);
 
     TS_ASSERT_THROWS_NOTHING(broadcaster.setProperty("InputWorkspace", inWS));
     TS_ASSERT_THROWS_NOTHING(

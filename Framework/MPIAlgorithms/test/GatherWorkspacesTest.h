@@ -3,10 +3,10 @@
 
 #include <cxxtest/TestSuite.h>
 
-#include "MantidMPIAlgorithms/GatherWorkspaces.h"
-#include "MantidTestHelpers/WorkspaceCreationHelper.h"
 #include "MantidAPI/FrameworkManager.h"
 #include "MantidGeometry/Instrument.h"
+#include "MantidMPIAlgorithms/GatherWorkspaces.h"
+#include "MantidTestHelpers/WorkspaceCreationHelper.h"
 
 using namespace Mantid;
 
@@ -48,7 +48,7 @@ public:
     TS_ASSERT_THROWS_NOTHING(gatherer.initialize());
     // Create a small workspace
     API::MatrixWorkspace_sptr inWS =
-        WorkspaceCreationHelper::Create2DWorkspace154(1, 5);
+        WorkspaceCreationHelper::create2DWorkspace154(1, 5);
 
     TS_ASSERT_THROWS_NOTHING(gatherer.setProperty("InputWorkspace", inWS));
     gatherer.setChild(
