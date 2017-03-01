@@ -1,4 +1,5 @@
 #include "MantidGeometry/Instrument/CompAssembly.h"
+#include "MantidGeometry/Instrument/LinkedTreeParser.h"
 #include "MantidGeometry/Instrument/RectangularDetector.h"
 #include "MantidGeometry/Instrument/StructuredDetector.h"
 #include "MantidGeometry/Instrument/ParComponentFactory.h"
@@ -504,6 +505,11 @@ std::ostream &operator<<(std::ostream &os, const CompAssembly &ass) {
   os << "Number of children :" << ass.nelements() << '\n';
   ass.printChildren(os);
   return os;
+}
+
+void CompAssembly::registerContents(
+    Mantid::Geometry::LinkedTreeParser &parser) const {
+  parser.registerComposite(this);
 }
 
 } // Namespace Geometry

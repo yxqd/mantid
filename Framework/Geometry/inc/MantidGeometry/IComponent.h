@@ -20,7 +20,6 @@ namespace Mantid {
 namespace Kernel {
 class Quat;
 }
-
 namespace Geometry {
 //---------------------------------------------------------
 // Forward declarations
@@ -187,6 +186,10 @@ public:
   virtual void printSelf(std::ostream &) const = 0;
   //! Returns true if the Component is parametrized (has a parameter map)
   virtual bool isParametrized() const = 0;
+  /// Registers contents in a way that can be used to form a flat-tree structure
+  virtual void registerContents(
+      class LinkedTreeParser &) const { /*TODO should be pure virtual*/
+  }
 };
 
 /// Typedef of a shared pointer to a IComponent

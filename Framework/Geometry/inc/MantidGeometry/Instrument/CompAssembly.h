@@ -107,6 +107,7 @@ public:
   void testIntersectionWithChildren(
       Track &testRay,
       std::deque<IComponent_const_sptr> &searchQueue) const override;
+  void registerContents(class LinkedTreeParser &parser) const override;
 
 private:
   /// Private copy assignment operator

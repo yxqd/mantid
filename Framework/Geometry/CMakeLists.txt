@@ -47,12 +47,14 @@ set ( SRC_FILES
 	src/Instrument/CompAssembly.cpp
 	src/Instrument/Component.cpp
 	src/Instrument/ComponentHelper.cpp
+	src/Instrument/ComponentProxy.cpp
 	src/Instrument/Detector.cpp
 	src/Instrument/DetectorGroup.cpp
 	src/Instrument/FitParameter.cpp
 	src/Instrument/Goniometer.cpp
 	src/Instrument/IDFObject.cpp
 	src/Instrument/InstrumentDefinitionParser.cpp
+  src/Instrument/LinkedTreeParser.cpp
 	src/Instrument/ObjCompAssembly.cpp
 	src/Instrument/ObjComponent.cpp
 	src/Instrument/ParComponentFactory.cpp
@@ -199,12 +201,14 @@ set ( INC_FILES
 	inc/MantidGeometry/Instrument/CompAssembly.h
 	inc/MantidGeometry/Instrument/Component.h
 	inc/MantidGeometry/Instrument/ComponentHelper.h
+	inc/MantidGeometry/Instrument/ComponentProxy.h
 	inc/MantidGeometry/Instrument/Detector.h
 	inc/MantidGeometry/Instrument/DetectorGroup.h
 	inc/MantidGeometry/Instrument/FitParameter.h
 	inc/MantidGeometry/Instrument/Goniometer.h
 	inc/MantidGeometry/Instrument/IDFObject.h
 	inc/MantidGeometry/Instrument/InstrumentDefinitionParser.h
+  inc/MantidGeometry/Instrument/LinkedTreeParser.h
 	inc/MantidGeometry/Instrument/ObjCompAssembly.h
 	inc/MantidGeometry/Instrument/ObjComponent.h
 	inc/MantidGeometry/Instrument/ParComponentFactory.h
