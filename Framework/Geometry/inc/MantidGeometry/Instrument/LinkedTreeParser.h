@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cstddef>
+#include "MantidGeometry/IComponent.h"
 #include "MantidGeometry/Instrument/ComponentProxy.h"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -13,7 +14,6 @@ namespace Geometry {
 
 class Detector;
 class ICompAssembly;
-class IComponent;
 class PathComponent;
 
 /**
@@ -32,7 +32,7 @@ public:
   size_t registerComposite(ICompAssembly const *const comp, size_t parentIndex);
 
   //  std::vector<ComponentProxy> proxies();
-  //  size_t componentSize() const;
+  size_t componentSize() const;
   //  size_t detectorSize() const;
   //  size_t pathSize() const;
   // std::vector<size_t> pathComponentIndexes() const;
@@ -43,7 +43,7 @@ public:
   // std::vector<double> pathLengths() const;
   // std::vector<Eigen::Vector3d> startPositions() const;
   // std::vector<Eigen::Quaterniond> startRotations() const;
-  // std::vector<ComponentIdType> componentIds() const;
+  std::vector<ComponentID> componentIds() const;
   // std::vector<DetectorIdType> detectorIds() const;
   // int64_t sourcePathIndex() const;
   // int64_t samplePathIndex() const;
@@ -65,7 +65,7 @@ private:
   std::vector<ComponentProxy> m_proxies;
   std::vector<Eigen::Vector3d> m_positions;
   std::vector<Eigen::Quaterniond> m_rotations;
-  //  std::vector<ComponentIdType> m_componentIds;
+  std::vector<ComponentID> m_componentIds;
 
   /*
     These collections are conditionally updated depending upon component type.

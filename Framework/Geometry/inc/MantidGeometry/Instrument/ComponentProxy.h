@@ -4,9 +4,10 @@
 #include <vector>
 #include <cstddef>
 #include <cstdint>
+#include "MantidGeometry/IComponent.h"
+
 namespace Mantid {
 namespace Geometry {
-class IComponent;
 
 /**
  * Components and InstrumentTrees are Immutable. However the DetectorInfo needs
@@ -23,11 +24,11 @@ class IComponent;
  */
 class ComponentProxy {
 public:
-  //  ComponentProxy(const ComponentIdType &id);
+  ComponentProxy(const ComponentID &id);
 
-  ComponentProxy(size_t previous /*,const ComponentIdType &id*/);
+  ComponentProxy(size_t previous, const ComponentID &id);
 
-  ComponentProxy(size_t previous /*, const ComponentIdType &id*/,
+  ComponentProxy(size_t previous, const ComponentID &id,
                  std::vector<size_t> &&children);
 
   bool hasParent() const;
@@ -42,20 +43,19 @@ public:
 
   const std::vector<size_t> &children() const;
 
-  //  const ComponentIdType componentId() const; // Not strictly needed.
+  ComponentID componentId() const; // Not strictly needed.
 
   size_t nChildren() const;
-  /*
-    bool operator==(const ComponentProxy &other) const;
-    bool operator!=(const ComponentProxy &other) const;
-  */
+  bool operator==(const ComponentProxy &other) const;
+  bool operator!=(const ComponentProxy &other) const;
+
 private:
   /// Parent component, negative index indicates no parent.
   int64_t m_previous;
   /// Next or child nodes (owned)
   std::vector<size_t> m_next; // Children
                               /// Identifier for the component.
-  // ComponentIdType m_componentId;
+  ComponentID m_componentId;
 };
 }
 }

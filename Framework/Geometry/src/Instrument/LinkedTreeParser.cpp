@@ -12,20 +12,22 @@
 
 namespace {
 
-Mantid::Kernel::V3D toV3D(const Eigen::Vector3d &vector3d) {
-  return Mantid::Kernel::V3D{vector3d[0], vector3d[1], vector3d[2]};
-}
 Eigen::Vector3d toVector3d(const Mantid::Kernel::V3D &v3d) {
   return Eigen::Vector3d{v3d.X(), v3d.Y(), v3d.Z()};
-}
-Mantid::Kernel::Quat toQuat(const Eigen::Quaterniond &quaterniond) {
-  return Mantid::Kernel::Quat{quaterniond.w(), quaterniond.x(), quaterniond.y(),
-                              quaterniond.z()};
 }
 Eigen::Quaterniond toQuaterniond(const Mantid::Kernel::Quat &quat) {
   return Eigen::Quaterniond{quat.real(), quat.imagI(), quat.imagJ(),
                             quat.imagK()};
 }
+/*
+Mantid::Kernel::Quat toQuat(const Eigen::Quaterniond &quaterniond) {
+  return Mantid::Kernel::Quat{quaterniond.w(), quaterniond.x(), quaterniond.y(),
+                              quaterniond.z()};
+}
+Mantid::Kernel::V3D toV3D(const Eigen::Vector3d &vector3d) {
+  return Mantid::Kernel::V3D{vector3d[0], vector3d[1], vector3d[2]};
+}
+*/
 }
 
 namespace Mantid {
@@ -87,9 +89,9 @@ size_t LinkedTreeParser::registerComposite(const ICompAssembly *const comp,
 }
 /*
 std::vector<ComponentProxy> LinkedTreeParser::proxies() { return m_proxies; }
-
+*/
 size_t LinkedTreeParser::componentSize() const { return m_proxies.size(); }
-
+/*
 size_t LinkedTreeParser::detectorSize() const {
   return m_detectorComponentIndexes.size();
 }
@@ -126,9 +128,9 @@ std::vector<double> LinkedTreeParser::pathLengths() const {
 size_t LinkedTreeParser::coreUpdate(IComponent const *const comp,
                                     size_t previousIndex) {
   size_t newIndex = m_proxies.size();
-  // m_componentIds.emplace_back(comp->componentId());
-  // m_proxies.emplace_back(previousIndex, comp->componentId());
-  // m_proxies[previousIndex].addChild(newIndex);
+  m_componentIds.emplace_back(comp->getComponentID());
+  m_proxies.emplace_back(previousIndex, comp->getComponentID());
+  m_proxies[previousIndex].addChild(newIndex);
   m_positions.emplace_back(toVector3d(comp->getPos()));
   m_rotations.emplace_back(toQuaterniond(comp->getRotation()));
   return newIndex; // Return the last index.
@@ -150,11 +152,11 @@ std::vector<Eigen::Vector3d> LinkedTreeParser::startPositions() const {
 std::vector<Eigen::Quaterniond> LinkedTreeParser::startRotations() const {
   return m_rotations;
 }
-
-std::vector<ComponentIdType> LinkedTreeParser::componentIds() const {
+*/
+std::vector<ComponentID> LinkedTreeParser::componentIds() const {
   return m_componentIds;
 }
-
+/*
 std::vector<DetectorIdType> LinkedTreeParser::detectorIds() const {
   return m_detectorIds;
 }

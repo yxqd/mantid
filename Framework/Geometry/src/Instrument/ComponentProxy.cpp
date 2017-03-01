@@ -4,16 +4,14 @@
 
 namespace Mantid {
 namespace Geometry {
-/*ComponentProxy::ComponentProxy(const ComponentIdType &id)
+ComponentProxy::ComponentProxy(const ComponentID &id)
     : m_previous(-1), m_componentId(id) {}
-*/
-ComponentProxy::ComponentProxy(size_t previous /*, const ComponentIdType &id*/)
-    : m_previous(previous) /*,m_componentId(id)*/ {}
+ComponentProxy::ComponentProxy(size_t previous, const ComponentID &id)
+    : m_previous(previous), m_componentId(id) {}
 
-ComponentProxy::ComponentProxy(size_t previous /*, const ComponentIdType &id*/,
+ComponentProxy::ComponentProxy(size_t previous, const ComponentID &id,
                                std::vector<size_t> &&children)
-    : m_previous(previous) /*, m_componentId(id)*/,
-      m_next(std::move(children)) {}
+    : m_previous(previous), m_componentId(id), m_next(std::move(children)) {}
 
 void ComponentProxy::addChild(size_t child) { m_next.emplace_back(child); }
 
@@ -33,12 +31,9 @@ size_t ComponentProxy::child(size_t index) const {
 size_t ComponentProxy::nChildren() const { return m_next.size(); }
 
 const std::vector<size_t> &ComponentProxy::children() const { return m_next; }
-/*
-const ComponentIdType ComponentProxy::componentId() const {
-  return m_componentId;
-}
-*/
-/*
+
+ComponentID ComponentProxy::componentId() const { return m_componentId; }
+
 bool ComponentProxy::operator==(const ComponentProxy &other) const {
   return m_componentId == other.componentId() && m_next == other.children() &&
          m_previous == other.parent();
@@ -46,6 +41,5 @@ bool ComponentProxy::operator==(const ComponentProxy &other) const {
 bool ComponentProxy::operator!=(const ComponentProxy &other) const {
   return !(this->operator==(other));
 }
-*/
 }
 }
