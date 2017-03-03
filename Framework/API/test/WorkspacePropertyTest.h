@@ -238,6 +238,18 @@ public:
     TS_ASSERT_EQUALS(history3.direction(), 0)
     wsp7->setValue("ws2");
     delete wsp7;
+
+    // create empty worksapce with blank name and output direction and optional
+    auto wsp8 = Mantid::Kernel::make_unique<WorkspaceProperty<Workspace>>("workspace8", "",
+                                                                          Direction::Output, PropertyMode::Optional);
+    Workspace_sptr test_ws = WorkspaceFactory::Instance().create("WorkspacePropertyTest2", 1, 1, 1);
+    *wsp8 = test_ws;
+    const auto history4 = wsp8->createHistory();
+    TS_ASSERT_EQUALS(history4.name(), "workspace8")
+    TS_ASSERT(!history4.value().empty())
+    TS_ASSERT_EQUALS(history4.value().substr(0, 5), "__TMP")
+    TS_ASSERT_EQUALS(history3.type(), wsp7->type())
+    TS_ASSERT_EQUALS(history3.direction(), 1)
   }
 
   void testStore() {
@@ -279,6 +291,46 @@ public:
     PropertyHistory history = wsp4->createHistory();
     TS_ASSERT(!history.value().empty())
     TS_ASSERT_EQUALS(history.value().substr(0, 5), "__TMP")
+  }
+
+  void test_GIVEN_an_empty_name_on_an_optional_output_prop_and_no_ws_has_been_set_WHEN_creating_history_THEN_name_is_empty() {
+    // Given: An empty name on an optional output workspace property and no workspace has been set.
+    auto wsp = Mantid::Kernel::make_unique<WorkspaceProperty<Workspace>>("workspace8", "",
+                                                                          Direction::Output, PropertyMode::Optional);
+
+    // When: A history is created.
+    auto history = wsp->createHistory();
+
+    // Then: The value of the history, ie the name, is empty.
+    TS_ASSERT(history.value().empty());
+  }
+
+  void test_GIVEN_a_name_on_an_optional_output_prop_and_no_ws_has_been_set_WHEN_creating_history_THEN_name_is_as_set() {
+    // Given: A name on an optional output workspace property and no workspace has been set.
+    auto wsp = Mantid::Kernel::make_unique<WorkspaceProperty<Workspace>>("workspace8", "test",
+                                                                          Direction::Output, PropertyMode::Optional);
+
+    // When: A history is created
+    auto history = wsp->createHistory();
+
+    // Then: The value of the history, ie the name, is the same as the original name
+    TS_ASSERT(!history.value().empty());
+    TS_ASSERT(history.value() == "test");
+  }
+
+  void test_GIVEN_a_name_on_an_optional_output_prop_and_ws_has_been_set_WHEN_creating_history_THEN_name_is_as_set() {
+    // Given: A name on an optional output workspace property and a workspace has been set.
+    auto wsp = Mantid::Kernel::make_unique<WorkspaceProperty<Workspace>>("workspace8", "test",
+                                                                          Direction::Output, PropertyMode::Optional);
+    Workspace_sptr ws = WorkspaceFactory::Instance().create("WorkspacePropertyTest", 1, 1, 1);
+    *wsp = ws;
+
+    // When: A history is created.
+    auto history = wsp->createHistory();
+
+    // Then: The value of the history, ie the name, is the same as the original name.
+    TS_ASSERT(!history.value().empty());
+    TS_ASSERT(history.value() == "test");
   }
 
   void testDirection() {
