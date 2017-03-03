@@ -311,7 +311,11 @@ const Kernel::PropertyHistory WorkspaceProperty<TYPE>::createHistory() const {
     os << "__TMP" << this->operator()().get();
     wsName = os.str();
     isdefault = false;
+  } else if ((wsName.empty() || this->hasTemporaryValue()) && !this->operator()() && isOptional()) {
+    wsName = "";
+    isdefault = true;
   }
+
   return Kernel::PropertyHistory(this->name(), wsName, this->type(), isdefault,
                                  this->direction());
 }

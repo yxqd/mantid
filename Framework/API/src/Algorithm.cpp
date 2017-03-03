@@ -745,7 +745,7 @@ Algorithm_sptr Algorithm::createChildAlgorithm(const std::string &name,
   for (auto prop : props) {
     auto wsProp = dynamic_cast<IWorkspaceProperty *>(prop);
     if (prop->direction() == Mantid::Kernel::Direction::Output && wsProp) {
-      if (prop->value().empty()) {
+      if (prop->value().empty() && !wsProp->isOptional()) {
         prop->createTemporaryValue();
       }
     }
