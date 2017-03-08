@@ -28,6 +28,7 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
 
     _beam_height = None
     _beam_width = None
+    _unit = None
     _emode = None
     _efixed = None
     _number_wavelengths = 10    
@@ -101,8 +102,7 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
                              doc='Scale factor to multiply Container data')
 
         # Beam size
-        self.declareProperty(name='BeamHeight', defaultValue=1.0,
-                             validator=FloatBoundedValidator(0.0),
+        self.declareProperty(name='BeamHeight', defaultValue='',
                              doc='Height of the beam (cm)')
         self.declareProperty(name='BeamWidth', defaultValue='',
                              doc='Width of the beam (cm)')
@@ -133,16 +133,29 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
         if self._can_ws_name is not None:
             n_prog_reports += 1
         prog = Progress(self, 0.0, 1.0, n_prog_reports)
+        delete_alg = self.createChildAlgorithm("DeleteWorkspace", enableLogging=False)
+        multiply_alg = self.createChildAlgorithm("Multiply", enableLogging=False)
+        divide_alg = self.createChildAlgorithm("Divide", enableLogging=False)
+        minus_alg = self.createChildAlgorithm("Minus", enableLogging=False)
+        convert_unit_alg = self.createChildAlgorithm("ConvertUnits", enableLogging=False)
+        clone_alg = self.createChildAlgorithm("CloneWorkspace", enableLogging=False)
+        group_alg = self.createChildAlgorithm("GroupWorkspaces", enableLogging=False)
 
         sample_wave_ws = '__sam_wave'
-        convert_unit_alg = self.createChildAlgorithm("ConvertUnits", enableLogging=False)
-        convert_unit_alg.setProperty("InputWorkspace", self._sample_ws_name)
-        convert_unit_alg.setProperty("OutputWorkspace", sample_wave_ws)
-        convert_unit_alg.setProperty("Target", 'Wavelength')
-        convert_unit_alg.setProperty("EMode", self._emode)
-        convert_unit_alg.setProperty("EFixed", self._efixed)
-        convert_unit_alg.execute()
-        mtd.addOrReplace(sample_wave_ws, convert_unit_alg.getProperty("OutputWorkspace").value)
+        if self._unit == 'Wavelength':
+            clone_alg.setProperty("InputWorkspace", self._sample_ws_name)
+            clone_alg.setProperty("OutputWorkspace", sample_wave_ws)
+            clone_alg.execute()
+            mtd.addOrReplace(sample_wave_ws, clone_alg.getProperty("OutputWorkspace").value)
+        else:
+            convert_unit_alg.setProperty("InputWorkspace", self._sample_ws_name)
+            convert_unit_alg.setProperty("OutputWorkspace", sample_wave_ws)
+            convert_unit_alg.setProperty("Target", 'Wavelength')
+            convert_unit_alg.setProperty("EMode", self._emode)
+            if self._emode == 'Indirect':
+                convert_unit_alg.setProperty("EFixed", self._efixed)
+            convert_unit_alg.execute()
+            mtd.addOrReplace(sample_wave_ws, convert_unit_alg.getProperty("OutputWorkspace").value)
 					 
         prog.report('Calculating sample corrections')
         FlatPlateMonteCarloAbsorption(InputWorkspace=sample_wave_ws,
@@ -162,10 +175,6 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
                                       Interpolation=self._interpolation)
         group = self._ass_ws
 
-        delete_alg = self.createChildAlgorithm("DeleteWorkspace", enableLogging=False)
-        multiply_alg = self.createChildAlgorithm("Multiply", enableLogging=False)
-        divide_alg = self.createChildAlgorithm("Divide", enableLogging=False)
-        minus_alg = self.createChildAlgorithm("Minus", enableLogging=False)
 
         if self._can_ws_name is not None:
             can1_wave_ws = '__can1_wave'
@@ -275,13 +284,20 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
             divide_alg.setProperty("OutputWorkspace", sample_wave_ws)
             divide_alg.execute()
 
-        convert_unit_alg.setProperty("InputWorkspace", sample_wave_ws)
-        convert_unit_alg.setProperty("OutputWorkspace", self._output_ws)
-        convert_unit_alg.setProperty("Target", 'DeltaE')
-        convert_unit_alg.setProperty("EMode", self._emode)
-        convert_unit_alg.setProperty("EFixed", self._efixed)
-        convert_unit_alg.execute()
-        mtd.addOrReplace(self._output_ws, convert_unit_alg.getProperty("OutputWorkspace").value)
+        if self._unit == 'Wavelength':
+            clone_alg.setProperty("InputWorkspace", sample_wave_ws)
+            clone_alg.setProperty("OutputWorkspace", self._output_ws)
+            clone_alg.execute()
+            mtd.addOrReplace(self._output_ws, clone_alg.getProperty("OutputWorkspace").value)
+        else:
+            convert_unit_alg.setProperty("InputWorkspace", sample_wave_ws)
+            convert_unit_alg.setProperty("OutputWorkspace", self._output_ws)
+            convert_unit_alg.setProperty("Target", self._unit)
+            convert_unit_alg.setProperty("EMode", self._emode)
+            if self._emode == 'Inelastic':
+                convert_unit_alg.setProperty("EFixed", self._efixed)
+            convert_unit_alg.execute()
+            mtd.addOrReplace(self._output_ws, convert_unit_alg.getProperty("OutputWorkspace").value)
         delete_alg.setProperty("Workspace", sample_wave_ws)
         delete_alg.execute()
 
@@ -321,9 +337,10 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
                 delete_alg.setProperty("Workspace", self._acc_ws)
                 delete_alg.execute()
         else:
-            GroupWorkspaces(InputWorkspaces=group,
-                            OutputWorkspace=self._abs_ws,
-                            EnableLogging=False)
+            group_alg.setProperty("InputWorkspaces", group)
+            group_alg.setProperty("OutputWorkspace", self._abs_ws)
+            group_alg.execute()
+            mtd.addOrReplace(self._abs_ws, group_alg.getProperty("OutputWorkspace").value)
             self.setProperty('CorrectionsWorkspace', self._abs_ws)
 
 
@@ -335,28 +352,19 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
         self._sample_ws_name = self.getPropertyValue('SampleWorkspace')
         ws = mtd[self._sample_ws_name]
         axis = ws.getAxis(0)
-        unit = axis.getUnit().unitID()
-        logger.information('X-unit is %s' % unit)
-#        if unit == 'dSpacing':
-#            self._emode = 'Elastic'
-#        elif unit == 'DeltaE':
-        self._emode = 'Indirect'
-        self._efixed = self._get_Efixed()
-        logger.information('InputWorkspace is %s' % self._sample_ws_name)
-        logger.information('Input emode is %s' % self._emode)
-        logger.information('Input fixed is %f' % self._efixed)
-        
-		
-        beam_height = self.getProperty('BeamHeight').value
-        if beam_height == '':
-            self._beam_height = float(ws.getInstrument().getStringParameter('Workflow.beam-height')[0])
+        self._unit = axis.getUnit().unitID()
+        logger.information('Input X-unit is %s' % self._unit)
+        if self._unit == 'dSpacing':
+            self._emode = 'Elastic'
         else:
-            self._beam_height = float(beam_height)
-        beam_width = self.getProperty('BeamWidth').value
-        if beam_width == '':
-            self._beam_width = float(ws.getInstrument().getStringParameter('Workflow.beam-width')[0])
-        else:
-            self._beam_width = float(beam_width)
+            self._emode = str(ws.getEMode())
+        logger.information('Input Emode is %s' % self._emode)
+        if self._emode == 'Indirect':
+            self._efixed = self._get_Efixed()
+            logger.information('Input Efixed is %f' % self._efixed)   
+
+        self._beam_height = self.getProperty('BeamHeight').value
+        self._beam_width = self.getProperty('BeamWidth').value
 
         self._sample_chemical_formula = self.getPropertyValue('SampleChemicalFormula')
         self._sample_density_type = self.getProperty('SampleDensityType').value
@@ -414,6 +422,13 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
             issues['UseCanCorrections'] = 'Must specify a can workspace to use can corections'
 
         return issues
+
+    def _get_Emode(self):
+        inst = mtd[self._sample_ws_name].getInstrument()
+
+        if inst.hasParameter('Emode'):
+            return inst.getStringParameter('Emode')[0]
+        raise ValueError('No Emode parameter found')
 
     def _get_Efixed(self):
         inst = mtd[self._sample_ws_name].getInstrument()
