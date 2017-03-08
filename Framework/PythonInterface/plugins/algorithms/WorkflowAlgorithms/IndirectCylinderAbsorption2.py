@@ -9,26 +9,26 @@ from mantid.kernel import (StringMandatoryValidator, Direction, logger, FloatBou
 
 class IndirectCylinderAbsorption(DataProcessorAlgorithm):
     # Sample variables
-    _sample_ws_name=None
-    _sample_chemical_formula=None
-    _sample_density_type=None
-    _sample_density=None
-    _sample_radius=None
+    _sample_ws_name = None
+    _sample_chemical_formula = None
+    _sample_density_type = None
+    _sample_density = None
+    _sample_radius = None
 
     # Container variables
-    _can_ws_name=None
-    _use_can_corrections=None
-    _can_chemical_formula=None
-    _can_density_type=None
-    _can_density=None
-    _can_radius=None
-    _can_scale=None
+    _can_ws_name = None
+    _use_can_corrections = None
+    _can_chemical_formula = None
+    _can_density_type = None
+    _can_density = None
+    _can_radius = None
+    _can_scale = None
 
     _beam_height = None
     _beam_width = None
     _emode = None
     _efixed = None
-    _number_wavelengths = 10    
+    _number_wavelengths = 10
     _events = 2000
     _abs_ws = None
     _ass_ws = None
@@ -124,17 +124,17 @@ class IndirectCylinderAbsorption(DataProcessorAlgorithm):
 
         prog.report('Calculating sample corrections')
         CylinderMonteCarloAbsorption(InputWorkspace=sample_wave_ws,
-                                      OutputWorkspace=self._ass_ws,
-                                      ChemicalFormula=self._sample_chemical_formula,
-                                      DensityType=self._sample_density_type,
-                                      Density=self._sample_density,
-                                      Height=self._sample_height,
-                                      Radius=self._sample_radius,
-                                      BeamHeight=self._beam_height,
-                                      BeamWidth=self._beam_width,
-                                      EventsPerPoint=self._events,
-                                      NumberOfWavelengthPoints=self._number_wavelengths,
-                                      Interpolation=self._interpolation)
+                                     OutputWorkspace=self._ass_ws,
+                                     ChemicalFormula=self._sample_chemical_formula,
+                                     DensityType=self._sample_density_type,
+                                     Density=self._sample_density,
+                                     Height=self._sample_height,
+                                     Radius=self._sample_radius,
+                                     BeamHeight=self._beam_height,
+                                     BeamWidth=self._beam_width,
+                                     EventsPerPoint=self._events,
+                                     NumberOfWavelengthPoints=self._number_wavelengths,
+                                     Interpolation=self._interpolation)
         group = self._ass_ws
 
         delete_alg = self.createChildAlgorithm("DeleteWorkspace", enableLogging=False)
@@ -161,7 +161,7 @@ class IndirectCylinderAbsorption(DataProcessorAlgorithm):
                 scale_alg.execute()
 
             can_thickness = self._can_radius - self._sample_radius
-            logger.information('Container thickness: %f' % (can_thickness))
+            logger.information('Container thickness: %f' % can_thickness)
 
             if self._use_can_corrections:
                 # Doing can corrections
@@ -296,7 +296,7 @@ class IndirectCylinderAbsorption(DataProcessorAlgorithm):
         self._efixed = self._get_Efixed()
         self._number_wavelengths = self.getProperty('NumberOfWavelengthPoints').value
         self._events = self.getPropertyValue('EventsPerPoint')
-        self._interpolation	= 'CSpline'
+        self._interpolation = 'CSpline'
 
         self._output_ws = self.getPropertyValue('OutputWorkspace')
 

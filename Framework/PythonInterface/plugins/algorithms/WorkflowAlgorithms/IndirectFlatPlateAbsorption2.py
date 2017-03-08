@@ -1,12 +1,12 @@
-#pylint: disable=no-init,too-many-instance-attributes,too-many-branches
+# pylint: disable=no-init,too-many-instance-attributes,too-many-branches
 from mantid.simpleapi import *
 from mantid.api import DataProcessorAlgorithm, AlgorithmFactory, PropertyMode, MatrixWorkspaceProperty, \
-                       WorkspaceGroupProperty, InstrumentValidator, WorkspaceUnitValidator, Progress
+    WorkspaceGroupProperty, InstrumentValidator, WorkspaceUnitValidator, Progress
 from mantid.kernel import StringListValidator, StringMandatoryValidator, IntBoundedValidator, \
-                          FloatBoundedValidator, Direction, logger, CompositeValidator
+    FloatBoundedValidator, Direction, logger, CompositeValidator
+
 
 class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
-
     # Sample variables
     _sample_ws_name = None
     _sample_chemical_formula = None
@@ -31,21 +31,18 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
     _unit = None
     _emode = None
     _efixed = None
-    _number_wavelengths = 10    
+    _number_wavelengths = 10
     _events = 2000
     _abs_ws = None
     _ass_ws = None
     _acc_ws = None
     _output_ws = None
 
-
     def category(self):
         return "Workflow\\Inelastic;CorrectionFunctions\\AbsorptionCorrections;Workflow\\MIDAS"
 
-
     def summary(self):
         return "Calculates indirect absorption corrections for a flat sample shape."
-
 
     def version(self):
         return 2
@@ -125,7 +122,6 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
                                                     optional=PropertyMode.Optional),
                              doc='The workspace group to save correction factors')
 
-
     def PyExec(self):
 
         # Set up progress reporting
@@ -156,7 +152,7 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
                 convert_unit_alg.setProperty("EFixed", self._efixed)
             convert_unit_alg.execute()
             mtd.addOrReplace(sample_wave_ws, convert_unit_alg.getProperty("OutputWorkspace").value)
-					 
+
         prog.report('Calculating sample corrections')
         FlatPlateMonteCarloAbsorption(InputWorkspace=sample_wave_ws,
                                       OutputWorkspace=self._ass_ws,
@@ -174,7 +170,6 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
                                       NumberOfWavelengthPoints=self._number_wavelengths,
                                       Interpolation=self._interpolation)
         group = self._ass_ws
-
 
         if self._can_ws_name is not None:
             can1_wave_ws = '__can1_wave'
@@ -208,7 +203,7 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
                 divide_alg.setProperty("OutputWorkspace", sample_wave_ws)
                 divide_alg.execute()
 
-                offset_front = 0.5*(float(self._can_front_thickness) + float(self._sample_thickness))
+                offset_front = 0.5 * (float(self._can_front_thickness) + float(self._sample_thickness))
                 FlatPlateMonteCarloAbsorption(InputWorkspace=can1_wave_ws,
                                               OutputWorkspace='__Acc1',
                                               ChemicalFormula=self._can_chemical_formula,
@@ -225,7 +220,7 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
                                               NumberOfWavelengthPoints=self._number_wavelengths,
                                               Interpolation=self._interpolation)
 
-                offset_back = 0.5*(float(self._can_back_thickness) + float(self._sample_thickness))
+                offset_back = 0.5 * (float(self._can_back_thickness) + float(self._sample_thickness))
                 FlatPlateMonteCarloAbsorption(InputWorkspace=can2_wave_ws,
                                               OutputWorkspace='__Acc2',
                                               ChemicalFormula=self._can_chemical_formula,
@@ -314,8 +309,8 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
             sample_logs.append(('container_scale', self._can_scale))
             if self._use_can_corrections:
                 sample_log_workspaces.append(self._acc_ws)
-                sample_logs.append(('container_front_thickness', self. _can_front_thickness))
-                sample_logs.append(('container_back_thickness', self. _can_back_thickness))
+                sample_logs.append(('container_front_thickness', self._can_front_thickness))
+                sample_logs.append(('container_back_thickness', self._can_back_thickness))
 
         log_names = [item[0] for item in sample_logs]
         log_values = [item[1] for item in sample_logs]
@@ -343,7 +338,6 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
             mtd.addOrReplace(self._abs_ws, group_alg.getProperty("OutputWorkspace").value)
             self.setProperty('CorrectionsWorkspace', self._abs_ws)
 
-
     def _setup(self):
         """
         Get algorithm properties.
@@ -361,7 +355,7 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
         logger.information('Input Emode is %s' % self._emode)
         if self._emode == 'Indirect':
             self._efixed = self._get_Efixed()
-            logger.information('Input Efixed is %f' % self._efixed)   
+            logger.information('Input Efixed is %f' % self._efixed)
 
         self._beam_height = self.getProperty('BeamHeight').value
         self._beam_width = self.getProperty('BeamWidth').value
@@ -395,7 +389,7 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
 
         self._number_wavelengths = self.getProperty('NumberOfWavelengthPoints').value
         self._events = self.getProperty('EventsPerPoint').value
-        self._interpolation	= 'CSpline'
+        self._interpolation = 'CSpline'
 
         self._output_ws = self.getPropertyValue('OutputWorkspace')
 
@@ -419,7 +413,7 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
             issues['CanChemicalFormula'] = 'Must be set to use can corrections'
 
         if self._use_can_corrections and self._can_ws_name is None:
-            issues['UseCanCorrections'] = 'Must specify a can workspace to use can corections'
+            issues['UseCanCorrections'] = 'Must specify a can workspace to use can corrections'
 
         return issues
 
