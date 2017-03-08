@@ -101,9 +101,8 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
                              doc='Scale factor to multiply Container data')
 
         # Beam size
-        self.declareProperty('DefaultBeamSize', defaultValue=True,
-                             doc='Override beam size with instrument defaults')
-        self.declareProperty(name='BeamHeight', defaultValue='',
+        self.declareProperty(name='BeamHeight', defaultValue=1.0,
+                             validator=FloatBoundedValidator(0.0),
                              doc='Height of the beam (cm)')
         self.declareProperty(name='BeamWidth', defaultValue='',
                              doc='Width of the beam (cm)')
@@ -399,19 +398,6 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
         else:
             self._ass_ws = self._abs_ws + '_ass'
             self._acc_ws = self._abs_ws + '_acc'
-
-        # Get beam size defaults
-        inst = mtd[self._sample_ws_name].getInstrument()
-        has_beam = inst.hasParameter('Workflow.beam-height')
-        default = self.getProperty('DefaultBeamSize').value
-
-        if default and not has_beam:
-            default = False
-            logger.warning("Instrument has no default beam size; will use inputs")
-
-        if default:
-            self._beam_height = float(inst.getStringParameter('Workflow.beam-height')[0])
-            self._beam_width = float(inst.getStringParameter('Workflow.beam-width')[0])
 
     def validateInputs(self):
         """

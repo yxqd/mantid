@@ -5338,6 +5338,8 @@ void ApplicationWindow::readSettings() {
   settings.endGroup();
   settings.endGroup();
   // END Mantid Muon interface one time only change
+
+  emit configModified();
 }
 
 void ApplicationWindow::saveSettings() {
@@ -8988,7 +8990,11 @@ void ApplicationWindow::activateWindow(MdiSubWindow *w,
   FloatingWindow *fw = w->getFloatingWindow();
   if (fw) {
     if (activateOuterWindow) {
-      w->setNormal();
+      if (fw->isMaximized()) {
+        w->setMaximized();
+      } else {
+        w->setNormal();
+      }
     }
   } else {
     QMainWindow::activateWindow();
