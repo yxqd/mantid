@@ -77,9 +77,9 @@ class IndirectCylinderAbsorption2Test(unittest.TestCase):
         """
 
         corrected, fact = IndirectCylinderAbsorption(SampleWorkspace=self._red_ws,
-                                                     CanWorkspace=self._can_ws,
+                                                     ContainerWorkspace=self._can_ws,
                                                      SampleChemicalFormula='H2-O',
-                                                     UseCanCorrections=False,
+                                                     UseContainerCorrections=False,
                                                      Events=200)
 
         self.assertEqual(fact.size(), 1)
@@ -92,10 +92,10 @@ class IndirectCylinderAbsorption2Test(unittest.TestCase):
         """
 
         corrected, fact = IndirectCylinderAbsorption(SampleWorkspace=self._red_ws,
-                                                     CanWorkspace=self._can_ws,
-                                                     CanScaleFactor=0.8,
+                                                     ContainerWorkspace=self._can_ws,
+                                                     ContainerScaleFactor=0.8,
                                                      SampleChemicalFormula='H2-O',
-                                                     UseCanCorrections=False,
+                                                     UseContainerCorrections=False,
                                                      Events=200)
 
         self.assertEqual(fact.size(), 1)
@@ -107,10 +107,10 @@ class IndirectCylinderAbsorption2Test(unittest.TestCase):
         """
 
         corrected, fact = IndirectCylinderAbsorption(SampleWorkspace=self._red_ws,
-                                                     CanWorkspace=self._can_ws,
+                                                     ContainerWorkspace=self._can_ws,
                                                      SampleChemicalFormula='H2-O',
-                                                     CanChemicalFormula='V',
-                                                     UseCanCorrections=True,
+                                                     ContainerChemicalFormula='V',
+                                                     UseContainerCorrections=True,
                                                      Events=200)
 
         self.assertEqual(fact.size(), 2)
@@ -125,12 +125,12 @@ class IndirectCylinderAbsorption2Test(unittest.TestCase):
                                                      SampleChemicalFormula='H2-O',
                                                      SampleDensityType='Number Density',
                                                      SampleDensity=0.5,
-                                                     CanWorkspace=self._can_ws,
-                                                     CanChemicalFormula='V',
-                                                     CanDensityType='Number Density',
-                                                     CanDensity=0.5,
+                                                     ContainerWorkspace=self._can_ws,
+                                                     ContainerChemicalFormula='V',
+                                                     ContainerDensityType='Number Density',
+                                                     ContainerDensity=0.5,
                                                      Events=200,
-                                                     UseCanCorrections=True)
+                                                     UseContainerCorrections=True)
 
         self.assertEqual(fact.size(), 2)
         self._test_workspaces(corrected, fact)
@@ -144,12 +144,12 @@ class IndirectCylinderAbsorption2Test(unittest.TestCase):
                                                      SampleChemicalFormula='H2-O',
                                                      SampleDensityType='Mass Density',
                                                      SampleDensity=0.5,
-                                                     CanWorkspace=self._can_ws,
-                                                     CanChemicalFormula='V',
-                                                     CanDensityType='Mass Density',
-                                                     CanDensity=0.5,
+                                                     ContainerWorkspace=self._can_ws,
+                                                     ContainerChemicalFormula='V',
+                                                     ContainerDensityType='Mass Density',
+                                                     ContainerDensity=0.5,
                                                      Events=200,
-                                                     UseCanCorrections=True)
+                                                     UseContainerCorrections=True)
 
         self.assertEqual(fact.size(), 2)
         self._test_workspaces(corrected, fact)

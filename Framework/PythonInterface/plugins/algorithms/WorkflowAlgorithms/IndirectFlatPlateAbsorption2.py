@@ -99,9 +99,11 @@ class IndirectFlatPlateAbsorption(DataProcessorAlgorithm):
                              doc='Scale factor to multiply Container data')
 
         # Beam size
-        self.declareProperty(name='BeamHeight', defaultValue='',
+        self.declareProperty(name='BeamHeight', defaultValue=1.0,
+                             validator=FloatBoundedValidator(0.0),
                              doc='Height of the beam (cm)')
-        self.declareProperty(name='BeamWidth', defaultValue='',
+        self.declareProperty(name='BeamWidth', defaultValue=1.0,
+                             validator=FloatBoundedValidator(0.0),
                              doc='Width of the beam (cm)')
 
         # Monte Carlo
