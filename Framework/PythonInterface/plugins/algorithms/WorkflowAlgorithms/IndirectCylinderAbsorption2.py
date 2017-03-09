@@ -63,22 +63,22 @@ class IndirectCylinderAbsorption(DataProcessorAlgorithm):
                              doc='Sample height')
 
         # Container options
-        self.declareProperty(MatrixWorkspaceProperty('CanWorkspace', '', optional=PropertyMode.Optional,
+        self.declareProperty(MatrixWorkspaceProperty('ContainerWorkspace', '', optional=PropertyMode.Optional,
                                                      direction=Direction.Input),
                              doc='Container workspace.')
-        self.declareProperty(name='UseCanCorrections', defaultValue=False,
+        self.declareProperty(name='UseContainerCorrections', defaultValue=False,
                              doc='Use can corrections in subtraction')
-        self.declareProperty(name='CanChemicalFormula', defaultValue='',
-                             doc='Can chemical formula')
-        self.declareProperty(name='CanDensityType', defaultValue='Mass Density',
+        self.declareProperty(name='ContainerChemicalFormula', defaultValue='',
+                             doc='Container chemical formula')
+        self.declareProperty(name='ContainerDensityType', defaultValue='Mass Density',
                              validator=StringListValidator(['Mass Density', 'Number Density']),
                              doc='Use of Mass Density or Number density')
-        self.declareProperty(name='CanDensity', defaultValue=0.1,
+        self.declareProperty(name='ContainerDensity', defaultValue=0.1,
                              doc='Mass Density (g/cm^3) or Number density (atoms/Angstrom^3)')
-        self.declareProperty(name='CanRadius', defaultValue=0.2,
+        self.declareProperty(name='ContainerRadius', defaultValue=0.2,
                              validator=FloatBoundedValidator(0.0),
-                             doc='Can radius')
-        self.declareProperty(name='CanScaleFactor', defaultValue=1.0,
+                             doc='Container radius')
+        self.declareProperty(name='ContainerScaleFactor', defaultValue=1.0,
                              validator=FloatBoundedValidator(0.0),
                              doc='Scale factor to multiply can data')
 
@@ -278,16 +278,16 @@ class IndirectCylinderAbsorption(DataProcessorAlgorithm):
         self._sample_radius = self.getProperty('SampleRadius').value
         self._sample_height = self.getProperty('SampleHeight').value
 
-        self._can_ws_name = self.getPropertyValue('CanWorkspace')
+        self._can_ws_name = self.getPropertyValue('ContainerWorkspace')
         if self._can_ws_name == '':
             self._can_ws_name = None
 
-        self._use_can_corrections = self.getProperty('UseCanCorrections').value
-        self._can_chemical_formula = self.getPropertyValue('CanChemicalFormula')
-        self._can_density_type = self.getPropertyValue('CanDensityType')
-        self._can_density = self.getProperty('CanDensity').value
-        self._can_radius = self.getProperty('CanRadius').value
-        self._can_scale = self.getProperty('CanScaleFactor').value
+        self._use_can_corrections = self.getProperty('UseContainerCorrections').value
+        self._can_chemical_formula = self.getPropertyValue('ContainerChemicalFormula')
+        self._can_density_type = self.getPropertyValue('ContainerDensityType')
+        self._can_density = self.getProperty('ContainerDensity').value
+        self._can_radius = self.getProperty('ContainerRadius').value
+        self._can_scale = self.getProperty('ContainerScaleFactor').value
 
         self._beam_height = self.getProperty('BeamHeight').value
         self._beam_width = self.getProperty('BeamWidth').value
@@ -318,13 +318,13 @@ class IndirectCylinderAbsorption(DataProcessorAlgorithm):
 
         if self._can_ws_name is not None:
             if self._sample_radius >= self._can_radius:
-                issues['CanRadius'] = 'Must be greater than SampleRadius'
+                issues['ContainerRadius'] = 'Must be greater than SampleRadius'
 
         if self._use_can_corrections and self._can_chemical_formula == '':
-            issues['CanChemicalFormula'] = 'Must be set to use can corrections'
+            issues['ContainerChemicalFormula'] = 'Must be set to use can corrections'
 
         if self._use_can_corrections and self._can_ws_name is None:
-            issues['UseCanCorrections'] = 'Must specify a can workspace to use can corrections'
+            issues['UseContainerCorrections'] = 'Must specify a can workspace to use can corrections'
 
         return issues
 

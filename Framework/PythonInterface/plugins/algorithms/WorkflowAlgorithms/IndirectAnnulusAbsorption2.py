@@ -64,26 +64,26 @@ class IndirectAnnulusAbsorption(DataProcessorAlgorithm):
                              doc='Sample height')
 
         # Container options
-        self.declareProperty(MatrixWorkspaceProperty('CanWorkspace', '', optional=PropertyMode.Optional,
+        self.declareProperty(MatrixWorkspaceProperty('ContainerWorkspace', '', optional=PropertyMode.Optional,
                                                      direction=Direction.Input),
                              doc='Container workspace.')
-        self.declareProperty(name='UseCanCorrections', defaultValue=False,
+        self.declareProperty(name='UseContainerCorrections', defaultValue=False,
                              doc='Use Container corrections in subtraction')
-        self.declareProperty(name='CanChemicalFormula', defaultValue='',
+        self.declareProperty(name='ContainerChemicalFormula', defaultValue='',
                              doc='Chemical formula for the Container')
-        self.declareProperty(name='CanDensityType', defaultValue='Mass Density',
+        self.declareProperty(name='ContainerDensityType', defaultValue='Mass Density',
                              validator=StringListValidator(['Mass Density', 'Number Density']),
                              doc='Container density type.')
-        self.declareProperty(name='CanDensity', defaultValue=1.0,
+        self.declareProperty(name='ContainerDensity', defaultValue=1.0,
                              validator=FloatBoundedValidator(0.0),
                              doc='Container number density')
-        self.declareProperty(name='CanInnerRadius', defaultValue=0.19,
+        self.declareProperty(name='ContainerInnerRadius', defaultValue=0.19,
                              validator=FloatBoundedValidator(0.0),
                              doc='Container inner radius')
-        self.declareProperty(name='CanOuterRadius', defaultValue=0.35,
+        self.declareProperty(name='ContainerOuterRadius', defaultValue=0.35,
                              validator=FloatBoundedValidator(0.0),
                              doc='Container outer radius')
-        self.declareProperty(name='CanScaleFactor', defaultValue=1.0,
+        self.declareProperty(name='ContainerScaleFactor', defaultValue=1.0,
                              validator=FloatBoundedValidator(0.0),
                              doc='Scale factor to multiply Container data')
 
@@ -332,16 +332,16 @@ class IndirectAnnulusAbsorption(DataProcessorAlgorithm):
         self._sample_outer_radius = self.getProperty('SampleOuterRadius').value
         self._sample_height = self.getProperty('SampleHeight').value
 
-        self._can_ws_name = self.getPropertyValue('CanWorkspace')
+        self._can_ws_name = self.getPropertyValue('ContainerWorkspace')
         if self._can_ws_name == '':
             self._can_ws_name = None
-        self._use_can_corrections = self.getProperty('UseCanCorrections').value
-        self._can_chemical_formula = self.getPropertyValue('CanChemicalFormula')
-        self._can_density_type = self.getPropertyValue('CanDensityType')
-        self._can_density = self.getProperty('CanDensity').value
-        self._can_inner_radius = self.getProperty('CanInnerRadius').value
-        self._can_outer_radius = self.getProperty('CanOuterRadius').value
-        self._can_scale = self.getProperty('CanScaleFactor').value
+        self._use_can_corrections = self.getProperty('UseContainerCorrections').value
+        self._can_chemical_formula = self.getPropertyValue('ContainerChemicalFormula')
+        self._can_density_type = self.getPropertyValue('ContainerDensityType')
+        self._can_density = self.getProperty('ContainerDensity').value
+        self._can_inner_radius = self.getProperty('ContainerInnerRadius').value
+        self._can_outer_radius = self.getProperty('ContainerOuterRadius').value
+        self._can_scale = self.getProperty('ContainerScaleFactor').value
 
         self._beam_height = float(self.getProperty('BeamHeight').value)
         self._beam_width = float(self.getProperty('BeamWidth').value)
@@ -371,10 +371,10 @@ class IndirectAnnulusAbsorption(DataProcessorAlgorithm):
         issues = dict()
 
         if self._use_can_corrections and self._can_chemical_formula == '':
-            issues['CanChemicalFormula'] = 'Must be set to use can corrections'
+            issues['ContainerChemicalFormula'] = 'Must be set to use can corrections'
 
         if self._use_can_corrections and self._can_ws_name is None:
-            issues['UseCanCorrections'] = 'Must specify a can workspace to use can corrections'
+            issues['UseContainerCorrections'] = 'Must specify a can workspace to use can corrections'
 
         # Geometry validation: can inner < sample inner < sample outer < can outer
         if self._sample_outer_radius <= self._sample_inner_radius:
@@ -382,10 +382,10 @@ class IndirectAnnulusAbsorption(DataProcessorAlgorithm):
 
         if self._can_ws_name is not None:
             if self._sample_inner_radius <= self._can_inner_radius:
-                issues['SampleInnerRadius'] = 'Must be greater than CanInnerRadius'
+                issues['SampleInnerRadius'] = 'Must be greater than ContainerInnerRadius'
 
             if self._can_outer_radius <= self._sample_outer_radius:
-                issues['CanOuterRadius'] = 'Must be greater than SampleOuterRadius'
+                issues['ContainerOuterRadius'] = 'Must be greater than SampleOuterRadius'
 
         return issues
 

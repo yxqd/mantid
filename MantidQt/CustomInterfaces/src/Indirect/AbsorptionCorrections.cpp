@@ -185,10 +185,10 @@ void AbsorptionCorrections::addShapeSpecificSampleOptions(IAlgorithm_sptr alg,
     alg->setProperty("SampleOuterRadius", sampleOuterRadius);
 
     double canInnerRadius = m_uiForm.spAnnCanInnerRadius->value();
-    alg->setProperty("CanInnerRadius", canInnerRadius);
+    alg->setProperty("ContainerInnerRadius", canInnerRadius);
 
     double canOuterRadius = m_uiForm.spAnnCanOuterRadius->value();
-    alg->setProperty("CanOuterRadius", canOuterRadius);
+    alg->setProperty("ContainerOuterRadius", canOuterRadius);
 
   } else if (shape == "Cylinder") {
     double sampleRadius = m_uiForm.spCylSampleRadius->value();
@@ -217,7 +217,7 @@ void AbsorptionCorrections::addShapeSpecificCanOptions(IAlgorithm_sptr alg,
     alg->setProperty("ContainerBackThickness", canBackThickness);
   } else if (shape == "Cylinder") {
     double canRadius = m_uiForm.spCylCanRadius->value();
-    alg->setProperty("CanRadius", canRadius);
+    alg->setProperty("ContainerRadius", canRadius);
   }
 }
 
