@@ -73,9 +73,9 @@ void AbsorptionCorrections::run() {
   absCorAlgo->setProperty("BeamHeight", m_uiForm.spBeamHeight->value());
   absCorAlgo->setProperty("BeamWidth", m_uiForm.spBeamWidth->value());
   long wave = static_cast<long>(m_uiForm.spNumberWavelengths->value());
-  absCorAlgo->setProperty("NumberWavelengths", wave);
+  absCorAlgo->setProperty("NumberOfWavelengthPoints", wave);
   long events = static_cast<long>(m_uiForm.spNumberEvents->value());
-  absCorAlgo->setProperty("Events", events);
+  absCorAlgo->setProperty("EventsPerPoint", events);
 
   // Can details
   bool useCan = m_uiForm.ckUseCan->isChecked();
@@ -109,19 +109,19 @@ void AbsorptionCorrections::run() {
       rebin->setProperty("OutputWorkspace", shiftedCanName);
       rebin->execute();
     }
-    absCorAlgo->setProperty("CanWorkspace", shiftedCanName);
+    absCorAlgo->setProperty("ContainerWorkspace", shiftedCanName);
 
     bool useCanCorrections = m_uiForm.ckUseCanCorrections->isChecked();
-    absCorAlgo->setProperty("UseCanCorrections", useCanCorrections);
+    absCorAlgo->setProperty("UseContainerCorrections", useCanCorrections);
 
     if (useCanCorrections) {
 
       absCorAlgo->setProperty(
-          "CanDensityType", m_uiForm.cbCanDensity->currentText().toStdString());
-      absCorAlgo->setProperty("CanDensity", m_uiForm.spCanDensity->value());
+          "ContainerDensityType", m_uiForm.cbCanDensity->currentText().toStdString());
+      absCorAlgo->setProperty("ContainerDensity", m_uiForm.spCanDensity->value());
 
       QString canChemicalFormula = m_uiForm.leCanChemicalFormula->text();
-      absCorAlgo->setProperty("CanChemicalFormula",
+      absCorAlgo->setProperty("ContainerChemicalFormula",
                               canChemicalFormula.toStdString());
     }
 
@@ -211,10 +211,10 @@ void AbsorptionCorrections::addShapeSpecificCanOptions(IAlgorithm_sptr alg,
                                                        QString shape) {
   if (shape == "FlatPlate") {
     double canFrontThickness = m_uiForm.spFlatCanFrontThickness->value();
-    alg->setProperty("CanFrontThickness", canFrontThickness);
+    alg->setProperty("ContainerFrontThickness", canFrontThickness);
 
     double canBackThickness = m_uiForm.spFlatCanBackThickness->value();
-    alg->setProperty("CanBackThickness", canBackThickness);
+    alg->setProperty("ContainerBackThickness", canBackThickness);
   } else if (shape == "Cylinder") {
     double canRadius = m_uiForm.spCylCanRadius->value();
     alg->setProperty("CanRadius", canRadius);
@@ -360,7 +360,7 @@ void AbsorptionCorrections::plotClicked() {
     if (m_uiForm.ckUseCanCorrections->isChecked()) {
       plotCorr.push_back(QString::fromStdString(outputFactorsWsName) + "_acc");
       QString shiftedWs = QString::fromStdString(
-          m_absCorAlgo->getPropertyValue("CanWorkspace"));
+          m_absCorAlgo->getPropertyValue("ContainerWorkspace"));
       plotData.push_back(shiftedWs);
     }
     plotSpectrum(plotCorr, 0);
