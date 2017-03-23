@@ -1,0 +1,630 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- For help on the notation used to specify an Instrument Definition File 
+     see http://www.mantidproject.org/IDF -->
+<instrument xmlns="http://www.mantidproject.org/IDF/1.0" 
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://www.mantidproject.org/IDF/1.0 http://schema.mantidproject.org/IDF/1.0/IDFSchema.xsd"
+ name="MANDI" valid-from   ="2017-02-24 00:00:00"
+              valid-to     ="2100-12-31 23:59:59"
+                      last-modified="2017-03-23 10:15:43.501923">
+  <!--DEFAULTS-->
+  <defaults>
+    <length unit="metre"/>
+    <angle unit="degree"/>
+    <reference-frame>
+      <along-beam axis="z"/>
+      <pointing-up axis="y"/>
+      <handedness val="right"/>
+    </reference-frame>
+    <default-view view="spherical_y"/>
+  </defaults>
+
+  <!--SOURCE-->
+  <component type="moderator">
+    <location z="-30.054103"/>
+  </component>
+  <type name="moderator" is="Source"/>
+
+  <!--SAMPLE-->
+  <component type="sample-position">
+    <location y="0.0" x="0.0" z="0.0"/>
+  </component>
+  <type name="sample-position" is="SamplePos"/>
+
+  <!--MONITORS-->
+  <component type="monitors" idlist="monitors">
+    <location/>
+  </component>
+  <type name="monitors">
+    <component type="monitor">
+      <location z="-2.935" name="monitor1"/>
+    </component>
+    <component type="monitor">
+      <location z="-0.898" name="monitor2"/>
+    </component>
+    <component type="monitor">
+      <location z="1.042" name="monitor3"/>
+    </component>
+  </type>
+<!-- XML Code automatically generated on 2017-03-23 10:15:43.503969 for the Mantid instrument definition file from MANDI_2017-03-21.DetCal -->
+<component type="panel1" idstart="65536" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.409700" t="66.457675" p="-93.740325" name="bank1" rot="91.664179" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="65.837204">
+    <rot val="87.487917" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel1" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.079792" xstep="0.000626"
+    ypixels="256" ystart="-0.079454" ystep="0.000623" >
+  <properties/>
+</type> 
+<component type="panel2" idstart="131072" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.439900" t="67.092877" p="-68.110498" name="bank2" rot="86.211611" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="66.419087">
+    <rot val="111.136418" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel2" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.079861" xstep="0.000626"
+    ypixels="256" ystart="-0.079520" ystep="0.000624" >
+  <properties/>
+</type> 
+<component type="panel3" idstart="196608" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.409800" t="90.521374" p="-69.407740" name="bank3" rot="-179.970039" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="71.133831">
+    <rot val="90.003027" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel3" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.079196" xstep="0.000621"
+    ypixels="256" ystart="-0.079459" ystep="0.000623" >
+  <properties/>
+</type> 
+<component type="panel5" idstart="327680" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.408300" t="114.831804" p="-93.467537" name="bank5" rot="-91.537486" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="66.052500">
+    <rot val="92.398061" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel5" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078755" xstep="0.000618"
+    ypixels="256" ystart="-0.078934" ystep="0.000619" >
+  <properties/>
+</type> 
+<component type="panel7" idstart="458752" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.408700" t="90.807383" p="-117.760160" name="bank7" rot="0.144679" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="62.841830">
+    <rot val="89.999356" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel7" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078900" xstep="0.000619"
+    ypixels="256" ystart="-0.078827" ystep="0.000618" >
+  <properties/>
+</type> 
+<component type="panel8" idstart="524288" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.439400" t="67.295776" p="-119.234180" name="bank8" rot="-4.803630" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="64.220057">
+    <rot val="115.896652" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel8" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.079230" xstep="0.000621"
+    ypixels="256" ystart="-0.079828" ystep="0.000626" >
+  <properties/>
+</type> 
+<component type="panel11" idstart="720896" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.455000" t="46.894061" p="-50.155142" name="bank11" rot="-169.388194" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="54.757552">
+    <rot val="41.512375" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel11" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078677" xstep="0.000617"
+    ypixels="256" ystart="-0.079010" ystep="0.000620" >
+  <properties/>
+</type> 
+<component type="panel12" idstart="786432" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.454400" t="75.242454" p="-36.579591" name="bank12" rot="-136.851371" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="54.822964">
+    <rot val="44.488494" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel12" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078705" xstep="0.000617"
+    ypixels="256" ystart="-0.078453" ystep="0.000615" >
+  <properties/>
+</type> 
+<component type="panel17" idstart="1114112" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.454500" t="105.816460" p="-150.624160" name="bank17" rot="46.399696" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="50.471143">
+    <rot val="38.141310" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel17" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078145" xstep="0.000613"
+    ypixels="256" ystart="-0.078428" ystep="0.000615" >
+  <properties/>
+</type> 
+<component type="panel18" idstart="1179648" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.455300" t="75.326538" p="-150.563299" name="bank18" rot="81.079289" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="53.728670">
+    <rot val="39.602984" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel18" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078702" xstep="0.000617"
+    ypixels="256" ystart="-0.078641" ystep="0.000617" >
+  <properties/>
+</type> 
+<component type="panel19" idstart="1245184" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.456100" t="46.979806" p="-137.080958" name="bank19" rot="118.812689" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="54.593713">
+    <rot val="39.067204" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel19" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.079333" xstep="0.000622"
+    ypixels="256" ystart="-0.078937" ystep="0.000619" >
+  <properties/>
+</type> 
+<component type="panel20" idstart="1310720" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.425500" t="23.895366" p="-46.274837" name="bank20" rot="-174.256235" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="49.570165">
+    <rot val="22.352288" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel20" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078957" xstep="0.000619"
+    ypixels="256" ystart="-0.078659" ystep="0.000617" >
+  <properties/>
+</type> 
+<component type="panel21" idstart="1376256" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.424200" t="55.919908" p="-22.792750" name="bank21" rot="-141.697024" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="49.245870">
+    <rot val="23.393176" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel21" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078534" xstep="0.000616"
+    ypixels="256" ystart="-0.078533" ystep="0.000616" >
+  <properties/>
+</type> 
+<component type="panel22" idstart="1441792" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.424700" t="90.531144" p="-19.195025" name="bank22" rot="-110.690247" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="48.852124">
+    <rot val="26.202334" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel22" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078516" xstep="0.000616"
+    ypixels="256" ystart="-0.078347" ystep="0.000614" >
+  <properties/>
+</type> 
+<component type="panel23" idstart="1507328" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.432100" t="124.904004" p="-22.530168" name="bank23" rot="-73.052708" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="46.336147">
+    <rot val="25.447289" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel23" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.079312" xstep="0.000622"
+    ypixels="256" ystart="-0.079312" ystep="0.000622" >
+  <properties/>
+</type> 
+<component type="panel26" idstart="1703936" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.431800" t="124.931136" p="-164.604491" name="bank26" rot="38.921612" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="45.158162">
+    <rot val="19.846784" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel26" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.079161" xstep="0.000621"
+    ypixels="256" ystart="-0.079019" ystep="0.000620" >
+  <properties/>
+</type> 
+<component type="panel27" idstart="1769472" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.424200" t="90.582423" p="-167.929932" name="bank27" rot="76.246501" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="46.966156">
+    <rot val="20.464098" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel27" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078192" xstep="0.000613"
+    ypixels="256" ystart="-0.078298" ystep="0.000614" >
+  <properties/>
+</type> 
+<component type="panel28" idstart="1835008" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.425100" t="56.058654" p="-164.413205" name="bank28" rot="113.258082" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="48.667465">
+    <rot val="20.136733" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel28" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078831" xstep="0.000618"
+    ypixels="256" ystart="-0.078558" ystep="0.000616" >
+  <properties/>
+</type> 
+<component type="panel29" idstart="1900544" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.425800" t="24.082790" p="-141.245587" name="bank29" rot="151.900484" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="49.124421">
+    <rot val="19.193595" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel29" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.079160" xstep="0.000621"
+    ypixels="256" ystart="-0.079573" ystep="0.000624" >
+  <properties/>
+</type> 
+<component type="panel31" idstart="2031616" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.397300" t="36.266445" p="-3.145035" name="bank31" rot="-148.593437" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="47.702298">
+    <rot val="2.324175" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel31" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.079354" xstep="0.000622"
+    ypixels="256" ystart="-0.079470" ystep="0.000623" >
+  <properties/>
+</type> 
+<component type="panel32" idstart="2097152" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.395700" t="72.464058" p="-3.225998" name="bank32" rot="-108.945431" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="45.919781">
+    <rot val="2.424223" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel32" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078306" xstep="0.000614"
+    ypixels="256" ystart="-0.078492" ystep="0.000616" >
+  <properties/>
+</type> 
+<component type="panel33" idstart="2162688" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.395600" t="108.490574" p="-3.064037" name="bank33" rot="-75.549776" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="43.851838">
+    <rot val="5.304808" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel33" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078092" xstep="0.000612"
+    ypixels="256" ystart="-0.078031" ystep="0.000612" >
+  <properties/>
+</type> 
+<component type="panel37" idstart="2424832" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.394800" t="108.531853" p="175.972814" name="bank37" rot="74.683947" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="44.139914">
+    <rot val="-3.948834" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel37" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.077821" xstep="0.000610"
+    ypixels="256" ystart="-0.077853" ystep="0.000611" >
+  <properties/>
+</type> 
+<component type="panel39" idstart="2555904" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.393900" t="36.391829" p="176.055623" name="bank39" rot="146.043912" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="48.157404">
+    <rot val="-2.296286" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel39" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078203" xstep="0.000613"
+    ypixels="256" ystart="-0.078519" ystep="0.000616" >
+  <properties/>
+</type> 
+<component type="panel40" idstart="2621440" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.425300" t="24.215995" p="39.688665" name="bank40" rot="-150.344714" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="49.417137">
+    <rot val="-20.163524" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel40" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.079230" xstep="0.000621"
+    ypixels="256" ystart="-0.078570" ystep="0.000616" >
+  <properties/>
+</type> 
+<component type="panel41" idstart="2686976" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.424700" t="55.987831" p="16.305684" name="bank41" rot="-113.934730" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="48.248164">
+    <rot val="-18.430771" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel41" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078340" xstep="0.000614"
+    ypixels="256" ystart="-0.078575" ystep="0.000616" >
+  <properties/>
+</type> 
+<component type="panel42" idstart="2752512" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.425800" t="90.433692" p="12.832192" name="bank42" rot="-80.917573" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="45.624306">
+    <rot val="-14.685296" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel42" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078535" xstep="0.000616"
+    ypixels="256" ystart="-0.078113" ystep="0.000613" >
+  <properties/>
+</type> 
+<component type="panel43" idstart="2818048" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.431600" t="124.639302" p="16.508533" name="bank43" rot="-38.506600" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="45.229406">
+    <rot val="-19.936127" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel43" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.079089" xstep="0.000620"
+    ypixels="256" ystart="-0.079116" ystep="0.000621" >
+  <properties/>
+</type> 
+<component type="panel46" idstart="3014656" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.432600" t="124.745068" p="156.381605" name="bank46" rot="73.101202" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="46.415416">
+    <rot val="-25.136525" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel46" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078940" xstep="0.000619"
+    ypixels="256" ystart="-0.078834" ystep="0.000618" >
+  <properties/>
+</type> 
+<component type="panel47" idstart="3080192" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.425500" t="90.471702" p="160.078133" name="bank47" rot="107.596950" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="47.935054">
+    <rot val="-25.524137" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel47" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078277" xstep="0.000614"
+    ypixels="256" ystart="-0.078227" ystep="0.000614" >
+  <properties/>
+</type> 
+<component type="panel48" idstart="3145728" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.424400" t="56.083249" p="156.642650" name="bank48" rot="142.187259" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="49.819061">
+    <rot val="-24.505758" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel48" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078428" xstep="0.000615"
+    ypixels="256" ystart="-0.078218" ystep="0.000613" >
+  <properties/>
+</type> 
+<component type="panel49" idstart="3211264" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.426800" t="24.275169" p="133.243762" name="bank49" rot="172.473189" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="49.007502">
+    <rot val="-23.178293" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel49" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078747" xstep="0.000618"
+    ypixels="256" ystart="-0.079267" ystep="0.000622" >
+  <properties/>
+</type> 
+<component type="panel50" idstart="3276800" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.453400" t="32.405962" p="86.492165" name="bank50" rot="-155.265219" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="54.407463">
+    <rot val="-40.645584" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel50" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078693" xstep="0.000617"
+    ypixels="256" ystart="-0.078362" ystep="0.000615" >
+  <properties/>
+</type> 
+<component type="panel51" idstart="3342336" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.453000" t="47.079546" p="43.451941" name="bank51" rot="-118.551839" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="54.316337">
+    <rot val="-39.282353" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel51" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078058" xstep="0.000612"
+    ypixels="256" ystart="-0.078221" ystep="0.000613" >
+  <properties/>
+</type> 
+<component type="panel52" idstart="3407872" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.456600" t="75.189556" p="30.079295" name="bank52" rot="-82.283997" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="52.635472">
+    <rot val="-37.444164" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel52" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078546" xstep="0.000616"
+    ypixels="256" ystart="-0.078624" ystep="0.000617" >
+  <properties/>
+</type> 
+<component type="panel53" idstart="3473408" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.456300" t="105.479430" p="30.117971" name="bank53" rot="-45.251493" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="50.938140">
+    <rot val="-40.028328" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel53" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078069" xstep="0.000612"
+    ypixels="256" ystart="-0.077971" ystep="0.000612" >
+  <properties/>
+</type> 
+<component type="panel57" idstart="3735552" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.456100" t="105.506463" p="142.757643" name="bank57" rot="101.822442" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="53.614330">
+    <rot val="-44.355990" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel57" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.077980" xstep="0.000612"
+    ypixels="256" ystart="-0.077850" ystep="0.000611" >
+  <properties/>
+</type> 
+<component type="panel58" idstart="3801088" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.455700" t="75.307863" p="142.867460" name="bank58" rot="137.272284" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="55.544894">
+    <rot val="-43.020847" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel58" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078337" xstep="0.000614"
+    ypixels="256" ystart="-0.078301" ystep="0.000614" >
+  <properties/>
+</type> 
+<component type="panel59" idstart="3866624" idfillbyfirst="y" idstepbyrow="256">
+<location r="0.455100" t="47.100012" p="129.506149" name="bank59" rot="169.896280" axis-x="0" axis-y="1" axis-z="0">
+  <rot val="55.238604">
+    <rot val="-41.753420" axis-x="0" axis-y="1" axis-z="0" />
+  </rot>
+</location>
+</component> 
+
+<!-- Rectangular Detector Panel optimized size for each bank -->
+<type name="panel59" is="rectangular_detector" type="pixel"
+    xpixels="256" xstart="-0.078382" xstep="0.000615"
+    ypixels="256" ystart="-0.078904" ystep="0.000619" >
+  <properties/>
+</type> 
+<!-- List of all the bank names:
+bank1,bank2,bank3,bank5,bank7,bank8,bank11,bank12,bank17,bank18,bank19,bank20,bank21,bank22,bank23,bank26,bank27,bank28,bank29,bank31,bank32,bank33,bank37,bank39,bank40,bank41,bank42,bank43,bank46,bank47,bank48,bank49,bank50,bank51,bank52,bank53,bank57,bank58,bank59
+-->
+
+
+  <!-- Pixel for Detectors-->
+  <type is="detector" name="pixel">
+    <cuboid id="pixel-shape">
+      <left-front-bottom-point y="-0.000309" x="-0.000309" z="0.0"/>
+      <left-front-top-point y="0.000309" x="-0.000309" z="0.0"/>
+      <left-back-bottom-point y="-0.000309" x="-0.000309" z="-0.0001"/>
+      <right-front-bottom-point y="-0.000309" x="0.000309" z="0.0"/>
+    </cuboid>
+    <algebra val="pixel-shape"/>
+  </type>
+
+  <!-- Shape for Monitors-->
+  <!-- TODO: Update to real shape -->
+  <type is="monitor" name="monitor">
+    <cylinder id="some-shape">
+      <centre-of-bottom-base p="0.0" r="0.0" t="0.0"/>
+      <axis y="0.0" x="0.0" z="1.0"/>
+      <radius val="0.01"/>
+      <height val="0.03"/>
+    </cylinder>
+    <algebra val="some-shape"/>
+  </type>
+
+  <!--MONITOR IDs-->
+  <idlist idname="monitors">
+    <id val="-1"/>
+    <id val="-2"/>
+    <id val="-3"/>
+  </idlist>
+</instrument>
