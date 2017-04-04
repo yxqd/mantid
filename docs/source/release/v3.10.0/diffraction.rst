@@ -20,6 +20,8 @@ Powder Diffraction
 - :ref:`AlignAndFocusPowder <algm-AlignAndFocusPowder>` Now supports supplying an a second ``.cal`` file for the ``GroupingFilename``.
 - Bugfix in :ref:`SNAPReduce <algm-SNAPReduce>` with loading previous normalizations
 
+- New instrument definition files are added for D1B, D4, and D20 powder/liquid diffractometers at ILL.
+
 Single Crystal Diffraction
 --------------------------
 
