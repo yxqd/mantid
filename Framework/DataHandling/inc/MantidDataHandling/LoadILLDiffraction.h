@@ -75,8 +75,8 @@ private:
   std::vector<double> getAxis(const NeXus::NXDouble &) const;
   std::vector<double> getMonitor(const NeXus::NXDouble &) const;
 
-  void fillDataScanMetaData(const NeXus::NXDouble &) const;
-  void fillMovingInstrumentScan(const NeXus::NXUInt &,const NeXus::NXDouble &) {}
+  std::map<std::string, std::string> fillDataScanMetaData(const NeXus::NXDouble &) const;
+  void fillMovingInstrumentScan(const NeXus::NXUInt &,const NeXus::NXDouble &);
   void fillStaticInstrumentScan(const NeXus::NXUInt &, const NeXus::NXDouble &,
                                 const NeXus::NXFloat &);
 
@@ -85,6 +85,7 @@ private:
   void loadMetadata();
   void loadScannedVariables();
   void loadStaticInstrument();
+  API::MatrixWorkspace_sptr loadEmptyInstrument();
   void moveTwoThetaZero(double);
   void resolveInstrument();
   void resolveScanType();

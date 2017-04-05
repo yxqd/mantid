@@ -1,5 +1,6 @@
 #include "MantidDataHandling/LoadILLDiffraction.h"
 #include "MantidDataHandling/H5Util.h"
+#include "MantidDataHandling/ScanningWorkspaceBuilder.h"
 #include "MantidGeometry/Instrument/ComponentHelper.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/DetectorInfo.h"
@@ -58,7 +59,7 @@ const std::string LoadILLDiffraction::summary() const {
  * Constructor
  */
 LoadILLDiffraction::LoadILLDiffraction()
-    : IFileLoader<NexusDescriptor>(), m_instNames({"D20"}) {}
+    : IFileLoader<NexusDescriptor>(), m_instNames({"D20", "D2B"}) {}
 
 /**
  * Initialize the algorithm's properties.
@@ -87,7 +88,7 @@ void LoadILLDiffraction::exec() {
   loadDataScan();
   progress.report("Loaded the detector scan data");
 
-  //loadMetadata();
+  // loadMetadata();
   progress.report("Loaded the metadata");
 
   setProperty("OutputWorkspace", m_outWorkspace);
@@ -141,13 +142,14 @@ void LoadILLDiffraction::loadDataScan() {
 
   resolveInstrument();
 
-  initWorkspace();
-
-  fillDataScanMetaData(scan);
-
   if (m_scanType == DetectorScan) {
     fillMovingInstrumentScan(data, scan);
   } else {
+    initWorkspace();
+    auto logs = fillDataScanMetaData(scan);
+    for (const auto &item : logs)
+      m_outWorkspace->mutableRun().addProperty(item.first, item.second);
+
     fillStaticInstrumentScan(data, scan, twoTheta0);
   }
 
@@ -155,6 +157,25 @@ void LoadILLDiffraction::loadDataScan() {
   dataGroup.close();
   firstEntry.close();
   dataRoot.close();
+}
+
+void LoadILLDiffraction::fillMovingInstrumentScan(const NXUInt &,
+                                                  const NXDouble &) {
+
+  size_t nSpectra = m_numberDetectorsActual + 1;
+  size_t nTimeIndexes = m_numberScanPoints;
+  size_t nBins = 1;
+
+  auto scanningWorkspaceBuilder =
+      ScanningWorkspaceBuilder(nSpectra, nTimeIndexes, nBins);
+
+  auto instrumentWorkspace = loadEmptyInstrument();
+
+  scanningWorkspaceBuilder.setInstrument(instrumentWorkspace->getInstrument());
+
+
+  m_outWorkspace = scanningWorkspaceBuilder.buildWorkspace();
+
 }
 
 /**
@@ -230,8 +251,7 @@ void LoadILLDiffraction::loadScannedVariables() {
   const auto units = H5Util::readStringVector(varNames, "unit");
 
   for (size_t i = 0; i < names.size(); ++i) {
-    m_scanVar.emplace_back(
-        ScannedVariables(names[i], properties[i], units[i]));
+    m_scanVar.emplace_back(ScannedVariables(names[i], properties[i], units[i]));
   }
 
   varNames.close();
@@ -245,7 +265,7 @@ void LoadILLDiffraction::loadScannedVariables() {
  * Creates sample logs for the scanned variables
  * @param scan : scan data
  */
-void LoadILLDiffraction::fillDataScanMetaData(const NXDouble &scan) const {
+std::map<std::string, std::string> LoadILLDiffraction::fillDataScanMetaData(const NXDouble &scan) const {
 
   std::map<std::string, std::string> logs;
 
@@ -274,9 +294,7 @@ void LoadILLDiffraction::fillDataScanMetaData(const NXDouble &scan) const {
     }
   }
 
-  for(const auto& item : logs) {
-      m_outWorkspace->mutableRun().addProperty(item.first, item.second);
-  }
+  return logs;
 }
 
 /**
@@ -376,16 +394,9 @@ void LoadILLDiffraction::resolveInstrument() {
  */
 void LoadILLDiffraction::initWorkspace() {
 
-  size_t nSpectra = m_numberDetectorsActual + 1, nBins = 1;
-
-  if (m_scanType == DetectorScan) {
-    nSpectra *= m_numberScanPoints;
-  } else if (m_scanType == OtherScan) {
-    nBins = m_numberScanPoints;
-  }
-
-  m_outWorkspace = WorkspaceFactory::Instance().create("Workspace2D", nSpectra,
-                                                       nBins, nBins);
+  size_t nSpectra = m_numberDetectorsActual + 1;
+  m_outWorkspace = WorkspaceFactory::Instance().create(
+      "Workspace2D", nSpectra, m_numberScanPoints, m_numberScanPoints);
 }
 
 /**
@@ -397,6 +408,14 @@ void LoadILLDiffraction::loadStaticInstrument() {
   loadInst->setProperty<MatrixWorkspace_sptr>("Workspace", m_outWorkspace);
   loadInst->setProperty("RewriteSpectraMap", OptionalBool(true));
   loadInst->execute();
+}
+
+MatrixWorkspace_sptr LoadILLDiffraction::loadEmptyInstrument() {
+  IAlgorithm_sptr loadInst = createChildAlgorithm("LoadEmptyInstrument");
+  loadInst->setPropertyValue("InstrumentName", m_instName);
+  loadInst->execute();
+
+  return loadInst->getProperty("OutputWorkspace");;
 }
 
 /**
