@@ -76,9 +76,10 @@ private:
   std::vector<double> getMonitor(const NeXus::NXDouble &) const;
 
   std::map<std::string, std::string> fillDataScanMetaData(const NeXus::NXDouble &) const;
-  void fillMovingInstrumentScan(const NeXus::NXUInt &,const NeXus::NXDouble &);
+  std::vector<double> getTimeDurations(const NeXus::NXDouble &scan) const;
   void fillStaticInstrumentScan(const NeXus::NXUInt &, const NeXus::NXDouble &,
                                 const NeXus::NXFloat &);
+  void createAndFillMovingInstrumentScan(const NeXus::NXUInt &, const NeXus::NXDouble &);
 
   void initWorkspace();
   void loadDataScan();
@@ -92,16 +93,19 @@ private:
 
   size_t m_numberDetectorsRead; ///< number of cells read from file
   size_t m_numberDetectorsActual; ///< number of cells actually active
+  size_t m_numberMonitors; ///< number of monitors in instrument
   size_t m_numberScanPoints; ///< number of scan points
 
   std::string m_instName; ///< instrument name to load the IDF
   std::set<std::string> m_instNames; ///< supported instruments
   std::string m_fileName; ///< file name to load
   ScanType m_scanType; ///< NoScan, DetectorScan or OtherScan
+  Kernel::DateAndTime m_startTime; ///< NoScan, DetectorScan or OtherScan
 
   std::vector<ScannedVariables> m_scanVar; ///< holds the scan info
-  LoadHelper m_loadHelper; ///< a helper for metadata
+  LoadHelper m_loadHelper = LoadHelper(); ///< a helper for metadata
   API::MatrixWorkspace_sptr m_outWorkspace; ///< output workspace
+
 };
 
 } // namespace DataHandling

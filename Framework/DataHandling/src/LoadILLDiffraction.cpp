@@ -88,7 +88,7 @@ void LoadILLDiffraction::exec() {
   loadDataScan();
   progress.report("Loaded the detector scan data");
 
-  // loadMetadata();
+  loadMetadata();
   progress.report("Loaded the metadata");
 
   setProperty("OutputWorkspace", m_outWorkspace);
@@ -104,6 +104,8 @@ void LoadILLDiffraction::loadDataScan() {
   NXEntry firstEntry = dataRoot.openFirstEntry();
 
   m_instName = firstEntry.getString("instrument/name");
+  m_startTime = Kernel::DateAndTime(
+      m_loadHelper.dateTimeInIsoFormat(firstEntry.getString("start_time")));
 
   // read the detector data
   NXData dataGroup = firstEntry.openNXData("data_scan/detector_data");
@@ -129,7 +131,10 @@ void LoadILLDiffraction::loadDataScan() {
   NXFloat twoTheta0 = firstEntry.openNXFloat("instrument/2theta/value");
   twoTheta0.load();
 
-  m_numberDetectorsRead = static_cast<size_t>(data.dim1());
+  m_numberMonitors = 1; // This should be determined in a different way if there
+                        // are cases where it is not 1
+
+  m_numberDetectorsRead = static_cast<size_t>(data.dim1() * data.dim2());
   m_numberScanPoints = static_cast<size_t>(data.dim0());
 
   for (size_t i = 0; i < m_scanVar.size(); ++i) {
@@ -143,7 +148,7 @@ void LoadILLDiffraction::loadDataScan() {
   resolveInstrument();
 
   if (m_scanType == DetectorScan) {
-    fillMovingInstrumentScan(data, scan);
+    createAndFillMovingInstrumentScan(data, scan);
   } else {
     initWorkspace();
     auto logs = fillDataScanMetaData(scan);
@@ -157,25 +162,6 @@ void LoadILLDiffraction::loadDataScan() {
   dataGroup.close();
   firstEntry.close();
   dataRoot.close();
-}
-
-void LoadILLDiffraction::fillMovingInstrumentScan(const NXUInt &,
-                                                  const NXDouble &) {
-
-  size_t nSpectra = m_numberDetectorsActual + 1;
-  size_t nTimeIndexes = m_numberScanPoints;
-  size_t nBins = 1;
-
-  auto scanningWorkspaceBuilder =
-      ScanningWorkspaceBuilder(nSpectra, nTimeIndexes, nBins);
-
-  auto instrumentWorkspace = loadEmptyInstrument();
-
-  scanningWorkspaceBuilder.setInstrument(instrumentWorkspace->getInstrument());
-
-
-  m_outWorkspace = scanningWorkspaceBuilder.buildWorkspace();
-
 }
 
 /**
@@ -234,6 +220,49 @@ void LoadILLDiffraction::fillStaticInstrumentScan(const NXUInt &data,
   moveTwoThetaZero(double(twoTheta0[0]));
 }
 
+void LoadILLDiffraction::createAndFillMovingInstrumentScan(
+    const NXUInt &data, const NXDouble &scan) {
+
+  size_t nSpectra = m_numberDetectorsActual + 1;
+  size_t nTimeIndexes = m_numberScanPoints;
+  size_t nBins = 1;
+
+  auto scanningWorkspaceBuilder =
+      ScanningWorkspaceBuilder(nSpectra, nTimeIndexes, nBins);
+
+  auto instrumentWorkspace = loadEmptyInstrument();
+
+  scanningWorkspaceBuilder.setInstrument(instrumentWorkspace->getInstrument());
+  std::vector<double> timeDurations = getTimeDurations(scan);
+  scanningWorkspaceBuilder.setTimeRanges(m_startTime, timeDurations);
+
+  m_outWorkspace = scanningWorkspaceBuilder.buildWorkspace();
+
+  std::vector<double> axis = getAxis(scan);
+  std::vector<double> monitor = getMonitor(scan);
+
+  // First load the monitors
+  for (size_t i = 0; i < m_numberMonitors; ++i) {
+    for (size_t j = 0; j < m_numberScanPoints; ++j) {
+      m_outWorkspace->mutableY(j + i * m_numberScanPoints) = monitor[j] + 10;
+      m_outWorkspace->mutableE(j + i * m_numberScanPoints) =
+          sqrt(monitor[j] + 10);
+      m_outWorkspace->mutableX(j + i * m_numberScanPoints) = axis;
+    }
+  }
+
+  // Then load the detector spectra
+  for (size_t i = m_numberMonitors;
+       i < m_numberDetectorsActual + m_numberMonitors; ++i) {
+    for (size_t j = 0; j < m_numberScanPoints; ++j) {
+      unsigned int y = data(static_cast<int>(j), static_cast<int>(i));
+      m_outWorkspace->mutableY(j + i * m_numberScanPoints) = y;
+      m_outWorkspace->mutableE(j + i * m_numberScanPoints) = sqrt(y);
+      m_outWorkspace->mutableX(j + i * m_numberScanPoints) = axis;
+    }
+  }
+}
+
 /**
  * Loads the scanned_variables/variables_names block
  */
@@ -265,7 +294,8 @@ void LoadILLDiffraction::loadScannedVariables() {
  * Creates sample logs for the scanned variables
  * @param scan : scan data
  */
-std::map<std::string, std::string> LoadILLDiffraction::fillDataScanMetaData(const NXDouble &scan) const {
+std::map<std::string, std::string>
+LoadILLDiffraction::fillDataScanMetaData(const NXDouble &scan) const {
 
   std::map<std::string, std::string> logs;
 
@@ -297,6 +327,22 @@ std::map<std::string, std::string> LoadILLDiffraction::fillDataScanMetaData(cons
   return logs;
 }
 
+std::vector<double>
+LoadILLDiffraction::getTimeDurations(const NXDouble &scan) const {
+  std::vector<double> timeDurations;
+
+  for (size_t i = 0; i < m_scanVar.size(); ++i) {
+    if (boost::starts_with(m_scanVar[i].property, "Time")) {
+      for (size_t j = 0; j < m_numberScanPoints; ++j) {
+        timeDurations.push_back(scan(static_cast<int>(i), static_cast<int>(j)));
+      }
+      break;
+    }
+  }
+
+  return timeDurations;
+}
+
 /**
  * Returns the monitor spectrum
  * @param scan : scan data
@@ -306,7 +352,7 @@ std::vector<double> LoadILLDiffraction::getMonitor(const NXDouble &scan) const {
 
   std::vector<double> monitor = {0.};
   for (size_t i = 0; i < m_scanVar.size(); ++i) {
-    if (m_scanVar[i].name == "Monitor1") {
+    if (m_scanVar[i].name == "Monitor1" || m_scanVar[i].name == "Monitor_1") {
       monitor.assign(scan() + m_numberScanPoints * i,
                      scan() + m_numberScanPoints * (i + 1));
       break;
@@ -322,7 +368,7 @@ std::vector<double> LoadILLDiffraction::getMonitor(const NXDouble &scan) const {
  */
 std::vector<double> LoadILLDiffraction::getAxis(const NXDouble &scan) const {
 
-  std::vector<double> axis = {0.};
+  std::vector<double> axis = {-0.5, 0.5};
   if (m_scanType == OtherScan) {
     for (size_t i = 0; i < m_scanVar.size(); ++i) {
       if (m_scanVar[i].axis == 1) {
@@ -394,7 +440,7 @@ void LoadILLDiffraction::resolveInstrument() {
  */
 void LoadILLDiffraction::initWorkspace() {
 
-  size_t nSpectra = m_numberDetectorsActual + 1;
+  size_t nSpectra = m_numberDetectorsActual + m_numberMonitors;
   m_outWorkspace = WorkspaceFactory::Instance().create(
       "Workspace2D", nSpectra, m_numberScanPoints, m_numberScanPoints);
 }
@@ -415,7 +461,7 @@ MatrixWorkspace_sptr LoadILLDiffraction::loadEmptyInstrument() {
   loadInst->setPropertyValue("InstrumentName", m_instName);
   loadInst->execute();
 
-  return loadInst->getProperty("OutputWorkspace");;
+  return loadInst->getProperty("OutputWorkspace");
 }
 
 /**
