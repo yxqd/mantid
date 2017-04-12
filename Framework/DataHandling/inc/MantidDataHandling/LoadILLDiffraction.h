@@ -76,7 +76,7 @@ private:
   std::vector<double> getMonitor(const NeXus::NXDouble &) const;
 
   std::map<std::string, std::string> fillDataScanMetaData(const NeXus::NXDouble &) const;
-  std::vector<double> getTimeDurations(const NeXus::NXDouble &scan) const;
+  std::vector<double> getScannedVaribleByPropertyName(const NeXus::NXDouble &scan, const std::string &propertyName) const;
   void fillStaticInstrumentScan(const NeXus::NXUInt &, const NeXus::NXDouble &,
                                 const NeXus::NXFloat &);
   void createAndFillMovingInstrumentScan(const NeXus::NXUInt &, const NeXus::NXDouble &);

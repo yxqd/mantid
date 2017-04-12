@@ -7,6 +7,8 @@
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/RegisterFileLoader.h"
 #include "MantidAPI/WorkspaceFactory.h"
+#include "MantidIndexing/IndexInfo.h"
+#include "MantidTypes/SpectrumDefinition.h"
 
 #include <numeric>
 #include <boost/algorithm/string/predicate.hpp>
@@ -233,8 +235,22 @@ void LoadILLDiffraction::createAndFillMovingInstrumentScan(
   auto instrumentWorkspace = loadEmptyInstrument();
 
   scanningWorkspaceBuilder.setInstrument(instrumentWorkspace->getInstrument());
-  std::vector<double> timeDurations = getTimeDurations(scan);
+  std::vector<double> timeDurations =
+      getScannedVaribleByPropertyName(scan, "Time");
   scanningWorkspaceBuilder.setTimeRanges(m_startTime, timeDurations);
+
+  // For D2B angles in the NeXus files are for the last detector. Here we change
+  // them to be the first detector.
+  std::vector<double> instrumentAngles =
+      getScannedVaribleByPropertyName(scan, "Position");
+  if (m_instName == "D2B") {
+    double offsetAngle = 50;
+    std::transform(instrumentAngles.begin(), instrumentAngles.end(),
+                   instrumentAngles.begin(),
+                   [&](double angle) { return (angle - offsetAngle); });
+  }
+
+  scanningWorkspaceBuilder.setInstrumentAngles(instrumentAngles);
 
   m_outWorkspace = scanningWorkspaceBuilder.buildWorkspace();
 
@@ -244,9 +260,8 @@ void LoadILLDiffraction::createAndFillMovingInstrumentScan(
   // First load the monitors
   for (size_t i = 0; i < m_numberMonitors; ++i) {
     for (size_t j = 0; j < m_numberScanPoints; ++j) {
-      m_outWorkspace->mutableY(j + i * m_numberScanPoints) = monitor[j] + 10;
-      m_outWorkspace->mutableE(j + i * m_numberScanPoints) =
-          sqrt(monitor[j] + 10);
+      m_outWorkspace->mutableY(j + i * m_numberScanPoints) = monitor[j];
+      m_outWorkspace->mutableE(j + i * m_numberScanPoints) = sqrt(monitor[j]);
       m_outWorkspace->mutableX(j + i * m_numberScanPoints) = axis;
     }
   }
@@ -327,12 +342,12 @@ LoadILLDiffraction::fillDataScanMetaData(const NXDouble &scan) const {
   return logs;
 }
 
-std::vector<double>
-LoadILLDiffraction::getTimeDurations(const NXDouble &scan) const {
+std::vector<double> LoadILLDiffraction::getScannedVaribleByPropertyName(
+    const NXDouble &scan, const std::string &propertyName) const {
   std::vector<double> timeDurations;
 
   for (size_t i = 0; i < m_scanVar.size(); ++i) {
-    if (boost::starts_with(m_scanVar[i].property, "Time")) {
+    if (m_scanVar[i].property.compare(propertyName) == 0) {
       for (size_t j = 0; j < m_numberScanPoints; ++j) {
         timeDurations.push_back(scan(static_cast<int>(i), static_cast<int>(j)));
       }
