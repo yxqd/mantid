@@ -280,24 +280,29 @@ public:
                             "and/or rotations have already been set.")
   }
 
-  void test_creating_workspace_with_default_index_info() {
+  void test_creating_workspace_with_time_oriented_index_info() {
     const auto &instrument = createSimpleInstrument(nDetectors, nBins);
 
     auto builder = ScanningWorkspaceBuilder(nDetectors, nTimeIndexes, nBins);
     TS_ASSERT_THROWS_NOTHING(builder.setInstrument(instrument));
     TS_ASSERT_THROWS_NOTHING(builder.setTimeRanges(timeRanges));
+    TS_ASSERT_THROWS_NOTHING(builder.setIndexingType(
+        ScanningWorkspaceBuilder::IndexingType::TIME_ORIENTED))
     MatrixWorkspace_const_sptr ws;
     TS_ASSERT_THROWS_NOTHING(ws = builder.buildWorkspace());
 
     const auto &indexInfo = ws->indexInfo();
+    const auto &detectorIDs = ws->detectorInfo().detectorIDs();
     const auto &spectrumDefinitions = *(indexInfo.spectrumDefinitions());
     for (size_t i = 0; i < nDetectors; ++i) {
       for (size_t j = 0; j < nTimeIndexes; ++j) {
-        TS_ASSERT_EQUALS(spectrumDefinitions[i * nTimeIndexes + j].size(), 1)
-        TS_ASSERT_EQUALS(spectrumDefinitions[i * nTimeIndexes + j][0].first, i)
-        TS_ASSERT_EQUALS(spectrumDefinitions[i * nTimeIndexes + j][0].second, j)
+        const auto index = i * nTimeIndexes + j;
+        TS_ASSERT_EQUALS(spectrumDefinitions[index].size(), 1)
+        TS_ASSERT_EQUALS(spectrumDefinitions[index][0].first, i)
+        TS_ASSERT_EQUALS(spectrumDefinitions[index][0].second, j)
+        TS_ASSERT_EQUALS(detectorIDs[spectrumDefinitions[index][0].first],
+                         i + 1)
       }
-      TS_ASSERT_EQUALS(indexInfo.detectorIDs(i)[0], i + 1);
     }
   }
 
@@ -313,14 +318,17 @@ public:
     TS_ASSERT_THROWS_NOTHING(ws = builder.buildWorkspace());
 
     const auto &indexInfo = ws->indexInfo();
+    const auto &detectorIDs = ws->detectorInfo().detectorIDs();
     const auto &spectrumDefinitions = *(indexInfo.spectrumDefinitions());
     for (size_t i = 0; i < nTimeIndexes; ++i) {
       for (size_t j = 0; j < nDetectors; ++j) {
-        TS_ASSERT_EQUALS(spectrumDefinitions[i * nDetectors + j].size(), 1)
-        TS_ASSERT_EQUALS(spectrumDefinitions[i * nDetectors + j][0].first, j)
-        TS_ASSERT_EQUALS(spectrumDefinitions[i * nDetectors + j][0].second, i)
+        const auto index = i * nDetectors + j;
+        TS_ASSERT_EQUALS(spectrumDefinitions[index].size(), 1)
+        TS_ASSERT_EQUALS(spectrumDefinitions[index][0].first, j)
+        TS_ASSERT_EQUALS(spectrumDefinitions[index][0].second, i)
+        TS_ASSERT_EQUALS(detectorIDs[spectrumDefinitions[index][0].first],
+                         j + 1)
       }
-      TS_ASSERT_EQUALS(indexInfo.detectorIDs(i)[0], i + 1);
     }
   }
 
