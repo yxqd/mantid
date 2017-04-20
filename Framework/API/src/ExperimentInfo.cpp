@@ -66,8 +66,7 @@ Kernel::Logger g_log("ExperimentInfo");
  */
 ExperimentInfo::ExperimentInfo()
     : m_moderatorModel(), m_choppers(), m_sample(new Sample()),
-      m_run(new Run()), m_parmap(new ParameterMap()),
-      sptr_instrument(new Instrument()),
+      m_parmap(new ParameterMap()), sptr_instrument(new Instrument()),
       m_detectorInfo(boost::make_shared<Beamline::DetectorInfo>()),
       m_componentInfo(boost::make_shared<Beamline::ComponentInfo>()),
       m_componentIds(boost::make_shared<std::vector<Geometry::ComponentID>>()) {
@@ -96,7 +95,7 @@ ExperimentInfo::~ExperimentInfo() = default;
  */
 void ExperimentInfo::copyExperimentInfoFrom(const ExperimentInfo *other) {
   m_sample = other->m_sample;
-  m_run = other->m_run->clone();
+  m_run = other->m_run;
   this->setInstrument(other->getInstrument());
   if (other->m_moderatorModel)
     m_moderatorModel = other->m_moderatorModel->clone();
@@ -750,7 +749,6 @@ Sample &ExperimentInfo::mutableSample() {
 */
 const Run &ExperimentInfo::run() const {
   populateIfNotLoaded();
-  std::lock_guard<std::recursive_mutex> lock(m_mutex);
   return *m_run;
 }
 
@@ -762,18 +760,18 @@ const Run &ExperimentInfo::run() const {
 */
 Run &ExperimentInfo::mutableRun() {
   populateIfNotLoaded();
-  // Use a double-check for sharing so that we only
-  // enter the critical region if absolutely necessary
-  if (!m_run.unique()) {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
-    // Check again because another thread may have taken copy
-    // and dropped reference count since previous check
-    if (!m_run.unique()) {
-      boost::shared_ptr<Run> oldData = m_run;
-      m_run = boost::make_shared<Run>(*oldData);
-    }
-  }
-  return *m_run;
+  // TODO This calls the copy constructor. However, `Run` has a clone() method,
+  // maybe that has to be used instead? The old code seem inconsistent:
+  // WorkspaceFactory shares the Run, and the copy triggered in
+  // ExperimentInfo::mutableRun() then uses the copy constructor, whereas
+  // ExperimentInfo::copyExperimentInfoFrom() (which is also used by the copy
+  // constructor of ExperimentInfo) uses Run::clone()! This seems weird and
+  // inconsistent, you will need to figure that out.
+  // Option 1: Calling copy constructor:
+  return m_run.access();
+  // Option 2: Calling clone():
+  m_run = m_run.clone();
+  return m_run.access();
 }
 
 /**
