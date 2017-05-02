@@ -5,7 +5,7 @@ add_subdirectory(HFIRPowderReduction)
 add_subdirectory(Interface/ui)
 add_subdirectory(TofConverter)
 add_subdirectory(HFIR_4Circle_Reduction)
-add_subdirectory(Indirect/Interface)
+add_subdirectory(Inelastic/Interface)
 
 # Chain all required interface custom targets into CompilePyUI
 add_custom_target(CompilePyUI DEPENDS
@@ -24,7 +24,7 @@ set_property ( TARGET CompileUIHFIRPowderReduction PROPERTY FOLDER "CompilePyUI"
 set_property ( TARGET CompileUITofConverter PROPERTY FOLDER "CompilePyUI" )
 set_property ( TARGET CompileUIUI PROPERTY FOLDER "CompilePyUI" )
 set_property ( TARGET CompileUIHFIR_4Circle_Reduction PROPERTY FOLDER "CompilePyUI" )
-set_property ( TARGET ComplileUIIndirectQuickRun PROPERTY FOLDER "CompilePyUI" )
+set_property ( TARGET CompileUIIndirectQuickRun PROPERTY FOLDER "CompilePyUI" )
 
 set ( TEST_PY_FILES
       test/AbinsAtomsDataTest.py
