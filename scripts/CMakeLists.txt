@@ -5,7 +5,7 @@ add_subdirectory(HFIRPowderReduction)
 add_subdirectory(Interface/ui)
 add_subdirectory(TofConverter)
 add_subdirectory(HFIR_4Circle_Reduction)
-add_subdirectory(Inelastic/Interface)
+add_subdirectory(IndirectQuickRun)
 
 # Chain all required interface custom targets into CompilePyUI
 add_custom_target(CompilePyUI DEPENDS
