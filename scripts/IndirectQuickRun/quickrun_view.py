@@ -4,7 +4,10 @@ import sys
 from quickrun_presenter import QuickRunPresenter
 from quickrun_model import PlotOptionsModel
 from IndirectQuickRun.ui_IndirectQuickRun import Ui_MainWindow
-from IndirectQuickRun.ui_DiffractionScan import Ui_Form as Ui_DiffractionScan
+from IndirectQuickRun.ui_DiffractionScan import Ui_DiffractionScan
+from IndirectQuickRun.ui_EnergyWindowScan import Ui_EnergyWindowScan
+from IndirectQuickRun.ui_SQWMomentScan import Ui_SQWMomentScan
+from IndirectQuickRun.ui_SampleChanger import Ui_SampleChanger
 
 
 class ScanTab(QWidget):
@@ -24,12 +27,14 @@ class QuickRunView(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowTitle("Indirect QuickRun")
-        self.diffractiontas = ScanTab(Ui_DiffractionScan)
-
-        #self.ui.tb_quickrun.insertTab(0, self.tabs.energytab, "Energy Window Scan")
-        #self.ui.tb_quickrun.insertTab(1, self.tabs.sqwtab, "SQW Moments Scan")
-        self.ui.tb_quickrun.insertTab(2, self.tabs, "Diffraction Scan")
-        #self.ui.tb_quickrun.insertTab(3, self.tabs.samplechangertab, "Sample Changer")
+        self.diffractiontab = ScanTab(Ui_DiffractionScan)
+        self.energytab = ScanTab(Ui_EnergyWindowScan)
+        self.sqwtab = ScanTab(Ui_SQWMomentScan)
+        self.samplechangertab = ScanTab(Ui_SampleChanger)
+        self.ui.tb_quickrun.insertTab(0, self.energytab, "Energy Window Scan")
+        self.ui.tb_quickrun.insertTab(1, self.sqwtab, "SQW Moments Scan")
+        self.ui.tb_quickrun.insertTab(2, self.diffractiontab, "Diffraction Scan")
+        self.ui.tb_quickrun.insertTab(3, self.samplechangertab, "Sample Changer")
 
         # set default plot options
         self.ui.cb_plotOptions.addItems(['Spectra', 'Contour', 'Elwin', 'MSDFit'])
