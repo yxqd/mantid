@@ -10,10 +10,10 @@ class QuickRunPresenter(object):
         view.tabChanged.connect(self.onTabChanged)
 
     def onPlotClicked(self):
-        view = self._view
+        #view = self._view
 
-        plot_option = view.getPlotOption()
-        print(plot_option)
+        #plot_option = view.getPlotOption()
+        pass
 
         return None
 
