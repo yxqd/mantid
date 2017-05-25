@@ -375,7 +375,7 @@ void LoadEventPreNexus2::exec() {
   prog->report("Loading Event File");
   this->openEventFile(event_filename);
 
-  // Correct event indexes mased by veto flag
+  // Correct event indexes masked by veto flag
   unmaskVetoEventIndex();
 
   // Optinally output event number / pulse file
@@ -453,6 +453,9 @@ void LoadEventPreNexus2::createOutputWorkspace(
   // Replace workspace by workspace of correct size
   // Number of non-monitors in instrument
   size_t nSpec = localWorkspace->getInstrument()->getDetectorIDs(true).size();
+  g_log.warning() << "Number of spectra = " << nSpec << "\n";
+  g_log.warning() << "Spectra list size = " << spectra_list.size() << "\n";
+
   if (!this->spectra_list.empty())
     nSpec = this->spectra_list.size();
   auto tmp = createWorkspace<EventWorkspace>(nSpec, 2, 1);
@@ -622,6 +625,7 @@ void LoadEventPreNexus2::runLoadInstrument(
 
   // do the actual work
   IAlgorithm_sptr loadInst = createChildAlgorithm("LoadInstrument");
+  g_log.warning() << "Load instrument " << instrument << ", which is parsed from file name\n";
 
   // Now execute the Child Algorithm. Catch and log any error, but don't stop.
   loadInst->setPropertyValue("InstrumentName", instrument);
@@ -796,6 +800,8 @@ void LoadEventPreNexus2::procEvents(
 
     prog->resetNumSteps(numBlocks, 0.1, 0.8);
 
+    g_log.warning("About to loading data....");
+
     //-------------------------------------------------------------------------
     // LOAD THE DATA
     //-------------------------------------------------------------------------
@@ -910,6 +916,7 @@ void LoadEventPreNexus2::procEvents(
     workspace->clearMRU();
 
     // Now, create a default X-vector for histogramming, with just 2 bins.
+    g_log.warning() << "Shortest TOF = " << shortest_tof << ", Longest TOF = " << longest_tof << "\n";
     auto axis = HistogramData::BinEdges{shortest_tof - 1, longest_tof + 1};
     workspace->setAllX(axis);
     this->pixel_to_wkspindex.clear();
@@ -992,6 +999,12 @@ void LoadEventPreNexus2::procEventsLinear(
   std::vector<std::vector<double>> local_tofs;
   std::set<PixelType> local_wrongdetids;
 
+  // about new detectors
+  size_t num_events_on_new = 0;
+  PixelType new_pid_min = 200192;
+  PixelType new_pid_max = 218368 + 255;
+
+
   // process the individual events
   std::stringstream dbss;
   // size_t numwrongpid = 0;
@@ -999,6 +1012,7 @@ void LoadEventPreNexus2::procEventsLinear(
     DasEvent &temp = *(event_buffer + i);
     PixelType pid = temp.pid;
     bool iswrongdetid = false;
+    bool isnewid = false;
 
     if (dbprint && i < m_dbOpNumEvents)
       dbss << i << " \t" << temp.tof << " \t" << temp.pid << "\n";
@@ -1019,13 +1033,24 @@ void LoadEventPreNexus2::procEventsLinear(
       pid = this->pixelmap[unmapped_pid];
     }
 
-    // Wrong pixel IDs
-    if (pid > static_cast<PixelType>(detid_max)) {
+    // New detectors
+    if (pid >= new_pid_min && pid <= new_pid_max)
+    {
+        // new detectors first 9 packs
+        ++ num_events_on_new;
+        isnewid = true;
+    }
+    else if (pid > static_cast<PixelType>(detid_max)) {
+      // Wrong pixel IDs
       iswrongdetid = true;
 
       local_num_error_events++;
       local_num_wrongdetid_events++;
       local_wrongdetids.insert(pid);
+
+//      g_log.warning() << "'Bad' PID " << pid << "\n";
+//      if (local_num_wrongdetid_events > 20)
+//          throw std::runtime_error("Debug Stop!");
     }
 
     // Now check if this pid we want to load.
@@ -1062,7 +1087,8 @@ void LoadEventPreNexus2::procEventsLinear(
     // TOF
     double tof = static_cast<double>(temp.tof) * TOF_CONVERSION;
 
-    if (!iswrongdetid) {
+    // Add new event to the vector or map!
+    if (!iswrongdetid && !isnewid) {
       // Regular event that is belonged to a defined detector
       // Find the overall max/min tof
       if (tof < local_shortest_tof)
@@ -1075,6 +1101,22 @@ void LoadEventPreNexus2::procEventsLinear(
       // But should be faster as a bunch of these calls were cached.
       arrayOfVectors[pid]->emplace_back(tof, pulsetime);
       ++local_num_good_events;
+    }
+    else if (isnewid)
+    {
+        if (tof < local_shortest_tof)
+          local_shortest_tof = tof;
+        if (tof > local_longest_tof)
+          local_longest_tof = tof;
+
+              arrayOfVectors[pid]->emplace_back(tof, pulsetime);
+
+        ++ local_num_good_events;
+
+//        if ((*arrayOfVectors)->size() < pid)
+//            g_log.warning() << "PID " << pid << " is out of range of arrayOfVectors with size " << (*arrayOfVectors)->size() << "\n";
+
+
     } else {
       // Special events/Wrong detector id
       // i.  get/add index of the entry in map
@@ -1109,6 +1151,9 @@ void LoadEventPreNexus2::procEventsLinear(
     } // END-IF-ELSE: On Event's Pixel's Nature
 
   } // ENDFOR each event
+
+  g_log.warning() << "File offset = " << fileOffset << ": number of events on new detectors = " << num_events_on_new
+                  << ".  Size of local TOF/Pule Time vector = " << local_pulsetimes.size() << "\n";
 
   if (dbprint)
     g_log.information(dbss.str());
@@ -1163,6 +1208,8 @@ void LoadEventPreNexus2::procEventsLinear(
     if (local_longest_tof > longest_tof)
       longest_tof = local_longest_tof;
   } // END_CRITICAL
+
+  return;
 }
 
 //----------------------------------------------------------------------------------------------
@@ -1220,7 +1267,7 @@ void LoadEventPreNexus2::loadPixelMap(const std::string &filename) {
   }
 
   // actually deal with the file
-  this->g_log.debug("Using mapping file \"" + filename + "\"");
+  this->g_log.information("Using mapping file \"" + filename + "\"");
 
   // Open the file; will throw if there is any problem
   BinaryFile<PixelType> pixelmapFile(filename);
