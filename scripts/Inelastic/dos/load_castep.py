@@ -1,4 +1,4 @@
-#pylint: disable=redefined-builtin
+
 from __future__ import (absolute_import, division, print_function)
 from six.moves import range
 
@@ -13,6 +13,7 @@ def parse_castep_file(file_name, ir_or_raman):
     Read frequencies from a <>.castep file
 
     @param file_name - file path of the file to read
+    @param ir_or_raman
     @return the frequencies, infra red and raman intensities and weights of frequency blocks
     """
 
@@ -66,15 +67,16 @@ def parse_castep_file(file_name, ir_or_raman):
         'ir_intensities': ir_intensities,
         'raman_intensities': raman_intensities,
         'weights': warray,
-        'q_vectors':q_vectors
-        })
+        'q_vectors': q_vectors
+    })
 
     if len(bonds) > 0:
         file_data['bonds'] = bonds
 
     return file_data
 
-#----------------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------------
 
 
 def _parse_castep_file_header(f_handle):
@@ -101,7 +103,8 @@ def _parse_castep_file_header(f_handle):
             file_data['num_branches'] = num_species * file_data['num_ions']
             return file_data
 
-#----------------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------------
 
 
 def _parse_castep_freq_block(f_handle, num_branches, ir_or_raman):
@@ -130,7 +133,7 @@ def _parse_castep_freq_block(f_handle, num_branches, ir_or_raman):
         yield line_data
 
 
-#----------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------
 
 def _find_castep_freq_block(f_handle, data_regex):
     """
@@ -151,7 +154,8 @@ def _find_castep_freq_block(f_handle, data_regex):
             f_handle.seek(pos)
             return
 
-#----------------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------------
 
 
 def _parse_castep_bond(bond_match):
@@ -170,4 +174,4 @@ def _parse_castep_bond(bond_match):
 
     return bond
 
-#----------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------

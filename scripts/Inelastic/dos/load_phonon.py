@@ -1,4 +1,3 @@
-#pylint: disable=redefined-builtin
 from __future__ import (absolute_import, division, print_function)
 from six.moves import range
 
@@ -15,6 +14,7 @@ def parse_phonon_file(file_name, record_eigenvectors):
     Read frequencies from a <>.phonon file
 
     @param file_name - file path of the file to read
+    @param record_eigenvectors
     @return the frequencies, infra red and raman intensities and weights of frequency blocks
     """
     file_data = {}
@@ -63,7 +63,7 @@ def parse_phonon_file(file_name, record_eigenvectors):
                     for _ in range(file_data['num_ions'] * file_data['num_branches']):
                         line = f_handle.readline()
                         if not line:
-                            raise IOError("Bad file format. Uexpectedly reached end of file.")
+                            raise IOError("Bad file format. Unexpectedly reached end of file.")
 
     frequencies = np.asarray(frequencies)
     ir_intensities = np.asarray(ir_intensities)
@@ -76,13 +76,14 @@ def parse_phonon_file(file_name, record_eigenvectors):
         'ir_intensities': ir_intensities,
         'raman_intensities': raman_intensities,
         'weights': warray,
-        'q_vectors':q_vectors,
+        'q_vectors': q_vectors,
         'eigenvectors': eigenvectors
-        })
+    })
 
     return file_data, element_isotope
 
-#----------------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------------
 
 
 def _parse_phonon_file_header(f_handle):
@@ -130,7 +131,8 @@ def _parse_phonon_file_header(f_handle):
                 raise IOError("Failed to parse file. Invalid file header.")
             return file_data
 
-#----------------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------------
 
 
 def _parse_phonon_freq_block(f_handle, num_branches):
@@ -145,7 +147,8 @@ def _parse_phonon_freq_block(f_handle, num_branches):
         line_data = [float(x) for x in line_data]
         yield line_data
 
-#----------------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------------
 
 
 def _parse_phonon_unit_cell_vectors(f_handle):
@@ -164,7 +167,8 @@ def _parse_phonon_unit_cell_vectors(f_handle):
 
     return np.array(data)
 
-#----------------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------------
 
 
 def _parse_phonon_eigenvectors(f_handle, num_ions, num_branches):
@@ -176,10 +180,10 @@ def _parse_phonon_eigenvectors(f_handle, num_ions, num_branches):
             raise IOError("Could not parse file. Invalid file format.")
 
         line_data = line.strip().split()
-        vector_componets = line_data[2::2]
-        vector_componets = [float(x) for x in vector_componets]
-        vectors.append(vector_componets)
+        vector_components = line_data[2::2]
+        vector_components = [float(x) for x in vector_components]
+        vectors.append(vector_components)
 
     return np.asarray(vectors)
 
-#----------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------
