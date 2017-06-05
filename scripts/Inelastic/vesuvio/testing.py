@@ -8,13 +8,13 @@ def create_test_ws():
     """
     ###### Simulates LoadVesuvio with spectrum number 135-136 #################
     tof_ws = CreateSimulationWorkspace(Instrument='Vesuvio',
-                                       BinParams=[49,2,563],
+                                       BinParams=[49, 2, 563],
                                        UnitX='TOF')
-    tof_ws = CropWorkspace(tof_ws,StartWorkspaceIndex=134,
+    tof_ws = CropWorkspace(tof_ws, StartWorkspaceIndex=134,
                            EndWorkspaceIndex=135)
     tof_ws = ConvertToPointData(tof_ws)
     SetInstrumentParameter(tof_ws, ParameterName='t0',
-                           ParameterType='Number',Value='0.5')
+                           ParameterType='Number', Value='0.5')
     SetInstrumentParameter(tof_ws, ParameterName='sigma_l1',
                            ParameterType='Number', Value='0.021')
     SetInstrumentParameter(tof_ws, ParameterName='sigma_l2',
@@ -266,12 +266,12 @@ def create_test_container_ws():
     """
     ###### Simulates LoadVesuvio with spectrum number 135-136 #################
     can_ws = CreateSimulationWorkspace(Instrument='Vesuvio',
-                                       BinParams=[49,2,563],UnitX='TOF')
-    can_ws = CropWorkspace(can_ws,StartWorkspaceIndex=134,
+                                       BinParams=[49, 2, 563], UnitX='TOF')
+    can_ws = CropWorkspace(can_ws, StartWorkspaceIndex=134,
                            EndWorkspaceIndex=135)
     can_ws = ConvertToPointData(can_ws)
     SetInstrumentParameter(can_ws, ParameterName='t0',
-                           ParameterType='Number',Value='0.5')
+                           ParameterType='Number', Value='0.5')
     SetInstrumentParameter(can_ws, ParameterName='sigma_l1',
                            ParameterType='Number', Value='0.021')
     SetInstrumentParameter(can_ws, ParameterName='sigma_l2',

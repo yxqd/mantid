@@ -1,5 +1,6 @@
-#pylint: disable=too-many-arguments,redefined-builtin
-"""Holds classes that define the mass profiles.
+
+"""
+Holds classes that define the mass profiles.
 This is all essentially about parsing the user input and putting it into a form
 the Mantid fitting algorithm will understand
 """
@@ -12,13 +13,13 @@ import re
 
 from mantid import logger
 
+
 # --------------------------------------------------------------------------------
 # Mass profile base class
 # --------------------------------------------------------------------------------
 
 
 class MassProfile(object):
-
     cfunction = None
 
     def __init__(self, width, mass, intensity=None):
@@ -109,13 +110,13 @@ class MassProfile(object):
 
         return value
 
+
 # --------------------------------------------------------------------------------
 # Gaussian profile
 # --------------------------------------------------------------------------------
 
 
 class GaussianMassProfile(MassProfile):
-
     cfunction = "GaussianComptonProfile"
 
     @classmethod
@@ -177,17 +178,17 @@ class GaussianMassProfile(MassProfile):
         constraints += "{0}Intensity > 0.0".format(param_prefix)
         return constraints
 
+
 # --------------------------------------------------------------------------------
 # MultivariateGaussian profile
 # --------------------------------------------------------------------------------
 
 
 class MultivariateGaussianMassProfile(MassProfile):
-
     cfunction = "MultivariateGaussianComptonProfile"
     integration_steps = 64
 
-    def __init__(self, width, mass, sigma_x = 1.0, sigma_y = 1.0, sigma_z = 1.0):
+    def __init__(self, width, mass, sigma_x=1.0, sigma_y=1.0, sigma_z=1.0):
         super(MultivariateGaussianMassProfile, self).__init__(width, mass)
 
         self._sigma_x = sigma_x
@@ -253,14 +254,15 @@ class MultivariateGaussianMassProfile(MassProfile):
         :param param_prefix: An optional prefix for the parameter name
         """
         constraints = "{0}Intensity > 0.0,".format(param_prefix) \
-            + "{0}SigmaX > 0.0,".format(param_prefix) \
-            + "{0}SigmaY > 0.0,".format(param_prefix) \
-            + "{0}SigmaZ > 0.0".format(param_prefix)
+                      + "{0}SigmaX > 0.0,".format(param_prefix) \
+                      + "{0}SigmaY > 0.0,".format(param_prefix) \
+                      + "{0}SigmaZ > 0.0".format(param_prefix)
         return constraints
 
     def create_ties_str(self, param_prefix=""):
         ties_str = "{0}Mass={1:f}".format(param_prefix, self.mass)
         return ties_str
+
 
 # --------------------------------------------------------------------------------
 # GramCharlier profile
@@ -268,7 +270,6 @@ class MultivariateGaussianMassProfile(MassProfile):
 
 
 class GramCharlierMassProfile(MassProfile):
-
     cfunction = "GramCharlierComptonProfile"
 
     def __init__(self, width, mass, hermite_coeffs, k_free, sears_flag, hermite_coeff_vals=None, fsecoeff=None):
@@ -324,7 +325,6 @@ class GramCharlierMassProfile(MassProfile):
 
         return GramCharlierMassProfile(**params)
 
-    # pylint: disable=too-many-branches
     def create_fit_function_str(self, param_vals=None, param_prefix=""):
         """Creates a string used by the Fit algorithm for this profile
 
@@ -346,6 +346,7 @@ class GramCharlierMassProfile(MassProfile):
             for item in collection:
                 _str += " " + str(item)
             return _str.lstrip()
+
         hermite_str = to_space_sep_str(self.hermite_co)
 
         fitting_str = "name={0},Mass={1:f},HermiteCoeffs={2},Width={3:f}".format(self.cfunction,
@@ -355,7 +356,7 @@ class GramCharlierMassProfile(MassProfile):
             par_names = ["FSECoeff"]
             for i, coeff in enumerate(self.hermite_co):
                 if coeff > 0:
-                    par_names.append("C_{0}".format(2*i))
+                    par_names.append("C_{0}".format(2 * i))
             for par_name in par_names:
                 fitting_str += ",{0}={1:f}".format(par_name, param_vals[param_prefix + par_name])
         else:
@@ -380,7 +381,7 @@ class GramCharlierMassProfile(MassProfile):
         # All coefficients should be greater than zero
         for i, coeff in enumerate(self.hermite_co):
             if coeff > 0:
-                constraints += "{0}C_{1} > 0.0,".format(param_prefix, 2*i)
+                constraints += "{0}C_{1} > 0.0,".format(param_prefix, 2 * i)
         return constraints.rstrip(",")
 
     def create_ties_str(self, param_prefix=""):

@@ -1,4 +1,4 @@
-# pylint: disable=too-many-arguments,invalid-name,too-many-locals,too-many-branches
+
 """
 Defines functions and classes to start the processing of Vesuvio data.
 The main entry point that most users should care about is fit_tof().

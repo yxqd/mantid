@@ -1,4 +1,3 @@
-# pylint: disable=too-few-public-methods,redefined-builtin
 from __future__ import (absolute_import, division, print_function)
 from six import iteritems
 
@@ -6,7 +5,6 @@ from mantid.api import Algorithm
 
 
 class VesuvioBase(Algorithm):
-
     # There seems to be a problem with Python algorithms
     # defining a __init__ method
     _INST = None
@@ -48,6 +46,7 @@ class VesuvioBase(Algorithm):
         else:
             return tuple(outputs)
 
+
 # -----------------------------------------------------------------------------------------
 # Helper to translate from an table workspace to a dictionary. Should be on the workspace
 # really ...
@@ -66,7 +65,7 @@ class TableWorkspaceDictionaryFacade(object):
         for row in self._table_ws:
             if row['Name'] == item:
                 return row['Value']
-        #endfor
+        # endfor
         raise KeyError(str(item))
 
     def __contains__(self, item):

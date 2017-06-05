@@ -75,9 +75,11 @@ class IndirectDiffScan(DataProcessorAlgorithm):
 
         self._setup()
 
-        process_prog = Progress(self, start=0.1, end=0.9, nreports=len(self._workspace_names))
+        process_prog = Progress(self, start=0.1, end=0.9,
+                                nreports=len(self._workspace_names))
         process_prog.report("Running diffraction")
-        scan_alg = self.createChildAlgorithm("ISISIndirectDiffractionReduction", 0.05, 0.95)
+        scan_alg = self.createChildAlgorithm(
+            "ISISIndirectDiffractionReduction", 0.05, 0.95)
         scan_alg.setProperty('InputFiles', self._data_files)
         scan_alg.setProperty('ContainerFiles', self._can_files)
         scan_alg.setProperty('ContainerScaleFactor', self._can_scale)
@@ -93,7 +95,8 @@ class IndirectDiffScan(DataProcessorAlgorithm):
         scan_alg.execute()
         logger.information('OutputWorkspace : %s' % self._output_ws)
 
-        self.setProperty('OutputWorkspace', scan_alg.getPropertyValue('OutputWorkspace'))
+        self.setProperty('OutputWorkspace',
+                         scan_alg.getPropertyValue('OutputWorkspace'))
 
         workspace_names = mtd[self._output_ws].getNames()
         scan_workspace = self._output_ws + '_scan'
@@ -107,8 +110,10 @@ class IndirectDiffScan(DataProcessorAlgorithm):
             run_no = self._get_InstrRun(input_ws)[1]
             run_numbers.append(run_no)
 
-        clone_alg = self.createChildAlgorithm("CloneWorkspace", enableLogging=False)
-        append_alg = self.createChildAlgorithm("AppendSpectra", enableLogging=False)
+        clone_alg = self.createChildAlgorithm(
+            "CloneWorkspace", enableLogging=False)
+        append_alg = self.createChildAlgorithm(
+            "AppendSpectra", enableLogging=False)
         for idx in range(len(workspace_names)):
             if idx == 0:
                 clone_alg.setProperty("InputWorkspace", workspace_names[0])
@@ -120,7 +125,8 @@ class IndirectDiffScan(DataProcessorAlgorithm):
                 append_alg.setProperty("InputWorkspace2", workspace_names[idx])
                 append_alg.setProperty("OutputWorkspace", scan_workspace)
                 append_alg.execute()
-                scan_workspace = append_alg.getProperty("OutputWorkspace").value
+                scan_workspace = append_alg.getProperty(
+                    "OutputWorkspace").value
 
         # Set the vertical axis units
         num_hist = scan_workspace.getNumberHistograms()
@@ -189,12 +195,14 @@ class IndirectDiffScan(DataProcessorAlgorithm):
                             'average': lambda x: x.mean()
                             }
             temp = value_action[self._sample_log_value](tmp)
-            logger.debug('Temperature %d K found for run: %s' % (temp, run_name))
+            logger.debug('Temperature %d K found for run: %s' %
+                         (temp, run_name))
             return temp
 
         else:
             # Logs not in workspace, try loading from file
-            logger.information('Log parameter not found in workspace. Searching for log file.')
+            logger.information(
+                'Log parameter not found in workspace. Searching for log file.')
             log_path = FileFinder.getFullPath(log_filename)
 
             if log_path != '':
@@ -204,10 +212,12 @@ class IndirectDiffScan(DataProcessorAlgorithm):
                 if self._sample_log_name in run_logs:
                     tmp = run_logs[self._sample_log_name].value
                     temp = tmp[-1]
-                    logger.debug('Temperature %d K found for run: %s' % (temp, run_name))
+                    logger.debug('Temperature %d K found for run: %s' %
+                                 (temp, run_name))
                     return temp
                 else:
-                    logger.warning('Log entry %s for run %s not found' % (self._sample_log_name, run_name))
+                    logger.warning('Log entry %s for run %s not found' %
+                                   (self._sample_log_name, run_name))
             else:
                 logger.warning('Log file for run %s not found' % run_name)
 
@@ -230,13 +240,15 @@ class IndirectDiffScan(DataProcessorAlgorithm):
             if match:
                 run_number = match.group(2)
             else:
-                raise RuntimeError("Could not find run number associated with workspace.")
+                raise RuntimeError(
+                    "Could not find run number associated with workspace.")
 
         instrument = mtd[ws_name].getInstrument().getName()
         if instrument != '':
             for facility in config.getFacilities():
                 try:
-                    instrument = facility.instrument(instrument).filePrefix(int(run_number))
+                    instrument = facility.instrument(
+                        instrument).filePrefix(int(run_number))
                     instrument = instrument.lower()
                     break
                 except RuntimeError:
@@ -265,15 +277,18 @@ class IndirectDiffScan(DataProcessorAlgorithm):
 
         self._grouping_method = 'All'
 
-        self._sample_log_name = self.getPropertyValue('SampleEnvironmentLogName')
-        self._sample_log_value = self.getPropertyValue('SampleEnvironmentLogValue')
+        self._sample_log_name = self.getPropertyValue(
+            'SampleEnvironmentLogName')
+        self._sample_log_value = self.getPropertyValue(
+            'SampleEnvironmentLogValue')
 
         self._output_ws = self.getPropertyValue('OutputWorkspace')
 
         # Disable sum files if there is only one file
         if len(self._data_files) == 1:
             if self._sum_files:
-                logger.warning('SumFiles disabled when only one input file is provided.')
+                logger.warning(
+                    'SumFiles disabled when only one input file is provided.')
             self._sum_files = False
 
         # The list of workspaces being processed

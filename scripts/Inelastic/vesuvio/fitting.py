@@ -1,4 +1,5 @@
-"""Fitting support routines
+"""
+Fitting support routines
 
 This is all essentially about parsing the user input and putting it into a form
 the Mantid fitting algorithm will understand
@@ -59,7 +60,7 @@ class FittingOptions(object):
                 self.intensity_constraints = intensity_constraints
             else:
                 # trailing comma is important or the list gets undone
-                self.intensity_constraints = [intensity_constraints,]
+                self.intensity_constraints = [intensity_constraints]
         else:
             self.intensity_constraints = None
         self.background = background
@@ -178,7 +179,7 @@ class FittingOptions(object):
         # $domains=i means "function index == workspace index"
         fun_str = func_str[:i] + ',$domains=i' + func_str[i:]
 
-        # append the constrints and ties within the local function
+        # append the constraints and ties within the local function
         fun_str += ';constraints=(' + self.create_constraints_str() + ')'
         ties = self.create_ties_str()
         if len(ties) > 0:

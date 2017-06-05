@@ -1,4 +1,3 @@
-#pylint: disable=too-few-public-methods
 """
 Holds an instrument class for VESUVIO
 """
