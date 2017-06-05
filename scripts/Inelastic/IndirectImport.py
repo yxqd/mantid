@@ -1,3 +1,5 @@
+from __future__ import (absolute_import, division, print_function)
+
 """
 Temporary solutions to the messy problem of importing F2Py libraries into
 the Indirect scripts depending on platform and numpy package version.
