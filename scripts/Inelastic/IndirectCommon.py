@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,redefined-builtin
 from __future__ import (absolute_import, division, print_function)
 from six.moves import range
 
@@ -293,7 +292,7 @@ def CheckAnalysers(in1WS, in2WS):
 
 def CheckHistZero(inWS):
     """
-    Retrieves basic info on a worskspace
+    Retrieves basic info on a workspace
 
     Checks the workspace is not empty, then returns the number of histogram and
     the number of X-points, which is the number of bin boundaries minus one
@@ -308,7 +307,7 @@ def CheckHistZero(inWS):
            number of X-points.
 
     Raises:
-      @exception ValueError - Worskpace has no histograms
+      @exception ValueError - Workspace has no histograms
     """
     num_hist = s_api.mtd[inWS].getNumberHistograms()  # no. of hist/groups in WS
     if num_hist == 0:
@@ -393,7 +392,7 @@ def getInstrumentParameter(ws, param_name):
     inst = s_api.mtd[ws].getInstrument()
 
     # Create a map of type parameters to functions. This is so we avoid writing lots of
-    # if statements becuase there's no way to dynamically get the type.
+    # if statements because there's no way to dynamically get the type.
     func_map = {'double': inst.getNumberParameter, 'string': inst.getStringParameter,
                 'int': inst.getIntParameter, 'bool': inst.getBoolParameter}
 
@@ -488,7 +487,7 @@ def transposeFitParametersTable(params_table, output_table=None):
 
 def IndentifyDataBoundaries(sample_ws):
     """
-    Indentifies and returns the first and last no zero data point in a workspace
+    Identifies and returns the first and last no zero data point in a workspace
 
     For multiple workspace spectra, the data points that are closest to the centre
     out of all the spectra in the workspace are returned
