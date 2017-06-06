@@ -1,12 +1,10 @@
 #ifndef MANTID_DATAHANDLING_GROUPDETECTORS2_H_
 #define MANTID_DATAHANDLING_GROUPDETECTORS2_H_
 
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAPI/Algorithm.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/GroupingWorkspace.h"
+#include "MantidKernel/StringTokenizer.h"
 
 #include <map>
 
@@ -168,9 +166,6 @@ private:
   /// read in the input parameters and see what findout what will be to grouped
   void getGroups(API::MatrixWorkspace_const_sptr workspace,
                  std::vector<int64_t> &unUsedSpec);
-  /// read in a list of instructions and output commands in .map file format
-  void translateInstructions(const std::string &instructions,
-                             std::stringstream &commands);
   /// gets the list of spectra _index_ _numbers_ from a file of _spectra_
   /// _numbers_
   void processFile(std::string fname, API::MatrixWorkspace_const_sptr workspace,
@@ -216,6 +211,10 @@ private:
   size_t formGroupsEvent(DataObjects::EventWorkspace_const_sptr inputWS,
                          DataObjects::EventWorkspace_sptr outputWS,
                          const double prog4Copy);
+
+  /// Returns true if detectors exists and is masked
+  bool isMaskedDetector(const API::SpectrumInfo &detector,
+                        const size_t index) const;
 
   /// Copy the ungrouped spectra from the input workspace to the output
   template <class TIn, class TOut>
