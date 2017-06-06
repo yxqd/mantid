@@ -158,12 +158,16 @@ public:
     BeforeReplaceNotification(const std::string &name,
                               const boost::shared_ptr<T> obj,
                               const boost::shared_ptr<T> newObj)
-        : DataServiceNotification(name, obj), m_newObject(newObj) {}
+        : DataServiceNotification(name, obj), m_newObject(newObj),
+          m_oldObject(obj) {}
     const boost::shared_ptr<T> newObject() const {
       return m_newObject;
     } ///< Returns the pointer to the new object.
+    const boost::shared_ptr<T> oldObject() const { return m_oldObject; }
+
   private:
     boost::shared_ptr<T> m_newObject; ///< shared pointer to the object
+    boost::shared_ptr<T> m_oldObject;
   };
 
   /// AfterReplaceNotification is sent after an object is replaced in the
@@ -326,26 +330,37 @@ public:
   void rename(const std::string &oldName, const std::string &newName) {
     checkForEmptyName(newName);
 
+    if (oldName == newName) {
+      g_log.warning("Rename: The existing name matches the new name");
+      return;
+    }
+
     // Make DataService access thread-safe
     auto it = datamap.find(oldName);
     if (it == datamap.end()) {
-      lock.unlock();
       g_log.warning(" rename '" + oldName + "' cannot be found");
       return;
     }
 
-    // delete the object with the old name
-      auto object = std::move(it->second);
-    PARALLEL_CRITICAL(datamap_unsafe_erase) { datamap.unsafe_erase(it); }
+    auto existingNameObject = std::move(existingNameIter->second);
+    auto targetNameIter = datamap.find(newName);
 
-    // if there is another object which has newName delete it
-    auto it2 = datamap.find(newName);
-    if (it2 != datamap.end()) {
+    // If we are overriding send a notification for observers
+    if (targetNameIter != datamap.end()) {
+      auto targetNameObject = targetNameIter->second;
+      // As we are renaming the existing name turns into the new name
+      notificationCenter.postNotification(new BeforeReplaceNotification(
+          newName, targetNameObject, existingNameObject));
+    }
+
+    datamap.erase(existingNameIter);
+
+    if (targetNameIter != datamap.end()) {
+      targetNameIter->second = std::move(existingNameObject);
       notificationCenter.postNotification(
-          new AfterReplaceNotification(newName, object));
-      it2->second = std::move(object);
+          new AfterReplaceNotification(newName, targetNameIter->second));
     } else {
-      if (!(datamap.emplace(newName, std::move(object)).second)) {
+      if (!(datamap.emplace(newName, std::move(existingNameObject)).second)) {
         // should never happen
         std::string error =
             " add : Unable to insert Data Object : '" + newName + "'";

@@ -1,10 +1,8 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidDataHandling/SaveDiffFittingAscii.h"
 
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/TableRow.h"
+#include "MantidAPI/WorkspaceGroup.h"
 #include "MantidDataObjects/TableWorkspace.h"
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/MandatoryValidator.h"
@@ -142,7 +140,7 @@ void SaveDiffFittingAscii::processAll(
   std::vector<std::string> splitBank = splitList(bankList);
 
   // Create a progress reporting object
-  Progress progress(this, 0, 1, input_ws.size());
+  Progress progress(this, 0.0, 1.0, input_ws.size());
 
   size_t breaker = input_ws.size();
   if (outMode == "AppendToExistingFile" && input_ws.size() == 1)

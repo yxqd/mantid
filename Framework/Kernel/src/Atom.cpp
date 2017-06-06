@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include "MantidKernel/Atom.h"
 #include "MantidKernel/PhysicalConstants.h"
-#include <boost/math/special_functions/fpclassify.hpp>
+#include <cmath>
 
 namespace Mantid {
 namespace PhysicalConstants {
@@ -3151,7 +3151,7 @@ static const size_t NUM_ATOMS = 2845;
 bool AtomEqualsWithNaN(const double left, const double right) {
   if (left == right)
     return true;
-  if ((boost::math::isnan)(left) && (boost::math::isnan)(right))
+  if ((std::isnan)(left) && (std::isnan)(right))
     return true;
   return false;
 }
@@ -3226,14 +3226,14 @@ Atom getAtom(const uint16_t z_number, const uint16_t a_number) {
  */
 Atom getAtom(const std::string &symbol, const uint16_t a_number) {
   // special cases for aliases
-  if (symbol.compare("D") == 0)
+  if (symbol == "D")
     return H2;
-  if (symbol.compare("T") == 0)
+  if (symbol == "T")
     return H3;
 
   // linear search
   for (auto &atom : ATOMS) {
-    if (symbol.compare(atom.symbol) == 0) {
+    if (symbol == atom.symbol) {
       if (a_number == atom.a_number) {
         return atom;
       }
