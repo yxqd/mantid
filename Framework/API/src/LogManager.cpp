@@ -1,10 +1,9 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAPI/LogManager.h"
+#include "MantidKernel/Cache.h"
 #include "MantidKernel/PropertyNexus.h"
-
 #include "MantidKernel/TimeSeriesProperty.h"
+
+#include <nexus/NeXusFile.hpp>
 
 namespace Mantid {
 namespace API {
@@ -92,6 +91,27 @@ const char *LogManager::PROTON_CHARGE_LOG_NAME = "gd_prtn_chrg";
 //----------------------------------------------------------------------
 // Public member functions
 //----------------------------------------------------------------------
+
+LogManager::LogManager()
+    : m_singleValueCache(Kernel::make_unique<Kernel::Cache<
+          std::pair<std::string, Kernel::Math::StatisticType>, double>>()) {}
+
+LogManager::LogManager(const LogManager &other)
+    : m_manager(other.m_manager),
+      m_singleValueCache(Kernel::make_unique<Kernel::Cache<
+          std::pair<std::string, Kernel::Math::StatisticType>, double>>(
+          *other.m_singleValueCache)) {}
+
+// Defined as default in source for forward declaration with std::unique_ptr.
+LogManager::~LogManager() = default;
+
+LogManager &LogManager::operator=(const LogManager &other) {
+  m_manager = other.m_manager;
+  m_singleValueCache = Kernel::make_unique<Kernel::Cache<
+      std::pair<std::string, Kernel::Math::StatisticType>, double>>(
+      *other.m_singleValueCache);
+  return *this;
+}
 
 /**
 * Set the run start and end
@@ -211,7 +231,7 @@ void LogManager::splitByTime(TimeSplitterType &splitter,
  */
 void LogManager::filterByLog(const Kernel::TimeSeriesProperty<bool> &filter) {
   // This will invalidate the cache
-  m_singleValueCache.clear();
+  m_singleValueCache->clear();
   m_manager.filterByProperty(filter);
 }
 
@@ -260,7 +280,7 @@ bool LogManager::hasProperty(const std::string &name) const {
 void LogManager::removeProperty(const std::string &name, bool delProperty) {
   // Remove any cached entries for this log. Need to make this more general
   for (unsigned int stat = 0; stat < 7; ++stat) {
-    m_singleValueCache.removeCache(
+    m_singleValueCache->removeCache(
         std::make_pair(name, static_cast<Math::StatisticType>(stat)));
   }
   m_manager.removeProperty(name, delProperty);
@@ -329,7 +349,7 @@ double LogManager::getPropertyAsSingleValue(
     const std::string &name, Kernel::Math::StatisticType statistic) const {
   double singleValue(0.0);
   const auto key = std::make_pair(name, statistic);
-  if (!m_singleValueCache.getCache(key, singleValue)) {
+  if (!m_singleValueCache->getCache(key, singleValue)) {
     const Property *log = getProperty(name);
     if (!convertPropertyToDouble(log, singleValue, statistic)) {
       if (const auto stringLog =
@@ -349,7 +369,7 @@ double LogManager::getPropertyAsSingleValue(
       }
     }
     // Put it in the cache
-    m_singleValueCache.setCache(key, singleValue);
+    m_singleValueCache->setCache(key, singleValue);
   }
   return singleValue;
 }
@@ -451,19 +471,36 @@ void LogManager::saveNexus(::NeXus::File *file, const std::string &group,
 //--------------------------------------------------------------------------------------------
 /** Load the object from an open NeXus file.
  * @param file :: open NeXus file
- * @param group :: name of the group to open. Empty string to NOT open a group,
- * but
+ * @param group :: name of the group to open. Pass an empty string to NOT open a
+ * group
  * @param keepOpen :: do not close group on exit to allow overloading and child
  * classes reading from the same group
  * load any NXlog in the current open group.
  */
 void LogManager::loadNexus(::NeXus::File *file, const std::string &group,
                            bool keepOpen) {
-  if (!group.empty())
+  if (!group.empty()) {
     file->openGroup(group, "NXgroup");
-
+  }
   std::map<std::string, std::string> entries;
   file->getEntries(entries);
+  LogManager::loadNexus(file, entries);
+
+  if (!(group.empty() || keepOpen)) {
+    file->closeGroup();
+  }
+}
+
+//--------------------------------------------------------------------------------------------
+/** Load the object from an open NeXus file. Avoid multiple expensive calls to
+ * getEntries().
+ * @param file :: open NeXus file
+ * @param entries :: The entries available in the current place in the file.
+ * load any NXlog in the current open group.
+ */
+void LogManager::loadNexus(::NeXus::File *file,
+                           const std::map<std::string, std::string> &entries) {
+
   for (const auto &name_class : entries) {
     // NXLog types are the main one.
     if (name_class.second == "NXlog") {
@@ -476,8 +513,6 @@ void LogManager::loadNexus(::NeXus::File *file, const std::string &group,
       }
     }
   }
-  if (!(group.empty() || keepOpen))
-    file->closeGroup();
 }
 
 /**
