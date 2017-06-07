@@ -10,6 +10,7 @@ are configured to find the Vesuvio data
 import stresstesting
 import numpy as np
 import platform
+from six import iteritems
 
 
 from mantid.api import *
@@ -57,7 +58,7 @@ def _create_algorithm(**kwargs):
     alg.setProperty("CorrectionWorkspaces", "__Correction")
     alg.setProperty("CorrectedWorkspaces", "__Corrected")
     alg.setProperty("LinearFitResult", "__LinearFit")
-    for key, value in kwargs.iteritems():
+    for key, value in iteritems(kwargs):
         alg.setProperty(key, value)
     return alg
 
