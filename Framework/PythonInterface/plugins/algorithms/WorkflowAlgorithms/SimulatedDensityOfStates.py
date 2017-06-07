@@ -6,6 +6,7 @@ import numpy as np
 import re
 import os.path
 import math
+import collections
 
 from mantid.kernel import *
 from mantid.api import *
@@ -332,7 +333,7 @@ class SimulatedDensityOfStates(PythonAlgorithm):
         @param weights          :: weight data from file
         """
         # Build a dictionary of ions that the user cares about
-        partial_ions = dict()
+        partial_ions = collections.OrderedDict()
 
         calc_ion_index = self.getProperty('CalculateIonIndices').value
 
