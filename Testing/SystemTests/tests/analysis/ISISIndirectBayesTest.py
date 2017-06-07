@@ -335,6 +335,10 @@ class JumpFitFunctionTestBase(stresstesting.MantidStressTest):
         raise NotImplementedError("Implmenent get_reference_files to return "
                                   "the names of the files to compare against.")
 
+    def skipTests(self):
+        if not self._function:
+            return True
+
     def runTest(self):
         # Load file
         filename = self._sample_name + '.nxs'
