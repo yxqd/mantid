@@ -13,7 +13,20 @@ class ISISIndirectDiffractionReduction(stresstesting.MantidStressTest):
     """
 
     __metaclass__ = ABCMeta
-    _output_workspace = None
+
+
+    def __init__(self):
+
+        stresstesting.MantidStressTest.__init__(self)
+        self._output_workspace = None
+        self.raw_file = ''
+
+    def skipTests(self):
+        """
+        Checks for raw file so that base class is not tested
+        """
+        if not self.raw_file:
+            return True
 
     @abstractmethod
     def get_reference_file(self):
