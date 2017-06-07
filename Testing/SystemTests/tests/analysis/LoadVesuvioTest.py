@@ -289,7 +289,7 @@ class VesuvioTests(unittest.TestCase):
         self._verify_spectra_numbering(evs_raw.getSpectrum(0), 3,
                                        range(2101,2114))
         self._verify_spectra_numbering(evs_raw.getSpectrum(1), 30,
-                                       range(2128,2145) + range(2201,2205))
+                                       list(range(2128,2145)) + list(range(2201,2205)))
 
     def _verify_spectra_numbering(self, spectrum, expected_no, expected_ids):
         self.assertEquals(expected_no, spectrum.getSpectrumNo())
