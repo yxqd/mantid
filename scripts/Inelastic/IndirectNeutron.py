@@ -3,6 +3,7 @@
 """
 Force for ILL backscattering raw
 """
+from __future__ import (absolute_import, division, print_function)
 
 from IndirectImport import *
 from mantid.simpleapi import *
@@ -23,7 +24,7 @@ def Iblock(a, first):  # read Ascii block of Integers
     line2 = a[first + 1]
     val = ExtractInt(line2)
     numb = val[0]
-    lines = numb / 10
+    lines = int(numb / 10)
     last = numb - 10 * lines
     if line1.startswith('I'):
         error = ''
@@ -50,7 +51,7 @@ def Fblock(a, first):  # read Ascii block of Floats
     line2 = a[first + 1]
     val = ExtractInt(line2)
     numb = val[0]
-    lines = numb / 5
+    lines = int(numb / 5)
     last = numb - 5 * lines
     if line1.startswith('F'):
         error = ''
