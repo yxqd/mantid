@@ -176,7 +176,7 @@ def IbackStart(instr, run, ana, refl, rejectZ, useM, mapPath, Plot, Save):  # As
     # raw spectra
     val = ExtractInt(asc[next + 3])
     npt = val[0]
-    lgrp = 5 + npt / 10
+    lgrp = int(5 + npt / 10)
     val = ExtractInt(asc[next + 1])
     if instr == 'IN10':
         nsp = int(val[2])
