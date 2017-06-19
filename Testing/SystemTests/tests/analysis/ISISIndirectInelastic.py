@@ -71,6 +71,7 @@ from __future__ import (absolute_import, division, print_function)
 import stresstesting
 import os
 from abc import ABCMeta, abstractmethod
+from six import with_metaclass
 
 from mantid.simpleapi import *
 
@@ -78,12 +79,13 @@ from mantid.simpleapi import *
 from mantid.api import FileFinder
 
 
-class ISISIndirectInelasticBase(stresstesting.MantidStressTest):
+class ISISIndirectInelasticBase(with_metaclass(ABCMeta, stresstesting.MantidStressTest)):
     """
     A common base class for the ISISIndirectInelastic* base classes.
     """
 
-    __metaclass__ = ABCMeta  # Mark as an abstract class
+    def __init__(self):
+        stresstesting.MantidStressTest.__init__(self)
 
     @abstractmethod
     def get_reference_files(self):
@@ -153,7 +155,7 @@ class ISISIndirectInelasticBase(stresstesting.MantidStressTest):
 # ==============================================================================
 
 
-class ISISIndirectInelasticReduction(ISISIndirectInelasticBase):
+class ISISIndirectInelasticReduction(with_metaclass(ABCMeta, ISISIndirectInelasticBase)):
     """A base class for the ISIS indirect inelastic reduction tests
 
     The workflow is defined in the _run() method, simply
@@ -168,7 +170,9 @@ class ISISIndirectInelasticReduction(ISISIndirectInelasticBase):
                         to save to.
     """
 
-    __metaclass__ = ABCMeta  # Mark as an abstract class
+    def __init__(self):
+        ISISIndirectInelasticBase.__init__(self)
+
     sum_files = False
 
     def _run(self):
@@ -334,7 +338,7 @@ class IRISMultiFileSummedReduction(ISISIndirectInelasticReduction):
 # ==============================================================================
 
 
-class ISISIndirectInelasticCalibration(ISISIndirectInelasticBase):
+class ISISIndirectInelasticCalibration(with_metaclass(ABCMeta, ISISIndirectInelasticBase)):
     """A base class for the ISIS indirect inelastic calibration tests
 
     The workflow is defined in the _run() method, simply
@@ -348,7 +352,8 @@ class ISISIndirectInelasticCalibration(ISISIndirectInelasticBase):
         - self.reflection: a string giving the reflection to use
     """
 
-    __metaclass__ = ABCMeta  # Mark as an abstract class
+    def __init__(self):
+        ISISIndirectInelasticBase.__init__(self)
 
     def _run(self):
         """Defines the workflow for the test"""
@@ -408,7 +413,7 @@ class IRISCalibration(ISISIndirectInelasticCalibration):
 # ==============================================================================
 
 
-class ISISIndirectInelasticResolution(ISISIndirectInelasticBase):
+class ISISIndirectInelasticResolution(with_metaclass(ABCMeta, ISISIndirectInelasticBase)):
     """A base class for the ISIS indirect inelastic resolution tests
 
     The workflow is defined in the _run() method, simply
@@ -423,7 +428,8 @@ class ISISIndirectInelasticResolution(ISISIndirectInelasticBase):
         - self.files: a list of strings containing filenames
     """
 
-    __metaclass__ = ABCMeta  # Mark as an abstract class
+    def __init__(self):
+        ISISIndirectInelasticBase.__init__(self)
 
     def _run(self):
         """Defines the workflow for the test"""
