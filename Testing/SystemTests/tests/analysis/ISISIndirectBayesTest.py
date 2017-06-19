@@ -2,6 +2,7 @@
 import stresstesting
 import os
 from abc import ABCMeta, abstractmethod
+from six import with_metaclass
 from mantid.simpleapi import *
 import platform
 
@@ -316,9 +317,7 @@ class QLWidthTest(stresstesting.MantidStressTest):
 #==============================================================================
 
 
-class JumpFitFunctionTestBase(stresstesting.MantidStressTest):
-
-    __metaclass__ = ABCMeta
+class JumpFitFunctionTestBase(with_metaclass(ABCMeta, stresstesting.MantidStressTest)):
 
     def __init__(self):
         stresstesting.MantidStressTest.__init__(self)
