@@ -2,17 +2,20 @@
 # non-parent-init-called is disabled to remove false positives from a bug in pyLint < 1.4
 
 from abc import ABCMeta, abstractmethod
+from six import with_metaclass
 import stresstesting
 import mantid.simpleapi as ms
 from mantid import mtd
 
 
-class ISISIndirectDiffractionReduction(stresstesting.MantidStressTest):
+class ISISIndirectDiffractionReduction(with_metaclass(ABCMeta,stresstesting.MantidStressTest)):
     """
     Base class for tests that use the ISISIndirectDiffractionReduction algorithm.
     """
 
-    __metaclass__ = ABCMeta
+    def __init__(self):
+        stresstesting.MantidStressTest.__init__(self)
+
     _output_workspace = None
 
     @abstractmethod
