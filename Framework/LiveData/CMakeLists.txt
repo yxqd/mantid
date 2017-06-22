@@ -3,6 +3,7 @@ set ( SRC_FILES
 	src/ADARA/ADARAParser.cpp
 	src/FakeEventDataListener.cpp
 	src/FileEventDataListener.cpp
+	src/FileWatcher.cpp
 	src/ISIS/DAE/idc.cpp
 	src/ISIS/DAE/isisds_command.cpp
 	src/ISIS/FakeISISEventDAE.cpp
@@ -27,6 +28,7 @@ set ( INC_FILES
 	inc/MantidLiveData/Exception.h
 	inc/MantidLiveData/FakeEventDataListener.h
 	inc/MantidLiveData/FileEventDataListener.h
+	inc/MantidLiveData/FileWatcher.h
 	inc/MantidLiveData/ISIS/FakeISISEventDAE.h
 	inc/MantidLiveData/ISIS/FakeISISHistoDAE.h
 	inc/MantidLiveData/ISIS/ISISHistoDataListener.h
@@ -47,6 +49,7 @@ set ( TEST_FILES
 	ADARAPacketTest.h
 	FakeEventDataListenerTest.h
 	FileEventDataListenerTest.h
+	FileWatcherTest.h
 	ISISHistoDataListenerTest.h
 	LiveDataAlgorithmTest.h
 	LoadLiveDataTest.h
