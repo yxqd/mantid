@@ -38,13 +38,15 @@ public:
 	//~FileWatcher();
 	std::string get_path();
 	bool hasChanged();
-	std::vector<Poco::File> changedFiles;
+	std::vector<Poco::File> readChanged();
 
 	void start();
 
 private:
 	bool m_changed;
 	std::string m_path;
+	Poco::DirectoryWatcher dw;
+	std::vector<Poco::File> m_changedFiles;
 
 	void onItemAdded(const Poco::DirectoryWatcher::DirectoryEvent& ev);
 	void onItemRemoved(const Poco::DirectoryWatcher::DirectoryEvent & ev);

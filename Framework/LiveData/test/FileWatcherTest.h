@@ -10,6 +10,9 @@
 static const std::string folderPath = "C:\\Instrument\\FileWatcherTestBed\\";
 static std::vector<std::string> testFiles;
 using Mantid::LiveData::FileWatcher;
+using Poco::DirectoryWatcher;
+
+static bool flag;
 
 class FileWatcherTest : public CxxTest::TestSuite {
 public:
@@ -17,7 +20,6 @@ public:
   // This means the constructor isn't called when running other tests
   static FileWatcherTest *createSuite() { return new FileWatcherTest(); }
   static void destroySuite( FileWatcherTest *suite ) { delete suite; }
-
   void test_pathIsSet()
   {
 	FileWatcher fw(folderPath);
@@ -29,25 +31,29 @@ public:
 	  TS_ASSERT_EQUALS(fw.hasChanged(), false);
   }
 
-  void test_flagSetToTrueIfFileAdded() {
+  void test_added()
+  {
+	  // Create filewatcher
+	  std::string filePath = folderPath + "test_added.txt";
 	  FileWatcher fw(folderPath);
 	  fw.start();
 
-	  std::ofstream testFile = openFile("example.txt");
-	  testFile.close();
+	  Poco::Thread::sleep(1000);
 
-	  Sleep(1000);
-	  TS_ASSERT_EQUALS(fw.hasChanged(), true);
-  }
-  std::ofstream openFile(std::string fileName) {
-	  std::ofstream file;
-
-	  // check doesnt exist
-	  std::string filePath = folderPath + fileName;
+	  // Add file in watched directory
+	  Poco::FileOutputStream fos(filePath);
 	  testFiles.push_back(filePath);
+	  fos.close();
 
-	  file.open(filePath);
-	  return file;
+	  Poco::Thread::sleep(1000);
+
+	  // Check updated flag has changed
+	  TS_ASSERT_EQUALS(true, fw.hasChanged());
+
+	  // Read changed files
+	  std::vector<Poco::File> changed = fw.readChanged();
+	  TS_ASSERT_EQUALS(filePath, changed.at(0).path());
+	  TS_ASSERT_EQUALS(false, fw.hasChanged());
   }
 
   void tearDown() override {
@@ -55,6 +61,7 @@ public:
 	  for (auto const& filePath : testFiles) {
 		  remove(filePath.c_str());
 	  }
+	  testFiles.clear();
   }
 
 };
