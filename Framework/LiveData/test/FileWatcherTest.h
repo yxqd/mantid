@@ -51,8 +51,9 @@ public:
 	  TS_ASSERT_EQUALS(true, fw.hasChanged());
 
 	  // Read changed files
-	  std::vector<Poco::File> changed = fw.readChanged();
-	  TS_ASSERT_EQUALS(filePath, changed.at(0).path());
+	  std::set<Poco::File> addedFiles = fw.readChanges().added;
+	  Poco::File added = *addedFiles.begin();
+	  TS_ASSERT_EQUALS(filePath, added.path());
 	  TS_ASSERT_EQUALS(false, fw.hasChanged());
   }
 

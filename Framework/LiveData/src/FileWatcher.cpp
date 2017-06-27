@@ -3,6 +3,7 @@
 
 namespace Mantid {
 namespace LiveData {
+
 	/**
 	* The constructor
 	*/
@@ -23,11 +24,11 @@ namespace LiveData {
 	/**
 	* Read and empty the list of changed files .
 	*/
-	std::vector<Poco::File> FileWatcher::readChanged() {
-		std::vector<Poco::File> changedFiles = m_changedFiles;
+	FileWatcher::ChangedFiles FileWatcher::readChanges() {
+		FileWatcher::ChangedFiles changed(m_changedFiles);
 		m_changedFiles.clear();
 		m_changed = false;
-		return changedFiles;
+		return changed;
 	}
 
 	/**
@@ -46,7 +47,7 @@ namespace LiveData {
 	*/
 	void FileWatcher::onItemAdded(const Poco::DirectoryWatcher::DirectoryEvent& ev)
 	{
-		m_changedFiles.push_back(ev.item);
+		m_changedFiles.added.insert(ev.item);
 		std::cout << "ADDED: item at " << ev.item.path() << std::endl;
 		m_changed = true;
 	}

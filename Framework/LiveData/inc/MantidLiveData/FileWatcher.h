@@ -33,12 +33,25 @@ namespace LiveData {
   Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
 class DLLExport FileWatcher {
+
 public:
+	struct ChangedFiles {
+		std::set<Poco::File> added;
+		std::set<Poco::File> modified;
+		std::set<Poco::File> deleted;
+
+		void clear() {
+			added.clear();
+			modified.clear();
+			deleted.clear();
+		}
+	};
+
 	FileWatcher(std::string path);
 	//~FileWatcher();
 	std::string get_path();
 	bool hasChanged();
-	std::vector<Poco::File> readChanged();
+	FileWatcher::ChangedFiles readChanges();
 
 	void start();
 
@@ -46,7 +59,7 @@ private:
 	bool m_changed;
 	std::string m_path;
 	Poco::DirectoryWatcher dw;
-	std::vector<Poco::File> m_changedFiles;
+	struct ChangedFiles m_changedFiles;
 
 	void onItemAdded(const Poco::DirectoryWatcher::DirectoryEvent& ev);
 	void onItemRemoved(const Poco::DirectoryWatcher::DirectoryEvent & ev);
