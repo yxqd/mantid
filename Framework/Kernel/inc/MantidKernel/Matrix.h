@@ -2,9 +2,9 @@
 #define MANTID_KERNEL_MATRIX_H_
 
 #include "MantidKernel/DllConfig.h"
-#include <vector>
 #include <cfloat>
 #include <iosfwd>
+#include <vector>
 
 namespace Mantid {
 
@@ -45,11 +45,31 @@ public:
   typedef T value_type;
 
 private:
-  size_t nx; ///< Number of rows    (x coordinate)
-  size_t ny; ///< Number of columns (y coordinate)
+  // Allows addressing the 1D array as a 2D array
+  struct DataStorageImpl {
+    DataStorageImpl() : nrows(0), ncols(0), data() {}
 
-  T **V;                     ///< Raw data
-  void deleteMem();          ///< Helper function to delete memory
+    DataStorageImpl(size_t rows, size_t cols)
+        : nrows(rows), ncols(cols), data(rows * cols) {}
+
+    inline operator bool() const { return !data.empty(); }
+
+    inline value_type *operator[](const size_t rowIdx) {
+      // avoid duplicating const & non-const members
+      return const_cast<value_type *>(
+          static_cast<const DataStorageImpl &>(*this).operator[](rowIdx));
+    }
+    inline const value_type *operator[](const size_t rowIdx) const {
+      return data.data() + rowIdx * ncols;
+    }
+
+    size_t nrows;
+    size_t ncols;
+    // storage as flat array
+    std::vector<value_type> data;
+  };
+
+  DataStorageImpl m_storage;
   void lubcmp(int *, int &); ///< starts inversion process
   void lubksb(int const *, double *);
   void rotate(double const, double const, int const, int const, int const,
@@ -69,16 +89,10 @@ public:
 
   Matrix(const Matrix<T> &, const size_t nrow, const size_t ncol);
 
-  Matrix(const Matrix<T> &);
-  Matrix<T> &operator=(const Matrix<T> &);
-  Matrix(Matrix<T> &&) noexcept;
-  Matrix<T> &operator=(Matrix<T> &&) noexcept;
-  ~Matrix();
-
   /// const Array accessor
-  const T *operator[](const size_t A) const { return V[A]; }
+  const T *operator[](const size_t A) const { return m_storage[A]; }
   /// Array accessor. Use, e.g. Matrix[row][col]
-  T *operator[](const size_t A) { return V[A]; }
+  T *operator[](const size_t A) { return m_storage[A]; }
 
   Matrix<T> &operator+=(const Matrix<T> &);     ///< Basic addition operator
   Matrix<T> operator+(const Matrix<T> &) const; ///< Basic addition operator
@@ -102,8 +116,8 @@ public:
   bool operator!=(const Matrix<T> &) const;
   bool operator==(const Matrix<T> &) const;
   bool equals(const Matrix<T> &A, const double Tolerance = FLT_EPSILON) const;
-  T item(const int a, const int b) const {
-    return V[a][b];
+  T item(const int row, const int col) const {
+    return m_storage[row][col];
   } ///< disallows access
 
   void print() const;
@@ -133,21 +147,23 @@ public:
   Matrix<T> postMultiplyByDiagonal(
       const std::vector<T> &) const; ///< post-multiply this*D
 
-  void setMem(const size_t, const size_t);
+  void setMem(const size_t numRows, const size_t numCols);
+
+  /// Return the number of rows in the matrix
+  inline size_t numRows() const { return m_storage.nrows; }
+
+  /// Return the number of columns in the matrix
+  inline size_t numCols() const { return m_storage.ncols; }
 
   /// Access matrix sizes
   std::pair<size_t, size_t> size() const {
-    return std::pair<size_t, size_t>(nx, ny);
+    return std::pair<size_t, size_t>(numRows(), numCols());
   }
 
-  /// Return the number of rows in the matrix
-  size_t numRows() const { return nx; }
-
-  /// Return the number of columns in the matrix
-  size_t numCols() const { return ny; }
-
   /// Return the smallest matrix size
-  size_t Ssize() const { return (nx > ny) ? ny : nx; }
+  inline size_t Ssize() const {
+    return (numRows() > numCols()) ? numCols() : numRows();
+  }
 
   void swapRows(const size_t, const size_t); ///< Swap rows (first V index)
   void swapCols(const size_t, const size_t); ///< Swap cols (second V index)
