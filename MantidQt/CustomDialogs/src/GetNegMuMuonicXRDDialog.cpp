@@ -91,13 +91,62 @@ void GetNegMuMuonicXRDDialog::enableElementsForGetNegMuMuonicXRD() {
   * for the algorithm, and the button for that element can be enabled
   * the same as the elements are below.
   */
+  m_periodicTable->enableButtonByName("He");
+  m_periodicTable->enableButtonByName("Li");
+  m_periodicTable->enableButtonByName("Be"); 
+  m_periodicTable->enableButtonByName("B");
+  m_periodicTable->enableButtonByName("C");
+  m_periodicTable->enableButtonByName("N");
+  m_periodicTable->enableButtonByName("O");
+  m_periodicTable->enableButtonByName("F");
+  m_periodicTable->enableButtonByName("Ne");
+  m_periodicTable->enableButtonByName("Na");
+  m_periodicTable->enableButtonByName("Mg");
+  m_periodicTable->enableButtonByName("Ar");
+  m_periodicTable->enableButtonByName("Si");
+  m_periodicTable->enableButtonByName("P");
+  m_periodicTable->enableButtonByName("S");
+  m_periodicTable->enableButtonByName("Cl");
+  m_periodicTable->enableButtonByName("Al");
+  m_periodicTable->enableButtonByName("K");
+  m_periodicTable->enableButtonByName("Ca");
+  m_periodicTable->enableButtonByName("Ti");
+  m_periodicTable->enableButtonByName("V");
+  m_periodicTable->enableButtonByName("Cr");
+  m_periodicTable->enableButtonByName("Mn");
+  m_periodicTable->enableButtonByName("Fe");
+  m_periodicTable->enableButtonByName("Co");
+  m_periodicTable->enableButtonByName("Ni");
+  m_periodicTable->enableButtonByName("As");
   m_periodicTable->enableButtonByName("Au");
   m_periodicTable->enableButtonByName("Ag");
   m_periodicTable->enableButtonByName("Cu");
+  m_periodicTable->enableButtonByName("Sr");
+  m_periodicTable->enableButtonByName("Y");
+  m_periodicTable->enableButtonByName("Zr");
+  m_periodicTable->enableButtonByName("Nb");
+  m_periodicTable->enableButtonByName("Mo");
+  m_periodicTable->enableButtonByName("Rh");
+  m_periodicTable->enableButtonByName("Pd");
+  m_periodicTable->enableButtonByName("Cd");
+  m_periodicTable->enableButtonByName("In");
+  m_periodicTable->enableButtonByName("Sn");
+  m_periodicTable->enableButtonByName("Sb");
+  m_periodicTable->enableButtonByName("Te");
+  m_periodicTable->enableButtonByName("I");
+  m_periodicTable->enableButtonByName("Cs");
+  m_periodicTable->enableButtonByName("Ba");
+  m_periodicTable->enableButtonByName("La");
+  m_periodicTable->enableButtonByName("Ce");
+  m_periodicTable->enableButtonByName("Pr");
+  m_periodicTable->enableButtonByName("Nd");
+  m_periodicTable->enableButtonByName("Hg");
+  m_periodicTable->enableButtonByName("Tl");
   m_periodicTable->enableButtonByName("Zn");
   m_periodicTable->enableButtonByName("Pb");
   m_periodicTable->enableButtonByName("As");
   m_periodicTable->enableButtonByName("Sn");
+  m_periodicTable->enableButtonByName("Bi");
 }
 
 /**
