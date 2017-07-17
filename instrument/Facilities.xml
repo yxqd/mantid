@@ -631,15 +631,7 @@
     <technique>Powder diffraction</technique>
   </instrument>
 
-  <instrument name="D20_lr">
-    <technique>Powder diffraction</technique>
-  </instrument>
-
   <instrument name="D20">
-    <technique>Powder diffraction</technique>
-  </instrument>
-
-  <instrument name="D20_hr">
     <technique>Powder diffraction</technique>
   </instrument>
 
@@ -647,11 +639,7 @@
     <technique>Powder diffraction</technique>
   </instrument>
 
-  <instrument name="D4">
-    <technique>Liquid diffraction</technique>
-  </instrument>
-
-  <instrument name="D4_hr">
+  <instrument name="D4C">
     <technique>Liquid diffraction</technique>
   </instrument>
 

@@ -48,7 +48,8 @@ class Pearl(AbstractInst):
 
     def _get_run_details(self, run_number_string):
         run_number_string_key = self._generate_run_details_fingerprint(run_number_string,
-                                                                       self._inst_settings.file_extension)
+                                                                       self._inst_settings.file_extension,
+                                                                       self._inst_settings.tt_mode)
         if run_number_string_key in self._cached_run_details:
             return self._cached_run_details[run_number_string_key]
 
@@ -64,16 +65,19 @@ class Pearl(AbstractInst):
 
     def _generate_output_file_name(self, run_number_string):
         inst = self._inst_settings
-        return pearl_algs.generate_out_name(run_number_string=run_number_string, absorb_on=inst.absorb_corrections,
+        return pearl_algs.generate_out_name(run_number_string=run_number_string,
                                             long_mode_on=inst.long_mode, tt_mode=inst.tt_mode)
 
     def _attenuate_workspace(self, input_workspace):
         attenuation_path = self._inst_settings.attenuation_file_path
         return pearl_algs.attenuate_workspace(attenuation_file_path=attenuation_path, ws_to_correct=input_workspace)
 
-    def _normalise_ws_current(self, ws_to_correct, run_details=None):
-        monitor_ws = common.get_monitor_ws(ws_to_process=ws_to_correct, run_number_string=run_details.run_number,
-                                           instrument=self)
+    def _normalise_ws_current(self, ws_to_correct):
+        monitor_spectra = self._inst_settings.monitor_spec_no
+
+        monitor_ws = common.extract_single_spectrum(ws_to_process=ws_to_correct,
+                                                    spectrum_number_to_extract=monitor_spectra)
+
         normalised_ws = pearl_algs.normalise_ws_current(ws_to_correct=ws_to_correct, monitor_ws=monitor_ws,
                                                         spline_coeff=self._inst_settings.monitor_spline,
                                                         integration_range=self._inst_settings.monitor_integration_range,
@@ -86,13 +90,20 @@ class Pearl(AbstractInst):
         # instead we don't try to run this automatically
         raise NotImplementedError("You must run the create_vanadium method manually on Pearl")
 
-    def _get_monitor_spectra_index(self, run_number):
-        return self._inst_settings.monitor_spec_no
+    def _get_current_tt_mode(self):
+        return self._inst_settings.tt_mode
 
     def _spline_vanadium_ws(self, focused_vanadium_spectra):
         focused_vanadium_spectra = pearl_algs.strip_bragg_peaks(focused_vanadium_spectra)
-        return common.spline_workspaces(focused_vanadium_spectra=focused_vanadium_spectra,
-                                        num_splines=self._inst_settings.spline_coefficient)
+        splined_list = common.spline_workspaces(focused_vanadium_spectra=focused_vanadium_spectra,
+                                                num_splines=self._inst_settings.spline_coefficient)
+        # Ensure the name is unique if we are in tt_mode all
+        new_workspace_names = []
+        for ws in splined_list:
+            new_name = ws.getName() + '_' + self._inst_settings.tt_mode
+            new_workspace_names.append(mantid.RenameWorkspace(InputWorkspace=ws, OutputWorkspace=new_name))
+
+        return new_workspace_names
 
     def _output_focused_ws(self, processed_spectra, run_details, output_mode=None):
         if not output_mode:

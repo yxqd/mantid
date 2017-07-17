@@ -8,6 +8,7 @@
 #include "MantidKernel/MandatoryValidator.h"
 #include "MantidKernel/StringTokenizer.h"
 #include "MantidKernel/Unit.h"
+#include "MantidGeometry/IDetector.h"
 
 #include <algorithm>
 #include <boost/lexical_cast.hpp>
@@ -479,6 +480,9 @@ MatrixWorkspace_sptr ReflectometryReductionOne2::makeIvsLam() {
       result = directBeamCorrection(result);
       result = monitorCorrection(result);
     }
+    // Crop to wavelength limits
+    g_log.debug("Cropping output workspace\n");
+    result = cropWavelength(result);
     if (m_normaliseTransmission) {
       g_log.debug("Normalising input workspace by transmission run\n");
       result = transOrAlgCorrection(result, false);
@@ -497,15 +501,14 @@ MatrixWorkspace_sptr ReflectometryReductionOne2::makeIvsLam() {
       result = directBeamCorrection(result);
       result = monitorCorrection(result);
     }
+    // Crop to wavelength limits
+    g_log.debug("Cropping output workspace\n");
+    result = cropWavelength(result);
     if (m_normaliseTransmission) {
       g_log.debug("Normalising output workspace by transmission run\n");
       result = transOrAlgCorrection(result, true);
     }
   }
-
-  // Crop to wavelength limits
-  g_log.debug("Cropping output workspace\n");
-  result = cropWavelength(result);
 
   return result;
 }
