@@ -5,7 +5,7 @@
             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
             xsi:schemaLocation="http://www.mantidproject.org/IDF/1.0 http://schema.mantidproject.org/IDF/1.0/IDFSchema.xsd"
  name="VULCAN" valid-from   ="2017-05-19 23:59:59"
-                          valid-to     ="2019-05-19 23:59:59"
+                          valid-to     ="2019-06-19 23:59:59"
 		          last-modified="2017-05-25 10:30:00">
   <!--Data taken from VULCAN_geom_2010_06_03.xml-->
   <!--Created by Vickie Lynch-->
@@ -46,22 +46,23 @@
     <location/>
   </component>
   <type name="Group1">
-  <component type="flip-panel" idstart="26250" idfillbyfirst="y" idstepbyrow="8">
-    <location y="0.4021558" x="-1.9591505" z="0.0" name="bank21" rot="-180.0" axis-x="0" axis-y="1" axis-z="0">
+  <!--NOTE 25250 28750-->
+  <component type="flip-panel" idstart="28750" idfillbyfirst="y" idstepbyrow="7">
+    <location y="0.4021558" x="-1.9591505" z="0.0" name="bank23" rot="-180.0" axis-x="0" axis-y="1" axis-z="0">
       <rot val="11.6000073013">
         <rot val="90.0" axis-x="0" axis-y="1" axis-z="0" />
       </rot>
     </location>
   </component>
-  <component type="flip-panel" idstart="27500" idfillbyfirst="y" idstepbyrow="8">
+  <component type="flip-panel" idstart="27500" idfillbyfirst="y" idstepbyrow="7">
     <location y="0.0" x="-2.0" z="0.0" name="bank22" rot="0.0" axis-x="0" axis-y="1" axis-z="0">
       <rot val="0.0">
         <rot val="-90.0" axis-x="0" axis-y="1" axis-z="0" />
       </rot>
     </location>
   </component>
-  <component type="flip-panel" idstart="28750" idfillbyfirst="y" idstepbyrow="8">
-    <location y="-0.4021558" x="-1.9591505" z="0.0" name="bank23" rot="0.0" axis-x="0" axis-y="1" axis-z="0">
+  <component type="flip-panel" idstart="26250" idfillbyfirst="y" idstepbyrow="7">
+    <location y="-0.4021558" x="-1.9591505" z="0.0" name="bank21" rot="0.0" axis-x="0" axis-y="1" axis-z="0">
       <rot val="11.6000073013">
         <rot val="-90.0" axis-x="0" axis-y="1" axis-z="0" />
       </rot>
@@ -70,21 +71,21 @@
   </type>
 
   <type name="Group2">
-  <component type="panel" idstart="32500" idfillbyfirst="y" idstepbyrow="8">
+  <component type="panel" idstart="32500" idfillbyfirst="y" idstepbyrow="7">
     <location y="-0.4021558" x="1.9591505" z="0.0" name="bank26" rot="-180.0" axis-x="0" axis-y="1" axis-z="0">
       <rot val="11.6000073013">
         <rot val="90.0" axis-x="0" axis-y="1" axis-z="0" />
       </rot>
     </location>
   </component>
-  <component type="panel" idstart="33750" idfillbyfirst="y" idstepbyrow="8">
+  <component type="panel" idstart="33750" idfillbyfirst="y" idstepbyrow="7">
     <location y="0.0" x="2.0" z="0.0" name="bank27" rot="0.0" axis-x="0" axis-y="1" axis-z="0">
       <rot val="0.0">
         <rot val="-90.0" axis-x="0" axis-y="1" axis-z="0" />
       </rot>
     </location>
   </component>
-  <component type="panel" idstart="35000" idfillbyfirst="y" idstepbyrow="8">
+  <component type="panel" idstart="35000" idfillbyfirst="y" idstepbyrow="7">
     <location y="0.4021558" x="1.9591505" z="0.0" name="bank28" rot="0.0" axis-x="0" axis-y="1" axis-z="0">
       <rot val="11.6000073013">
         <rot val="-90.0" axis-x="0" axis-y="1" axis-z="0" />
@@ -94,8 +95,9 @@
   </type>
 
   <!-- NOTE: New high angle detector -->
-  <component type="HighAngleGroup" idlist="HighAngleGroup">
-    <location>
+  <component type="HighAngleGroup" idlist="HighAngleGroup" idstart="62500">
+    <!-- NOTE: Detector: 2 meter away and rotate around sample with 150 degree -->
+    <location name="bank4">
       <parameter name="r-position">
         <value val="2.0"/>
       </parameter>
@@ -119,35 +121,35 @@
   </component>
   <!-- 9 banks. each is a eight-pack -->
   <type name="HighAngleGroup">
-    <component type="bank9">
+    <component type="bank09" idstart="62500">
       <location/>
     </component>
-    <component type="bank8">
+    <component type="bank08">
       <location/>
     </component>
-    <component type="bank7">
+    <component type="bank07">
       <location/>
     </component>
-    <component type="bank6">
+    <component type="bank06">
       <location/>
     </component>
-    <component type="bank5">
+    <component type="bank05">
       <location/>
     </component>
-    <component type="bank4">
+    <component type="bank04">
       <location/>
     </component>
-    <component type="bank3">
+    <component type="bank03">
       <location/>
     </component>
-    <component type="bank2">
+    <component type="bank02">
       <location/>
     </component>
-    <component type="bank1">
+    <component type="bank01">
       <location/>
     </component>
   </type>
-  <type name="bank1">
+  <type name="bank01">
     <component type="eightpack">
       <location y="0.0" x="0.1776" z="0.0">
         <rot axis-z="0" axis-x="0" axis-y="1" val="0.0">
@@ -158,7 +160,7 @@
       </location>
     </component>
   </type>
-  <type name="bank2">
+  <type name="bank02">
     <component type="eightpack">
       <location y="0.0" x="0.1332" z="0.0">
         <rot axis-z="0" axis-x="0" axis-y="1" val="0.0">
@@ -169,7 +171,7 @@
       </location>
     </component>
   </type>
-  <type name="bank3">
+  <type name="bank03">
     <component type="eightpack">
       <location y="0.0" x="0.0888" z="0.0">
         <rot axis-z="0" axis-x="0" axis-y="1" val="0.0">
@@ -180,7 +182,7 @@
       </location>
     </component>
   </type>
-  <type name="bank4">
+  <type name="bank04">
     <component type="eightpack">
       <location y="0.0" x="0.0444" z="0.0">
         <rot axis-z="0" axis-x="0" axis-y="1" val="0.0">
@@ -191,7 +193,7 @@
       </location>
     </component>
   </type>
-  <type name="bank5">
+  <type name="bank05">
     <component type="eightpack">
       <location y="0.0" x="0.0" z="0.0">
         <rot axis-z="0" axis-x="0" axis-y="1" val="0.0">
@@ -202,7 +204,7 @@
       </location>
     </component>
   </type>
-  <type name="bank6">
+  <type name="bank06">
     <component type="eightpack">
       <location y="0.0" x="-0.0444" z="0.0">
         <rot axis-z="0" axis-x="0" axis-y="1" val="0.0">
@@ -213,7 +215,7 @@
       </location>
     </component>
   </type>
-  <type name="bank7">
+  <type name="bank07">
     <component type="eightpack">
       <location y="0.0" x="-0.0888" z="0.0">
         <rot axis-z="0" axis-x="0" axis-y="1" val="0.0">
@@ -224,7 +226,7 @@
       </location>
     </component>
   </type>
-  <type name="bank8">
+  <type name="bank08">
     <component type="eightpack">
       <location y="0.0" x="-0.1332" z="0.0">
         <rot axis-z="0" axis-x="0" axis-y="1" val="0.0">
@@ -235,8 +237,8 @@
       </location>
     </component>
   </type>
-  <type name="bank9">
-    <component type="eightpack">
+  <type name="bank09">
+    <component type="eightpack" idstart="62500">
       <location y="0.0" x="-0.1776" z="0.0">
         <rot axis-z="0" axis-x="0" axis-y="1" val="0.0">
           <rot axis-z="0" axis-x="1" axis-y="0" val="0.0">
@@ -539,14 +541,14 @@
   <!-- Rectangular Detector Panel -->
   <type name="panel" is="rectangular_detector" type="pixel"
       xpixels="154" xstart="-0.3825" xstep="+0.005"
-      ypixels="8" ystart="-0.16625" ystep="+0.0475" >
+      ypixels="7" ystart="-0.14250" ystep="+0.0475" >
     <properties/>
   </type>
   <!-- NOTE: This detector is the same as the SNAP detector -->
   <!-- Rectangular Detector Panel -->
   <type name="flip-panel" is="rectangular_detector" type="pixel"
       xpixels="154" xstart="+0.3825" xstep="-0.005"
-      ypixels="8" ystart="-0.16625" ystep="+0.0475" >
+      ypixels="7" ystart="-0.14250" ystep="+0.0475" >
     <properties/>
   </type>
 
@@ -574,7 +576,7 @@
 
   <!--DETECTOR IDs for high angle detectors -->
   <idlist idname="HighAngleGroup">
-    <id start="200192" end="218623"/>
+    <id start="62500" end="80931"/>
   </idlist>
 
   <!--MONITOR IDs-->
