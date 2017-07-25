@@ -3,7 +3,7 @@
 see http://www.mantidproject.org/IDF -->
 <instrument xmlns="http://www.mantidproject.org/IDF/1.0"
             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-            xsi:schemaLocation="http://www.mantidproject.org/IDF/1.0 Schema/IDFSchema.xsd"
+            xsi:schemaLocation="http://www.mantidproject.org/IDF/1.0 http://schema.mantidproject.org/IDF/1.0/IDFSchema.xsd"
             name="IMAT" valid-from ="2016-07-15 00:00:00"
             valid-to ="2017-02-24 23:59:59"
             last-modified="2016-08-03 18:46:01">
@@ -26,7 +26,6 @@ see http://www.mantidproject.org/IDF -->
   <!-- LIST OF PHYSICAL COMPONENTS (which the instrument consists of) -->
 
   <!-- source and sample-position components -->
-
   <component type="source">
     <location z="-56.0"/>
   </component>
