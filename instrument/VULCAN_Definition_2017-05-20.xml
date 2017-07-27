@@ -95,7 +95,11 @@
   </type>
 
   <!-- NOTE: New high angle detector -->
-  <component type="GroupHighAngle" idlist="GroupHighAngle" idstart="62500">
+  <component type="Group3">
+    <location/>
+  </component>
+  <type name="Group3">
+  <component type="bank4" idlist="bank4" idstart="62500">
     <!-- NOTE: Detector: 2 meter away and rotate around sample with 150 degree -->
     <location name="bank4">
       <parameter name="r-position">
@@ -119,8 +123,9 @@
       </parameter>
     </location>
   </component>
+  </type>
   <!-- 9 banks. each is a eight-pack -->
-  <type name="GroupHighAngle">
+  <type name="bank4">
     <component type="bank01">
       <location/>
     </component>
@@ -575,7 +580,7 @@
   </type>
 
   <!--DETECTOR IDs for high angle detectors -->
-  <idlist idname="GroupHighAngle">
+  <idlist idname="bank4">
     <id start="62500" end="80931"/>
   </idlist>
 
