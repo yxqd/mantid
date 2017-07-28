@@ -46,7 +46,7 @@
     <location/>
   </component>
   <type name="Group1">
-  <!--NOTE 25250 28750-->
+  <!--NOTE West Bank from 26250 to 28750-->
   <component type="flip-panel" idstart="28750" idfillbyfirst="y" idstepbyrow="7">
     <location y="0.4021558" x="-1.9591505" z="0.0" name="bank23" rot="-180.0" axis-x="0" axis-y="1" axis-z="0">
       <rot val="11.6000073013">
