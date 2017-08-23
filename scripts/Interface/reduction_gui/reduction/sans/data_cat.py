@@ -10,6 +10,8 @@ import sqlite3
 import sys
 import traceback
 
+from multiprocessing import Process, Queue, Lock
+
 # Only way that I have found to use the logger from both the command line
 # and mantiplot
 try:
@@ -128,33 +130,39 @@ class DataSet(object):
             return rows[0][0]
 
     @classmethod
-    def find(cls, file_path, cursor, process_files=True):
+    def find(cls, file_path, conn, process_files=True, queue=None, lock=None)
         """
             Find an entry in the database, or create on as needed
         """
         run = cls.handle(file_path)
         if run is None:
-            return None
+            return
 
         t = (run,)
-        cursor.execute('select * from %s where run=?'% cls.TABLE_NAME, t)
-        rows = cursor.fetchall()
-
-        if len(rows) == 0:
-            if process_files:
-                log_ws = "__log"
+        
+        # First checks if there are entries in the DB for this run
+        lock.acquire()
+        try:
+            with conn:
+                cursor = conn.cursor()
+                cursor.execute('select * from %s where run=?'% cls.TABLE_NAME, t)
+                rows = cursor.fetchall()
+                cursor.close()
+        except sqlite3.OperationalError as e:
+            logger.exception(e)
+        lock.release()
+        
+        if len(rows) > 0:
+            row = rows[0]
+            queue.put(DataSet(row[1], row[2], row[3], row[4], row[5], id=row[0]))
+        elif process_files:
+                log_ws = os.path.basename(file_path)
                 if cls.load_meta_data(file_path, outputWorkspace=log_ws):
                     try:
-                        return cls.read_properties(log_ws, run, cursor)
+                        ds = cls.read_properties(log_ws, run, cursor)
+                        queue.put(ds)
                     except Exception:
-                        return None
-                else:
-                    return None
-            else:
-                return None
-        else:
-            row = rows[0]
-            return DataSet(row[1], row[2], row[3], row[4], row[5], id=row[0])
+                        pass
 
     @classmethod
     def create_table(cls, cursor):
@@ -187,7 +195,7 @@ class DataCatalog(object):
         # Connect/create to DB
         db_path = os.path.join(os.path.expanduser("~"), ".mantid_data_sets")
         self.db_exists = False
-        self.db = None
+        self.conn = None
 
         try:
             self._create_db(db_path, replace_db)
@@ -203,10 +211,10 @@ class DataCatalog(object):
             if replace_db:
                 os.remove(db_path)
 
-        self.db = sqlite3.connect(db_path)
-        cursor = self.db.cursor()
+        self.conn = sqlite3.connect(db_path)
+        cursor = self.conn.cursor()
         self.data_set_cls.create_table(cursor)
-        self.db.commit()
+        self.conn.commit()
         cursor.close()
 
     def __str__(self):
@@ -246,17 +254,37 @@ class DataCatalog(object):
         return output
 
     def add_type(self, run, type):
-        if self.db is None:
+        if self.conn is None:
             print ("DataCatalog: Could not access local data catalog")
             return
 
-        c = self.db.cursor()
+        c = self.conn.cursor()
         id = self.data_set_cls.get_data_set_id(run, c)
         if id>0:
             self.data_set_cls.data_type_cls.add(id, type, c)
 
-        self.db.commit()
+        self.conn.commit()
         c.close()
+        
+
+
+    def append_data_sets(self, queue, call_back):
+        '''
+        This can be seen as a consumer
+        '''
+        while True:
+            d = queue.get()
+            if d is None:
+                # Poison pill means shutdown
+                queue.close()
+                break
+            if call_back is not None:
+                attr_list = d.as_string_list()
+                type_id = self.data_set_cls.data_type_cls.get_likely_type(d.id, c)
+                attr_list += type_id, 
+                call_back(attr_list)
+            self.catalog.append(d)
+        
 
     def list_data_sets(self, data_dir=None, call_back=None, process_files=True):
         """
@@ -264,36 +292,47 @@ class DataCatalog(object):
         """
         self.catalog = []
 
-        if self.db is None:
+        if self.conn is None:
             print ("DataCatalog: Could not access local data catalog")
             return
-
-        c = self.db.cursor()
 
         if not os.path.isdir(data_dir):
             return
 
         try:
+            jobs = []
+            lock = Lock()
+            queue = Queue()
             for f in os.listdir(data_dir):
                 for extension in self.extension:
                     if f.endswith(extension):
                         file_path = os.path.join(data_dir, f)
+                        # I guess this is never called (?)
                         if hasattr(self.data_set_cls, "find_with_api"):
-                            d = self.data_set_cls.find_with_api(file_path, c,
+                            d = self.data_set_cls.find_with_api(file_path,
                                                                 process_files=process_files)
                         else:
-                            d = self.data_set_cls.find(file_path, c,
-                                                       process_files=process_files)
-                        if d is not None:
-                            if call_back is not None:
-                                attr_list = d.as_string_list()
-                                type_id = self.data_set_cls.data_type_cls.get_likely_type(d.id, c)
-                                attr_list += (type_id,)
-                                call_back(attr_list)
-                            self.catalog.append(d)
+                            p = Process(
+                                target=self.data_set_cls.find,
+                                # file_path, db_connection, process_files
+                                args=(file_path, self.conn, process_files, queue, lock, )
+                            )
+                            jobs.append(p)
+                            p.start()
+                            
+            
+            # starts the thread to display of the queue
+            qp = Process(target=self.append_data_sets, args=(queue, call_back, ))
+            qp.start()
+            # Waits for all jobs to finish
+            for p in jobs:
+                p.join()
+        
+            # All jobs finished, puts not in the queue: Poison pill
+            # and waits for it to finish
+            queue.put(None)
+            qp.join()
 
-            self.db.commit()
-            c.close()
         except Exception as msg:
             logger.error("DataCatalog: Error working with the local data catalog\n%s" % str(traceback.format_exc()))
             logger.exception(msg)
