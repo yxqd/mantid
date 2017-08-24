@@ -7,6 +7,8 @@ from reduction_gui.reduction.sans.data_cat import DataCatalog as BaseCatalog
 from reduction_gui.reduction.sans.data_cat import DataSet,  DataType
 import re
 import datetime
+import traceback
+from twisted.python.log import logerr
 
 # Check whether Mantid is available
 try:
@@ -18,9 +20,13 @@ except:
 
 try:
     import mantidplot
+    from mantid.kernel import logger
     IN_MANTIDPLOT = True
 except:
     IN_MANTIDPLOT = False
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger("data_cat")
 
 
 class EQSANSDataType(DataType):
@@ -34,20 +40,7 @@ class EQSANSDataSet(DataSet):
     def __init__(self, run_number, title, run_start, duration, sdd):
         super(EQSANSDataSet, self).__init__(run_number, title, run_start, duration, sdd)
 
-    @classmethod
-    def load_meta_data(cls, file_path, outputWorkspace):
-        try:
-            if IN_MANTIDPLOT:
-                script = "LoadEventNexus(Filename='%s', OutputWorkspace='%s', MetaDataOnly=True)" % (file_path, outputWorkspace)
-                mantidplot.runPythonScript(script, True)
-                if not AnalysisDataService.doesExist(outputWorkspace):
-                    return False
-            else:
-                api.LoadEventNexus(Filename=file_path, OutputWorkspace=outputWorkspace, MetaDataOnly=True)
-            return True
-        except:
-            return False
-
+    
     @classmethod
     def handle(cls, file_path):
         """
@@ -68,29 +61,40 @@ class EQSANSDataSet(DataSet):
             except:
                 return None
         return None
-
+    
+    
     @classmethod
-    def read_properties(cls, ws, run, cursor):
-        def read_prop(prop):
+    def load_meta_data(cls, file_path, run, out_ws_name):
+        
+        def read_prop(ws_object, prop):
             try:
-                ws_object = AnalysisDataService.retrieve(ws)
                 return str(ws_object.getRun().getProperty(prop).value)
             except:
                 return ""
 
-        def read_series(prop):
+        def read_series(ws_object, prop):
             try:
-                ws_object = AnalysisDataService.retrieve(ws)
                 return float(ws_object.getRun().getProperty(prop).getStatistics().mean)
             except:
                 return -1
-
-        runno = read_prop("run_number")
+        
+        file_path = str(file_path)
+        out_ws_name = str(out_ws_name)
+        
+        api.LoadEventNexus(
+            Filename=file_path,
+            OutputWorkspace=out_ws_name,
+            MetaDataOnly=True
+        )
+        out_ws = api.mtd[out_ws_name]
+        
+        
+        runno = read_prop(out_ws, "run_number")
         if runno=="":
             runno = run
 
-        title = read_prop("run_title")
-        t_str = read_prop("start_time")
+        title = read_prop(out_ws, "run_title")
+        t_str = read_prop(out_ws, "start_time")
         # Get rid of the training microseconds
         toks = t_str.split('.')
         if len(toks)>=2:
@@ -101,16 +105,17 @@ class EQSANSDataSet(DataSet):
         t = t+offset
         run_start = t.strftime('%y-%m-%d %H:%M')
 
-        duration = read_prop("duration")
+        duration = read_prop(out_ws, "duration")
         try:
             duration = float(duration)
         except:
             duration = 0
 
-        sdd = read_series("detectorZ")
+        sdd = read_series(out_ws, "detectorZ")
 
+        api.DeleteWorkspace(out_ws_name)
+        
         d = EQSANSDataSet(runno, title, run_start, duration, sdd)
-        d.insert_in_db(cursor)
         return d
 
 

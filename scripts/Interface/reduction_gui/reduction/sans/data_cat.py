@@ -1,10 +1,10 @@
-from __future__ import (absolute_import, division, print_function)
 #pylint: disable=invalid-name
 """
     Simple local data catalog for Mantid
     Gets main information from data files in a directory and stores
     that information in a database in the user home area.
 """
+from __future__ import (absolute_import, division, print_function)
 import os
 import sqlite3
 import sys
@@ -19,7 +19,7 @@ try:
     from mantid.kernel import logger
 except ImportError:
     import logging
-    logging.basicConfig()#level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger("data_cat")
 
 
@@ -130,12 +130,13 @@ class DataSet(object):
             return rows[0][0]
 
     @classmethod
-    def find(cls, file_path, conn, process_files=True, queue=None, lock=None)
+    def find(cls, file_path, conn, process_files=True, queue=None, lock=None):
         """
             Find an entry in the database, or create on as needed
         """
         run = cls.handle(file_path)
         if run is None:
+            logger.warning("Could not get run number from file {}.".format(file_path))
             return
 
         t = (run,)
@@ -149,21 +150,30 @@ class DataSet(object):
                 rows = cursor.fetchall()
                 cursor.close()
         except sqlite3.OperationalError as e:
-            logger.exception(e)
+            logger.error("DataCatalog: Error while looking up on the DB:\n{}".format(str(traceback.format_exc())))
+            logger.error(e)
         lock.release()
         
         if len(rows) > 0:
+            logger.debug("Got run info from the database...")
             row = rows[0]
             queue.put(DataSet(row[1], row[2], row[3], row[4], row[5], id=row[0]))
         elif process_files:
-                log_ws = os.path.basename(file_path)
-                if cls.load_meta_data(file_path, outputWorkspace=log_ws):
-                    try:
-                        ds = cls.read_properties(log_ws, run, cursor)
-                        queue.put(ds)
-                    except Exception:
-                        pass
-
+            logger.debug("Processing file: {}.".format(file_path))
+            log_ws = os.path.basename(file_path)
+            ds =  cls.load_meta_data(file_path, run, out_ws_name=log_ws)
+            
+            lock.acquire()
+            try:
+                with conn:
+                    cursor = conn.cursor()
+                    ds.insert_in_db(cursor)
+                    cursor.close()
+            except sqlite3.OperationalError as e:
+                logger.error("DataCatalog: Error while inserting on the DB:\n{}".format(str(traceback.format_exc())))
+            lock.release()
+            queue.put(ds)
+                
     @classmethod
     def create_table(cls, cursor):
         cursor.execute("""create table if not exists %s (
@@ -200,8 +210,8 @@ class DataCatalog(object):
         try:
             self._create_db(db_path, replace_db)
         except Exception as msg:
-            logger.error("DataCatalog: Could not access local data catalog\n%s" % sys.exc_info()[1])
-            logger.exception(msg)
+            logger.error("DataCatalog: Could not access local data catalog:\n{}".format(sys.exc_info()[1]))
+
 
     def _create_db(self, db_path, replace_db):
         """
@@ -268,19 +278,34 @@ class DataCatalog(object):
         
 
 
-    def append_data_sets(self, queue, call_back):
+    def append_data_sets(self, queue, call_back, lock):
         '''
         This can be seen as a consumer
         '''
+        logger.debug("Queue started...",)
         while True:
             d = queue.get()
             if d is None:
                 # Poison pill means shutdown
+                
                 queue.close()
+                logger.debug("Queue exiting...",)
                 break
+            logger.debug("Queue got: {}".format(d))
             if call_back is not None:
                 attr_list = d.as_string_list()
-                type_id = self.data_set_cls.data_type_cls.get_likely_type(d.id, c)
+                
+                lock.acquire()
+                try:
+                    with self.conn:
+                        cursor = self.conn.cursor()
+                        type_id = self.data_set_cls.data_type_cls.get_likely_type(d.id, cursor)
+                        cursor.close()
+                except sqlite3.OperationalError as e:
+                    logger.error("DataCatalog (Queue): Error while inserting on the DB:\n{}".format(str(traceback.format_exc())))
+                lock.release()
+            
+                
                 attr_list += type_id, 
                 call_back(attr_list)
             self.catalog.append(d)
@@ -293,16 +318,23 @@ class DataCatalog(object):
         self.catalog = []
 
         if self.conn is None:
-            print ("DataCatalog: Could not access local data catalog")
+            logger.info("DataCatalog: Could not access local data catalog")
             return
 
         if not os.path.isdir(data_dir):
             return
+        
+        logger.debug("Listing directory: {}".format(data_dir))
 
         try:
             jobs = []
             lock = Lock()
             queue = Queue()
+            
+            # starts the thread to process the queue
+            qp = Process(target=self.append_data_sets, args=(queue, call_back, lock))
+            qp.start()
+            
             for f in os.listdir(data_dir):
                 for extension in self.extension:
                     if f.endswith(extension):
@@ -321,9 +353,7 @@ class DataCatalog(object):
                             p.start()
                             
             
-            # starts the thread to display of the queue
-            qp = Process(target=self.append_data_sets, args=(queue, call_back, ))
-            qp.start()
+            
             # Waits for all jobs to finish
             for p in jobs:
                 p.join()
@@ -334,5 +364,4 @@ class DataCatalog(object):
             qp.join()
 
         except Exception as msg:
-            logger.error("DataCatalog: Error working with the local data catalog\n%s" % str(traceback.format_exc()))
-            logger.exception(msg)
+            logger.error("DataCatalog: Error working with the local data catalog:\n{}".format(str(traceback.format_exc())))
