@@ -1004,8 +1004,59 @@ void Instrument::saveNexus(::NeXus::File *file,
   file->writeData("description", "XML contents of the instrument IDF file.");
   file->closeGroup();
 
+  bool isScanning = false;
+  if (isParametrized())
+    if (m_map->hasDetectorInfo(this->baseInstrument().get()))
+      isScanning = m_map->detectorInfo().isScanning();
+
   // Now the parameter map, as a NXnote via its saveNexus method
-  if (isParametrized()) {
+  if (isScanning) {
+    auto detInfo = m_map->detectorInfo();
+
+    std::vector<int> positionDims(2, int(detInfo.scanSize()) * 2);
+    positionDims[1] = 3;
+    std::vector<int> rotationDims(2, int(detInfo.scanSize()) * 2);
+    rotationDims[1] = 4;
+    std::vector<int> indexDims(2, int(detInfo.scanSize()));
+    indexDims[1] = 2;
+
+    std::vector<double> positions;
+    positions.reserve(detInfo.scanSize() * 3);
+    std::vector<double> rotations;
+    rotations.reserve(detInfo.scanSize() * 4);
+    std::vector<int> isMasked;
+    isMasked.reserve(detInfo.scanSize());
+    std::vector<int> indexes;
+    indexes.reserve(detInfo.scanSize() * 2);
+
+    for (size_t i = 0; i < detInfo.size(); ++i) {
+      for (size_t j = 0; j < detInfo.scanCount(i); ++j) {
+        positions.push_back(detInfo.position({i, j}).X());
+        positions.push_back(detInfo.position({i, j}).Y());
+        positions.push_back(detInfo.position({i, j}).Z());
+        rotations.push_back(detInfo.rotation({i, j}).real());
+        rotations.push_back(detInfo.rotation({i, j}).imagI());
+        rotations.push_back(detInfo.rotation({i, j}).imagJ());
+        rotations.push_back(detInfo.rotation({i, j}).imagK());
+        isMasked.push_back(detInfo.isMasked({i, j}));
+        indexes.push_back(int(i));
+        indexes.push_back(int(j));
+      }
+    }
+
+    file->makeGroup("detector_scan_info", "NXdetector", true);
+    file->writeData("scan_size", uint64_t(detInfo.scanSize()));
+    file->writeData("isSyncScan", int(detInfo.isSyncScan()));
+    file->writeCompData("positions", positions, positionDims, ::NeXus::LZW,
+                        positionDims);
+    file->writeCompData("rotations", rotations, rotationDims, ::NeXus::LZW,
+                        rotationDims);
+    file->writeData("isMasked", isMasked);
+    file->writeData("indexes", indexes, indexDims);
+    file->closeGroup();
+    // positions and rotations should not have been added to this parameter map
+    m_map->saveNexus(file, "instrument_parameter_map");
+  } else if (isParametrized()) {
     // Map with data extracted from DetectorInfo -> legacy compatible files.
     const auto &params = makeLegacyParameterMap();
     params->saveNexus(file, "instrument_parameter_map");
@@ -1014,7 +1065,7 @@ void Instrument::saveNexus(::NeXus::File *file,
   // Add physical detector and monitor data
   auto detectorIDs = getDetectorIDs(true);
   auto detmonIDs = getDetectorIDs(false);
-  if (!detmonIDs.empty()) {
+  if (!detmonIDs.empty() && !isScanning) {
     // Add detectors group
     file->makeGroup("physical_detectors", "NXdetector", true);
     file->writeData("number_of_detectors", uint64_t(detectorIDs.size()));
