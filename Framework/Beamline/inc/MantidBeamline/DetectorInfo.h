@@ -71,6 +71,7 @@ public:
   size_t size() const;
   size_t scanSize() const;
   bool isScanning() const;
+  bool isSyncScan() const;
 
   bool isMonitor(const size_t index) const;
   bool isMonitor(const std::pair<size_t, size_t> &index) const;
@@ -152,6 +153,9 @@ inline bool DetectorInfo::isScanning() const {
     return false;
   return size() != m_positions->size();
 }
+
+/// Returns true if the beamline has scanning detectors.
+inline bool DetectorInfo::isSyncScan() const { return m_isSyncScan; }
 
 /** Returns the position of the detector with given detector index.
  *
