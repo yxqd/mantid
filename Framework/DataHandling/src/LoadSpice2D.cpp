@@ -426,8 +426,9 @@ void LoadSpice2D::addRunProperty(const std::string &name, const T &value,
 /**
  * Sets the beam trap as Run Property
  * There's several beamstrap position. We have to find the maximum of every
- *motor above certain treshold.
+ * motor above certain treshold.
  * The maximum motor position will be the trap in use.
+ * If all below the treshold no trap in use
  *
  * Notes:
  * Resting positions:
@@ -443,7 +444,7 @@ void LoadSpice2D::setBeamTrapRunProperty(
 
   std::vector<double> trapDiameters = {76.2, 50.8, 76.2, 101.6};
   // default use the shortest trap
-  double trapDiameterInUse = trapDiameters[1];
+  double trapDiameterInUse = 0;
 
   std::vector<double> trapMotorPositions;
   trapMotorPositions.push_back(
@@ -483,7 +484,8 @@ void LoadSpice2D::setBeamTrapRunProperty(
 
   g_log.debug() << "trapDiameterInUse:" << trapDiameterInUse << "\n";
 
-  addRunProperty<double>("beam-trap-diameter", trapDiameterInUse, "mm");
+  if (trapDiameterInUse != 0)
+  	addRunProperty<double>("beam-trap-diameter", trapDiameterInUse, "mm");
 }
 
 void LoadSpice2D::setTimes() {
