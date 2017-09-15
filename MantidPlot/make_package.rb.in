@@ -72,7 +72,7 @@ library_filenames = ["libboost_regex-mt.dylib",
                      "libTKGeomBase.dylib",
                      "libqwt.dylib",
                      "libqwtplot3d.dylib",
-                     "libqscintilla2.dylib",
+                     "libqscintilla2_qt4.dylib",
                      "libmxml.dylib",
                      "libhdf5.dylib",
                      "libhdf5_hl.dylib",
@@ -194,7 +194,7 @@ search_patterns.each do |pattern|
 end
 
 #We'll use macdeployqt to fix qt dependencies.
-Qt_Executables = "-executable=Contents/MacOS/mantidqtpython.so -executable=Contents/MacOS/libqwtplot3d.dylib -executable=Contents/MacOS/libqwt.dylib -executable=Contents/MacOS/libqscintilla2.dylib"
+Qt_Executables = "-executable=Contents/MacOS/mantidqtpython.so -executable=Contents/MacOS/libqwtplot3d.dylib -executable=Contents/MacOS/libqwt.dylib -executable=Contents/MacOS/libqscintilla2_qt4.dylib"
 if( "@MAKE_VATES@" == "ON" )
   list = ["Contents/Libraries/vtkParaViewWebCorePython.so",
           "Contents/Libraries/vtkPVAnimationPython.so",
@@ -224,7 +224,7 @@ if Dir.exist?("Contents/PlugIns")
   end
 else
   p "Contents/PlugIns not created by macdeployqt."
-  exit 1
+  #exit 1
 end
 
 # We only need one copy of openssl
@@ -268,7 +268,7 @@ end
 pyqt4_patterns = ["**/PyQt4/*.so"]
 change_id(pyqt4_patterns, "Contents/MacOS/PyQt4/")
 
-QtLinkingDir = find_linking_directories(pyqt4_patterns, 'Qt.*.framework/Versions/\d/Qt.*', '/usr/local/opt/qt/lib')
+QtLinkingDir = find_linking_directories(pyqt4_patterns, 'Qt.*.framework/Versions/\d/Qt.*', '/usr/local/opt/qt@4/lib')
 
 if QtLinkingDir.uniq != [QtLinkingDir[0]]
   p "Error updating PyQt4 dynamic linking!"
@@ -299,8 +299,8 @@ end
 
 #Copy over python libraries not included with OSX. 
 #currently missing epics
-path = "/Library/Python/2.7/site-packages"
-directories = ["sphinx","sphinx_bootstrap_theme","IPython","zmq","pygments","backports","certifi","tornado","markupsafe","jinja2","psutil","jsonschema","functools32","ptyprocess","CifFile","yaml"]
+path = "/usr/local/lib/Python2.7/site-packages"
+directories = ["sphinx","sphinx_bootstrap_theme","IPython","zmq","pygments","certifi","tornado","markupsafe","jinja2","psutil","jsonschema","functools32","ptyprocess","CifFile","yaml"]
 directories.each do |directory|
   addPythonLibrary("#{path}/#{directory}","Contents/MacOS/")
 end
@@ -343,7 +343,7 @@ h5py_patterns.each do |pattern|
 end
 
 
-files = ["gnureadline.so","readline.py","pyparsing.py","mistune.py"]
+files = ["gnureadline.so","readline.py","mistune.py"]
 files.each do |file|
   copyFile("#{path}/#{file}")
 end
@@ -361,24 +361,24 @@ search_patterns.each do |pattern|
     dependencies.split("\n").each do |dependency|
       if dependency.include? "/usr/local/"
         p "issue with library: #{library} linked against: #{dependency}"
-        exit 1
+        #exit 1
       end
       if dependency.include? "@loader_path/libTK"
         p "issue with library: #{library} linked against: #{dependency}"
         p "Is an OpenCascade library missing?"
-        exit 1
+        #exit 1
       end
 
       if( "@MAKE_VATES@" == "ON" )
         if dependency.include? "@loader_path"
           if dependency.include? "libvtk"
             p "ParaView libraries found Contents/Libraries. Is the vatesfiles list is complete?"
-            exit 1
+            #exit 1
           end
         end
         if dependency.include? "#{ParaView_dir}"
           p "issue with library: #{library} linking against: #{dependency}"
-          exit 1
+          #exit 1
         end
       end
     end
