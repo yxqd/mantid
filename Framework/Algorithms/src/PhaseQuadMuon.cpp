@@ -116,9 +116,31 @@ std::map<std::string, std::string> PhaseQuadMuon::validateInputs() {
     result["PhaseTable"] = "PhaseTable must have three columns";
   }
   auto names = tabWS->getColumnNames();
+  std::string logger;
+  std::string data;
+  size_t j = 0;
+  auto tmp = tabWS->clone();
   for (auto &name : names) {
     std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+	logger += name;
+	logger += "   ";
+	if (j == 0) {
+		data += std::to_string(tmp->Int(10, j));
+
+	}
+	else {
+		data += std::to_string(tmp->Double(10, j));
+	}
+	data += "    ";
+	j = j + 1;
   }
+
+  m_log.warning(logger);
+  m_log.warning(data);
+
+
+
+
   int phaseCount = 0;
   int asymmetryCount = 0;
   for (const std::string &name : names) {

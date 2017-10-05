@@ -11,6 +11,8 @@
 #include "MantidDataObjects/TableWorkspace.h"
 #include "MantidAPI/TableRow.h"
 
+
+
 using namespace Mantid::DataObjects;
 using namespace Mantid::API;
 
@@ -50,7 +52,7 @@ IAlgorithm_sptr setupAlg(MatrixWorkspace_sptr m_loadedData, bool isChildAlg) {
   boost::shared_ptr<ITableWorkspace> phaseTable(
       new Mantid::DataObjects::TableWorkspace);
   populatePhaseTable(phaseTable);
-
+  auto stuff =phaseTable->getColumnNames();
   return setupAlg(m_loadedData, isChildAlg, phaseTable);
 }
 
@@ -99,6 +101,7 @@ public:
     TS_ASSERT_EQUALS(phaseQuad->category(), "Muon");
     TS_ASSERT_THROWS_NOTHING(phaseQuad->initialize());
     TS_ASSERT(phaseQuad->isInitialized());
+
   }
 
   void testExecPhaseTable() {
