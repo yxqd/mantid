@@ -6,15 +6,19 @@ from Muon import table_utils
 
 
 class MaxEntView(QtGui.QWidget):
+    """
+    The view for the MaxEnt widget. This
+    creates the look of the widget
+    """
     # signals
     maxEntButtonSignal = QtCore.pyqtSignal()
+    cancelSignal = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
         super(MaxEntView, self).__init__(parent)
-        self.grid = QtGui.QGridLayout(self)
+        self.grid = QtGui.QVBoxLayout(self)
 
         #make table
-
         self.table = QtGui.QTableWidget(self)
         self.table.resize(800, 800)
 
@@ -25,11 +29,9 @@ class MaxEntView(QtGui.QWidget):
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.setHorizontalHeaderLabels(("MaxEnt Property;Value").split(";"))
-
         table_utils.setTableHeaders(self.table)
 
         # populate table
-
         table_utils.setRowName(self.table,0,"Complex Data")
         self.complex_data_box= table_utils.addCheckBoxToTable(self.table,False,0)
         self.complex_data_box.setFlags(QtCore.Qt.ItemIsEnabled)
@@ -97,32 +99,44 @@ class MaxEntView(QtGui.QWidget):
 
         #layout
         # this is if complex data is unhidden
-        #self.table.setMinimumSize(40,228)
         self.table.setMinimumSize(40,203)
         self.tableA.setMinimumSize(40,207)
         self.horizontalSpacer1 = QtGui.QSpacerItem(20, 30, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         self.horizontalSpacer2 = QtGui.QSpacerItem(20, 70, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-        #make button
+        #make buttons
         self.button = QtGui.QPushButton('Calculate MaxEnt', self)
         self.button.setStyleSheet("background-color:lightgrey")
-#        #connects
+        self.cancel = QtGui.QPushButton('Cancel', self)
+        self.cancel.setStyleSheet("background-color:lightgrey")
+        self.cancel.setEnabled(False)
+        #connects
         self.button.clicked.connect(self.MaxEntButtonClick)
+        self.cancel.clicked.connect(self.cancelClick)
+        # button layout
+        self.buttonLayout=QtGui.QHBoxLayout()
+        self.buttonLayout.addWidget(self.button)
+        self.buttonLayout.addWidget(self.cancel)
         # add to layout
         self.grid.addWidget(self.table)
         self.grid.addItem(self.horizontalSpacer1)
         self.grid.addWidget(self.advancedLabel)
         self.grid.addWidget(self.tableA)
         self.grid.addItem(self.horizontalSpacer2)
-        self.grid.addWidget(self.button)
+        self.grid.addLayout(self.buttonLayout)
 
     # add data to view
     def addItems(self,options):
         self.ws.clear()
         self.ws.addItems(options)
 
+    # send signal
     def MaxEntButtonClick(self):
         self.maxEntButtonSignal.emit()
 
+    def cancelClick(self):
+        self.cancelSignal.emit()
+
+    # get some inputs for model
     def initMaxEntInput(self):
         inputs={}
 
@@ -159,8 +173,11 @@ class MaxEntView(QtGui.QWidget):
     def isRaw(self):
         return self.raw_box.checkState() == QtCore.Qt.Checked
 
-    def activateButton(self):
+    # turn button on and off
+    def activateCalculateButton(self):
         self.button.setEnabled(True)
+        self.cancel.setEnabled(False)
 
-    def deactivateButton(self):
+    def deactivateCalculateButton(self):
         self.button.setEnabled(False)
+        self.cancel.setEnabled(True)

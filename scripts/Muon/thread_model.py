@@ -4,9 +4,11 @@ from PyQt4.QtCore import QThread
 
 
 class ThreadModel(QThread):
-    # a wrapper to allow threading with
-    # the MaxEnt algorithm.
 
+    """
+    A wrapper to allow threading with
+    the MaxEnt models.
+    """
     def __init__(self,model):
         QThread.__init__(self)
         self.model=model
@@ -19,8 +21,13 @@ class ThreadModel(QThread):
         self.model.output()
         return
 
+    def cancel(self):
+        self.model.cancel()
+   
+    # if there is one set of inputs (1 alg)
     def setInputs(self,inputs,runName):
         self.model.setInputs(inputs,runName)
 
+    # if there are multiple inputs (alg>1)
     def loadData(self,inputs):
         self.model.loadData(inputs)
