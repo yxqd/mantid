@@ -15,15 +15,15 @@ class FrequencyDomainAnalysisGui(QtGui.QMainWindow):
         super(FrequencyDomainAnalysisGui,self).__init__(parent)
 
         groupedModels = model_constructor.ModelConstructor(True)
-        widget = main_window_view.MainWindowView(parent)
-        self.presenter=main_window_presenter.MainWindowPresenter(widget,groupedModels)
-        self.setCentralWidget(widget.getWidget())
+        self.view = main_window_view.MainWindowView(parent)
+        self.presenter=main_window_presenter.MainWindowPresenter(self.view,groupedModels)
+        self.setCentralWidget(self.view.getWidget())
         self.setWindowTitle("Frequency Domain Analysis")
 
     # cancel algs if window is closed
     def closeEvent(self,event):
-        a=1
         #self.presenter.close()
+        self.view.closeEvent(event)
 
 def qapp():
     if QtGui.QApplication.instance():

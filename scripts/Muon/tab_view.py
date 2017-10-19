@@ -46,3 +46,7 @@ class TabView(QtGui.QMainWindow):
         for j in range(0,len(self.tabs),1):
            self.tabs[j].setFeatures(QtGui.QDockWidget.DockWidgetClosable and QtGui.QDockWidget.DockWidgetFloatable)
 
+    def closeEvent(self,event):
+        for j in range(len(self.tabs)-1,-1,-1):
+            self.tabs[j].close()
+            self.widgets[j].close()

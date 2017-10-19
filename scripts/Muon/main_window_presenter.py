@@ -17,3 +17,6 @@ class MainWindowPresenter(object):
 
         groupedModels= model_constructor.ModelConstructor(True)
         self.tabPresenter = tab_presenter.TabPresenter(self.view.tabView,self.view.tabView.transformView,groupedModels)
+
+    def close(self):
+        self.tabPresenter.close()

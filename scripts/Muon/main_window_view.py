@@ -27,8 +27,10 @@ class MainWindowView(QtGui.QWidget):
         QHbox.addWidget(splitter)
         self.widget.setLayout(QHbox)      
  
-
+    
     def getWidget(self):
         return self.widget
-
+   
+    def closeEvent(self,event):
+        self.tabView.closeEvent(event)
 
