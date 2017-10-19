@@ -46,25 +46,34 @@ namespace {
 		phaseTable->addColumn("double", "Asymmetry");
 		return phaseTable;
 	}
+
+	// Now convert phases to interval [0, 2PI)
+	double getPhaseFromZeroTo2Pi(const double phi) {
+		int factor = static_cast<int>(floor(phi / (2. * M_PI)));
+		if (factor) {
+			return phi - factor * 2. * M_PI;
+		}
+		return phi;
+	}
 	// Return asymmetry and phase pair for field along x axis
 	std::pair<double, double> xField(const V3D det, const double radius) {
-		double phi = atan2(det.Z(), det.Y());
+		double phi = atan2(det.Z(), det.Y()) - M_PI;
 		double asymm = sqrt(det.Z()*det.Z() + det.Y()*det.Y()) / radius;
-		std::pair <double, double> asymmPhasePair(asymm, phi);
+		std::pair <double, double> asymmPhasePair(asymm, getPhaseFromZeroTo2Pi(phi));
 		return asymmPhasePair;
 	}
 	// Return asymmetry and phase pair for field along y axis
 	std::pair<double, double> yField(const V3D det, const double radius) {
-		double phi = atan2(det.X(), det.Z());
+		double phi = atan2(det.X(), det.Z()) - M_PI;
 		double asymm = sqrt(det.X()*det.X() + det.Z()*det.Z()) / radius;
-		std::pair <double, double> asymmPhasePair(asymm, phi);
+		std::pair <double, double> asymmPhasePair(asymm, getPhaseFromZeroTo2Pi(phi));
 		return asymmPhasePair;
 	}
 	// Return asymmetry and phase pair for field along z axis
 	std::pair<double, double> zField(const V3D det, const double radius) {
-		double phi = atan2(det.Y(), det.X());
+		double phi = atan2(det.Y(), det.X())-M_PI;
 		double asymm = sqrt(det.Y()*det.Y() + det.X()*det.X()) / radius;
-		std::pair <double, double> asymmPhasePair(asymm, phi);
+		std::pair <double, double> asymmPhasePair(asymm, getPhaseFromZeroTo2Pi(phi));
 		return asymmPhasePair;
 	}
 	// returns a pointer to relevant function to calculat asymmetry, pahse pair
@@ -119,7 +128,12 @@ void MuonPhasesFromDetectors::exec() {
 
 	std::string axis = getProperty("FieldDirection");
 	fptr asymmPhasePairFunction = getAsymmPhasePair(axis);
-	int numberHistograms = outputWS->getNumberHistograms();
+	int numberHistograms = 0;
+	try {
+		numberHistograms = boost::numeric_cast<int>(outputWS->getNumberHistograms());
+	}catch(boost::numeric::bad_numeric_cast &error) {
+		g_log.error("Bad numeric cast for detector ID "+static_cast<std::string>(error.what()));
+	}
 	for (int j = 0; j < numberHistograms; j++) {
 		reportProgress(j, numberHistograms);
 		auto det = outputWS->getDetector(j)->getPos() - outputWS->getInstrument()->getSample()->getPos();
