@@ -23,14 +23,14 @@ class MainWindowView(QtGui.QWidget):
 
 
         groupedViews = view_constructor.ViewConstructor(True,parent)
-        groupedModels = model_constructor.ModelConstructor(True)
+        #groupedModels = model_constructor.ModelConstructor(True)
 
 
         #tabView =groupedViews.getMainView("Tabs")
         #transformView = groupedViews.getTabView("Transform")
-        tabView = tab_view.TabView(parent)
-        transformView = transform_view.TransformView(groupedViews,parent)
-        self.presenter =tab_presenter.TabPresenter(tabView,transformView,groupedModels)
+        self.tabView = tab_view.TabView(parent)
+        self.transformView = transform_view.TransformView(groupedViews,parent)
+        #self.presenter =tab_presenter.TabPresenter(tabView,transformView,groupedModels)
         
 
         #helpView = groupedViews.getMainView("Help")
@@ -41,7 +41,7 @@ class MainWindowView(QtGui.QWidget):
         self.widget = QtGui.QWidget()
         splitter=QtGui.QSplitter(QtCore.Qt.Vertical)
         splitter.addWidget(loadView)
-        splitter.addWidget(tabView)
+        splitter.addWidget(self.tabView)
         splitter.addWidget(helpView)
         QHbox = QtGui.QHBoxLayout()
         QHbox.addWidget(splitter)
