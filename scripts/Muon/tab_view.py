@@ -4,6 +4,9 @@ from PyQt4 import QtGui
 from PyQt4 import QtCore
 
 
+from Muon import view_constructor
+from Muon import transform_view
+
 class TabView(QtGui.QMainWindow):
     """
     Creates the view for the tabs.
@@ -13,6 +16,8 @@ class TabView(QtGui.QMainWindow):
         #self.dock = QtGui.QMainWindow()
         self.widgets=[]
         self.tabs=[]
+        groupedViews=view_constructor.ViewConstructor(True,self)
+        self.transformView = transform_view.TransformView(groupedViews,self)
 
     def addTab(self,widget,name):
         # add widget

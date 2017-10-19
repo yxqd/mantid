@@ -14,9 +14,6 @@ class MainWindowPresenter(object):
     """
     def __init__(self,view,groupedModels):
         self.view=view
-        self.groupedModels=groupedModels
-        #view =transform_view.TransformView(self.groupedViews,parent)
-        self.Transformpresenter =transform_presenter.TransformPresenter(self.view.transformView,self.groupedModels)
 
         groupedModels= model_constructor.ModelConstructor(True)
-        self.tabPresenter = tab_presenter.TabPresenter(self.view.tabView,self.view.transformView,groupedModels)
+        self.tabPresenter = tab_presenter.TabPresenter(self.view.tabView,self.view.tabView.transformView,groupedModels)
