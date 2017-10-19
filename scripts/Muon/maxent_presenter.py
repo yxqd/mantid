@@ -13,6 +13,7 @@ class MaxEntPresenter(object):
         self.view=view
         self.alg=alg
         self.load=load
+        self.thread=None
         # set data
         self.getWorkspaceNames()
         #connect

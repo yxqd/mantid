@@ -22,7 +22,7 @@ class FrequencyDomainAnalysisGui(QtGui.QMainWindow):
 
     # cancel algs if window is closed
     def closeEvent(self,event):
-        #self.presenter.close()
+        self.presenter.close()
         self.view.closeEvent(event)
 
 def qapp():

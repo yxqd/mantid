@@ -14,7 +14,9 @@ class TransformPresenter(object):
     def __init__(self,view,model):
         self.view=view
         self.load=load_utils.LoadUtils()
+        self.success=True
         if not self.load.MuonAnalysisExists():
+            self.success=False
             return
 
         # create presenters for the views
@@ -30,7 +32,8 @@ class TransformPresenter(object):
         self.view.selection.changeMethodSignal.connect(self.updateDisplay)
 
     def close(self):
-        self.MaxEntPresenter.cancel()
+        if self.success:
+            self.MaxEntPresenter.cancel()
 
     #switch the view
     def updateDisplay(self,index):
