@@ -36,3 +36,6 @@ class TransformView(QtGui.QWidget):
 
     def getView(self,name):
         return self.methods[name]
+  
+    def getLayout(self):
+        return self.Layout
