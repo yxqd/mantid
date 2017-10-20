@@ -17,7 +17,7 @@ class TabView(QtGui.QMainWindow):
         self.widgets=[]
         self.tabs=[]
         groupedViews=view_constructor.ViewConstructor(True,self)
-        self.transformView = transform_view.TransformView(groupedViews,self)
+        self.transformView = transform_view.TransformView(groupedViews)
 
     def addTab(self,widget,name):
         # add widget

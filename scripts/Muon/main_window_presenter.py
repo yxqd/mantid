@@ -23,7 +23,9 @@ class MainWindowPresenter(object):
         It constructs the different presenters that are contained 
         within the main window
         """
-        self.tabPresenter = tab_presenter.TabPresenter(self.view.tabView,self.view.tabView.transformView,groupedModels)
+        childViews = self.view.getViews()
+ 
+        self.tabPresenter = tab_presenter.TabPresenter(childViews["Tab"],childViews["Tab"].transformView,groupedModels)
 
     def close(self):
         """
