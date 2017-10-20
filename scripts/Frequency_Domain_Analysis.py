@@ -6,16 +6,18 @@ import sys
 import PyQt4.QtGui as QtGui
 import PyQt4.QtCore as QtCore
 
-from Muon import model_constructor
 from Muon import main_window_view
 from Muon import main_window_presenter
+
+from Muon import model_constructor
 
 class FrequencyDomainAnalysisGui(QtGui.QMainWindow):
     def __init__(self,parent=None):
         super(FrequencyDomainAnalysisGui,self).__init__(parent)
 
         groupedModels = model_constructor.ModelConstructor(True)
-        self.view = main_window_view.MainWindowView(parent)
+
+        self.view = main_window_view.MainWindowView(self)
         self.presenter=main_window_presenter.MainWindowPresenter(self.view,groupedModels)
         self.setCentralWidget(self.view.getWidget())
         self.setWindowTitle("Frequency Domain Analysis")

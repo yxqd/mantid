@@ -1,10 +1,7 @@
 from __future__ import (absolute_import, division, print_function)
 
 
-from Muon import model_constructor
-from Muon import transform_presenter
 from Muon import tab_presenter
-from Muon import transform_view
 
 
 class MainWindowPresenter(object):
@@ -14,9 +11,24 @@ class MainWindowPresenter(object):
     """
     def __init__(self,view,groupedModels):
         self.view=view
+        self.createPresenters(groupedModels)
 
-        groupedModels= model_constructor.ModelConstructor(True)
+
+    """
+    Only the following code would need updating for a new GUI
+    """
+    def createPresenters(self,groupedModels):
+        """
+        This code may need updating for a different GUI
+        It constructs the different presenters that are contained 
+        within the main window
+        """
         self.tabPresenter = tab_presenter.TabPresenter(self.view.tabView,self.view.tabView.transformView,groupedModels)
 
     def close(self):
+        """
+        This code may need updating for a different GUI
+        It contains the close command for all of the presenters
+        contained in the main window
+        """
         self.tabPresenter.close()

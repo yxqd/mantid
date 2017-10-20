@@ -23,6 +23,8 @@ class MainWindowView(QtGui.QWidget):
         splitter.addWidget(loadView)
         splitter.addWidget(self.tabView)
         splitter.addWidget(helpView)
+
+        splitter.setSizes([200,800,100])
         QHbox = QtGui.QHBoxLayout()
         QHbox.addWidget(splitter)
         self.widget.setLayout(QHbox)      
