@@ -1,0 +1,175 @@
+from __future__ import (absolute_import, division, print_function)
+from mantid.api import * # PythonAlgorithm, registerAlgorithm, WorkspaceProperty
+from mantid.kernel import *
+from mantid.simpleapi import *
+
+#pylint: disable=no-init
+
+
+class GetNegMuMuonicXRD(PythonAlgorithm):
+    #Dictionary of <element>:<peaks> easily extendible by user.
+    muonic_xr ={'He' :[10.484,10.278,9.742,8.228], #[data point 2: 10.34,9.70,8.18] [data point 3:8.18]  
+	            'Li' :[18.69],#[li'7 ,18.1]  [li'6: 18.64,18.1]  
+				'Be' :[33.39],#[data point 2:33.0]
+				'B'  :[52.31], #(nutron number 11[data point 2:52.23] [data point 3:51.6])
+			     #'B' (Z = 10 [data point 1: 51.6] [data point 2:52.23] [data point 3:52.18])
+				'C'  :[97.601,96.355,94.095,89.212,75.248],# [data point 2:75.8] [data point 3: 94.0, 88.6,75.3]
+                 # [data point 4: 75.25] [data point 5:75.23]	
+     			'N'  :[131.167,96.355,94.095,89.212,75.248],# [data point 2:101.9] [data point 3:102.29]
+		    	'O'  :[173.331,171.144,167.114,158.408,133.525], #[data point 2:133.4] [data point 3:158.9,133.3] [data point 4:133.56]
+				'F'  :[268.45], #[data point 2:168.9] [data point 3:168.07]
+				'Ne' :[207.1],
+				'Na' :[250.21], #[data point 2:249.6] [data point 3: 250.24]
+				'Mg' :[382.00,372.50,353.00,296.40], # [data point 2: 296.1] [data point 3: 296.88] [data point 4:296.55]
+				'Ar' :[452.62,446.66,436.14,413.02,346.90], #[data point 2:347.21] [data point 3:346.82]
+				'Si' :[503.85,477.00,400.15], # [data point 2:400.38] [data point 3:400.22] [data point 4:400.2]
+				'P'  :[456.54], # [data point 2:457.06]
+				'S'  :[651.90,617.00,516.50], # [data point 2: 516.24] 
+				'Cl' :[578.56],
+				'Al' :[770.6,643.94],# (Z=36 [data point 1:644.34]) (Z=38 [644.34]) (z=40 [643.94]) 
+				'K'  :[712.24], #[data point 1:712.64]
+				'Ca' :[940.7,783.85,212.05,158.17,156.830],
+				'Ti' :[1011.3,191.921,189.967],
+				'V'  :[1094.4,208.1],
+				'Cr' :[1094.4],
+				'Mn' :[1171.2],
+		 	    'Fe' :[1257.21,1253.01,269.39,265.69,264.95,244.33,243.17],
+				'Co' :[1541.8],
+				'Ni' :[1427.4,1422.1,309.97],
+		    	'As' :[1866.9,1855.8,436.6,427.5],
+	            'Au' :[8135.2,8090.6,8105.4,8069.4,5764.89,5594.97,3360.2,
+                        3206.8,2474.22,2341.21,2304.44,1436.05,1391.58,1104.9,
+                        899.14,869.98,405.654,400.143],
+                'Ag' :[3184.7,3147.7,901.2,869.2,308.428,304.759],
+                'Cu' :[1512.78,1506.61,334.8,330.26],
+			    'Sr' :[2241.5,2224.0,200.254,198.708],
+				'Y'  :[3038.63,3033.11,2439.38,2420.12,807.6,616.38,599.39,200.254,
+				       198.708],
+				'zr' :[2535.9,2514.9],
+				'Nb' :[2626.6,2603.42,683.03,662.54,543.91,537.45,140.01,116.87],
+				'Mo' :[2732.3,2706.8,717.8,695.0],
+				'Rh' :[2982],
+				'Pd' :[3077],
+				'Cd' :[3263.63,3223.74,940.58,905.85,321.973,317.977],
+				'In' :[3366.27,3322.67,981.64,943.39],
+				'Sn' :[3454.41,3408.79,1369.50,1325.9,1022.2,982.20,976.55,747.15,
+				       733.20,280.14,234.50,350.0,345.3],
+				'Sb' :[3543.3,3497.7,1062.8,1019.6,360.3],
+				'Te' :[3625.6,3375.5,1104.3,1060.0,375.9],
+				'I'  :[3723.23,3667.35,1150.42,1101.84,394.30,388.16,179.98],
+				'Cs' :[3899.1,3836.1,421.2],
+				'Ba' :[5196.7,5215.3,3988.09,3922.15,1720.40,1658.31,1283.22,
+				       1227.09,1218.03,868.50,405.41,339.5,441.28,433.72,
+					   200.53],
+				'La' :[4081.42,4011.95,1329.90,1270.13,1259.02,452.8,206.8],
+				'Ce' :[5449.2,5469.6,5459.7,5459.7,4155.86,4082.81,1846.10,
+				       1777.27,1375.80,1313.47,1303.10,932.55,913.00,453.45,
+					   379.90,474.24,465.46,215.01],
+				'Pr' :[4263.54,4185.87,1424.07,1158.11,134.43,485.5,221.3],
+				'Nd' :[4352.52,4270.78,1472.30,1403.06,1390.52,498.4,229.4],
+				'Hg' :[5817.2,5645.1,2523.6,2388.5,918.1,888.1,412.7],
+				'Tl' :[5906.38,5726.14,2587.73,2448.22,2407.48,1485.67,
+				       1439.54,1178.52,947.47,915.1,426.828,420.717],        
+                 'Zn' :[1600.15,1592.97,360.75,354.29],
+                 'Pb' :[8523.3,8442.11,5966.0,5780.1,2641.8,2499.7,
+                        2459.7,1511.63,1214.12,1028.83,972.3,938.4,
+                        437.687,431.285],
+                'As' :[1866.9,1855.8,436.6,427.5],
+                'Sn' :[3457.3,3412.8,1022.6,982.5,349.953,345.226],
+				'Bi' :[6032.2,5839.7,2700.2,2554.8,2554.8,2501.81,996.53,
+				       961.00,448.80,442.11],
+				#below is off a graph so not as acurate 
+				'Sc' :[78,129,154,560,890,1010,1175,1250,1355,1525,2160],
+				'Ga' :[105,180,320,480,530,600,910,1615,1790,1870,2090,2200,2230,2350],
+                'Ge' :[85,100,130,190,210,410,500,540,660,700,1775,2155,2295,2345,2460],
+                'Se' :[95,130,180,225,250,470,545,610,690,1440,1985,2320,2400,2490,2655,2715],
+				'Br' :[445,540,615,730,1035,1440,2020,2210,2620,2705,2810,2900],
+				'Rb' :[105,160,260,305,535,725,815,865,930,1235,1715,2340,2770,2965,3190],
+				'Ru' :[90,125,295,760,1015,1140,1350,1880,2345,2905,3150,2660,3130,3760,3260],
+				'Cs' :[100,200,295,355,580,620,690,730,1165,1230,1600,1655,1795,2810,2900,3330,3400,3845,3905],
+				'Ba' :[75,140,205,300,400,505,635,1210,1290,1645,1740,1805,1880,2895
+				       ,2980,3405,3490,3920,3995,4775,5215,5645,6195],
+				'La' :[450,500,575,770,124,1310,400,1705,1790,1900,2230,2630,2980,3055
+				       ,3475,3565,4010,4860,4840,5350,5830,6380],
+				'Hf' :[90,125,260,320,520,715,1050,1190,1980,2120,2640,2890,4030,4235,4885,5020,5240],
+				'Ta' :[90,190,300,345,505,745,1080,1230,1905,1955,2015,2030,2185,2950,4110,4720,5140,5315],
+				'W'  :[115,235,330,560,600,765,1100,2025,2810,2990,4105,4610,5120,5230
+				       ,5395,6550,6960,7450,8650,9145],
+				'Re' :[105,160,220,325,420,800,1140,1740,2095,2180,3070,4260,4885,5295,5460,6555,7050,7630],
+				'Os' :[60,130,285,815,1000,1160,2115,2300,4350,4850,4985,5460,5600],
+				'Ir' :[110,140,210,390,600,890,1210,1400,1885,2120,2280,2370,2980,3120,4405,4595,4945,5075,7310,7850],
+				'Pt' :[90,220,315,380,870,1250,1445,1800,2300,2400,2650,3260,3300,4600,4675,4965,5000,5160,5500,5700,7450,7965],
+				'Sm' :[110,200,320,360,555,800,1545,1605,2010,3390,3475,3860,3980,4390,4510,5450,6000,6505,6635,7175],
+				'Eu' :[100,160,305,535,730,1000,1480,1560,1650,2100,2740,3420,3900,4400,4465,4685,5550,6090],
+				'Gd' :[90,190,430,530,830,1550,3990,4040,4445,4500,4610,5680,6195],
+				'Tb' :[65,100,150,295,500,865,1590,1700,2305,3470,4075,4565,4590,4740,5330,5810,6300,7900],
+				'Ho' :[100,175,290,595,640,745,900,1670,1870,2485,3695,4290,4565,4750,4900],
+				'Er' :[150,290,525,965,1860,1990,3450,4290,4870,4930,6205,6745],
+				'Tm' :[105,185,480,760,970,1800,1905,2435,3860,4000,4375,4830,5000,6470,6820],
+				'Yb' :[115,130,365,505,755,1000,1865,2000,2555,3970,4120,4460,4895,5155,6440],
+				'Lu' :[105,245,315,715,1020,1840,2000,2075,2770,3990,4555,5000,5050,5145,6450,7045],
+				'Th' :[125,145,335,405,810,1100,1200,17352,900,3215,4300,5030,5530,6090,6300,6350],
+
+				}
+
+    def PyInit(self):
+        self.declareProperty(StringArrayProperty("Elements", values=[],
+                                                 direction=Direction.Input))
+        self.declareProperty(name="YAxisPosition",
+                             defaultValue=-0.001,
+                             doc="Position for Markers on the y-axis")
+        self.declareProperty(WorkspaceGroupProperty('OutputWorkspace', '', direction=Direction.Output),
+                             doc='The output workspace will always be a GroupWorkspaces '
+                                 'that will have the workspaces of each'
+                                 ' muonicXR workspace created')
+        #We sort the lists of x-values from the dictionary here
+        #so that mantid can plot the workspaces it produces.
+        for key in self.muonic_xr:
+            value = self.muonic_xr.get(key)
+            self.muonic_xr[key] = sorted(value)
+
+    def get_muonic_xr(self, element):
+        #retrieve peak values from dictionary Muonic_XR
+        peak_values = self.muonic_xr[element]
+        return peak_values
+
+    def validateInput(self):
+        issues = dict()
+
+        elements = self.getProperty('Elements').value()
+        if elements == "":
+            issues["Elements"] = 'No elements have been selected from the periodic table'
+        y_axis_position = self.getProperty('YAxisPosition').value()
+        if y_axis_position == "":
+            issues["YAxisPosition"] = 'No y-shift value has been entered'
+        outputworkspace_str = self.getProperty('OutputWorkspace').value()
+        if outputworkspace_str == "":
+            issues['OutputWorkspace'] = 'No output workspace name has been specified'
+
+        return issues
+
+    def create_muonic_xr_ws(self, element, y_pos):
+        #retrieve the values from Muonic_XR
+        xr_peak_values = self.get_muonic_xr(element)
+        #Calibrate y-axis for workspace
+        y_pos_ws = [y_pos]*len(xr_peak_values)
+        xvalues = xr_peak_values
+        muon_xr_ws = CreateWorkspace(xvalues, y_pos_ws[:])
+        RenameWorkspaces(muon_xr_ws, WorkspaceNames="MuonXRWorkspace_"+element)
+        return muon_xr_ws
+
+    def category(self):
+        return "Muon"
+
+    def PyExec(self):
+        elements = self.getProperty("Elements").value
+        y_position = self.getProperty("YAxisPosition").value
+        workspace_list = [None]*len(elements)
+        for idx,element in enumerate(elements):
+            curr_workspace = self.create_muonic_xr_ws(element, y_position)
+            workspace_list[idx] = curr_workspace
+
+        self.setProperty("OutputWorkspace", GroupWorkspaces(workspace_list))
+        self.log().information(str("Created Group: "+ self.getPropertyValue("OutputWorkspace")))
+
+AlgorithmFactory.subscribe(GetNegMuMuonicXRD)
