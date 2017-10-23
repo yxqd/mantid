@@ -149,3 +149,39 @@ class VesuvioLoadHelper(object):
         rebin_alg.setProperty("OutputWorkspace", "rebinned")
         rebin_alg.execute()
         return rebin_alg.getProperty("OutputWorkspace")
+
+# -----------------------------------------------------------------------------------------
+
+class VesuvioConstraints(object):
+
+    def __init__(self, name, parser):
+        self._name = name
+        self._parser = parser
+        self._constraints = dict()
+
+    def __iter__(self):
+        return self._constraints.__iter__()
+
+    def __contains__(self, key):
+        return self._constraints.__contains__(key)
+
+    def key_complement(self, keys):
+        return [key for key in self._constraints if key not in keys]
+
+    def add(self, key, constraint):
+        self._constraints[key] = constraint
+
+    def extend(self, constraints):
+        try:
+            if not isinstance(constraints, dict):
+                for constraint in constraints:
+                    self._constraints.update(self._parser(constraint))
+            else:
+                self._constraints.update(self._parser(constraints))
+        except AttributeError:
+            raise RuntimeError(self._name + ": Constraints are incorrectly formatted.")
+
+    def to_dict(self):
+        return dict(self._constraints)
+
+# -----------------------------------------------------------------------------------------
