@@ -2,7 +2,8 @@
 from __future__ import (absolute_import, division, print_function)
 from six import iteritems
 
-from mantid.api import Algorithm
+from mantid.api import Algorithm, AlgorithmManager
+from vesuvio.instrument import VESUVIO
 
 
 class VesuvioBase(Algorithm):
@@ -77,3 +78,74 @@ class TableWorkspaceDictionaryFacade(object):
         return False
 
 # -----------------------------------------------------------------------------------------
+
+class VesuvioLoadHelper(object):
+    """
+    A helper class for loading Vesuvio data from the input of a user script.
+    """
+
+    def __init__(self, diff_mode, fit_mode, param_file):
+        self._diff_mode = diff_mode
+        self._fit_mode = fit_mode
+        self._param_file = param_file
+        self._instrument = VESUVIO()
+
+    def load_and_crop_runs(self, runs, spectra, rebin_params=None):
+        sum_spectra = (self._fit_mode == 'bank')
+        loaded = self.load_runs(runs, spectra, sum_spectra)
+        cropped = self._crop_workspace(loaded)
+
+        if rebin_params is not None:
+            return self._rebin_workspace(cropped, rebin_params)
+        else:
+            return cropped
+
+    def _parse_spectra(self, spectra):
+        if self._fit_mode == 'bank':
+            return self._parse_spectra_bank(spectra)
+        else:
+            if spectra == "forward":
+                return "{0}-{1}".format(*self._instrument.forward_spectra)
+            elif spectra == "backward":
+                return "{0}-{1}".format(*self._instrument.backward_spectra)
+            else:
+                return spectra
+
+    def _parse_spectra_bank(self, spectra_bank):
+        if spectra_bank == "forward":
+            bank_ranges = self._instrument.forward_banks
+        elif spectra_bank == "backward":
+            bank_ranges = self._instrument.backward_banks
+        else:
+            raise ValueError("Fitting by bank requires selecting either 'forward' or 'backward' "
+                             "for the spectra to load")
+        bank_ranges = ["{0}-{1}".format(x, y) for x, y in bank_ranges]
+        return ";".join(bank_ranges)
+
+    def load_runs(self, runs, spectra, sum_spectra=False):
+        load_alg = AlgorithmManager.createUnmanaged("LoadVesuvio")
+        load_alg.setProperty("Filename", runs)
+        load_alg.setProperty("Mode", self._diff_mode)
+        load_alg.setProperty("InstrumentParFile", self._param_file)
+        load_alg.setProperty("SpectrumList", spectra)
+        load_alg.setProperty("SumSpectra", sum_spectra)
+        load_alg.setProperty("OutputWorkspace", "loaded")
+        load_alg.execute()
+        return load_alg.getProperty("OutputWorkspace").value
+
+    def _crop_workspace(self, workspace):
+        crop_alg = AlgorithmManager.createUnmanaged("CropWorkspace")
+        crop_alg.setProperty("InputWorkspace", workspace)
+        crop_alg.setProperty("XMin", self._instrument.tof_range[0])
+        crop_alg.setProperty("XMax", self._instrument.tof_range[1])
+        crop_alg.setProperty("OutputWorkspace", "cropped")
+        crop_alg.execute()
+        return crop_alg.getProperty("OutputWorkspace").value
+
+    def _rebin_workspace(self, workspace, rebin_params):
+        rebin_alg = AlgorithmManager.createUnmanaged("Rebin")
+        rebin_alg.setProperty("InputWorkspace", workspace)
+        rebin_alg.setProperty("Params", rebin_params)
+        rebin_alg.setProperty("OutputWorkspace", "rebinned")
+        rebin_alg.execute()
+        return rebin_alg.getProperty("OutputWorkspace")
