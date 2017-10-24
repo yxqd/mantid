@@ -79,6 +79,92 @@ class TableWorkspaceDictionaryFacade(object):
 
 # -----------------------------------------------------------------------------------------
 
+class MassProfileCollection(object):
+
+    def __init__(self):
+        self._profiles = []
+        self._mass_values = []
+        self._index_to_symbol_map = {}
+
+    def profiles(self, index=0, symbol_filter=None):
+        if symbol_filter is None:
+            return ';'.join(self._profiles[index])
+        else:
+            return ';'.join(self._apply_symbol_filter(self._profiles[index], symbol_filter))
+
+    def masses(self, index=0, symbol_filter=None):
+        if symbol_filter is None:
+            return self._mass_values[index]
+        else:
+            return self._apply_symbol_filter(self._mass_values[index], symbol_filter)
+
+    def _apply_symbol_filter(self, collection, symbol_filter, create_index_list=False):
+        filtered = []
+        for idx, item in enumerate(collection):
+            if idx not in self._index_to_symbol_map or \
+                symbol_filter(self._index_to_symbol_map[idx]):
+                filtered.append(idx if create_index_list else item)
+        return filtered
+
+    def parse_and_add_profiles(self, profile_properties_list):
+        profiles = [self._extract_function(profile_properties)
+                    for profile_properties in profile_properties_list]
+        mass_values = [self._extract_mass_value(profile_properties)
+                       for profile_properties in profile_properties_list]
+        self._profiles.append(profiles)
+        self._mass_values.append(mass_values)
+
+    def _extract_function(self, profile_properties):
+        function_name = ("function=%s," % profile_properties.pop('function'))
+        function_props = ["{0}={1}".format(key, value) for key, value in profile_properties.items()]
+        function_props = ("%s,%s" % (function_name, (','.join(function_props))))
+        return function_props
+
+    def _extract_mass_value(self, profile_properties):
+        material_builder = MaterialBuilder()
+        mass_value = profile_properties.pop('value', None)
+        if mass_value is None:
+            symbol = profile_properties.pop('symbol', None)
+
+            if symbol is None:
+                raise RuntimeError('Invalid mass specified - ' + str(profile_properties)
+                                   + " - either 'value' or 'symbol' must be given.")
+
+            try:
+                mass_value = material_builder.setFormula(symbol).build().relativeMolecularMass()
+                self._index_to_symbol_map[len(self._mass_values)] = mass_value
+            except BaseException as exc:
+                raise RuntimeError('Error when parsing mass - ' + str(profile_properties) + ": "
+                                   + "\n" + str(exc))
+        return mass_value
+
+    def update_from_workspace(self, params_ws, symbol_filter=None):
+        function_regex = re.compile("f([0-9]+).([A-z0-9_]+)")
+        param_labels = params_ws.getAxis(1).extractValues()
+        mass_indices = self._apply_symbol_filter(self._mass_values[0], symbol_filter,
+                                                 create_index_list=True)
+        num_masses = len(self._mass_values[0])
+
+        for column_idx in range(params_ws.blocksize()):
+
+            for idx, param in enumerate(param_labels):
+                if param != "Cost function value":
+                    param_re = function_regex.match(param)
+                    mass_idx = mass_indices[int(param_re.group(1))]
+
+                    if mass_idx >= num_masses:
+                        continue
+
+                    param_name = param_re.group(2).lower()
+                    if param_name == 'width' and \
+                            isinstance(self._profiles[column_idx][mass_idx].get(param_name, None), list):
+                        self._profiles[column_idx][mass_idx][param_name][1] = params_ws.dataY(idx)[column_idx]
+                    elif 'symbol' not in self._profiles[column_idx][mass_idx] or param_name != 'mass':
+                        self._profiles[column_idx][mass_idx][param_name] = params_ws.dataY(idx)[column_idx]
+
+
+# -----------------------------------------------------------------------------------------
+
 class VesuvioLoadHelper(object):
     """
     A helper class for loading Vesuvio data from the input of a user script.
@@ -244,9 +330,10 @@ class VesuvioConstraints(object):
 
 class VesuvioTOFFitRoutine(object):
 
-    def __init__(self, load_helper, ms_helper):
+    def __init__(self, load_helper, ms_helper, mass_profile_collection):
         self._load_helper = load_helper
         self._ms_helper = ms_helper
+        self._mass_profile_collection = mass_profile_collection
 
     def __call__(self, sample_runs, container_runs, spectra,
                  iterations, convergence_threshold):
@@ -255,20 +342,18 @@ class VesuvioTOFFitRoutine(object):
         sample_data = self._load_data(sample_runs)
         container_data = self._load_data(container_runs)
 
-    def _hydrogen_constraint_parser(self):
-
-        def parse_hydrogen_constraint(constraint):
-            symbol = constraint.pop("symbol", None)
-
-            if symbol is None:
-                raise RuntimeError("Invalid hydrogen constraint: " +
-                                   str(constraint) +
-                                   " - No symbol provided")
-            return {symbol: constraint}
-        return parse_hydrogen_constraint
-
     def _load_data(self, runs, spectra):
         if isinstance(runs, MatrixWorkspace):
             return runs
         else:
             return self._load_helper(runs)
+
+# ----------------------------------------------------------------------------------------
+
+class VesuvioTOFFitRoutineIteration(object):
+
+    def __init__(self, ms_helper, mass_profile_collectiom):
+        self._ms_helper = ms_helper
+        self._mass_profile_collection = mass_profile_collectiom
+
+    def __call__(self, sample_data, container_data):
