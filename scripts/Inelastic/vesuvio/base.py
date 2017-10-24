@@ -84,19 +84,23 @@ class VesuvioLoadHelper(object):
     A helper class for loading Vesuvio data from the input of a user script.
     """
 
-    def __init__(self, diff_mode, fit_mode, param_file):
+    def __init__(self, diff_mode, fit_mode, param_file, rebin_params=None):
         self._diff_mode = diff_mode
         self._fit_mode = fit_mode
         self._param_file = param_file
+        self._rebin_params = rebin_params
         self._instrument = VESUVIO()
 
-    def load_and_crop_runs(self, runs, spectra, rebin_params=None):
+    def __call__(self, runs, spectra):
+        return self.load_and_crop_runs(runs, spectra)
+
+    def load_and_crop_runs(self, runs, spectra):
         sum_spectra = (self._fit_mode == 'bank')
         loaded = self.load_runs(runs, spectra, sum_spectra)
         cropped = self._crop_workspace(loaded)
 
-        if rebin_params is not None:
-            return self._rebin_workspace(cropped, rebin_params)
+        if self._rebin_params is not None:
+            return self._rebin_workspace(cropped)
         else:
             return cropped
 
@@ -142,13 +146,65 @@ class VesuvioLoadHelper(object):
         crop_alg.execute()
         return crop_alg.getProperty("OutputWorkspace").value
 
-    def _rebin_workspace(self, workspace, rebin_params):
+    def _rebin_workspace(self, workspace):
         rebin_alg = AlgorithmManager.createUnmanaged("Rebin")
         rebin_alg.setProperty("InputWorkspace", workspace)
-        rebin_alg.setProperty("Params", rebin_params)
+        rebin_alg.setProperty("Params", self._rebin_params)
         rebin_alg.setProperty("OutputWorkspace", "rebinned")
         rebin_alg.execute()
         return rebin_alg.getProperty("OutputWorkspace")
+
+# -----------------------------------------------------------------------------------------
+
+class VesuvioMSHelper(object):
+
+    def __init__(self, beam_radius=2.5, sample_height=5.0, sample_width=5.0, sample_depth=5.0,
+                 sample_density=1.0, seed=123456789, num_scatters=3, num_runs=10, num_events=50000,
+                 smooth_neighbours=3):
+        self._beam_radius = beam_radius
+        self._sample_height = sample_height
+        self._sample_width = sample_width
+        self._sample_depth = sample_depth
+        self._sample_density = sample_density
+        self._seed = seed
+        self._num_scatters = num_scatters
+        self._num_runs = num_runs
+        self._num_events = num_events
+        self._smooth_neighbours = smooth_neighbours
+        self._hydrogen_constraints = {}
+
+    def parse_and_add_hydrogen_constraints(self, constraints):
+        """
+        Parses the specified hydrogen constraints from a list of constraints,
+        to a dictionary of the chemical symbols of each constraint mapped to
+        their corresponding constraint properties (factor and weight).
+
+        :param constraints: The hydrogen constraints to parse.
+        :raise:             A RuntimeError if a constraint doesn't hasn't been
+                            given an associated chemical symbol.
+        """
+        if not isinstance(constraints, dict):
+
+            try:
+                for constraint in constraints:
+                    self.parse_and_add_hydrogen_constraint(constraint)
+            except AttributeError:
+                raise RuntimeError("HydrogenConstraints are incorrectly formatted.")
+
+        try:
+            self.parse_and_add_hydrogen_constraint(constraints)
+        except AttributeError:
+            raise RuntimeError("HydrogenConstraints are incorrectly formatted.")
+
+    def parse_and_add_hydrogen_constraint(self, constraint):
+        symbol = constraint.pop("symbol", None)
+
+        if symbol is None:
+            raise RuntimeError("Invalid hydrogen constraint: " +
+                               str(constraint) +
+                               " - No symbol provided")
+        self._hydrogen_constraints[symbol] = constraint
+
 
 # -----------------------------------------------------------------------------------------
 
@@ -185,3 +241,34 @@ class VesuvioConstraints(object):
         return dict(self._constraints)
 
 # -----------------------------------------------------------------------------------------
+
+class VesuvioTOFFitRoutine(object):
+
+    def __init__(self, load_helper, ms_helper):
+        self._load_helper = load_helper
+        self._ms_helper = ms_helper
+
+    def __call__(self, sample_runs, container_runs, spectra,
+                 iterations, convergence_threshold):
+        if iterations < 1:
+            return ValueError('Must perform at least one iteration')
+        sample_data = self._load_data(sample_runs)
+        container_data = self._load_data(container_runs)
+
+    def _hydrogen_constraint_parser(self):
+
+        def parse_hydrogen_constraint(constraint):
+            symbol = constraint.pop("symbol", None)
+
+            if symbol is None:
+                raise RuntimeError("Invalid hydrogen constraint: " +
+                                   str(constraint) +
+                                   " - No symbol provided")
+            return {symbol: constraint}
+        return parse_hydrogen_constraint
+
+    def _load_data(self, runs, spectra):
+        if isinstance(runs, MatrixWorkspace):
+            return runs
+        else:
+            return self._load_helper(runs)
