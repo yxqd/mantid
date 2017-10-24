@@ -11,7 +11,7 @@ import re
 import numpy as np
 
 from mantid import mtd
-from mantid.api import (AnalysisDataService, MatrixWorkspace, WorkspaceFactory, TextAxis)
+from mantid.api import (AlgorithmManager, AnalysisDataService, MatrixWorkspace, WorkspaceFactory, TextAxis)
 from mantid.kernel import MaterialBuilder
 from vesuvio.instrument import VESUVIO
 
@@ -25,7 +25,7 @@ import mantid.simpleapi as ms
 def fit_tof(runs, flags, iterations=1, convergence_threshold=None):
     vesuvio_loader = VesuvioLoadHelper(flags['diff_mode'], flags['fit_mode'],
                                        flags['ip_file'], flags['bin_parameters'])
-    vesuvio_input = VesuvioTOFFitInput(flags['runs'], flags['container_runs'],
+    vesuvio_input = VesuvioTOFFitInput(runs, flags['container_runs'],
                                        flags['spectra'], vesuvio_loader)
     ms_helper = None
     if flags.get('ms_enabled', False):
@@ -49,9 +49,21 @@ def fit_tof(runs, flags, iterations=1, convergence_threshold=None):
     return vesuvio_fit_routine(vesuvio_input, iterations, convergence_threshold,
                                flags.get('output_verbose_corrections', False))
 
+
 # -----------------------------------------------------------------------------------------
 
 class VesuvioTOFFitInput(object):
+    """
+    A helper class for loading and storing the specified spectra of the specified
+    input sample and container runs, using the given loader.
+
+    Attributes:
+        sample_runs     The sample runs to load and store.
+        container_runs  The container runs to load and store.
+        sample_data     The loaded sample runs as a workspace.
+        container_data  The loaded container runs as a workspace
+        spectra         The spectra to load.
+    """
 
     def __init__(self, sample_runs, container_runs, spectra, loader):
         self.sample_runs = sample_runs
@@ -60,15 +72,27 @@ class VesuvioTOFFitInput(object):
         self.container_data = self._load_data(container_runs, spectra, loader)
         self.spectra = spectra
         self._back_scattering = self._is_back_scattering_spectra(spectra)
+        # Add the input workspaces to the ADS.
         mtd.addOrReplace(self._tof_workspace_suffix(sample_runs, spectra),
                          self.sample_data)
         mtd.addOrReplace(self._tof_workspace_suffix(container_runs, spectra),
                          self.container_data)
 
     def using_back_scattering_spectra(self):
+        """
+        :return: True if back-scattering spectra is being used as input,
+                 False otherwise.
+        """
         return self._back_scattering
 
     def _is_back_scattering_spectra(self, spectra):
+        """
+        Checks whether the specified spectra denotes back scattering spectra.
+
+        :param spectra: The spectra to check.
+        :return:        True if the specified spectra denotes back scattering
+                        spectra.
+        """
         if isinstance(spectra, str):
             return spectra == 'backward'
         else:
@@ -82,17 +106,45 @@ class VesuvioTOFFitInput(object):
                                    "the syntax 'a-b'.")
 
     def _load_data(self, runs, spectra, loader):
+        """
+        Loads the specified spectra, of the specified runs, using the
+        specified loader.
+
+        :param runs:    The runs to load.
+        :param spectra: The spectra of the runs to load.
+        :param loader:  The loader to use.
+        :return:        The output workspace from loading.
+        """
         if isinstance(runs, MatrixWorkspace):
             return runs
         else:
             return loader(runs, spectra)
 
     def _tof_workspace_suffix(self, runs, spectra):
+        """
+        Creates and returns the suffix for the loaded TOF workspaces.
+
+        :param runs:    The runs being loaded.
+        :param spectra: The spectra being loaded.
+        :return:        A suffix for the TOF workspaces being loaded.
+        """
         return runs + "_" + spectra + "_tof"
+
 
 # -----------------------------------------------------------------------------------------
 
 class VesuvioTOFFitRoutine(object):
+    """
+    A class for executing the the Vesuvio TOF Fit Routine from a Vesuvio Driver Script.
+
+    Attributes:
+        ms_helper                   A helper object for multiple scattering parameters.
+        fit_helper                  A helper object for computing a VesuvioTOFFit.
+        corrections_helper          A helper object for computing VesuvioCorrections.
+        mass_profile_collection     An object for storing and manipulating mass values
+                                    and profiles.
+        fit_mode                    The fit mode to use in the fitting routine.
+    """
 
     def __init__(self, ms_helper, fit_helper, corrections_helper, mass_profile_collection, fit_mode):
         self._ms_helper = ms_helper
@@ -106,15 +158,16 @@ class VesuvioTOFFitRoutine(object):
             return ValueError('Must perform at least one iteration')
 
         tof_iteration = VesuvioTOFFitRoutineIteration(self._ms_helper, self._fit_helper,
-                                                      self._mass_profile_collection)
+                                                      self._corrections_helper,
+                                                      self._mass_profile_collection,
+                                                      self._fit_mode)
 
         back_scattering = vesuvio_input.using_back_scattering()
-        ignore_hydrogen_filter = lambda x : x is not 'H'
         update_filter = ignore_hydrogen_filter if back_scattering else None
         exit_iteration = 0
         previous_results = None
 
-        for iteration in range(1, iterations+1):
+        for iteration in range(1, iterations + 1):
             if previous_results is not None:
                 self._mass_profile_collection.update_profiles_from_workspace(previous_results[2],
                                                                              update_filter)
@@ -140,9 +193,22 @@ class VesuvioTOFFitRoutine(object):
         chi2_delta = last_chi2 - chi2
         return np.abs(np.max(chi2_delta))
 
+
 # ------------------------------------------------------------------------------------------------------
 
 class VesuvioTOFFitRoutineIteration(object):
+    """
+    A class for executing a single iteration of the Vesuvio TOF Fit Routine, from a
+    Vesuvio Driver Script.
+
+    Attributes:
+        ms_helper                   A helper object for multiple scattering parameters.
+        fit_helper                  A helper object for computing a VesuvioTOFFit.
+        corrections_helper          A helper object for computing VesuvioCorrections.
+        mass_profile_collection     An object for storing and manipulating mass values
+                                    and profiles.
+        fit_mode                    The fit mode to use in the fitting routine.
+    """
 
     def __init__(self, ms_helper, fit_helper, corrections_helper, mass_profile_collection, fit_mode):
         self._fit_mode = fit_mode
@@ -157,7 +223,6 @@ class VesuvioTOFFitRoutineIteration(object):
         container_data = vesuvio_input.container_data
         num_spectra = sample_data.getNumberHistograms()
 
-        ignore_hydrogen_filter = lambda x : x is not 'H'
         fit_filter = ignore_hydrogen_filter if vesuvio_input.using_back_scattering_spectra() else None
         all_mass_values = self._mass_profile_collection.masses()
         fit_mass_values = self._mass_profile_collection.masses(fit_filter)
@@ -188,7 +253,7 @@ class VesuvioTOFFitRoutineIteration(object):
             # Calculate and apply vesuvio corrections
             linear_corrections_fit_params_name = sample_runs + "_correction_fit_scale" + suffix
             corrected_data_name = sample_runs + "_tof_corrected" + suffix
-            corrections_args = {'FitParameters' : pre_params_ws_name}
+            corrections_args = {'FitParameters': pre_params_ws_name}
             corrections_args.update(self._ms_helper.to_dict())
             if verbose_output:
                 corrections_args['CorrectionsWorkspaces'] = sample_runs + "_correction" + suffix
@@ -262,7 +327,6 @@ class VesuvioTOFFitRoutineIteration(object):
         if result_workspaces:
             output_groups.append(ms.GroupWorkspaces(InputWorkspaces=result_workspaces,
                                                     OutputWorkspace=group_name))
-
         if data_workspaces:
             output_groups.append(ms.GroupWorkspaces(InputWorkspaces=data_workspaces,
                                                     OutputWorkspace=group_name + '_data'))
@@ -309,11 +373,19 @@ class VesuvioTOFFitRoutineIteration(object):
             params_ws.dataY(idx)[spec_idx] = params_table.column('Value')[idx]
             params_ws.dataE(idx)[spec_idx] = params_table.column('Error')[idx]
 
+
 # ------------------------------------------------------------------------------------------------------
 
 class VesuvioLoadHelper(object):
     """
     A helper class for loading Vesuvio data from the input of a user script.
+
+    Attributes:
+        diff_mode       The difference mode to load runs with.
+        fit_mode        The fit mode to load runs with.
+        param_file      The instrument parameter file for loading.
+        rebin_params    The parameters to use for rebinning loaded data.
+                        If none, loaded data is not rebinned.
     """
 
     def __init__(self, diff_mode, fit_mode, param_file, rebin_params=None):
@@ -386,9 +458,17 @@ class VesuvioLoadHelper(object):
         rebin_alg.execute()
         return rebin_alg.getProperty("OutputWorkspace")
 
+
 # ------------------------------------------------------------------------------------------------------
 
 class VesuvioMSHelper(object):
+    """
+    A helper class for storing and manipulating the multiple scattering paramaters of
+    the Vesuvio TOF Fit Routine.
+
+    Attributes:
+
+    """
 
     def __init__(self, BeamRadius=2.5, SampleHeight=5.0, SampleWidth=5.0, SampleDepth=5.0,
                  SampleDensity=1.0, Seed=123456789, NumScatters=3, NumRuns=10, NumEvents=50000,
@@ -403,7 +483,10 @@ class VesuvioMSHelper(object):
         self.num_runs = NumRuns
         self.num_events = NumEvents
         self.smooth_neighbours = SmoothNeighbours
-        parser = lambda x : self._parse_hydrogen_constraint(x)
+
+        def parser(constraint):
+            return self._parse_hydrogen_constraint(constraint)
+
         self._hydrogen_constraints = VesuvioConstraints("HydrogenConstraints", parser)
 
     def add_hydrogen_constraints(self, constraints):
@@ -416,25 +499,25 @@ class VesuvioMSHelper(object):
             raise RuntimeError("Invalid hydrogen constraint: " +
                                str(constraint) +
                                " - No symbol provided")
-        return {symbol : constraint}
+        return {symbol: constraint}
 
     def to_dict(self):
-        return {"BeamRadius" : self.beam_radius,
-                "SampleHeight" : self.sample_height,
-                "SampleWidth" : self.sample_width,
-                "SampleDepth" : self.sample_depth,
-                "SampleDensity" : self.sample_density,
-                "Seed" : self.seed,
-                "NumScatters" : self.num_scatters,
-                "NumRuns" : self.num_runs,
-                "NumEvents" : self.num_events,
-                "SmoothNeighbours" : self.smooth_neighbours,
-                "HydrogenConstraints" : self._hydrogen_constraints.to_dict()}
+        return {"BeamRadius": self.beam_radius,
+                "SampleHeight": self.sample_height,
+                "SampleWidth": self.sample_width,
+                "SampleDepth": self.sample_depth,
+                "SampleDensity": self.sample_density,
+                "Seed": self.seed,
+                "NumScatters": self.num_scatters,
+                "NumRuns": self.num_runs,
+                "NumEvents": self.num_events,
+                "SmoothNeighbours": self.smooth_neighbours,
+                "HydrogenConstraints": self._hydrogen_constraints.to_dict()}
+
 
 # -----------------------------------------------------------------------------------------
 
 class VesuvioTOFFitHelper(object):
-
     def __init__(self, background, intensity_constraints, ties, max_iterations, minimizer):
         self._background = background
         self._intensity_constraints = intensity_constraints
@@ -455,10 +538,10 @@ class VesuvioTOFFitHelper(object):
                                 MaxIterations=self._max_iterations,
                                 Minimizer=self._minimizer)
 
+
 # -----------------------------------------------------------------------------------------
 
 class VesuvioCorrectionsHelper(object):
-
     def __init__(self, gamma_correct, multiple_scattering, gamma_background_scale,
                  container_scale, intensity_constraints):
         self._gamma_correct = gamma_correct
@@ -484,10 +567,10 @@ class VesuvioCorrectionsHelper(object):
                                      ContainerScale=self._container_scale,
                                      **corrections_args)
 
+
 # -----------------------------------------------------------------------------------------
 
 class VesuvioConstraints(object):
-
     def __init__(self, name, parser):
         self._name = name
         self._parser = parser
@@ -518,10 +601,10 @@ class VesuvioConstraints(object):
     def to_dict(self):
         return dict(self._constraints)
 
+
 # -----------------------------------------------------------------------------------------
 
 class MassProfileCollection(object):
-
     def __init__(self, profiles):
         self._profiles = [profiles]
         self._index_to_symbol_map = {}
@@ -565,15 +648,13 @@ class MassProfileCollection(object):
                     param_name = param_re.group(2).lower()
                     self._update_profile_parameter(param_name, params_ws.dataY(param_idx)[idx],
                                                    idx, mass_idx)
-
-        self._profile_functions = [[self._extract_function(profile) for profile in profiles]
-                                   for profiles in self._profiles]
+        self._set_profile_functions(self._profiles)
 
     def _apply_symbol_filter(self, collection, symbol_filter, create_index_list=False):
         filtered = []
         for idx, item in enumerate(collection):
             if idx not in self._index_to_symbol_map or \
-                symbol_filter(self._index_to_symbol_map[idx]):
+                    symbol_filter(self._index_to_symbol_map[idx]):
                 filtered.append(idx if create_index_list else item)
         return filtered
 
@@ -626,6 +707,7 @@ class MassProfileCollection(object):
 
     def _mass_from_chemical_symbol(self, chemical_symbol):
         return self._material_builder.setFormula(chemical_symbol).build().relativeMolecularMass()
+
 
 # --------------------------------------------------------------------------------
 # Private Functions
@@ -685,3 +767,7 @@ def _create_user_defined_ties_str(masses):
                 user_defined_ties.append(tie_str)
     user_defined_ties = ','.join(user_defined_ties)
     return user_defined_ties
+
+
+def ignore_hydrogen_filter(symbol):
+    return symbol is not 'H'
