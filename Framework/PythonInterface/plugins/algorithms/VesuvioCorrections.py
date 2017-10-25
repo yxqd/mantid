@@ -449,14 +449,15 @@ class VesuvioCorrections(VesuvioBase):
     # ------------------------------------------------------------------------------
 
     def _get_correction_scale_factor(self, correction_name, corrections, params_ws):
-        index = self._get_correction_workspace(correction_name, corrections)[0]
-        if index is None:
-            raise RuntimeError('No workspace for given correction')
-
         params_dict = TableWorkspaceDictionaryFacade(params_ws)
-        scale_param_name = 'f%d.Scaling' % index
 
-        return params_dict[scale_param_name]
+        if len(corrections) > 1:
+            index = self._get_correction_workspace(correction_name, corrections)[0]
+            if index is None:
+                raise RuntimeError('No workspace for given correction')
+            return params_dict['f%d.Scaling' % index]
+        else:
+            return params_dict['Scaling']
 
     # ------------------------------------------------------------------------------
 
