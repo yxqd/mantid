@@ -697,11 +697,12 @@ class MassProfileCollection(object):
     Attributes:
         _material_builder       A material builder for retrieving mass
                                 values from symbols
-        _profiles               The mass profiles
+        _profiles               A list containing the mass profiles for
+                                each spectrum index
         _index_to_symbol_map    A map from the index of a mass in the
                                 mass values list to its chemical symbol,
                                 where specified
-        _mass_values            The mass values
+        _mass_values            A list of the mass values
         _profile_functions      The function strings corresponding to the
                                 mass  profiles
     """
