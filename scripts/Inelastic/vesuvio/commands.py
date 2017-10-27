@@ -193,7 +193,7 @@ class VesuvioTOFFitRoutine(object):
         for iteration in range(1, iterations + 1):
             # Update the mass profiles using the previous result if it exists
             if vesuvio_output.contains_fit():
-                self._mass_profile_collection.update_profiles_from_workspace(previous_results[2],
+                self._mass_profile_collection.update_profiles_from_workspace(vesuvio_output.parameters_workspace(),
                                                                              update_filter)
             print("=== Iteration {0} out of a possible {1}".format(iteration, iterations))
             vesuvio_output = tof_iteration(vesuvio_input, vesuvio_output, iteration, verbose_output)
