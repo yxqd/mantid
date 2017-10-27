@@ -200,7 +200,7 @@ class VesuvioTOFFitRoutine(object):
             exit_iteration += 1
             # Check whether the change in the cost function between the result and
             # previous results is smaller than the convergence threshold.
-            if vesuvio_output.contains_fit() and convergence_threshold is not None:
+            if vesuvio_output.contains_previous_fit() and convergence_threshold is not None:
                 cost_function_change = vesuvio_output.change_in_cost_function()
                 print("Cost function change: {0}".format(cost_function_change))
 
@@ -282,6 +282,7 @@ class VesuvioTOFFitRoutineIteration(object):
                                      OutputWorkspace=corrected_data_name,
                                      LinearFitResult=linear_corrections_fit_params_name,
                                      **corrections_args)
+
             # Calculate final fit
             fit_ws_name = sample_runs + "_data" + suffix
             params_ws_name = sample_runs + "_params" + suffix
@@ -743,6 +744,9 @@ class VesuvioTOFFitOutput(object):
 
     def contains_fit(self):
         return bool(self._chi2_values)
+
+    def contains_previous_fit(self):
+        return bool(self._previous_chi2_values)
 
     def chi2_values(self):
         return self._chi2_values
