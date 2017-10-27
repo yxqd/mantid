@@ -188,12 +188,11 @@ class VesuvioTOFFitRoutine(object):
         back_scattering = vesuvio_input.using_back_scattering_spectra()
         update_filter = ignore_hydrogen_filter if back_scattering else None
         exit_iteration = 0
-        previous_results = None
         vesuvio_output = VesuvioTOFFitOutput(vesuvio_input, verbose_output)
 
         for iteration in range(1, iterations + 1):
             # Update the mass profiles using the previous result if it exists
-            if previous_results is not None:
+            if vesuvio_output.contains_fit() is not None:
                 self._mass_profile_collection.update_profiles_from_workspace(previous_results[2],
                                                                              update_filter)
             print("=== Iteration {0} out of a possible {1}".format(iteration, iterations))
