@@ -15,7 +15,8 @@ from mantid.api import (AlgorithmManager, AnalysisDataService, MatrixWorkspace, 
 from mantid.kernel import MaterialBuilder
 from vesuvio.instrument import VESUVIO
 
-import mantid.simpleapi as ms
+from mantid.simpleapi (CropWorkspace, ConjoinWorkspaces, DeleteWorkspace, GroupWorkspaces, LoadVesuvio, Rebin,
+                       RenameWorkspace, UnGroupWorkspace, VesuvioCorrections, VesuvioTOFFit)
 
 
 # --------------------------------------------------------------------------------
@@ -48,8 +49,10 @@ def fit_tof(runs, flags, iterations=1, convergence_threshold=None):
     mass_profile_collection = MassProfileCollection(flags['masses'])
     vesuvio_fit_routine = VesuvioTOFFitRoutine(ms_helper, fit_helper, corrections_helper,
                                                mass_profile_collection, flags['fit_mode'])
-    return vesuvio_fit_routine(vesuvio_input, iterations, convergence_threshold,
-                               flags.get('output_verbose_corrections', False))
+    vesuvio_output, exit_iteration  = vesuvio_fit_routine(vesuvio_input, iterations, convergence_threshold,
+                                                          flags.get('output_verbose_corrections', False))
+    return (vesuvio_output.result_workspace(), vesuvio_output.prefit_parameters_workspace(),
+            vesuvio_output.parameters_workspace(), exit_iteration)
 
 
 # -----------------------------------------------------------------------------------------
@@ -186,6 +189,7 @@ class VesuvioTOFFitRoutine(object):
         update_filter = ignore_hydrogen_filter if back_scattering else None
         exit_iteration = 0
         previous_results = None
+        vesuvio_output = VesuvioTOFFitOutput(vesuvio_input, verbose_output)
 
         for iteration in range(1, iterations + 1):
             # Update the mass profiles using the previous result if it exists
@@ -193,38 +197,20 @@ class VesuvioTOFFitRoutine(object):
                 self._mass_profile_collection.update_profiles_from_workspace(previous_results[2],
                                                                              update_filter)
             print("=== Iteration {0} out of a possible {1}".format(iteration, iterations))
-            results = tof_iteration(vesuvio_input, iteration, verbose_output)
+            vesuvio_output = tof_iteration(vesuvio_input, vesuvio_output, iteration, verbose_output)
             exit_iteration += 1
             # Check whether the change in the cost function between the result and
             # previous results is smaller than the convergence threshold.
-            if previous_results is not None and convergence_threshold is not None:
-                cost_function_change = self._calculate_change_in_cost_function(results,
-                                                                               previous_results)
+            if vesuvio_output.contains_fit() and convergence_threshold is not None:
+                cost_function_change = vesuvio_output.change_in_cost_function()
                 print("Cost function change: {0}".format(cost_function_change))
 
                 if cost_function_change <= convergence_threshold:
                     print("Stopped at iteration {0} due to minimal change in cost function"
                           .format(exit_iteration))
-                    return results[0], results[2], results[3], exit_iteration
-            previous_results = results
-        return previous_results[0], previous_results[2], previous_results[3], exit_iteration
-
-    def _calculate_change_in_cost_function(self, results, previous_results):
-        """
-        Calculates the change in the cost function between the specified
-        results and previous results of a fit routine iteration.
-
-        :param results:             The results of running a vesuvio fit
-                                    routine iteration.
-        :param previous_results:    The results of running the previous
-                                    iteration of the vesuvio fit routine.
-        :return:                    The change in the cost function between
-                                    the two results.
-        """
-        last_chi2 = np.array(previous_results[3])
-        chi2 = np.array(results[3])
-        chi2_delta = last_chi2 - chi2
-        return np.abs(np.max(chi2_delta))
+                    return vesuvio_output, exit_iteration
+            vesuvio_output.increment_iteration()
+        return vesuvio_output, exit_iteration
 
 
 # ------------------------------------------------------------------------------------------------------
@@ -244,13 +230,12 @@ class VesuvioTOFFitRoutineIteration(object):
     """
 
     def __init__(self, ms_helper, fit_helper, corrections_helper, mass_profile_collection, fit_mode):
-        self._fit_mode = fit_mode
         self._ms_helper = ms_helper
         self._fit_helper = fit_helper
         self._corrections_helper = corrections_helper
         self._mass_profile_collection = mass_profile_collection
 
-    def __call__(self, vesuvio_input, iteration, verbose_output=False):
+    def __call__(self, vesuvio_input, vesuvio_output, iteration, verbose_output=False):
         # Retrieve all input in local variables
         sample_runs = str(vesuvio_input.sample_runs)
         sample_data = vesuvio_input.sample_data
@@ -260,17 +245,6 @@ class VesuvioTOFFitRoutineIteration(object):
         fit_filter = ignore_hydrogen_filter if vesuvio_input.using_back_scattering_spectra() else None
         all_mass_values = self._mass_profile_collection.masses()
         fit_mass_values = self._mass_profile_collection.masses(fit_filter)
-
-        # Outputs
-        group_name = sample_runs + '_result'
-        fit_ws_name = ""
-        pre_correct_pars_workspace = None
-        pars_workspace = None
-        fit_workspace = None
-        output_groups = []
-        chi2_values = []
-        data_workspaces = []
-        result_workspaces = []
 
         for index in range(num_spectra):
             all_profiles = self._mass_profile_collection.profile_functions(index)
@@ -286,7 +260,7 @@ class VesuvioTOFFitRoutineIteration(object):
                              MassProfiles=fit_profiles,
                              OutputWorkspace=fit_ws_name,
                              FitParameters=pre_params_ws_name)
-            ms.DeleteWorkspace(fit_ws_name)
+            DeleteWorkspace(fit_ws_name)
 
             # Calculate and apply vesuvio corrections
             linear_corrections_fit_params_name = sample_runs + "_correction_fit_scale" + suffix
@@ -318,74 +292,24 @@ class VesuvioTOFFitRoutineIteration(object):
                                           MassProfiles=fit_profiles,
                                           OutputWorkspace=fit_ws_name,
                                           FitParameters=params_ws_name)
-            chi2_values.append(fit_result[-1])
-            ms.DeleteWorkspace(corrected_data_name)
+            DeleteWorkspace(corrected_data_name)
 
-            # Post-processing of parameter tables - update workspaces using param tables
-            if pre_correct_pars_workspace is None:
-                pre_correct_pars_workspace = \
-                    self._create_param_workspace(num_spectra, mtd[pre_params_ws_name])
-            if pars_workspace is None:
-                pars_workspace = \
-                    self._create_param_workspace(num_spectra, mtd[params_ws_name])
-            if fit_workspace is None:
-                fit_workspace = \
-                    self._create_param_workspace(num_spectra, mtd[linear_corrections_fit_params_name])
-
-            spectrum = sample_data.getSpectrum(index).getSpectrumNo()
-            current_spectrum = 'spectrum_' + str(spectrum)
-            self._update_fit_params(pre_correct_pars_workspace, index, mtd[pre_params_ws_name],
-                                    current_spectrum)
-            self._update_fit_params(pars_workspace, index, mtd[params_ws_name], current_spectrum)
-            self._update_fit_params(fit_workspace, index, mtd[linear_corrections_fit_params_name],
-                                    current_spectrum)
+            # Update output with results from fit
+            vesuvio_output.add_chi2_value(fit_result[-1])
+            vesuvio_output.set_fit_workspace_name(fit_ws_name)
+            vesuvio_output.update_prefit_parameters_workspace(mtd[pre_params_ws_name], index)
+            vesuvio_output.update_parameters_workspace(mtd[params_ws_name], index)
+            vesuvio_output.update_fit_workspace(mtd[linear_corrections_fit_params_name], index)
 
             # Delete parameter tables after use
-            ms.DeleteWorkspace(pre_params_ws_name)
-            ms.DeleteWorkspace(params_ws_name)
-            ms.DeleteWorkspace(linear_corrections_fit_params_name)
+            DeleteWorkspace(pre_params_ws_name)
+            DeleteWorkspace(params_ws_name)
+            DeleteWorkspace(linear_corrections_fit_params_name)
 
-            # Process spectrum group
-            # Note the ordering of operations here gives the order in the WorkspaceGroup
-            output_workspaces = []
-            data_workspaces.append(fit_ws_name)
-            if verbose_output:
-                output_workspaces += mtd[corrections_args["CorrectionWorkspaces"]].getNames()
-                output_workspaces += mtd[corrections_args["CorrectedWorkspaces"]].getNames()
-                ms.UnGroupWorkspace(corrections_args["CorrectionWorkspaces"])
-                ms.UnGroupWorkspace(corrections_args["CorrectedWorkspaces"])
-
-                for workspace in output_workspaces:
-                    group_name = sample_runs + '_iteration_' + str(iteration)
-                    name = group_name + '_' + workspace.split('_')[1] + '_' + workspace.split('_')[-1]
-                    result_workspaces.append(name)
-                    if index == 0:
-                        ms.RenameWorkspace(InputWorkspace=workspace, OutputWorkspace=name)
-                    else:
-                        ms.ConjoinWorkspaces(InputWorkspace1=name, InputWorkspace2=workspace)
-
-            # Output the parameter workspaces
-            params_pre_corr = sample_runs + "_params_pre_correction_iteration_" + str(iteration)
-            params_name = sample_runs + "_params_iteration_" + str(iteration)
-            fit_name = sample_runs + "_correction_fit_scale_iteration_" + str(iteration)
-            mtd.addOrReplace(params_pre_corr, pre_correct_pars_workspace)
-            mtd.addOrReplace(params_name, pars_workspace)
-            mtd.addOrReplace(fit_name, fit_workspace)
-
-        if result_workspaces:
-            output_groups.append(ms.GroupWorkspaces(InputWorkspaces=result_workspaces,
-                                                    OutputWorkspace=group_name))
-        if data_workspaces:
-            output_groups.append(ms.GroupWorkspaces(InputWorkspaces=data_workspaces,
-                                                    OutputWorkspace=group_name + '_data'))
-        else:
-            output_groups.append(fit_ws_name)
-
-        if len(output_groups) > 1:
-            result_ws = output_groups
-        else:
-            result_ws = output_groups[0]
-        return result_ws, pre_correct_pars_workspace, pars_workspace, chi2_values
+            # Add output to Analysis Data Service
+            vesuvio_output.add_output_to_ads(index, mtd[corrections_args["CorrectionWorkspaces"]],
+                                             mtd[corrections_args["CorrectedWorkspaces"]])
+        return vesuvio_output
 
     def _create_fit_workspace_suffix(self, index, tof_data, fit_mode, spectra, iteration=None):
         if fit_mode == "bank":
@@ -398,28 +322,6 @@ class VesuvioTOFFitRoutineIteration(object):
             suffix += "_iteration_" + str(iteration)
 
         return suffix
-
-    def _create_param_workspace(self, num_spec, param_table):
-        num_params = param_table.rowCount()
-        param_workspace = WorkspaceFactory.Instance().create("Workspace2D",
-                                                             num_params, num_spec,
-                                                             num_spec)
-        x_axis = TextAxis.create(num_spec)
-        param_workspace.replaceAxis(0, x_axis)
-
-        vert_axis = TextAxis.create(num_params)
-        for idx, param_name in enumerate(param_table.column('Name')):
-            vert_axis.setLabel(idx, param_name)
-        param_workspace.replaceAxis(1, vert_axis)
-
-        return param_workspace
-
-    def _update_fit_params(self, params_ws, spec_idx, params_table, name):
-        params_ws.getAxis(0).setLabel(spec_idx, name)
-        for idx in range(params_table.rowCount()):
-            params_ws.dataX(idx)[spec_idx] = spec_idx
-            params_ws.dataY(idx)[spec_idx] = params_table.column('Value')[idx]
-            params_ws.dataE(idx)[spec_idx] = params_table.column('Error')[idx]
 
 
 # ------------------------------------------------------------------------------------------------------
@@ -487,38 +389,26 @@ class VesuvioLoadHelper(object):
         return ";".join(bank_ranges)
 
     def load_runs(self, runs, spectra, sum_spectra=False):
-        load_alg = AlgorithmManager.createUnmanaged("LoadVesuvio")
-        load_alg.initialize()
-        load_alg.setChild(True)
-        load_alg.setProperty("Filename", runs)
-        load_alg.setProperty("Mode", self._diff_mode)
-        load_alg.setProperty("InstrumentParFile", self._param_file)
-        load_alg.setProperty("SpectrumList", spectra)
-        load_alg.setProperty("SumSpectra", sum_spectra)
-        load_alg.setProperty("OutputWorkspace", "loaded")
-        load_alg.execute()
-        return load_alg.getProperty("OutputWorkspace").value
+        return LoadVesuvio(Filename=runs,
+                           Mode=self._diff_mode,
+                           InstrumentParFile=self._param_file,
+                           SpectrumList=spectra,
+                           SumSpectra=sum_spectra,
+                           OutputWorkspace="loaded",
+                           StoreInADS=False)
 
     def _crop_workspace(self, workspace):
-        crop_alg = AlgorithmManager.createUnmanaged("CropWorkspace")
-        crop_alg.initialize()
-        crop_alg.setChild(True)
-        crop_alg.setProperty("InputWorkspace", workspace)
-        crop_alg.setProperty("XMin", self._instrument.tof_range[0])
-        crop_alg.setProperty("XMax", self._instrument.tof_range[1])
-        crop_alg.setProperty("OutputWorkspace", "cropped")
-        crop_alg.execute()
-        return crop_alg.getProperty("OutputWorkspace").value
+        return CropWorkspace(InputWorkspace=workspace,
+                             XMin=self._instrument.tof_range[0],
+                             XMax=self._instrument.tof_range[1],
+                             OutputWorkspace="cropped",
+                             StoreInADS=False)
 
     def _rebin_workspace(self, workspace):
-        rebin_alg = AlgorithmManager.createUnmanaged("Rebin")
-        rebin_alg.initialize()
-        rebin_alg.setChild(True)
-        rebin_alg.setProperty("InputWorkspace", workspace)
-        rebin_alg.setProperty("Params", self._rebin_params)
-        rebin_alg.setProperty("OutputWorkspace", "rebinned")
-        rebin_alg.execute()
-        return rebin_alg.getProperty("OutputWorkspace").value
+        return Rebin(InputWorkspace=workspace,
+                     Params=self._rebin_params,
+                     OutputWorkspace="rebinned",
+                     StoreInADS=False)
 
 
 # ------------------------------------------------------------------------------------------------------
@@ -608,12 +498,12 @@ class VesuvioTOFFitHelper(object):
         self._minimizer = minimizer
 
     def __call__(self, **fit_args):
-        return ms.VesuvioTOFFit(Background=self._background,
-                                IntensityConstraints=self._intensity_constraints,
-                                Ties=self._ties,
-                                MaxIterations=self._max_iterations,
-                                Minimizer=self._minimizer,
-                                **fit_args)
+        return VesuvioTOFFit(Background=self._background,
+                             IntensityConstraints=self._intensity_constraints,
+                             Ties=self._ties,
+                             MaxIterations=self._max_iterations,
+                             Minimizer=self._minimizer,
+                             **fit_args)
 
 
 # -----------------------------------------------------------------------------------------
@@ -641,12 +531,12 @@ class VesuvioCorrectionsHelper(object):
         self._intensity_constraints = intensity_constraints
 
     def __call__(self, **correction_args):
-        return ms.VesuvioCorrections(GammaBackground=self._gamma_correct,
-                                     IntensityConstraints=self._intensity_constraints,
-                                     MultipleScattering=self._multiple_scattering,
-                                     GammaBackgroundScale=self._gamma_background_scale,
-                                     ContainerScale=self._container_scale,
-                                     **correction_args)
+        return VesuvioCorrections(GammaBackground=self._gamma_correct,
+                                  IntensityConstraints=self._intensity_constraints,
+                                  MultipleScattering=self._multiple_scattering,
+                                  GammaBackgroundScale=self._gamma_background_scale,
+                                  ContainerScale=self._container_scale,
+                                  **correction_args)
 
 
 # -----------------------------------------------------------------------------------------
@@ -830,6 +720,155 @@ class MassProfileCollection(object):
 
     def _mass_from_chemical_symbol(self, chemical_symbol):
         return self._material_builder.setFormula(chemical_symbol).build().relativeMolecularMass()
+
+
+# -----------------------------------------------------------------------------------------
+
+class VesuvioTOFFitOutput(object):
+
+    def __init__(self, vesuvio_input, verbose_corrections):
+        self._verbose_corrections = verbose_corrections
+        self._input = vesuvio_input
+        self._group_name = vesuvio_input.sample_runs + "_result"
+        self._num_spectra = vesuvio_input.sample_data.getNumberHistograms()
+        self._result_ws = None
+        self._pre_correct_pars_workspace = None
+        self._pars_workspace = None
+        self._fit_workspace = None
+        self._iteration = 1
+        self._result_workspaces = []
+        self._data_workspaces = []
+        self._chi2_values = []
+        self._previous_chi2_values = []
+        self._fit_ws_name = ""
+
+    def contains_fit(self):
+        return bool(self._chi2_values)
+
+    def chi2_values(self):
+        return self._chi2_values
+
+    def prefit_parameters_workspace(self):
+        return self._pre_correct_pars_workspace
+
+    def parameters_workspace(self):
+        return self._pars_workspace
+
+    def result_workspace(self):
+        if self._result_ws is None:
+            self._result_ws = self._create_result_workspace()
+        return self._result_ws
+
+    def change_in_cost_function(self):
+        last_chi2 = np.array(self._previous_chi2_values)
+        chi2 = np.array(self._chi2_values)
+        chi2_delta = last_chi2 - chi2
+        return np.abs(np.max(chi2_delta))
+
+    def set_fit_workspace_name(self, fit_ws_name):
+        self._fit_ws_name = fit_ws_name
+
+    def add_chi2_value(self, chi2_value):
+        self._chi2_values.append(chi2_value)
+
+    def update_prefit_parameters_workspace(self, table_workspace, workspace_index):
+        self._pre_correct_pars_workspace = self._update_workspace(self._pre_correct_pars_workspace,
+                                                                  table_workspace, workspace_index)
+
+    def update_parameters_workspace(self, table_workspace, workspace_index):
+        self._pars_workspace = self._update_workspace(self._pars_workspace, table_workspace, workspace_index)
+
+    def update_fit_workspace(self, table_workspace, workspace_index):
+        self._fit_workspace = self._update_workspace(self._fit_workspace, table_workspace, workspace_index)
+
+    def increment_iteration(self):
+        self._result_ws = None
+        self._pre_correct_pars_workspace = None
+        self._pars_workspace = None
+        self._fit_workspace = None
+        self._result_workspaces = []
+        self._data_workspaces = []
+        self._previous_chi2_values = self._chi2_values
+        self._chi2_values = []
+        self._iteration += 1
+
+    def add_output_to_ads(self, workspace_index, correction_workspaces, corrected_workspaces):
+
+        if self._verbose_corrections:
+            self._create_verbose_output(workspace_index, correction_workspaces, corrected_workspaces)
+
+        sample_runs = self._input.sample_runs
+        params_pre_corr = sample_runs + "_params_pre_correction_iteration_" + str(self._iteration)
+        params_name = sample_runs + "_params_iteration_" + str(self._iteration)
+        fit_name = sample_runs + "_correction_fit_scale_iteration_" + str(self._iteration)
+        mtd.addOrReplace(params_pre_corr, self._pre_correct_pars_workspace)
+        mtd.addOrReplace(params_name, self._pars_workspace)
+        mtd.addOrReplace(fit_name, self._fit_workspace)
+
+    def _update_workspace(self, workspace, table_workspace, workspace_index):
+        if workspace is None:
+            workspace = self._create_param_workspace(self._num_spectra, table_workspace)
+
+        sample_data = self._input.sample_data
+        spectrum = sample_data.getSpectrum(workspace_index).getSpectrumNo()
+        current_spectrum = 'spectrum_' + str(spectrum)
+        self._update_fit_params(workspace, workspace_index, table_workspace, current_spectrum)
+        return workspace
+
+    def _create_verbose_output(self, workspace_index, correction_workspaces, corrected_workspaces):
+        output_workspaces = correction_workspaces.getNames()
+        output_workspaces += corrected_workspaces.getNames()
+        UnGroupWorkspace(correction_workspaces)
+        UnGroupWorkspace(corrected_workspaces)
+
+        for workspace in output_workspaces:
+            self._group_name = self._input.sample_runs + '_iteration' + str(self._iteration)
+            name = self._group_name + '_' + workspace.split('_')[1] + '_' + workspace.split('_')[-1]
+            self._result_workspaces.append(name)
+
+            if workspace_index == 0:
+                RenameWorkspace(InputWorkspace=workspace, OutputWorkspace=name)
+            else:
+                ConjoinWorkspaces(InputWorkspace1=name, InputWorkspace2=workspace)
+
+    def _create_result_workspace(self):
+        output_groups = []
+
+        if self._result_workspaces:
+            output_groups.append(GroupWorkspaces(InputWorkspaces=self._result_workspaces,
+                                                 OutputWorkspace=self._group_name))
+        if self._data_workspaces:
+            output_groups.append(GroupWorkspaces(InputWorkspaces=self._data_workspaces,
+                                                 OutputWorkspace=self._group_name + '_data'))
+        else:
+            output_groups.append(self._fit_ws_name)
+
+        if len(output_groups) > 1:
+            return output_groups
+        else:
+            return output_groups[0]
+
+    def _update_fit_params(self, params_ws, spec_idx, params_table, name):
+        params_ws.getAxis(0).setLabel(spec_idx, name)
+        for idx in range(params_table.rowCount()):
+            params_ws.dataX(idx)[spec_idx] = spec_idx
+            params_ws.dataY(idx)[spec_idx] = params_table.column('Value')[idx]
+            params_ws.dataE(idx)[spec_idx] = params_table.column('Error')[idx]
+
+    def _create_param_workspace(self, num_spec, param_table):
+        num_params = param_table.rowCount()
+        param_workspace = WorkspaceFactory.Instance().create("Workspace2D",
+                                                             num_params, num_spec,
+                                                             num_spec)
+        x_axis = TextAxis.create(num_spec)
+        param_workspace.replaceAxis(0, x_axis)
+
+        vert_axis = TextAxis.create(num_params)
+        for idx, param_name in enumerate(param_table.column('Name')):
+            vert_axis.setLabel(idx, param_name)
+        param_workspace.replaceAxis(1, vert_axis)
+
+        return param_workspace
 
 
 # --------------------------------------------------------------------------------
