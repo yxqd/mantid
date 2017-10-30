@@ -812,10 +812,8 @@ class VesuvioTOFFitOutput(object):
         if workspace is None:
             workspace = self._create_param_workspace(self._num_spectra, table_workspace)
 
-        sample_data = self._input.sample_data
-        spectrum = sample_data.getSpectrum(workspace_index).getSpectrumNo()
-        current_spectrum = 'spectrum_' + str(spectrum)
-        self._update_fit_params(workspace, workspace_index, table_workspace, current_spectrum)
+        spectrum = self._input.sample_data.getSpectrum(workspace_index).getSpectrumNo()
+        self._update_fit_params(workspace, workspace_index, table_workspace, 'spectrum_' + str(spectrum))
         return workspace
 
     def _create_verbose_output(self, workspace_index, correction_workspaces, corrected_workspaces):
