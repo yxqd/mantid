@@ -137,12 +137,7 @@ HistogramData::Histogram MuonRemoveExpDecay::removeDecay(
   for (size_t i = 0; i < yData.size(); ++i) {
     const double factor = exp(result.x()[i] / MUON_LIFETIME_MICROSECONDS);
     // Correct the Y data
-    if (yData[i] != 0.0) {
       yData[i] *= factor;
-    } else {
-      yData[i] = 0.1 * factor;
-    }
-
     // Correct the E data
     if (eData[i] != 0.0) {
       eData[i] *= factor;
