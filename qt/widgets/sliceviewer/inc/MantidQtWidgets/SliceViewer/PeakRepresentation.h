@@ -4,6 +4,7 @@
 #include "MantidQtWidgets/SliceViewer/PeakPrimitives.h"
 #include "MantidQtWidgets/SliceViewer/PeakViewColor.h"
 #include "MantidGeometry/Crystal/PeakTransform.h"
+#include "MantidDataObjects/AffineMatrixParameter.h"
 #include <boost/optional.hpp>
 
 class QPainter;
@@ -60,6 +61,10 @@ public:
   /// Transform the coordinates.
   virtual void
   movePosition(Mantid::Geometry::PeakTransform_sptr peakTransform) = 0;
+  virtual void
+  movePositionNonOrthogonal(Mantid::Geometry::PeakTransform_sptr peakTransform,
+                            Mantid::coord_t *fromHklToXyz, size_t dimX,
+                            size_t dimY, size_t dimMissing) = 0;
   /// Get the bounding box.
   virtual PeakBoundingBox getBoundingBox() const = 0;
   /// Set the size of the cross peak in the viewing plane

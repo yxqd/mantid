@@ -37,7 +37,8 @@ public:
   ~ConcretePeaksPresenter() override;
   void update() override;
   void updateWithSlicePoint(const PeakBoundingBox &slicePoint) override;
-  bool changeShownDim() override;
+  void setNonOrthogonal(bool nonOrthogonalEnabled) override;
+  bool changeShownDim(size_t dimX, size_t dimY) override;
   bool isLabelOfFreeAxis(const std::string &label) const override;
   SetPeaksWorkspaces presentedWorkspaces() const override;
   void setForegroundColor(const PeakViewColor) override;
@@ -86,6 +87,7 @@ private:
   EditMode m_editMode;
   /// Can we add to this peaks workspace
   bool m_hasAddPeaksMode;
+  bool m_NonOrthogonal;
   /// Configure peak transformations
   bool configureMappingTransform();
   /// Hide all views
@@ -112,6 +114,11 @@ private:
   std::vector<size_t> findVisiblePeakIndexes(const PeakBoundingBox &box);
   /// Set the visible peak list.
   void setVisiblePeaks(const std::vector<size_t> &indexes);
+  // non orthogonal information
+  Mantid::coord_t m_fromHklToXyz[9];
+  size_t m_dimX;
+  size_t m_dimY;
+  size_t m_dimMissing;
 };
 }
 }

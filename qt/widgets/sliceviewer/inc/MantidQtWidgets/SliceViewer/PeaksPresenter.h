@@ -51,7 +51,8 @@ class EXPORT_OPT_MANTIDQT_SLICEVIEWER PeaksPresenter : public QObject {
 public:
   virtual void update() = 0;
   virtual void updateWithSlicePoint(const PeakBoundingBox &) = 0;
-  virtual bool changeShownDim() = 0;
+  virtual bool changeShownDim(size_t dimX, size_t dimY) = 0;
+  virtual void setNonOrthogonal(bool nonOrthogonalEnabled) = 0;
   virtual bool isLabelOfFreeAxis(const std::string &label) const = 0;
   virtual SetPeaksWorkspaces presentedWorkspaces() const = 0;
   virtual void setForegroundColor(const PeakViewColor) = 0;
