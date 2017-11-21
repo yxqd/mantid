@@ -52,11 +52,11 @@ class DLLExport PeakHKLErrors : public API::ParamFunction,
 public:
   PeakHKLErrors();
 
-  std::string name() const override { return std::string("PeakHKLErrors"); };
+  std::string name() const override { return std::string("PeakHKLErrors"); }
 
-  virtual int version() const { return 1; };
+  virtual int version() const { return 1; }
 
-  const std::string category() const override { return "Calibration"; };
+  const std::string category() const override { return "Calibration"; }
 
   void function1D(double *out, const double *xValues,
                   const size_t nData) const override;
@@ -86,10 +86,6 @@ public:
   static DataObjects::Peak createNewPeak(const Geometry::IPeak &peak_old,
                                          Geometry::Instrument_sptr instrNew,
                                          double T0, double L0);
-
-  static void cLone(boost::shared_ptr<Geometry::ParameterMap> &pmap,
-                    boost::shared_ptr<const Geometry::IComponent> component,
-                    boost::shared_ptr<const Geometry::ParameterMap> &pmapSv);
 
   void getRun2MatMap(DataObjects::PeaksWorkspace_sptr &Peaks,
                      const std::string &OptRuns,

@@ -82,95 +82,6 @@ void PeakHKLErrors::setUpOptRuns() {
 }
 
 /**
- * "Clones" a parameter map duplicating all Parameters with double,V3D,int and
- *string parameter
- * values that apply to the given component and all(most) of the components
- *children.
- *
- * If the component is an instrument, this parameter map can be used to create
- * a separate parameterized instrument close to the original instrument.
- *
- * NOTE: For speed purposes, if a component( or subcomponent) has too many
- *children(180
- * or more),the parameters corresponding to these children( and subchildren)
- *will not
- * be added to the parameter map
- *
- *
- * @param pmap       The new parameter map to which the new Parameters are to be
- *added
- *
- * @param component  The component along with most of its children and
- *subchildren for
- *                   which Parameters that correspond to these will be
- *considered.
- *
- * @param pmapSv     The old parameter map from which copies of the parameters
- *corresponding
- *                   to the given component or subchild are added to pmap
- */
-void PeakHKLErrors::cLone(
-    boost::shared_ptr<Geometry::ParameterMap> &pmap,
-    boost::shared_ptr<const Geometry::IComponent> component,
-    boost::shared_ptr<const Geometry::ParameterMap> &pmapSv) {
-  if (!component)
-    return;
-  if (component->isParametrized()) {
-
-    auto nms = pmapSv->names(component.get());
-    for (const auto &nm : nms) {
-
-      if (pmapSv->contains(component.get(), nm, "double")) {
-        std::vector<double> dparams =
-            pmapSv->getDouble(component->getName(), nm);
-        pmap->addDouble(component.get(), nm, dparams[0]);
-        continue;
-      }
-
-      if (pmapSv->contains(component.get(), nm, "V3D")) {
-        std::vector<V3D> V3Dparams = pmapSv->getV3D(component->getName(), nm);
-        pmap->addV3D(component.get(), nm, V3Dparams[0]);
-        continue;
-      }
-
-      if (pmapSv->contains(component.get(), nm, "int")) {
-        std::vector<int> iparams =
-            pmapSv->getType<int>(component->getName(), nm);
-        pmap->addInt(component.get(), nm, iparams[0]);
-        continue;
-      }
-
-      if (pmapSv->contains(component.get(), nm, "string")) {
-        std::vector<std::string> sparams =
-            pmapSv->getString(component->getName(), nm);
-        pmap->addString(component.get(), nm, sparams[0]);
-        continue;
-      }
-
-      if (pmapSv->contains(component.get(), nm, "Quat")) {
-        std::vector<Kernel::Quat> sparams =
-            pmapSv->getType<Kernel::Quat>(component->getName(), nm);
-        pmap->addQuat(component.get(), nm, sparams[0]);
-        continue;
-      }
-    }
-
-    boost::shared_ptr<const CompAssembly> parent =
-        boost::dynamic_pointer_cast<const CompAssembly>(component);
-    if (parent && parent->nelements() < 180) //# need speed up. Assume pixel
-      // elements of a Panel have no
-      // attributes
-      for (int child = 0; child < parent->nelements(); child++) {
-        boost::shared_ptr<const Geometry::IComponent> kid =
-            boost::const_pointer_cast<const Geometry::IComponent>(
-                parent->getChild(child));
-        if (kid)
-          cLone(pmap, kid, pmapSv);
-      }
-  }
-}
-
-/**
  * Creates a new parameterized instrument for which the parameter values can be
  *changed
  *
@@ -183,48 +94,33 @@ void PeakHKLErrors::cLone(
 boost::shared_ptr<Geometry::Instrument>
 PeakHKLErrors::getNewInstrument(PeaksWorkspace_sptr Peaks) const {
   Geometry::Instrument_const_sptr instSave = Peaks->getPeak(0).getInstrument();
-  auto pmap = boost::make_shared<Geometry::ParameterMap>();
-  boost::shared_ptr<const Geometry::ParameterMap> pmapSv =
-      instSave->getParameterMap();
+  auto instChange = boost::shared_ptr<Geometry::Instrument>();
 
   if (!instSave) {
     g_log.error(" Peaks workspace does not have an instrument");
     throw std::invalid_argument(" Not all peaks have an instrument");
   }
-  auto instChange = boost::shared_ptr<Geometry::Instrument>();
 
+  Geometry::ParameterMap_sptr pmap;
   if (!instSave->isParametrized()) {
-
-    boost::shared_ptr<Geometry::Instrument> instClone(instSave->clone());
-    auto Pinsta = boost::make_shared<Geometry::Instrument>(instSave, pmap);
-
-    instChange = Pinsta;
-  } else // catch(... )
-  {
-    auto P1 = boost::make_shared<Geometry::Instrument>(
+    instChange = boost::make_shared<Geometry::Instrument>(instChange, pmap);
+  } else {
+    pmap = instSave->getParameterMap();
+    instChange = boost::make_shared<Geometry::Instrument>(
         instSave->baseInstrument(), pmap);
-    instChange = P1;
   }
 
   if (!instChange) {
     g_log.error("Cannot 'clone' instrument");
     throw std::logic_error("Cannot clone instrument");
   }
-  //------------------"clone" orig instruments pmap -------------------
 
-  cLone(pmap, instSave, pmapSv);
   IComponent_const_sptr sample = instChange->getSample();
   V3D sampPos = sample->getRelativePos();
   V3D sampOffsets(getParameter("SampleXOffset"), getParameter("SampleYOffset"),
                   getParameter("SampleZOffset"));
-
-  pmap->addPositionCoordinate(sample.get(), std::string("x"),
-                              sampPos.X() + sampOffsets.X());
-  pmap->addPositionCoordinate(sample.get(), std::string("y"),
-                              sampPos.Y() + sampOffsets.Y());
-  pmap->addPositionCoordinate(sample.get(), std::string("z"),
-                              sampPos.Z() + sampOffsets.Z());
-
+  // not updating the parameter map lets pass the unit test as well
+  pmap->addV3D(sample.get(), sample->getName(), sampPos+sampOffsets);
   return instChange;
 }
 
