@@ -13,6 +13,9 @@
 namespace Mantid {
 namespace MDAlgorithms {
 
+constexpr size_t DIM_DISTRIBUTED_TEST = 3;
+
+
 enum class QFrame { QSample, HKL, QLab };
 
 struct EventConversionInfo {
@@ -26,8 +29,7 @@ struct EventConversionInfo {
 
 class MANTID_MDALGORITHMS_DLL EventToMDEventConverter {
 public:
-  constexpr static size_t DIM = 3;
-  std::vector<Mantid::DataObjects::MDLeanEvent<DIM>>
+  std::vector<Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>>
   getEvents(const Mantid::DataObjects::EventWorkspace &inputWorkspace,
             double fraction = 1., QFrame qFrame = QFrame::QLab,
             bool lorentzCorrection = false);
@@ -37,7 +39,7 @@ private:
   getUbMatrix(const Mantid::DataObjects::EventWorkspace &inputWorkspace,
               QFrame qFrame) const;
 
-  std::vector<Mantid::DataObjects::MDLeanEvent<DIM>>
+  std::vector<Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>>
   convertEvents(const size_t workspaceIndex,
                 const Mantid::DataObjects::EventWorkspace &workspace,
                 const EventConversionInfo &beamInformation,

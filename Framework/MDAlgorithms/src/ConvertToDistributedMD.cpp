@@ -1,9 +1,8 @@
 #include <MantidAPI/IEventWorkspace.h>
 #include "MantidMDAlgorithms/ConvertToDistributedMD.h"
 #include "MantidMDAlgorithms/EventToMDEventConverter.h"
-#include "MantidKernel/PropertyWithValue.h"
-#include "MantidKernel/make_unique.h"
-
+#include "MantidParallel/Communicator.h"
+#include "MantidParallel/Collectives.h"
 
 
 namespace Mantid {
@@ -71,20 +70,91 @@ void ConvertToDistributedMD::exec() {
   EventToMDEventConverter converter;
   auto nPercentEvents = converter.getEvents(*inputWorkspace, fraction, QFrame::QLab);
 
-  // Build send all events to the master rank
+  // Get the preliminary box structure
+  auto* boxes = getPreliminaryBoxStructure(nPercentEvents);
+}
 
-  // Build the box structure on the master rank
 
-  // Serialize the box structure
+ConvertToDistributedMD::BoxStructure* ConvertToDistributedMD::getPreliminaryBoxStructure(ConvertToDistributedMD::MDEventList& mdEvents) const {
+  ConvertToDistributedMD::BoxStructure* boxStructure= nullptr;
 
-  // Share the box structure with all other ranks
+  const auto& communicator = this->communicator();
+  if (communicator.rank() == 0) {
+    // 1.b Receive the data from all the other ranks
+    auto allEvents = receiveMDEvents(const Mantid::Parallel::Communicator& communicator, mdEvents)
 
-  // Deserialize the box structure
+    // 2. Build the box structure on the master rank
 
-  //
+    // 4. Serialize the box structure
+
+    // 5.a Broadcast serialized box structure to all other ranks
+
+  } else {
+    // 1.a Send the event data to the master rank
+    sendMDEventsToMaster(communicator, mdEvents);
+
+    // 5.b Receive the box structure from master
+
+    // 6. Deserialize on all ranks (except for master)
+  }
+
+
+
+  return boxStructure;
+}
+
+void ConvertToDistributedMD::sendMDEventsToMaster(const Mantid::Parallel::Communicator& communicator,
+                                                  const MDEventList& mdEvents) const {
+  // Send signal array and qx qy qz arrays separately
+  // This could also be separate arrays
+
+  // Send the totalNumberOfEvents
+  auto totalNumberEvents = mdEvents.size();
+  gather(communicator, totalNumberEvents, 0);
+
+  // Build up the vectors we want to send, i.e. signal and position;
+  // TODO: use boost::serialization
+  auto numberOfDimensions = mdEvents.back().getNumDims();
+  std::vector<float> signals(totalNumberEvents);
+  std::vector<coord_t> positions(totalNumberEvents*numberOfDimensions);
+  for (const auto& event : mdEvents) {
+    signals.emplace_back(event.getSignal());
+    auto position = event.get
+  }
+
+  // Send the position array
 
 
 }
 
-} // namespace MDAlgorithms
+
+ConvertToDistributedMD::MDEventList ConvertToDistributedMD::receiveMDEventsOnMaster(const Mantid::Parallel::Communicator& communicator,
+                                                                            const MDEventList& mdEvents) const {
+  // Get the totalNumberOfEvents for each rank
+  std::vector<size_t> numberOfEventsPerRank;
+  auto masterNumberOfEvents = mdEvents.size();
+  gather(communicator, masterNumberOfEvents, numberOfEventsPerRank, 0);
+
+  // Receive the signal arrays. To do this we need to:
+  // 1. Create a sufficiently large buffer
+  // 2. Determine the strides that each rank requires
+  // 3. Apply gatherv
+
+  // 1. Create a receive buffer for the signals
+  auto totalNumberOfEvents = std::accumulate(numberOfEventsPerRank.begin(), numberOfEventsPerRank.end(), 0ul);
+  std::vector<int> signals(totalNumberOfEvents);
+
+  // 2. Create strides
+  std::vector<int> strides(numberOfEventsPerRank.size());
+  std::partial_sum(numberOfEventsPerRank.begin(), numberOfEventsPerRank.end(), strides.begin());
+  auto correctFirstValue = [&numberOfEventsPerRank](int& value) {value -= numberOfEventsPerRank[0];};
+  std::for_each(strides.begin(), strides.end(), correctFirstValue);
+
+  // 3 Receive the data from the other ranks.
+
+}
+
+
+
+  } // namespace MDAlgorithms
 } // namespace Mantid

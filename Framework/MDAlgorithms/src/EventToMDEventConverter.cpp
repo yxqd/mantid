@@ -12,7 +12,7 @@ using namespace Mantid::Types::Core;
 namespace Mantid {
 namespace MDAlgorithms {
 
-using Lev3D = Mantid::DataObjects::MDLeanEvent<EventToMDEventConverter::DIM>;
+using Lev3D = Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>;
 
 std::vector<Lev3D>
 EventToMDEventConverter::getEvents(const EventWorkspace &workspace,

@@ -2,38 +2,24 @@
 #define MANTID_MDALGORITHMS_CONVERTTODISTRIBUTEDMD_H_
 
 #include "MantidMDAlgorithms/DllConfig.h"
-#include "MantidAPI/Algorithm.h"
+#include "MantidAPI/ParallelAlgorithm.h"
 #include "MantidDataObjects/MDEvent.h"
+#include "MantidDataObjects/MDBoxBase.h"
+#include "MantidDataObjects/MDLeanEvent.h"
+#include "MantidAPI/ParallelAlgorithm.h"
+
+
+constexpr size_t DIM_DISTRIBUTED_TEST = 3;
 
 
 namespace Mantid {
 namespace MDAlgorithms {
 
-/** ConvertToDistributedMD : TODO: DESCRIPTION
-
-  Copyright &copy; 2017 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge
-  National Laboratory & European Spallation Source
-
-  This file is part of Mantid.
-
-  Mantid is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 3 of the License, or
-  (at your option) any later version.
-
-  Mantid is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-  File change history is stored at: <https://github.com/mantidproject/mantid>
-  Code Documentation is available at: <http://doxygen.mantidproject.org>
-*/
-class MANTID_MDALGORITHMS_DLL ConvertToDistributedMD : public API::Algorithm {
+class MANTID_MDALGORITHMS_DLL ConvertToDistributedMD : public API::ParallelAlgorithm {
 public:
+  using BoxStructure = Mantid::DataObjects::MDBoxBase<Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST>;
+  using MDEventList = std::vector<Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>>;
+
   const std::string name() const override;
   int version() const override;
   const std::string category() const override;
@@ -42,6 +28,17 @@ public:
 private:
   void init() override;
   void exec() override;
+
+  BoxStructure* getPreliminaryBoxStructure(MDEventList& mdEvents) const;
+
+  /// Send MDEvents to master
+  void sendMDEventsToMaster(const Mantid::Parallel::Communicator& communicator,
+                            const MDEventList& mdEvents) const;
+
+  /// Receive MDEvents on master
+  void sendMDEventsToMaster(const Mantid::Parallel::Communicator& communicator,
+                            const MDEventList& mdEvents) const;
+
 };
 
 } // namespace MDAlgorithms
