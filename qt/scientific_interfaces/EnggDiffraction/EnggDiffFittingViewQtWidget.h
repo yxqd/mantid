@@ -107,6 +107,10 @@ public:
 
   int getFittingListWidgetCurrentRow() const override;
 
+  std::string getFittingListWidgetCurrentValue() const override;
+
+  bool listWidgetHasSelectedRow() const override;
+
   void setFittingListWidgetCurrentRow(int idx) const override;
 
   std::string fittingPeaksData() const override;
@@ -190,6 +194,7 @@ private slots:
   void showToolTipHelp();
   void setBankDir(int idx);
   void listViewFittingRun();
+  void listWidget_fitting_run_num_clicked(QListWidgetItem *listWidget);
 
 private:
   /// Setup the interface (tab UI)

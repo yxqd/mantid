@@ -96,8 +96,14 @@ public:
   // return idx of current selected row of list widget
   MOCK_CONST_METHOD0(getFittingListWidgetCurrentRow, int());
 
+  // gets whether the list widget has a selected row
+  MOCK_CONST_METHOD0(listWidgetHasSelectedRow, bool());
+
   // sets the current row of the fitting list widget
   MOCK_CONST_METHOD1(setFittingListWidgetCurrentRow, void(int idx));
+
+  // gets current value of the fitting list widget
+  MOCK_CONST_METHOD0(getFittingListWidgetCurrentValue, std::string());
 
   // sets the peak list according to the QString given
   MOCK_CONST_METHOD1(setPeakList, void(const std::string &peakList));

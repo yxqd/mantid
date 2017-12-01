@@ -49,7 +49,7 @@ class AbstractInst(object):
         return calibrate.create_van(instrument=self, run_details=run_details,
                                     absorb=do_absorb_corrections)
 
-    def _focus(self, run_number_string, do_van_normalisation, do_absorb_corrections):
+    def _focus(self, run_number_string, do_van_normalisation, do_absorb_corrections, sample_details=None):
         """
         Focuses the user specified run - should be called by the concrete instrument
         :param run_number_string: The run number(s) to be processed
@@ -58,7 +58,7 @@ class AbstractInst(object):
         """
         self._is_vanadium = False
         return focus.focus(run_number_string=run_number_string, perform_vanadium_norm=do_van_normalisation,
-                           instrument=self, absorb=do_absorb_corrections)
+                           instrument=self, absorb=do_absorb_corrections, sample_details=sample_details)
 
     # Mandatory overrides
 
@@ -188,9 +188,12 @@ class AbstractInst(object):
                                                                                    processed_spectra=processed_spectra)
         output_paths = self._generate_out_file_paths(run_details=run_details)
 
+        file_ext = run_details.file_extension[1:] if run_details.file_extension else ""
+
         common_output.save_focused_data(d_spacing_group=d_spacing_group, tof_group=tof_group,
                                         output_paths=output_paths, inst_prefix=self._inst_prefix,
-                                        run_number_string=run_details.output_run_string)
+                                        run_number_string=run_details.output_run_string,
+                                        file_ext=file_ext)
 
         return d_spacing_group, tof_group
 
@@ -215,6 +218,8 @@ class AbstractInst(object):
         # Prepend the file extension used if it was set, this groups the files nicely in the file browser
         # Also remove the dot at the start so we don't make hidden files in *nix systems
         file_name = run_details.file_extension[1:] + file_name if run_details.file_extension else file_name
+        file_name += run_details.output_suffix if run_details.output_suffix is not None else ""
+
         nxs_file = os.path.join(output_directory, (file_name + ".nxs"))
         gss_file = os.path.join(output_directory, (file_name + ".gsas"))
         tof_xye_file = os.path.join(output_directory, (file_name + "_tof_xye.dat"))
