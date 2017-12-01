@@ -3,12 +3,16 @@
 
 #include "MantidKernel/System.h"
 #include "MantidGeometry/MDGeometry/MDTypes.h"
+
+#include <boost/serialization/access.hpp>
+
 #include <algorithm>
 #include <cmath>
 #include <numeric>
 #include <string>
 #include <vector>
 #include <stdexcept>
+
 
 namespace Mantid {
 namespace DataObjects {
@@ -33,6 +37,16 @@ namespace DataObjects {
  *
  * */
 template <size_t nd> class DLLExport MDLeanEvent {
+  private:
+    friend class boost::serialization::access;
+
+    template<class Archive>
+    void serialize(Archive &ar, const unsigned int /*version*/)
+    {
+      ar & signal;
+      ar & errorSquared;
+      ar & center;
+    }
 protected:
   /** The signal (aka weight) from the neutron event.
    * Will be exactly 1.0 unless modified at some point.
@@ -302,6 +316,8 @@ public:
     }
   }
 };
+
+
 
 } // namespace DataObjects
 } // namespace Mantid

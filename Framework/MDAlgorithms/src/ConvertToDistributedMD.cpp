@@ -4,6 +4,7 @@
 #include "MantidParallel/Communicator.h"
 #include "MantidParallel/Collectives.h"
 
+#include <boost/mpi/request.hpp>
 
 namespace Mantid {
 namespace MDAlgorithms {
@@ -39,13 +40,13 @@ const std::string ConvertToDistributedMD::summary() const {
  */
 void ConvertToDistributedMD::init() {
   declareProperty(
-      Kernel::make_unique<WorkspaceProperty<API::IEventWorkspace>>("InputWorkspace", "",
+      Kernel::make_unique<WorkspaceProperty<DataObjects::EventWorkspace>>("InputWorkspace", "",
                                                              Direction::Input),
       "An input workspace.");
-  declareProperty(
-      Kernel::make_unique<WorkspaceProperty<API::Workspace>>("OutputWorkspace", "",
-                                                             Direction::Output),
-      "An output workspace.");
+//  declareProperty(
+//      Kernel::make_unique<WorkspaceProperty<DataObjects::EventWorkspace>("OutputWorkspace", "",
+//                                                             Direction::Output),
+//      "An output workspace.");
 
   declareProperty(make_unique<Mantid::Kernel::PropertyWithValue<bool>>("LorentzCorrection",
                       false, Direction::Input),
@@ -62,16 +63,47 @@ void ConvertToDistributedMD::init() {
 /** Execute the algorithm.
  */
 void ConvertToDistributedMD::exec() {
+  // The generation of the distributed MDEventWorkspace (here only distributed box structure) has the following parts:
+  // 1. Convert the data which corresponds to the first n percent of the total measurement
+  // 2. Build a preliminary box structure on the master rank
+  // 3. Determine how the data will be split based on the preliminary box structure and share this information with all
+  //    ranks
+  // 4. Share the preliminary box structure with all ranks
+  // 5. Convert all events
+  // 6. Disable the box controller and add events to the local box structure
+  // 7. Send data from the each rank to the correct rank
+  // 8. Enable the box controller and start splitting the data
+
   // Get the users's inputs
   Mantid::DataObjects::EventWorkspace_sptr inputWorkspace = getProperty("InputWorkspace");
   double fraction = getProperty("Fraction");
 
-  // Get a n-percent fraction
+  // ----------------------------------------------------------
+  // 1. Get a n-percent fraction
+  // ----------------------------------------------------------
   EventToMDEventConverter converter;
   auto nPercentEvents = converter.getEvents(*inputWorkspace, fraction, QFrame::QLab);
 
-  // Get the preliminary box structure
+  // -----------------------------------------------------------------
+  // 2. + 3. = 4.  Get the preliminary box structure and the partition behaviour
+  // -----------------------------------------------------------------
   auto* boxes = getPreliminaryBoxStructure(nPercentEvents);
+
+  // ----------------------------------------------------------
+  // 5. Convert all events
+  // ----------------------------------------------------------
+
+  // ----------------------------------------------------------
+  // 6. Add the local data to the preliminary box structure
+  // ----------------------------------------------------------
+
+  // ----------------------------------------------------------
+  // 7. Redistribute data
+  // ----------------------------------------------------------
+
+  // ----------------------------------------------------------
+  // 8. Continue to split locally
+  // ----------------------------------------------------------
 }
 
 
@@ -81,9 +113,10 @@ ConvertToDistributedMD::BoxStructure* ConvertToDistributedMD::getPreliminaryBoxS
   const auto& communicator = this->communicator();
   if (communicator.rank() == 0) {
     // 1.b Receive the data from all the other ranks
-    auto allEvents = receiveMDEvents(const Mantid::Parallel::Communicator& communicator, mdEvents)
+    auto allEvents = receiveMDEventsOnMaster(communicator, mdEvents);
 
     // 2. Build the box structure on the master rank
+    //boxStructure = generatePreliminaryBoxStructure(allEvents);
 
     // 4. Serialize the box structure
 
@@ -98,61 +131,78 @@ ConvertToDistributedMD::BoxStructure* ConvertToDistributedMD::getPreliminaryBoxS
     // 6. Deserialize on all ranks (except for master)
   }
 
-
-
   return boxStructure;
 }
 
 void ConvertToDistributedMD::sendMDEventsToMaster(const Mantid::Parallel::Communicator& communicator,
                                                   const MDEventList& mdEvents) const {
-  // Send signal array and qx qy qz arrays separately
-  // This could also be separate arrays
-
   // Send the totalNumberOfEvents
   auto totalNumberEvents = mdEvents.size();
   gather(communicator, totalNumberEvents, 0);
 
-  // Build up the vectors we want to send, i.e. signal and position;
-  // TODO: use boost::serialization
-  auto numberOfDimensions = mdEvents.back().getNumDims();
-  std::vector<float> signals(totalNumberEvents);
-  std::vector<coord_t> positions(totalNumberEvents*numberOfDimensions);
-  for (const auto& event : mdEvents) {
-    signals.emplace_back(event.getSignal());
-    auto position = event.get
-  }
-
-  // Send the position array
-
-
+  // Send the vector of md events
+  communicator.send(0, 1, mdEvents.data(), mdEvents.size());
 }
 
 
 ConvertToDistributedMD::MDEventList ConvertToDistributedMD::receiveMDEventsOnMaster(const Mantid::Parallel::Communicator& communicator,
-                                                                            const MDEventList& mdEvents) const {
-  // Get the totalNumberOfEvents for each rank
+                                                                                    const MDEventList& mdEvents) const {
+  // In order to get all relevant md events onto the master rank we need to:
+  // 1. Inform the master rank about the number of events on all ranks (gather)
+  // 2. Create a sufficiently large buff on master
+  // 3. Determine the stride that each rank requires, ie which offset each rank requires
+  // 4. Send the data to master. This would be a natural operation for gatherv, however this is not available in
+  //    boost 1.58 (in 1.59+ it is).
+
+  // 1. Get the totalNumberOfEvents for each rank
   std::vector<size_t> numberOfEventsPerRank;
   auto masterNumberOfEvents = mdEvents.size();
   gather(communicator, masterNumberOfEvents, numberOfEventsPerRank, 0);
 
-  // Receive the signal arrays. To do this we need to:
-  // 1. Create a sufficiently large buffer
-  // 2. Determine the strides that each rank requires
-  // 3. Apply gatherv
-
-  // 1. Create a receive buffer for the signals
+  // 2. Create a buffer
   auto totalNumberOfEvents = std::accumulate(numberOfEventsPerRank.begin(), numberOfEventsPerRank.end(), 0ul);
-  std::vector<int> signals(totalNumberOfEvents);
+  MDEventList totalEvents;
+  totalEvents.reserve(totalNumberOfEvents);
+  std::copy(mdEvents.begin(), mdEvents.end(), std::back_inserter(totalEvents));
 
-  // 2. Create strides
-  std::vector<int> strides(numberOfEventsPerRank.size());
-  std::partial_sum(numberOfEventsPerRank.begin(), numberOfEventsPerRank.end(), strides.begin());
-  auto correctFirstValue = [&numberOfEventsPerRank](int& value) {value -= numberOfEventsPerRank[0];};
-  std::for_each(strides.begin(), strides.end(), correctFirstValue);
+  // 3. Determine the strides
+  std::vector<int> strides;
+  strides.reserve(numberOfEventsPerRank.size());
+  strides.push_back(0);
+  {
+    std::vector<int> tempStrides(numberOfEventsPerRank.size()-1);
+    std::partial_sum(numberOfEventsPerRank.begin(), numberOfEventsPerRank.end()-1, tempStrides.begin());
+    std::move(tempStrides.begin(), tempStrides.end(), std::back_inserter(strides));
+  }
 
-  // 3 Receive the data from the other ranks.
+  // 4. Send the data from all ranks to the master rank
+  const auto& boostCommunicator = communicator.getBoostCommunicator();
+  const auto numberOfRanks= communicator.size() ;
+  std::vector<boost::mpi::request> requests(static_cast<size_t>(numberOfRanks)-1);
 
+  for (int rank = 1; rank < numberOfRanks; ++rank) {
+    // Determine where to insert the array
+    auto start = totalEvents.data() + strides[rank]-1;
+    auto length = numberOfEventsPerRank[rank];
+    requests.emplace_back(boostCommunicator.irecv(rank, 1, start, static_cast<int>(length)));
+  }
+  boost::mpi::wait_all(requests.begin(), requests.end());
+
+  return totalEvents;
 }
+
+//ConvertToDistributedMD::BoxStructure* ConvertToDistributedMD::generatePreliminaryBoxStructure(const MDEventList& allEvents) {
+//  // To build the box structure we need to:
+//  // 1. Create a box controller
+//  // 2. Create a seed box
+//  // 3. Add the events one by one
+//
+//  // Create box controller
+//
+//  //data = new MDBox<MDE, nd>(m_BoxController.get(), 0);
+//
+//}
+
 
 
 

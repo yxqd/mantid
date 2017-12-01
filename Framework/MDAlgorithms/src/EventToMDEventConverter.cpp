@@ -182,6 +182,9 @@ std::vector<Lev3D> EventToMDEventConverter::convertEvents(
 std::vector<TofEvent>::const_iterator EventToMDEventConverter::getEndIterator(
     const std::vector<TofEvent> &events,
     const EventConversionInfo &eventConversionInfo) const {
+  if (events.empty()) {
+    return events.cend();
+  }
 
   if (events.back().pulseTime() <= eventConversionInfo.cutOffTime) {
     return events.cend();
@@ -193,12 +196,12 @@ std::vector<TofEvent>::const_iterator EventToMDEventConverter::getEndIterator(
         [](const TofEvent &event, const DateAndTime &cutOffTime)
             -> bool { return event.pulseTime() < cutOffTime; };
 
-    auto largerOrEqual = std::lower_bound(events.begin(), events.end(),
+    const auto largerOrEqual = std::lower_bound(events.begin(), events.end(),
                                           cutOffTime, comparePulseTime);
-    return largerOrEqual != events.end() &&
+    return largerOrEqual != events.cend() &&
                    !comparePulseTime(*largerOrEqual, cutOffTime)
                ? largerOrEqual
-               : events.end();
+               : events.cend();
   }
 }
 

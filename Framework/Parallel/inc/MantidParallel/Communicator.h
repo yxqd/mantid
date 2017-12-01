@@ -68,6 +68,7 @@ public:
 
 #ifdef MPI_EXPERIMENTAL
   operator const boost::mpi::communicator &() const;
+  const boost::mpi::communicator& getBoostCommunicator() const;
 #endif
 
   bool hasBackend() const;

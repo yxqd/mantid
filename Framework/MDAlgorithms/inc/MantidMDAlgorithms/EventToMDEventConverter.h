@@ -13,7 +13,7 @@
 namespace Mantid {
 namespace MDAlgorithms {
 
-constexpr size_t DIM_DISTRIBUTED_TEST = 3;
+  constexpr size_t DIM_DISTRIBUTED_TEST = 3;
 
 
 enum class QFrame { QSample, HKL, QLab };

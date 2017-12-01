@@ -4,6 +4,8 @@
 #include <cxxtest/TestSuite.h>
 
 #include "MantidMDAlgorithms/ConvertToDistributedMD.h"
+#include "MantidTestHelpers/WorkspaceCreationHelper.h"
+
 
 using Mantid::MDAlgorithms::ConvertToDistributedMD;
 
@@ -22,35 +24,29 @@ public:
 //    TS_ASSERT( alg.isInitialized() )
   }
 
-  void test_exec()
-  {
-//    // Create test input if necessary
-//    MatrixWorkspace_sptr inputWS = //-- Fill in appropriate code. Consider using TestHelpers/WorkspaceCreationHelpers.h --
-//
-//    ConvertToDistributedMD alg;
-//    // Don't put output in ADS by default
-//    alg.setChild(true);
-//    TS_ASSERT_THROWS_NOTHING( alg.initialize() )
-//    TS_ASSERT( alg.isInitialized() )
-//    TS_ASSERT_THROWS_NOTHING( alg.setProperty("InputWorkspace", inputWS) );
-//    TS_ASSERT_THROWS_NOTHING( alg.setPropertyValue("OutputWorkspace", "_unused_for_child") );
-//    TS_ASSERT_THROWS_NOTHING( alg.execute(); );
-//    TS_ASSERT( alg.isExecuted() );
-//
-//    // Retrieve the workspace from the algorithm. The type here will probably need to change. It should
-//    // be the type using in declareProperty for the "OutputWorkspace" type.
-//    // We can't use auto as it's an implicit conversion.
-//    Workspace_sptr outputWS = alg.getProperty("OutputWorkspace");
-//    TS_ASSERT(outputWS);
-//    TS_FAIL("TODO: Check the results and remove this line");
-  }
-  
-  void test_Something()
-  {
-//    TS_FAIL( "You forgot to write a test!");
+  void test_exec() {
+    // Arrange
+    auto ws = generate_test_workspace(2);
+    ConvertToDistributedMD alg;
+    alg.initialize();
+    alg.setProperty("InputWorkspace", ws);
+    alg.setProperty("OutputWorkspace", "dummy"); // Not used for now, but have to set.
+
+    // Act
+    alg.execute();
+
+    // Assert
+    int a = 1;
   }
 
-
+private:
+  Mantid::DataObjects::EventWorkspace_sptr generate_test_workspace(int numberOfBanks) {
+    // Create simple event workspace
+    // This will create numberOfBanks pixels with 100 bins with 200 events. With pulse times
+    // 0, 1, 2, ...
+    auto ws = WorkspaceCreationHelper::createEventWorkspaceWithFullInstrument(numberOfBanks, 1, false /* clear events*/);
+    return ws;
+  }
 };
 
 

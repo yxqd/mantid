@@ -44,6 +44,11 @@ int Communicator::size() const {
 Communicator::operator const boost::mpi::communicator &() const {
   return m_communicator;
 }
+
+const boost::mpi::communicator& Communicator::getBoostCommunicator() const {
+  return m_communicator;
+}
+
 #endif
 
 /// For internal use only. Returns true if the communicator has a

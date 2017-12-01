@@ -92,6 +92,14 @@ template <typename... T> void gather(const Communicator &comm, T &&... args) {
   detail::gather(comm, std::forward<T>(args)...);
 }
 
+//template <typename... T> void gatherv(const Communicator &comm, T &&... args) {
+//#ifdef MPI_EXPERIMENTAL
+//  if (!comm.hasBackend())
+//    return boost::mpi::gatherv(comm, std::forward<T>(args)...);
+//#endif
+//  throw std::runtime_error("Trying to use gatherv without a backend. This has not been implemented yet.");
+//}
+
 template <typename... T>
 void all_to_all(const Communicator &comm, T &&... args) {
 #ifdef MPI_EXPERIMENTAL

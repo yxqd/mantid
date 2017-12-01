@@ -36,9 +36,10 @@ private:
                             const MDEventList& mdEvents) const;
 
   /// Receive MDEvents on master
-  void sendMDEventsToMaster(const Mantid::Parallel::Communicator& communicator,
-                            const MDEventList& mdEvents) const;
+  MDEventList receiveMDEventsOnMaster(const Mantid::Parallel::Communicator& communicator,
+                               const MDEventList& mdEvents) const;
 
+//  BoxStructure* generatePreliminaryBoxStructure(const MDEventList& allEvents) const;
 };
 
 } // namespace MDAlgorithms
