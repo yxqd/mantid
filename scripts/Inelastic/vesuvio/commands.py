@@ -25,7 +25,8 @@ from mantid.simpleapi (CropWorkspace, ConjoinWorkspaces, DeleteWorkspace, GroupW
 
 def fit_tof(runs, flags, iterations=1, convergence_threshold=None):
     vesuvio_loader = VesuvioLoadHelper(flags['diff_mode'], flags['fit_mode'],
-                                       flags['ip_file'], flags['bin_parameters'])
+                                       flags['ip_file'], flags['bin_parameters'],
+                                       flags.get('load_log_files', True))
     vesuvio_input = VesuvioTOFFitInput(runs, flags['container_runs'],
                                        flags['spectra'], vesuvio_loader)
     ms_helper = None
@@ -336,13 +337,15 @@ class VesuvioLoadHelper(object):
         _param_file      The instrument parameter file for loading.
         _rebin_params    The parameters to use for rebinning loaded data.
                          If none, loaded data is not rebinned.
+        _load_log_files  If true, log files are loaded with data.
     """
 
-    def __init__(self, diff_mode, fit_mode, param_file, rebin_params=None):
+    def __init__(self, diff_mode, fit_mode, param_file, rebin_params=None, load_log_files=True):
         self._diff_mode = self._parse_diff_mode(diff_mode)
         self._fit_mode = fit_mode
         self._param_file = param_file
         self._rebin_params = rebin_params
+        self._load_log_files = load_log_files
         self._instrument = VESUVIO()
 
     def __call__(self, runs, spectra):
@@ -394,6 +397,7 @@ class VesuvioLoadHelper(object):
                            InstrumentParFile=self._param_file,
                            SpectrumList=spectra,
                            SumSpectra=sum_spectra,
+                           LoadLogFiles=self._load_log_files,
                            OutputWorkspace="loaded",
                            StoreInADS=False)
 
