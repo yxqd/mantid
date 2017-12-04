@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 #include "MantidPythonInterface/kernel/Converters/VectorToNDArray.h"
 #include "MantidPythonInterface/kernel/Converters/NDArrayTypeIndex.h"
+#include "MantidTypes/Core/DateAndTime.h"
 
 #include <boost/python/list.hpp>
 #define PY_ARRAY_UNIQUE_SYMBOL KERNEL_ARRAY_API
@@ -71,6 +72,24 @@ template <> PyObject *cloneToNDArray(const std::vector<std::string> &cdata) {
   boost::python::list pystrs;
   for (auto iter = cdata.begin(); iter != cdata.end(); ++iter) {
     pystrs.append(iter->c_str());
+  }
+  PyObject *rawptr = pystrs.ptr();
+  Py_INCREF(rawptr); // Make sure it survies after the wrapper decrefs the count
+  return rawptr;
+}
+
+/**
+ * Returns a new python list of strings from the given vector
+ * exists for strings so that they simply create a standard python list.
+ * @param cdata :: A reference to a std::vector
+ * @return
+ */
+template <>
+PyObject *
+cloneToNDArray(const std::vector<Mantid::Types::Core::DateAndTime> &cdata) {
+  boost::python::list pystrs;
+  for (auto iter = cdata.begin(); iter != cdata.end(); ++iter) {
+    pystrs.append(iter->total_nanoseconds());
   }
   PyObject *rawptr = pystrs.ptr();
   Py_INCREF(rawptr); // Make sure it survies after the wrapper decrefs the count

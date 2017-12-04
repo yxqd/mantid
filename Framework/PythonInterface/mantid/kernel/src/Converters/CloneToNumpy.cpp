@@ -4,6 +4,7 @@
 #include "MantidPythonInterface/kernel/Converters/CloneToNumpy.h"
 #include "MantidPythonInterface/kernel/Converters/NDArrayTypeIndex.h"
 #include "MantidPythonInterface/kernel/Converters/NumpyFunctions.h"
+#include "MantidTypes/Core/DateAndTime.h"
 
 #include <string>
 
@@ -32,6 +33,20 @@ template <typename ElementType>
 PyObject *clone1D(const std::vector<ElementType> &cvector) {
   Py_intptr_t dims[1] = {static_cast<int>(cvector.size())};
   return cloneND(cvector.data(), 1, dims);
+}
+
+template <>
+PyObject *clone1D(const std::vector<Types::Core::DateAndTime> &cvector) {
+  Py_intptr_t dims[1] = {static_cast<int>(cvector.size())};
+  int datatype = NDArrayTypeIndex<int64_t>::typenum;
+  PyArrayObject *nparray = func_PyArray_NewFromDescr(datatype, 1, &dims[0]);
+
+  for (Py_intptr_t i = 0; i < dims[0]; ++i) {
+    void *itemPtr = PyArray_GETPTR1(nparray, i);
+    PyArray_SETITEM(nparray, reinterpret_cast<char *>(itemPtr),
+                    PyLong_FromLong(cvector[i].totalNanoseconds()));
+  }
+  return reinterpret_cast<PyObject *>(nparray);
 }
 
 /**
@@ -133,6 +148,8 @@ INSTANTIATE_CLONE(double)
 INSTANTIATE_CLONE(float)
 // Need further 1D specialisation for string
 INSTANTIATE_CLONE1D(std::string)
+// Need further 1D specialisation for string
+INSTANTIATE_CLONEND(Types::Core::DateAndTime)
 // Need further ND specialisation for bool
 INSTANTIATE_CLONEND(bool)
 ///@endcond
