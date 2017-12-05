@@ -4,6 +4,7 @@
 #include "MantidParallel/Communicator.h"
 #include "MantidParallel/Collectives.h"
 #include "MantidKernel/UnitLabelTypes.h"
+#include "MantidMDAlgorithms/RankResponsibility.h"
 
 #include "MantidKernel/Strings.h"
 #include "MantidKernel/ArrayProperty.h"
@@ -11,7 +12,8 @@
 #include "MantidKernel/StringTokenizer.h"
 #include "MantidKernel/ListValidator.h"
 
-#include <boost/mpi/request.hpp>
+#include "MantidParallel/Nonblocking.h"
+
 
 namespace Mantid {
 namespace MDAlgorithms {
@@ -163,6 +165,7 @@ void ConvertToDistributedMD::exec() {
   // 6. Disable the box controller and add events to the local box structure
   // 7. Send data from the each rank to the correct rank
   // 8. Enable the box controller and start splitting the data
+  // 9. Maybe save in this algorithm already
 
   // Get the users's inputs
   Mantid::DataObjects::EventWorkspace_sptr inputWorkspace =
@@ -193,6 +196,11 @@ void ConvertToDistributedMD::exec() {
   // ----------------------------------------------------------
   // 8. Continue to split locally
   // ----------------------------------------------------------
+
+  // ----------------------------------------------------------
+  // 9. Save?
+  // ----------------------------------------------------------
+
 }
 
 ConvertToDistributedMD::MDEventList ConvertToDistributedMD::getNPercentEvents(const Mantid::DataObjects::EventWorkspace& workspace) const {
@@ -233,23 +241,43 @@ ConvertToDistributedMD::getPreliminaryBoxStructure(
 
     // 2. Build the box structure on the master rank
     auto boxStructureInformation = generatePreliminaryBoxStructure(allEvents);
-;
-    // 4. Serialize the box structure
+
+    // 3. Determine splitting
+    RankResponsibility rankResponsibility;
+    auto responsibility = rankResponsibility.getResponsibilites(communicator.size(), boxStructureInformation.boxStructure.get());
+
+    // 4.a Broadcast splitting behaviour
+    sendRankResponsibility(communicator, responsibility);
+
+    // 5. Serialize the box structure
     //serializeBoxStructure(boxStructureInformation);
 
-    // 5.a Broadcast serialized box structure to all other ranks
+    // 6.a Broadcast serialized box structure to all other ranks
 
   } else {
     // 1.a Send the event data to the master rank
     sendMDEventsToMaster(communicator, mdEvents);
 
-    // 5.b Receive the box structure from master
+    // 4.b Receive the splitting behaviour
+    auto responsibility = receiveRankResponsibility(communicator);
 
-    // 6. Deserialize on all ranks (except for master)
+    // 6.b Receive the box structure from master
+
+    // 7. Deserialize on all ranks (except for master)
   }
 
   return boxStructure;
 }
+
+
+void ConvertToDistributedMD::sendRankResponsibility(const Mantid::Parallel::Communicator& communicator, const std::vector<std::pair<size_t, size_t>>& responsibility) const {
+
+}
+
+std::vector<std::pair<size_t, size_t>> ConvertToDistributedMD::receiveRankResponsibility(const Mantid::Parallel::Communicator& communicator) const {
+  return std::vector<std::pair<size_t, size_t>>();
+}
+
 
 void ConvertToDistributedMD::sendMDEventsToMaster(
     const Mantid::Parallel::Communicator &communicator,
@@ -299,9 +327,8 @@ ConvertToDistributedMD::receiveMDEventsOnMaster(
   }
 
   // 4. Send the data from all ranks to the master rank
-  const auto &boostCommunicator = communicator.getBoostCommunicator();
   const auto numberOfRanks = communicator.size();
-  std::vector<boost::mpi::request> requests;
+  std::vector<Mantid::Parallel::Request> requests;
   requests.reserve(static_cast<size_t>(numberOfRanks) - 1);
 
   for (int rank = 1; rank < numberOfRanks; ++rank) {
@@ -309,9 +336,9 @@ ConvertToDistributedMD::receiveMDEventsOnMaster(
     auto start = totalEvents.data() + strides[rank];
     auto length = numberOfEventsPerRank[rank];
     requests.emplace_back(
-        boostCommunicator.irecv(rank, 2, start, static_cast<int>(length)));
+        communicator.irecv(rank, 2, start, static_cast<int>(length)));
   }
-  boost::mpi::wait_all(requests.begin(), requests.end());
+  wait_all(requests.begin(), requests.end());
   return totalEvents;
 }
 

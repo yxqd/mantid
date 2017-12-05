@@ -10,6 +10,7 @@ set ( SRC_FILES
 	src/BinaryOperationMD.cpp
 	src/BooleanBinaryOperationMD.cpp
 	src/BoxControllerSettingsAlgorithm.cpp
+	src/BoxStructureSerializer.cpp
 	src/CalculateCoverageDGS.cpp
 	src/CentroidPeaksMD.cpp
 	src/CentroidPeaksMD2.cpp
@@ -108,6 +109,7 @@ set ( SRC_FILES
 	src/Quantification/ResolutionConvolvedCrossSection.cpp
 	src/Quantification/SimulateResolutionConvolvedModel.cpp
 	src/QueryMDWorkspace.cpp
+	src/RankResponsibility.cpp
 	src/ReflectometryTransformKiKf.cpp
 	src/ReflectometryTransformP.cpp
 	src/ReflectometryTransformQxQz.cpp
@@ -142,6 +144,7 @@ set ( INC_FILES
 	inc/MantidMDAlgorithms/BinaryOperationMD.h
 	inc/MantidMDAlgorithms/BooleanBinaryOperationMD.h
 	inc/MantidMDAlgorithms/BoxControllerSettingsAlgorithm.h
+	inc/MantidMDAlgorithms/BoxStructureSerializer.h
 	inc/MantidMDAlgorithms/CalculateCoverageDGS.h
 	inc/MantidMDAlgorithms/CentroidPeaksMD.h
 	inc/MantidMDAlgorithms/CentroidPeaksMD2.h
@@ -240,6 +243,7 @@ set ( INC_FILES
 	inc/MantidMDAlgorithms/Quantification/ResolutionConvolvedCrossSection.h
 	inc/MantidMDAlgorithms/Quantification/SimulateResolutionConvolvedModel.h
 	inc/MantidMDAlgorithms/QueryMDWorkspace.h
+	inc/MantidMDAlgorithms/RankResponsibility.h
 	inc/MantidMDAlgorithms/ReflectometryTransformKiKf.h
 	inc/MantidMDAlgorithms/ReflectometryTransformP.h
 	inc/MantidMDAlgorithms/ReflectometryTransformQxQz.h
@@ -273,6 +277,7 @@ set ( TEST_FILES
 	AndMDTest.h
 	BooleanBinaryOperationMDTest.h
 	BoxControllerSettingsAlgorithmTest.h
+	BoxStructureSerializerTest.h
 	CachedExperimentInfoTest.h
 	CalculateCoverageDGSTest.h
 	CentroidPeaksMD2Test.h
@@ -357,6 +362,7 @@ set ( TEST_FILES
 	PowerMDTest.h
 	PreprocessDetectorsToMDTest.h
 	QueryMDWorkspaceTest.h
+	RankResponsibilityTest.h
 	ReflectometryTransformKiKfTest.h
 	ReflectometryTransformPTest.h
 	ReflectometryTransformQxQzTest.h

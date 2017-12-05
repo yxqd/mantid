@@ -73,6 +73,10 @@ private:
 
   BoxStructureInformation extractBoxStructure(Mantid::DataObjects::MDEventWorkspace3Lean& workspace) const;
 
+  void sendRankResponsibility(const Mantid::Parallel::Communicator& communicator, const std::vector<std::pair<size_t, size_t>>& responsibility) const;
+
+  std::vector<std::pair<size_t, size_t>> receiveRankResponsibility(const Mantid::Parallel::Communicator& communicator) const;
+
   // -------------------------------------------------------------------------------------------------------------------
   // Methods to build up a temporary MDEventWorkspace
   // -------------------------------------------------------------------------------------------------------------------
