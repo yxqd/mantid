@@ -20,9 +20,10 @@ public:
     // Arrange
     auto ws = generate_test_workspace(2);
     EventToMDEventConverter converter;
+    std::vector<Mantid::coord_t> extents = {-50., 50., -50., 50., -50., 50.};
 
     // Act
-    auto mdEvents = converter.getEvents(*ws);
+    auto mdEvents = converter.getEvents(*ws, extents);
 
     // Assert
     // TODO: Test conversion correctness.
@@ -33,9 +34,10 @@ public:
     // Arrange
     auto ws = generate_test_workspace(2);
     EventToMDEventConverter converter;
+    std::vector<Mantid::coord_t> extents = {-50., 50., -50., 50., -50., 50.};
 
     // Act
-    auto mdEvents = converter.getEvents(*ws, 0.5);
+    auto mdEvents = converter.getEvents(*ws, extents, 0.5);
 
     // Assert
     // TODO: Test conversion correctness.

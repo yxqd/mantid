@@ -16,12 +16,13 @@ using Lev3D = Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>;
 
 std::vector<Lev3D>
 EventToMDEventConverter::getEvents(const EventWorkspace &workspace,
-                                   double fraction, QFrame qFrame,
+                                   const std::vector<coord_t>& extents,
+                                   double fraction,
+                                   QFrame qFrame,
                                    bool lorentzCorrection) {
   // Get beamline inforamtion
   auto eventConversionInfo =
-      getEventConversionInfo(workspace, qFrame, fraction, lorentzCorrection);
-
+      getEventConversionInfo(workspace, qFrame, fraction, lorentzCorrection, extents);
 
   // Convert the number of events
   const auto &spectrumInfo = workspace.spectrumInfo();
@@ -140,6 +141,7 @@ std::vector<Lev3D> EventToMDEventConverter::convertEvents(
 
     const auto numberOfEvents = eventList.getNumberEvents();
     mdEvents.reserve(numberOfEvents);
+
     for (; it != it_end; it++) {
       // Get the wavenumber in ang^-1 using the previously calculated constant.
       coord_t wavenumber = coord_t(conversionFactor / it->tof());
@@ -149,21 +151,18 @@ std::vector<Lev3D> EventToMDEventConverter::convertEvents(
       coord_t center[3] = {Q_dir_x * wavenumber, Q_dir_y * wavenumber,
                            Q_dir_z * wavenumber};
 
-      //          // Check that the event is within bounds
-      //          if (center[0] < m_extentsMin[0] || center[0] >=
-      //          m_extentsMax[0])
-      //            continue;
-      //          if (center[1] < m_extentsMin[1] || center[1] >=
-      //          m_extentsMax[1])
-      //            continue;
-      //          if (center[2] < m_extentsMin[2] || center[2] >=
-      //          m_extentsMax[2])
-      //            continue;
+//      // Check that the event is within bounds
+//      if (center[0] < eventConversionInfo.minExtents[0] || center[0] >= eventConversionInfo.maxExtents[0])
+//        continue;
+//      if (center[1] < eventConversionInfo.minExtents[1] || center[1] >=  eventConversionInfo.maxExtents[1])
+//        continue;
+//      if (center[2] < eventConversionInfo.minExtents[2] || center[2] >= eventConversionInfo.maxExtents[2])
+//        continue;
 
       if (eventConversionInfo.lorentzCorrection) {
         // double lambda = 1.0/wavenumber;
         // (sin(theta))^2 / wavelength^4
-        float correct = float(sinThetaSquared * wavenumber * wavenumber *
+        auto correct = float(sinThetaSquared * wavenumber * wavenumber *
                               wavenumber * wavenumber);
         // Push the MDLeanEvent but correct the weight.
         mdEvents.emplace_back(float(it->weight() * correct),
@@ -193,8 +192,8 @@ std::vector<TofEvent>::const_iterator EventToMDEventConverter::getEndIterator(
     // time which is larger than the cutoff time
     const auto &cutOffTime = eventConversionInfo.cutOffTime;
     auto comparePulseTime =
-        [](const TofEvent &event, const DateAndTime &cutOffTime)
-            -> bool { return event.pulseTime() < cutOffTime; };
+        [](const TofEvent &event, const DateAndTime &cutOff)
+            -> bool { return event.pulseTime() < cutOff; };
 
     const auto largerOrEqual = std::lower_bound(events.begin(), events.end(),
                                           cutOffTime, comparePulseTime);
@@ -216,7 +215,7 @@ double EventToMDEventConverter::getQSign() const {
 
 EventConversionInfo EventToMDEventConverter::getEventConversionInfo(
     const Mantid::DataObjects::EventWorkspace &workspace, QFrame qFrame,
-    double fraction, bool lorentzCorrection) {
+    double fraction, bool lorentzCorrection, const std::vector<coord_t>& extents) {
   const auto &spectrumInfo = workspace.spectrumInfo();
   EventConversionInfo eventConversionInfo;
   eventConversionInfo.lorentzCorrection = lorentzCorrection;
@@ -237,6 +236,16 @@ EventConversionInfo EventToMDEventConverter::getEventConversionInfo(
   // Get the start and stop time
   auto cutOffTime = getCutOffTime(workspace, fraction);
   eventConversionInfo.cutOffTime = cutOffTime;
+
+  // Populate the extents
+  if (extents.size() != 2*DIM_DISTRIBUTED_TEST) {
+    throw std::runtime_error("The number extents has to be twice the number of dimensions");
+  }
+
+  for(auto dimension=0ul; dimension < DIM_DISTRIBUTED_TEST; ++dimension) {
+    eventConversionInfo.minExtents.emplace_back(extents[dimension]);
+    eventConversionInfo.maxExtents.emplace_back(extents[dimension+1]);
+  }
 
   return eventConversionInfo;
 }

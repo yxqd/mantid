@@ -214,6 +214,10 @@ public:
       Mantid::API::MDNormalization preferredNormalization) override;
   Mantid::API::MDNormalization displayNormalization() const override;
 
+  /// EXPERIMENTAL: Transfer ownership of box controller and data.
+  ///               This will make the workspace useless.
+  void transferInternals(API::BoxController_sptr& boxController, std::unique_ptr<MDBoxBase<MDE, nd>>& data);
+
 protected:
   /// Protected copy constructor. May be used by childs for cloning.
   MDEventWorkspace(const MDEventWorkspace<MDE, nd> &other);

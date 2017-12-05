@@ -25,13 +25,17 @@ struct EventConversionInfo {
   Mantid::Kernel::V3D beamDirection;
   Mantid::Kernel::Matrix<double> ubMatrix;
   Mantid::Types::Core::DateAndTime cutOffTime;
+  std::vector<coord_t> minExtents;
+  std::vector<coord_t> maxExtents;
 };
 
 class MANTID_MDALGORITHMS_DLL EventToMDEventConverter {
 public:
   std::vector<Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>>
   getEvents(const Mantid::DataObjects::EventWorkspace &inputWorkspace,
-            double fraction = 1., QFrame qFrame = QFrame::QLab,
+            const std::vector<coord_t>& extents,
+            double fraction = 1.,
+            QFrame qFrame = QFrame::QLab,
             bool lorentzCorrection = false);
 
 private:
@@ -49,7 +53,8 @@ private:
 
   EventConversionInfo
   getEventConversionInfo(const Mantid::DataObjects::EventWorkspace &workspace,
-                         QFrame qFrame, double fraction, bool lorentzCorrection);
+                         QFrame qFrame, double fraction, bool lorentzCorrection,
+                         const std::vector<coord_t>& extents);
 
   Mantid::Types::Core::DateAndTime
   getCutOffTime(const Mantid::DataObjects::EventWorkspace &workspace,

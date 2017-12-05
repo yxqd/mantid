@@ -1018,6 +1018,20 @@ TMDE(API::MDNormalization MDEventWorkspace)::displayNormalization() const {
   return m_displayNormalization;
 }
 
+
+TMDE(void MDEventWorkspace)::transferInternals(API::BoxController_sptr& boxController,
+                                               std::unique_ptr<MDBoxBase<MDE, nd>>& data) {
+  // Point to the box controller and reset the member pointer
+  boxController = m_BoxController;
+  m_BoxController = boost::make_shared<API::BoxController>(nd);
+
+  // Transfer the data into a unique pointer and create a new data
+  data.reset(this->data);
+  this->data = new MDBox<MDE, nd>(m_BoxController.get(), 0);
+}
+
+
+
 } // namespace DataObjects
 
 } // namespace Mantid
