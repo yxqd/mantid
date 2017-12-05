@@ -2,26 +2,20 @@
 #define MANTID_MDALGORITHMS_CONVERTTODISTRIBUTEDMD_H_
 
 #include "MantidMDAlgorithms/DllConfig.h"
+#include "MantidMDAlgorithms/BoxStructureSerializer.h"
+#include "MantidMDAlgorithms/DistributedCommon.h"
+#include "MantidAPI/BoxController.h"
 #include "MantidAPI/ParallelAlgorithm.h"
 #include "MantidDataObjects/MDEvent.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/MDBoxBase.h"
 #include "MantidDataObjects/MDLeanEvent.h"
-#include "MantidAPI/ParallelAlgorithm.h"
 #include "MantidGeometry/MDGeometry/MDFrameFactory.h"
 #include "MantidDataObjects/MDEventFactory.h"
 #include "MantidGeometry/Instrument.h"
-#include "MantidAPI/BoxController.h"
-
-
-constexpr size_t DIM_DISTRIBUTED_TEST = 3;
-
 
 namespace Mantid {
 namespace MDAlgorithms {
-
-using BoxStructure = Mantid::DataObjects::MDBoxBase<Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST>;
-
 
 struct FrameInformation {
   std::string dimensionNames[3];
@@ -30,16 +24,9 @@ struct FrameInformation {
 };
 
 
-struct BoxStructureInformation {
-  std::unique_ptr<BoxStructure> boxStructure;
-  Mantid::API::BoxController_sptr boxController;
-};
-
-
-class MANTID_MDALGORITHMS_DLL ConvertToDistributedMD : public API::ParallelAlgorithm {
+class MANTID_MDALGORITHMS_DLL ConvertToDistributedMD
+    : public API::ParallelAlgorithm {
 public:
-  using MDEventList = std::vector<Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>>;
-
   const std::string name() const override;
   int version() const override;
   const std::string category() const override;
@@ -51,45 +38,72 @@ private:
   void init() override;
   void exec() override;
 
-  BoxStructure* getPreliminaryBoxStructure(MDEventList& mdEvents) const;
+  void setupPreliminaryBoxStructure(DistributedCommon::MDEventList &mdEvents);
 
   /// Send MDEvents to master
-  void sendMDEventsToMaster(const Mantid::Parallel::Communicator& communicator,
-                            const MDEventList& mdEvents) const;
+  void sendMDEventsToMaster(const Mantid::Parallel::Communicator &communicator,
+                            const DistributedCommon::MDEventList &mdEvents) const;
 
   /// Receive MDEvents on master
-  MDEventList receiveMDEventsOnMaster(const Mantid::Parallel::Communicator& communicator,
-                               const MDEventList& mdEvents) const;
+  DistributedCommon::MDEventList
+  receiveMDEventsOnMaster(const Mantid::Parallel::Communicator &communicator,
+                          const DistributedCommon::MDEventList &mdEvents) const;
 
-  BoxStructureInformation generatePreliminaryBoxStructure(const MDEventList& allEvents) const;
+  DistributedCommon::BoxStructureInformation
+  generatePreliminaryBoxStructure(const DistributedCommon::MDEventList &allEvents) const;
 
   void initBoxControllerProps(const std::string &SplitInto = "5",
                               int SplitThreshold = 1000,
                               int MaxRecursionDepth = 5);
 
-  MDEventList getNPercentEvents(const Mantid::DataObjects::EventWorkspace& workspace) const;
+  DistributedCommon::MDEventList
+  getFractionEvents(const Mantid::DataObjects::EventWorkspace &workspace, double fraction) const;
 
   std::vector<coord_t> getWorkspaceExtents() const;
 
-  BoxStructureInformation extractBoxStructure(Mantid::DataObjects::MDEventWorkspace3Lean& workspace) const;
+  DistributedCommon::BoxStructureInformation extractBoxStructure(
+      Mantid::DataObjects::MDEventWorkspace3Lean &workspace) const;
 
-  void sendRankResponsibility(const Mantid::Parallel::Communicator& communicator, const std::vector<std::pair<size_t, size_t>>& responsibility) const;
+  void sendRankResponsibility(
+      const Mantid::Parallel::Communicator &communicator,
+      std::vector<std::pair<size_t, size_t>> &responsibility) const;
 
-  std::vector<std::pair<size_t, size_t>> receiveRankResponsibility(const Mantid::Parallel::Communicator& communicator) const;
+  std::vector<std::pair<size_t, size_t>> receiveRankResponsibility(
+      const Mantid::Parallel::Communicator &communicator) const;
+
+  SerialBoxStructureInformation serializeBoxStructure(
+      const DistributedCommon::BoxStructureInformation &boxStructureInformation) const;
+
+  void sendSerializedBoxStructureInformation(
+      const Mantid::Parallel::Communicator &communicator,
+      SerialBoxStructureInformation &serializedBoxStructureInformation) const;
+
+  SerialBoxStructureInformation receiveSerializedBoxStructureInformation(
+      const Mantid::Parallel::Communicator &communicator) const;
+
+  DistributedCommon::BoxStructureInformation deserializeBoxStructure(
+      SerialBoxStructureInformation &serializedBoxStructureInformation) const;
 
   // -------------------------------------------------------------------------------------------------------------------
   // Methods to build up a temporary MDEventWorkspace
   // -------------------------------------------------------------------------------------------------------------------
   FrameInformation createFrame() const;
 
-  Mantid::DataObjects::MDEventWorkspace3Lean::sptr createTemporaryWorkspace() const;
+  Mantid::DataObjects::MDEventWorkspace3Lean::sptr
+  createTemporaryWorkspace() const;
 
-  void addMDEventsToMDEventWorkspace(Mantid::DataObjects::MDEventWorkspace3Lean& workspace,
-                                     const MDEventList & allEvents) const;
-
+  void addMDEventsToMDEventWorkspace(
+      Mantid::DataObjects::MDEventWorkspace3Lean &workspace,
+      const DistributedCommon::MDEventList &allEvents) const;
 
   void setBoxController(Mantid::API::BoxController_sptr bc) const;
-  };
+
+
+  // --------------------------
+  // Members
+  DistributedCommon::BoxStructureInformation m_boxStructureInformation;
+  std::vector<std::pair<size_t, size_t>> m_responsibility;
+};
 
 } // namespace MDAlgorithms
 } // namespace Mantid

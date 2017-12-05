@@ -11,16 +11,15 @@ using namespace Mantid::Types::Core;
 
 namespace Mantid {
 namespace MDAlgorithms {
+using DistributedCommon::MDEventList;
 
-using Lev3D = Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>;
-
-std::vector<Lev3D>
+MDEventList
 EventToMDEventConverter::getEvents(const EventWorkspace &workspace,
                                    const std::vector<coord_t>& extents,
                                    double fraction,
                                    QFrame qFrame,
                                    bool lorentzCorrection) {
-  // Get beamline inforamtion
+  // Get beamline information
   auto eventConversionInfo =
       getEventConversionInfo(workspace, qFrame, fraction, lorentzCorrection, extents);
 
@@ -28,7 +27,7 @@ EventToMDEventConverter::getEvents(const EventWorkspace &workspace,
   const auto &spectrumInfo = workspace.spectrumInfo();
   const auto totalNumberOfSpectra = workspace.getNumberHistograms();
   const auto totalNumberOfEvents = workspace.getNumberEvents();
-  std::vector<Lev3D> output;
+  MDEventList output;
   output.reserve(totalNumberOfEvents);
   for (auto workspaceIndex = 0ul; workspaceIndex < totalNumberOfSpectra;
        ++workspaceIndex) {
@@ -68,19 +67,19 @@ EventToMDEventConverter::getUbMatrix(const EventWorkspace &workspace,
   return ubMatrix;
 }
 
-std::vector<Lev3D> EventToMDEventConverter::convertEvents(
+MDEventList EventToMDEventConverter::convertEvents(
     const size_t workspaceIndex, const EventWorkspace &workspace,
     const EventConversionInfo &eventConversionInfo,
     const API::SpectrumInfo &spectrumInfo) {
   const EventList &eventList = workspace.getSpectrum(workspaceIndex);
-  std::vector<Lev3D> mdEvents;
+  MDEventList mdEvents;
   // Get the position of the detector there.
   const auto &detectors = eventList.getDetectorIDs();
   if (!detectors.empty()) {
     // Check if a detector is located at this workspace index, returns
     // immediately if one is not found.
     if (!spectrumInfo.hasDetectors(workspaceIndex)) {
-      return std::vector<Lev3D>();
+      return MDEventList();
     }
 
     // Neutron's total travelled distance
@@ -238,11 +237,11 @@ EventConversionInfo EventToMDEventConverter::getEventConversionInfo(
   eventConversionInfo.cutOffTime = cutOffTime;
 
   // Populate the extents
-  if (extents.size() != 2*DIM_DISTRIBUTED_TEST) {
+  if (extents.size() != 2*DistributedCommon::DIM_DISTRIBUTED_TEST) {
     throw std::runtime_error("The number extents has to be twice the number of dimensions");
   }
 
-  for(auto dimension=0ul; dimension < DIM_DISTRIBUTED_TEST; ++dimension) {
+  for(auto dimension=0ul; dimension < DistributedCommon::DIM_DISTRIBUTED_TEST; ++dimension) {
     eventConversionInfo.minExtents.emplace_back(extents[dimension]);
     eventConversionInfo.maxExtents.emplace_back(extents[dimension+1]);
   }

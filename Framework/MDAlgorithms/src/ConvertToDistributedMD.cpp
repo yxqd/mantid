@@ -13,6 +13,13 @@
 #include "MantidKernel/ListValidator.h"
 
 #include "MantidParallel/Nonblocking.h"
+#include <boost/mpi/collectives.hpp>
+#include <boost/serialization/utility.hpp>
+
+
+namespace {
+
+}
 
 
 namespace Mantid {
@@ -20,8 +27,13 @@ namespace MDAlgorithms {
 
 using Mantid::Kernel::Direction;
 using Mantid::API::WorkspaceProperty;
+using DistributedCommon::DIM_DISTRIBUTED_TEST;
+using DistributedCommon::BoxStructure;
+using DistributedCommon::MDEventList;
+using DistributedCommon::BoxStructureInformation;
 using namespace Mantid::Kernel;
 using namespace Mantid::Geometry;
+
 
 const std::string ConvertToDistributedMD::boxSplittingGroupName =
     "Box Splitting Settings";
@@ -63,17 +75,17 @@ void ConvertToDistributedMD::init() {
                   "Correct the weights of events by multiplying by the Lorentz "
                   "formula: sin(theta)^2 / lambda^4");
 
-  declareProperty(make_unique<Mantid::Kernel::PropertyWithValue<double>>("Fraction", 0.01f),
-                  "Fraction of pulse time that should be used to build the "
-                  "initial data set.\n");
-
+  declareProperty(
+      make_unique<Mantid::Kernel::PropertyWithValue<double>>("Fraction", 0.01f),
+      "Fraction of pulse time that should be used to build the "
+      "initial data set.\n");
 
   std::vector<std::string> propOptions{"Q (lab frame)", "Q (sample frame)",
                                        "HKL"};
   declareProperty(
-    "OutputDimensions", "Q (lab frame)",
-    boost::make_shared<Mantid::Kernel::StringListValidator>(propOptions),
-    "What will be the dimensions of the output workspace?\n"
+      "OutputDimensions", "Q (lab frame)",
+      boost::make_shared<Mantid::Kernel::StringListValidator>(propOptions),
+      "What will be the dimensions of the output workspace?\n"
       "  Q (lab frame): Wave-vector change of the lattice in the lab frame.\n"
       "  Q (sample frame): Wave-vector change of the lattice in the frame of "
       "the sample (taking out goniometer rotation).\n"
@@ -171,23 +183,27 @@ void ConvertToDistributedMD::exec() {
   Mantid::DataObjects::EventWorkspace_sptr inputWorkspace =
       getProperty("InputWorkspace");
 
-  // ----------------------------------------------------------
-  // 1. Get a n-percent fraction
-  // ----------------------------------------------------------
-  auto nPercentEvents = getNPercentEvents(*inputWorkspace);
+  {
+    // ----------------------------------------------------------
+    // 1. Get a n-percent fraction
+    // ----------------------------------------------------------
+    double fraction = getProperty("Fraction");
+    auto nPercentEvents = getFractionEvents(*inputWorkspace, fraction);
 
-  // -----------------------------------------------------------------
-  // 2. + 3. = 4.  Get the preliminary box structure and the partition behaviour
-  // -----------------------------------------------------------------
-  auto *boxes = getPreliminaryBoxStructure(nPercentEvents);
-
+    // -----------------------------------------------------------------
+    // 2. + 3. = 4.  Get the preliminary box structure and the partition behaviour
+    // -----------------------------------------------------------------
+    setupPreliminaryBoxStructure(nPercentEvents);
+  }
   // ----------------------------------------------------------
   // 5. Convert all events
   // ----------------------------------------------------------
+  auto allEvents = getFractionEvents(*inputWorkspace, 1.);
 
   // ----------------------------------------------------------
   // 6. Add the local data to the preliminary box structure
   // ----------------------------------------------------------
+  //addEventsToPreliminaryBoxStructure(allEvents);
 
   // ----------------------------------------------------------
   // 7. Redistribute data
@@ -200,41 +216,52 @@ void ConvertToDistributedMD::exec() {
   // ----------------------------------------------------------
   // 9. Save?
   // ----------------------------------------------------------
-
 }
 
-ConvertToDistributedMD::MDEventList ConvertToDistributedMD::getNPercentEvents(const Mantid::DataObjects::EventWorkspace& workspace) const {
+MDEventList ConvertToDistributedMD::getFractionEvents(
+    const Mantid::DataObjects::EventWorkspace &workspace, double fraction) const {
   // Get user inputs
-  double fraction = getProperty("Fraction");
   auto extents = getWorkspaceExtents();
 
   EventToMDEventConverter converter;
   return converter.getEvents(workspace, extents, fraction, QFrame::QLab);
 }
 
-std::vector<Mantid::coord_t> ConvertToDistributedMD::getWorkspaceExtents() const {
+
+
+std::vector<Mantid::coord_t>
+ConvertToDistributedMD::getWorkspaceExtents() const {
   std::vector<double> extentsInput = getProperty("Extents");
 
   // Replicate a single min,max into several
   if (extentsInput.size() != DIM_DISTRIBUTED_TEST * 2)
     throw std::invalid_argument(
-      "You must specify multiple of 2 extents, ie two for each dimension.");
+        "You must specify multiple of 2 extents, ie two for each dimension.");
 
   // Convert input to coordinate type
   std::vector<coord_t> extents;
-  std::transform(extentsInput.begin(), extentsInput.end(), std::back_inserter(extents), [](double value) {
-    return static_cast<coord_t>(value);
-  });
+  std::transform(extentsInput.begin(), extentsInput.end(),
+                 std::back_inserter(extents),
+                 [](double value) { return static_cast<coord_t>(value); });
 
   return extents;
 }
 
-BoxStructure *
-ConvertToDistributedMD::getPreliminaryBoxStructure(
-    ConvertToDistributedMD::MDEventList &mdEvents) const {
-  BoxStructure *boxStructure = nullptr;
-
+void ConvertToDistributedMD::setupPreliminaryBoxStructure(MDEventList &mdEvents) {
+  // The following steps are performed
+  // 1. The first data is sent from all the ranks to the master rank
+  // 2. The box structure is built on the master rank
+  // 3. The responsibility of the ranks is determined, it is decided which ranks
+  // will take care of which boxes
+  // 4. This responsibility is shared with all ranks.
+  // 5. The master rank serializes the box structure
+  // 6. The serialized box structure is broadcast from the master rank to all
+  // other ranks
+  // 7. The other ranks deserialize the box structure (but without the event information)
   const auto &communicator = this->communicator();
+
+  SerialBoxStructureInformation serialBoxStructureInformation;
+
   if (communicator.rank() == 0) {
     // 1.b Receive the data from all the other ranks
     auto allEvents = receiveMDEventsOnMaster(communicator, mdEvents);
@@ -244,40 +271,81 @@ ConvertToDistributedMD::getPreliminaryBoxStructure(
 
     // 3. Determine splitting
     RankResponsibility rankResponsibility;
-    auto responsibility = rankResponsibility.getResponsibilites(communicator.size(), boxStructureInformation.boxStructure.get());
+    m_responsibility = rankResponsibility.getResponsibilites(
+        communicator.size(), boxStructureInformation.boxStructure.get());
 
     // 4.a Broadcast splitting behaviour
-    sendRankResponsibility(communicator, responsibility);
+    sendRankResponsibility(communicator, m_responsibility);
 
     // 5. Serialize the box structure
-    //serializeBoxStructure(boxStructureInformation);
+    serialBoxStructureInformation = serializeBoxStructure(boxStructureInformation);
 
     // 6.a Broadcast serialized box structure to all other ranks
+    sendSerializedBoxStructureInformation(communicator,
+                                          serialBoxStructureInformation);
 
   } else {
     // 1.a Send the event data to the master rank
     sendMDEventsToMaster(communicator, mdEvents);
 
-    // 4.b Receive the splitting behaviour
-    auto responsibility = receiveRankResponsibility(communicator);
+    // 4.b Receive the splitting behaviour from the broadcast
+    m_responsibility = receiveRankResponsibility(communicator);
 
     // 6.b Receive the box structure from master
-
-    // 7. Deserialize on all ranks (except for master)
+    serialBoxStructureInformation =
+        receiveSerializedBoxStructureInformation(communicator);
   }
 
-  return boxStructure;
+  // 7. Deserialize on all ranks
+  auto hollowBoxStructureInformation =
+    deserializeBoxStructure(serialBoxStructureInformation);
+
+  // Set results
+  m_boxStructureInformation = std::move(hollowBoxStructureInformation);
 }
 
-
-void ConvertToDistributedMD::sendRankResponsibility(const Mantid::Parallel::Communicator& communicator, const std::vector<std::pair<size_t, size_t>>& responsibility) const {
-
+BoxStructureInformation ConvertToDistributedMD::deserializeBoxStructure(
+    SerialBoxStructureInformation &serializedBoxStructureInformation) const {
+  BoxStructureSerializer serializer;
+  return serializer.deserializeBoxStructure(serializedBoxStructureInformation);
 }
 
-std::vector<std::pair<size_t, size_t>> ConvertToDistributedMD::receiveRankResponsibility(const Mantid::Parallel::Communicator& communicator) const {
-  return std::vector<std::pair<size_t, size_t>>();
+void ConvertToDistributedMD::sendSerializedBoxStructureInformation(
+    const Mantid::Parallel::Communicator &communicator,
+    SerialBoxStructureInformation &serializedBoxStructureInformation) const {
+  boost::mpi::broadcast(communicator, serializedBoxStructureInformation, 0);
 }
 
+SerialBoxStructureInformation
+ConvertToDistributedMD::receiveSerializedBoxStructureInformation(
+    const Mantid::Parallel::Communicator &communicator) const {
+  SerialBoxStructureInformation serializedBoxStructureInformation;
+  boost::mpi::broadcast(communicator, serializedBoxStructureInformation, 0);
+  return serializedBoxStructureInformation;
+}
+
+void ConvertToDistributedMD::sendRankResponsibility(
+    const Mantid::Parallel::Communicator &communicator,
+    std::vector<std::pair<size_t, size_t>> &responsibility) const {
+  boost::mpi::broadcast(communicator, responsibility.data(),
+                        communicator.size(), 0);
+}
+
+std::vector<std::pair<size_t, size_t>>
+ConvertToDistributedMD::receiveRankResponsibility(
+    const Mantid::Parallel::Communicator &communicator) const {
+  std::vector<std::pair<size_t, size_t>> responsibility;
+  responsibility.resize(communicator.size());
+  boost::mpi::broadcast(communicator, responsibility.data(),
+                        communicator.size(), 0);
+  return responsibility;
+}
+
+SerialBoxStructureInformation ConvertToDistributedMD::serializeBoxStructure(
+    const BoxStructureInformation &boxStructureInformation) const {
+  BoxStructureSerializer serializer;
+  return serializer.serializeBoxStructure(boxStructureInformation);
+}
 
 void ConvertToDistributedMD::sendMDEventsToMaster(
     const Mantid::Parallel::Communicator &communicator,
@@ -290,7 +358,7 @@ void ConvertToDistributedMD::sendMDEventsToMaster(
   communicator.send(0, 2, mdEvents.data(), static_cast<int>(mdEvents.size()));
 }
 
-ConvertToDistributedMD::MDEventList
+MDEventList
 ConvertToDistributedMD::receiveMDEventsOnMaster(
     const Mantid::Parallel::Communicator &communicator,
     const MDEventList &mdEvents) const {
@@ -360,20 +428,23 @@ BoxStructureInformation ConvertToDistributedMD::generatePreliminaryBoxStructure(
   return extractBoxStructure(*tempWorkspace);
 }
 
-
-void ConvertToDistributedMD::addMDEventsToMDEventWorkspace(Mantid::DataObjects::MDEventWorkspace3Lean& workspace,
-                                                           const MDEventList & allEvents) const {
-  // We could call the addEvents method, but it seems to behave slightly differently
+void ConvertToDistributedMD::addMDEventsToMDEventWorkspace(
+    Mantid::DataObjects::MDEventWorkspace3Lean &workspace,
+    const MDEventList &allEvents) const {
+  // We could call the addEvents method, but it seems to behave slightly
+  // differently
   // to addEvent. TODO: Investigate if addEvents could be used.
   size_t eventsAddedSinceLastSplit = 0;
   size_t eventsAddedTotal = 0;
   auto boxController = workspace.getBoxController();
   size_t lastNumBoxes = boxController->getTotalNumMDBoxes();
 
-  for (const auto& event : allEvents) {
-    // We have a different situation here compared to ConvertToDiffractionMD, since we already have
+  for (const auto &event : allEvents) {
+    // We have a different situation here compared to ConvertToDiffractionMD,
+    // since we already have
     // all events converted
-    if (boxController->shouldSplitBoxes(eventsAddedTotal, eventsAddedSinceLastSplit, lastNumBoxes)) {
+    if (boxController->shouldSplitBoxes(
+            eventsAddedTotal, eventsAddedSinceLastSplit, lastNumBoxes)) {
       workspace.splitAllIfNeeded(nullptr);
       eventsAddedSinceLastSplit = 0;
       lastNumBoxes = boxController->getTotalNumMDBoxes();
@@ -386,34 +457,39 @@ void ConvertToDistributedMD::addMDEventsToMDEventWorkspace(Mantid::DataObjects::
   workspace.refreshCache();
 }
 
-
-BoxStructureInformation ConvertToDistributedMD::extractBoxStructure(Mantid::DataObjects::MDEventWorkspace3Lean& workspace) const {
+BoxStructureInformation ConvertToDistributedMD::extractBoxStructure(
+    Mantid::DataObjects::MDEventWorkspace3Lean &workspace) const {
   // Extract the box controller
   BoxStructureInformation boxStructureInformation;
-  workspace.transferInternals(boxStructureInformation.boxController, boxStructureInformation.boxStructure);
+  workspace.transferInternals(boxStructureInformation.boxController,
+                              boxStructureInformation.boxStructure);
   return boxStructureInformation;
 }
 
-
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
-// Methods below are from ConvertToDiffractionMD and BoxControllerSettingsAlgorithm. In actual implementation
+// Methods below are from ConvertToDiffractionMD and
+// BoxControllerSettingsAlgorithm. In actual implementation
 // we need to re-implement ConvertToMD
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 
-Mantid::DataObjects::MDEventWorkspace3Lean::sptr ConvertToDistributedMD::createTemporaryWorkspace() const {
-  auto imdWorkspace = DataObjects::MDEventFactory::CreateMDWorkspace(DIM_DISTRIBUTED_TEST, "MDLeanEvent");
-  auto workspace = boost::dynamic_pointer_cast<DataObjects::MDEventWorkspace3Lean>(imdWorkspace);
+Mantid::DataObjects::MDEventWorkspace3Lean::sptr
+ConvertToDistributedMD::createTemporaryWorkspace() const {
+  auto imdWorkspace = DataObjects::MDEventFactory::CreateMDWorkspace(
+      DIM_DISTRIBUTED_TEST, "MDLeanEvent");
+  auto workspace =
+      boost::dynamic_pointer_cast<DataObjects::MDEventWorkspace3Lean>(
+          imdWorkspace);
   auto frameInformation = createFrame();
   auto extents = getWorkspaceExtents();
   for (size_t d = 0; d < DIM_DISTRIBUTED_TEST; d++) {
-    MDHistoDimension *dim =
-      new MDHistoDimension(frameInformation.dimensionNames[d], frameInformation.dimensionNames[d], *frameInformation.frame,
-                           static_cast<coord_t>(extents[d * 2]),
-                           static_cast<coord_t>(extents[d * 2 + 1]), 10);
+    MDHistoDimension *dim = new MDHistoDimension(
+        frameInformation.dimensionNames[d], frameInformation.dimensionNames[d],
+        *frameInformation.frame, static_cast<coord_t>(extents[d * 2]),
+        static_cast<coord_t>(extents[d * 2 + 1]), 10);
     workspace->addDimension(MDHistoDimension_sptr(dim));
   }
   workspace->initialize();
@@ -428,13 +504,12 @@ Mantid::DataObjects::MDEventWorkspace3Lean::sptr ConvertToDistributedMD::createT
   int maxDepth = this->getProperty("MaxRecursionDepth");
   if (minDepth > maxDepth)
     throw std::invalid_argument(
-      "MinRecursionDepth must be <= MaxRecursionDepth ");
+        "MinRecursionDepth must be <= MaxRecursionDepth ");
   workspace->setMinRecursionDepth(size_t(minDepth));
 
   workspace->setCoordinateSystem(frameInformation.specialCoordinateSystem);
   return workspace;
 }
-
 
 FrameInformation ConvertToDistributedMD::createFrame() const {
   using Mantid::Kernel::SpecialCoordinateSystem;
@@ -456,7 +531,8 @@ FrameInformation ConvertToDistributedMD::createFrame() const {
     information.dimensionNames[1] = "K";
     information.dimensionNames[2] = "L";
     information.specialCoordinateSystem = Mantid::Kernel::HKL;
-    MDFrameArgument frameArgQLab(HKL::HKLName, Mantid::Kernel::Units::Symbol::RLU.ascii());
+    MDFrameArgument frameArgQLab(HKL::HKLName,
+                                 Mantid::Kernel::Units::Symbol::RLU.ascii());
     information.frame = frameFactory->create(frameArgQLab);
   } else {
     information.dimensionNames[0] = "Q_lab_x";
@@ -470,8 +546,8 @@ FrameInformation ConvertToDistributedMD::createFrame() const {
   return information;
 }
 
-
-void ConvertToDistributedMD::setBoxController(Mantid::API::BoxController_sptr bc) const {
+void ConvertToDistributedMD::setBoxController(
+    Mantid::API::BoxController_sptr bc) const {
   size_t numberOfDimensions = bc->getNDims();
 
   int splitThreshold = this->getProperty("SplitThreshold");
@@ -489,7 +565,7 @@ void ConvertToDistributedMD::setBoxController(Mantid::API::BoxController_sptr bc
     throw std::invalid_argument("SplitInto parameter has " +
                                 Strings::toString(splits.size()) +
                                 " arguments. It should have either 1, or the "
-                                  "same as the number of dimensions.");
+                                "same as the number of dimensions.");
   bc->resetNumBoxes();
 }
 
