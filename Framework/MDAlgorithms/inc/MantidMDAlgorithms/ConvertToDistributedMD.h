@@ -59,6 +59,13 @@ private:
   DistributedCommon::MDEventList
   getFractionEvents(const Mantid::DataObjects::EventWorkspace &workspace, double fraction) const;
 
+  void addEventsToPreliminaryBoxStructure(const DistributedCommon::MDEventList& allEvents);
+
+  void redistributeData();
+
+  std::unordered_map<size_t, std::vector<uint64_t>> getRelevantEventsPerRankPerBox(const Mantid::Parallel::Communicator& communicator,
+                                                                                   const std::vector<Mantid::API::IMDNode*>& boxes);
+
   std::vector<coord_t> getWorkspaceExtents() const;
 
   DistributedCommon::BoxStructureInformation extractBoxStructure(

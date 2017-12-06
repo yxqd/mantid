@@ -177,7 +177,8 @@ void ConvertToDistributedMD::exec() {
   // 6. Disable the box controller and add events to the local box structure
   // 7. Send data from the each rank to the correct rank
   // 8. Enable the box controller and start splitting the data
-  // 9. Maybe save in this algorithm already
+  // 9. Ensure that the fileIDs and the box controller stats are correct.
+  // 10. Maybe save in this algorithm already
 
   // Get the users's inputs
   Mantid::DataObjects::EventWorkspace_sptr inputWorkspace =
@@ -203,15 +204,21 @@ void ConvertToDistributedMD::exec() {
   // ----------------------------------------------------------
   // 6. Add the local data to the preliminary box structure
   // ----------------------------------------------------------
-  //addEventsToPreliminaryBoxStructure(allEvents);
+  addEventsToPreliminaryBoxStructure(allEvents);
 
   // ----------------------------------------------------------
   // 7. Redistribute data
   // ----------------------------------------------------------
+  redistributeData();
 
   // ----------------------------------------------------------
   // 8. Continue to split locally
   // ----------------------------------------------------------
+
+  // ----------------------------------------------------------
+  // 9. Ensure that box controller and fileIDs are correct
+  // ----------------------------------------------------------
+
 
   // ----------------------------------------------------------
   // 9. Save?
@@ -227,6 +234,167 @@ MDEventList ConvertToDistributedMD::getFractionEvents(
   return converter.getEvents(workspace, extents, fraction, QFrame::QLab);
 }
 
+void ConvertToDistributedMD::addEventsToPreliminaryBoxStructure(const DistributedCommon::MDEventList& allEvents) {
+  // Add all events to the hollow box structure
+  for (auto& event : allEvents) {
+    // TODO: create a move-enabled addEvent
+    m_boxStructureInformation.boxStructure->addEvent(std::move(event));
+  }
+}
+
+
+void ConvertToDistributedMD::redistributeData() {
+  const auto& communicator = this->communicator();
+  // Build up the data which needs to be transmitted
+  std::vector<Mantid::API::IMDNode*> boxes;
+  m_boxStructureInformation.boxStructure->getBoxes(boxes, 1000, true);
+
+  // Determine the number of events per rank per box
+  auto relevantEventsPerRankPerBox = getRelevantEventsPerRankPerBox(communicator, boxes);
+
+  // Set up the buffer
+  auto localRank = communicator.rank();
+  auto numberOfRanks = static_cast<size_t>(communicator.size());
+
+  std::unordered_map<size_t, MDEventList> boxVsMDEvents;
+  auto startIndex = m_responsibility[localRank].first;
+  auto stopIndex = m_responsibility[localRank].second;
+  for (auto index = startIndex; index <= stopIndex; ++index) {
+    auto& numberOfEvents = relevantEventsPerRankPerBox.at(index);
+    auto totalNumEvents = std::accumulate(numberOfEvents.begin(), numberOfEvents.end(), 0ul);
+    auto& entry = boxVsMDEvents[index];
+    entry.resize(totalNumEvents);
+  }
+
+  // Determine the strides
+  std::unordered_map<size_t, std::vector<uint64_t>>  strides;
+  for (auto index = startIndex; index <= stopIndex; ++index) {
+    auto& stride = strides[index];
+    auto& numberOfEventsPerRank = relevantEventsPerRankPerBox.at(index);
+    stride.push_back(0);
+    std::vector<uint64_t> tempStrides(numberOfEventsPerRank.size() - 1);
+      std::partial_sum(numberOfEventsPerRank.begin(),
+                       numberOfEventsPerRank.end() - 1, tempStrides.begin());
+      std::move(tempStrides.begin(), tempStrides.end(),
+                std::back_inserter(stride));
+  }
+
+  auto rankOfCurrentIndex = 0;
+  startIndex = m_responsibility[rankOfCurrentIndex].first;
+  stopIndex = m_responsibility[rankOfCurrentIndex].second;
+  auto isInBounds = [&startIndex, & stopIndex](size_t index) {
+    return (startIndex <= index) && (index <= stopIndex);
+  };
+
+  std::vector<Mantid::Parallel::Request> requests;
+
+  for (auto index = 0ul; index < boxes.size(); ++index) {
+
+    // Check if we are still on the same rank. If not then we need to
+    // change the current rank and the corresponding indices
+    if (!isInBounds(index)) {
+      ++rankOfCurrentIndex;
+      startIndex = m_responsibility[rankOfCurrentIndex].first;
+      stopIndex = m_responsibility[rankOfCurrentIndex].second;
+    }
+
+    auto box = boxes[index];
+
+    // Now check if the local rank sends or receives a value for this
+    // We send a value if the local rank is not the same as the rank
+    // which is associated with the box, else we receive a value
+    // from all other boxes
+    if (localRank == rankOfCurrentIndex) {
+      for (auto rank = 0; rank < numberOfRanks; ++rank) {
+
+        const auto& relevantEventsPerRank = relevantEventsPerRankPerBox.at(index);
+        const auto numberOfEvents = relevantEventsPerRank[rank];
+
+        const auto& stride = strides.at(index);
+        const auto offset = stride[rank];
+
+        auto& events = boxVsMDEvents.at(index);
+        auto insertionPoint = events.data() + offset;
+
+        // We don't send anything to ourselves, however we want to record the number of events
+        // that we have already in the right place
+        if (rank == localRank) {
+          //value = box->getNPoints();
+          continue;
+        }
+
+        //requests.emplace_back(communicator.irecv(rank, index, insertionPoint, numberOfEvents));
+      }
+    } else {
+
+      //requests.emplace_back(communicator.isend(rankOfCurrentIndex, index, box->getNPoints()));
+    }
+  }
+  Mantid::Parallel::wait_all(requests.begin(), requests.end());
+
+}
+
+
+std::unordered_map<size_t, std::vector<uint64_t>> ConvertToDistributedMD::getRelevantEventsPerRankPerBox(const Mantid::Parallel::Communicator& communicator,
+                                                                                 const std::vector<Mantid::API::IMDNode*>& boxes) {
+  auto localRank = communicator.rank();
+  auto numberOfRanks = static_cast<size_t>(communicator.size());
+
+  // Initialize Events
+  std::unordered_map<size_t, std::vector<uint64_t>> relevantEventsPerRankPerBox;
+  auto range = m_responsibility[localRank];
+  for (size_t index = range.first; index <= range.second; ++index) {
+    auto& stride = relevantEventsPerRankPerBox[index];
+    stride.resize(numberOfRanks);
+  }
+
+  // Get the ranges for rank 0
+  auto rankOfCurrentIndex = 0;
+  auto startIndex = m_responsibility[rankOfCurrentIndex].first;
+  auto stopIndex = m_responsibility[rankOfCurrentIndex].second;
+  auto isInBounds = [&startIndex, & stopIndex](size_t index) {
+    return (startIndex <= index) && (index <= stopIndex);
+  };
+
+  std::vector<Mantid::Parallel::Request> requests;
+
+  for (auto index = 0ul; index < boxes.size(); ++index) {
+
+    // Check if we are still on the same rank. If not then we need to
+    // change the current rank and the corresponding indices
+    if (!isInBounds(index)) {
+      ++rankOfCurrentIndex;
+      startIndex = m_responsibility[rankOfCurrentIndex].first;
+      stopIndex = m_responsibility[rankOfCurrentIndex].second;
+    }
+
+    auto box = boxes[index];
+
+    // Now check if the local rank sends or receives a value for this
+    // We send a value if the local rank is not the same as the rank
+    // which is associated with the box, else we receive a value
+    // from all other boxes
+    if (localRank == rankOfCurrentIndex) {
+      for (auto rank = 0; rank < numberOfRanks; ++rank) {
+        auto& eventsPerBox = relevantEventsPerRankPerBox.at(index);
+        auto& value = eventsPerBox[rank];
+
+        // We don't send anything to ourselves, however we want to record the number of events
+        // that we have already in the right place
+        if (rank == localRank) {
+          value = box->getNPoints();
+          continue;
+        }
+
+        requests.emplace_back(communicator.irecv(rank, index, value));
+      }
+    } else {
+      requests.emplace_back(communicator.isend(rankOfCurrentIndex, index, box->getNPoints()));
+    }
+  }
+  Mantid::Parallel::wait_all(requests.begin(), requests.end());
+  return relevantEventsPerRankPerBox;
+};
 
 
 std::vector<Mantid::coord_t>
