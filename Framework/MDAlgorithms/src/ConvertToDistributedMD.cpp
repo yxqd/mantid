@@ -305,7 +305,7 @@ void ConvertToDistributedMD::redistributeData() {
     // which is associated with the box, else we receive a value
     // from all other boxes
     if (localRank == rankOfCurrentIndex) {
-      for (auto rank = 0; rank < numberOfRanks; ++rank) {
+      for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
 
         const auto& relevantEventsPerRank = relevantEventsPerRankPerBox.at(index);
         const auto numberOfEvents = relevantEventsPerRank[rank];
@@ -319,19 +319,34 @@ void ConvertToDistributedMD::redistributeData() {
         // We don't send anything to ourselves, however we want to record the number of events
         // that we have already in the right place
         if (rank == localRank) {
-          //value = box->getNPoints();
+          auto mdBox = dynamic_cast<Mantid::DataObjects::MDBox<Mantid::DataObjects::MDLeanEvent<DistributedCommon::DIM_DISTRIBUTED_TEST>, DistributedCommon::DIM_DISTRIBUTED_TEST>*>(box);
+          if (!mdBox) {
+            throw std::runtime_error("We didn't get an MDBox, but requiere an MDBox.");
+          }
+
+          auto start = mdBox->rawDataBegin();
+          auto size = mdBox->getDataInMemorySize();
+
+          if (size != numberOfEvents) {
+            throw std::runtime_error("Mismatch in the number of events.");
+          }
+
+          for (auto eventIndex = 0ul; eventIndex < size; ++eventIndex) {
+            *(insertionPoint + eventIndex) = std::move(*(start+eventIndex));
+          }
           continue;
         }
-
-        //requests.emplace_back(communicator.irecv(rank, index, insertionPoint, numberOfEvents));
+        requests.emplace_back(communicator.irecv(rank, index, insertionPoint, numberOfEvents));
       }
     } else {
-
-      //requests.emplace_back(communicator.isend(rankOfCurrentIndex, index, box->getNPoints()));
+      auto mdBox = dynamic_cast<Mantid::DataObjects::MDBox<Mantid::DataObjects::MDLeanEvent<DistributedCommon::DIM_DISTRIBUTED_TEST>, DistributedCommon::DIM_DISTRIBUTED_TEST>*>(box);
+      if (!mdBox) {
+        throw std::runtime_error("We didn't get an MDBox, but requiere an MDBox.");
+      }
+      requests.emplace_back(communicator.isend(rankOfCurrentIndex, index, mdBox->rawDataBegin(), mdBox->getDataInMemorySize()));
     }
   }
   Mantid::Parallel::wait_all(requests.begin(), requests.end());
-
 }
 
 
@@ -394,7 +409,7 @@ std::unordered_map<size_t, std::vector<uint64_t>> ConvertToDistributedMD::getRel
   }
   Mantid::Parallel::wait_all(requests.begin(), requests.end());
   return relevantEventsPerRankPerBox;
-};
+}
 
 
 std::vector<Mantid::coord_t>

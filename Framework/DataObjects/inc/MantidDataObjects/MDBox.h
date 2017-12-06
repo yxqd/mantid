@@ -208,6 +208,14 @@ public:
   /// Setter for unmasking the box
   void unmask() override;
 
+
+  /// Swaps the underlying data. Note that this invalidates the caches of the data structure. It will have
+  /// to be refreshed
+  void swapData(std::vector<MDE>& data);
+
+  /// Expose the raw data
+  MDE* rawDataBegin();
+
 protected:
   // the pointer to the class, responsible for saving/restoring this class to
   // the hdd

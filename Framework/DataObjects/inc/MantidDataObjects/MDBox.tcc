@@ -932,6 +932,26 @@ TMDE(void MDBox)::clearFileBacked(bool loadDiskBackedData) {
   }
 }
 
+
+/**
+ * Swap the data member for the provided events. Note that this will invalidate
+ * caches in the tree structure.
+ * @param data : The data structure with which the current data will be swapped.
+ */
+TMDE(void MDBox)::swapData(std::vector<MDE>& data) {
+  this->data.swap(data);
+}
+
+
+/**
+ * Expose the data vector. TODO: Remove this
+ * @return a pointer to the start of the underlying data vector
+ */
+TMDE(MDE* MDBox)::rawDataBegin() {
+  return data.data();
+}
+
+
 } // namespace DataObjects
 
 } // namespace Mantid
