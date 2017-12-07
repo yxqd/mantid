@@ -63,8 +63,15 @@ private:
 
   void redistributeData();
 
+  std::vector<size_t> getBoxPerDepthInformation(const Mantid::Parallel::Communicator &communicator,
+                                                std::vector<size_t> numberMDBoxesPerDepth) const;
+
   std::unordered_map<size_t, std::vector<uint64_t>> getRelevantEventsPerRankPerBox(const Mantid::Parallel::Communicator& communicator,
                                                                                    const std::vector<Mantid::API::IMDNode*>& boxes);
+
+  std::unordered_map<size_t, DistributedCommon::MDEventList> sendDataToCorrectRank(const Mantid::Parallel::Communicator& communicator,
+                                                                const std::unordered_map<size_t, std::vector<uint64_t>>& relevantEventsPerRankPerBox,
+                                                                const std::vector<Mantid::DataObjects::MDBox<Mantid::DataObjects::MDLeanEvent<DistributedCommon::DIM_DISTRIBUTED_TEST>, DistributedCommon::DIM_DISTRIBUTED_TEST>*>& mdBoxes);
 
   std::vector<coord_t> getWorkspaceExtents() const;
 
@@ -91,6 +98,12 @@ private:
   DistributedCommon::BoxStructureInformation deserializeBoxStructure(
       SerialBoxStructureInformation &serializedBoxStructureInformation) const;
 
+  void continueSplitting();
+
+  void updateMetaData();
+
+  size_t getOffset(int rank, size_t initialMaxID, const std::vector<size_t>& maxIDs) const;
+
   // -------------------------------------------------------------------------------------------------------------------
   // Methods to build up a temporary MDEventWorkspace
   // -------------------------------------------------------------------------------------------------------------------
@@ -110,6 +123,7 @@ private:
   // Members
   DistributedCommon::BoxStructureInformation m_boxStructureInformation;
   std::vector<std::pair<size_t, size_t>> m_responsibility;
+  size_t m_maxIDBeforeSplit;
 };
 
 } // namespace MDAlgorithms

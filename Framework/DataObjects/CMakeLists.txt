@@ -26,6 +26,7 @@ set ( SRC_FILES
 	src/MaskWorkspace.cpp
 	src/MementoTableWorkspace.cpp
 	src/NoShape.cpp
+	src/NullMDBox.cpp
 	src/OffsetsWorkspace.cpp
 	src/Peak.cpp
 	src/PeakColumn.cpp
@@ -105,6 +106,7 @@ set ( INC_FILES
 	inc/MantidDataObjects/MaskWorkspace.h
 	inc/MantidDataObjects/MementoTableWorkspace.h
 	inc/MantidDataObjects/NoShape.h
+	inc/MantidDataObjects/NullMDBox.h
 	inc/MantidDataObjects/OffsetsWorkspace.h
 	inc/MantidDataObjects/Peak.h
 	inc/MantidDataObjects/PeakColumn.h
@@ -165,6 +167,7 @@ set ( TEST_FILES
 	MaskWorkspaceTest.h
 	MementoTableWorkspaceTest.h
 	NoShapeTest.h
+	NullMDBoxTest.h
 	OffsetsWorkspaceTest.h
 	PeakColumnTest.h
 	PeakNoShapeFactoryTest.h

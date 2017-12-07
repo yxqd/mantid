@@ -173,7 +173,7 @@ set ( INC_FILES
 	inc/MantidMDAlgorithms/CreateMDWorkspace.h
 	inc/MantidMDAlgorithms/CutMD.h
 	inc/MantidMDAlgorithms/DisplayNormalizationSetter.h
-        inc/MantidMDAlgorithms/DistributedCommon.h
+	inc/MantidMDAlgorithms/DistributedCommon.h
 	inc/MantidMDAlgorithms/DivideMD.h
 	inc/MantidMDAlgorithms/DllConfig.h
 	inc/MantidMDAlgorithms/EqualToMD.h
