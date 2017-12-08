@@ -13,6 +13,7 @@ set ( SRC_FILES
 	src/Axis.cpp
 	src/BinEdgeAxis.cpp
 	src/BoxController.cpp
+	src/BoxControllerAccess.cpp
 	src/CatalogManager.cpp
 	src/CatalogSession.cpp
 	src/ChopperModel.cpp
@@ -109,10 +110,10 @@ set ( SRC_FILES
 	src/NullCoordTransform.cpp
 	src/NumericAxis.cpp
 	src/NumericAxisValidator.cpp
+	src/ParallelAlgorithm.cpp
 	src/ParamFunction.cpp
 	src/ParameterReference.cpp
 	src/ParameterTie.cpp
-	src/ParallelAlgorithm.cpp
 	src/PeakFunctionIntegrator.cpp
 	src/Progress.cpp
 	src/Projection.cpp
@@ -174,6 +175,7 @@ set ( INC_FILES
 	inc/MantidAPI/Axis.h
 	inc/MantidAPI/BinEdgeAxis.h
 	inc/MantidAPI/BoxController.h
+	inc/MantidAPI/BoxControllerAccess.h
 	inc/MantidAPI/CatalogFactory.h
 	inc/MantidAPI/CatalogManager.h
 	inc/MantidAPI/CatalogSession.h
@@ -305,10 +307,10 @@ set ( INC_FILES
 	inc/MantidAPI/NullCoordTransform.h
 	inc/MantidAPI/NumericAxis.h
 	inc/MantidAPI/NumericAxisValidator.h
+	inc/MantidAPI/ParallelAlgorithm.h
 	inc/MantidAPI/ParamFunction.h
 	inc/MantidAPI/ParameterReference.h
 	inc/MantidAPI/ParameterTie.h
-	inc/MantidAPI/ParallelAlgorithm.h
 	inc/MantidAPI/PeakFunctionIntegrator.h
 	inc/MantidAPI/Progress.h
 	inc/MantidAPI/Projection.h
@@ -364,6 +366,7 @@ set ( TEST_FILES
 	AnalysisDataServiceTest.h
 	AsynchronousTest.h
 	BinEdgeAxisTest.h
+	BoxControllerAccessTest.h
 	BoxControllerTest.h
 	CommonBinsValidatorTest.h
 	CompositeFunctionTest.h

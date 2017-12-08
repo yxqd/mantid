@@ -6,6 +6,7 @@
 #include "MantidKernel/ThreadPool.h"
 #include "MantidKernel/Exception.h"
 #include "MantidAPI/IBoxControllerIO.h"
+#include "MantidAPI/BoxControllerAccess.h"
 #include <nexus/NeXusFile.hpp>
 
 #include <boost/optional.hpp>
@@ -25,6 +26,8 @@ namespace API {
  * @date Feb 21, 2011
  */
 class DLLExport BoxController {
+private:
+  friend Mantid::API::BoxControllerAccess;
 public:
   //-----------------------------------------------------------------------------------
   /** Constructor

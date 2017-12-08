@@ -118,10 +118,13 @@ private:
 
   void setBoxController(Mantid::API::BoxController_sptr bc) const;
 
-
   // --------------------------
   // Members
+  // --------------------------
+  /// The box structure information which contains the box controller and the actuall box structure (of the local rank)
   DistributedCommon::BoxStructureInformation m_boxStructureInformation;
+  /// Responsibility map which maps a rank to a start and stop index pair of the box array which is obtained from
+  /// IMDNode::getBoxes. This shows which boxes are associated with which rank.
   std::vector<std::pair<size_t, size_t>> m_responsibility;
   size_t m_maxIDBeforeSplit;
 };
