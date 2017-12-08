@@ -667,7 +667,7 @@ void MuonFitPropertyBrowser::doTFAsymmFit() {
       auto TFAsymmFunc = getTFAsymmFitFunction(userFunc, normVec);
       alg->setProperty("Function", TFAsymmFunc);
     }
-    if (rawData()) {
+    if (rawData() && wsName.substr(wsName.size()-4) != "Raw") {
       alg->setPropertyValue("InputWorkspace", wsName + "_Raw");
     } else {
       alg->setPropertyValue("InputWorkspace", wsName);
