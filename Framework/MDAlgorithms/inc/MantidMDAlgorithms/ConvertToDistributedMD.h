@@ -73,7 +73,12 @@ private:
                                                                 const std::unordered_map<size_t, std::vector<uint64_t>>& relevantEventsPerRankPerBox,
                                                                 const std::vector<Mantid::DataObjects::MDBox<Mantid::DataObjects::MDLeanEvent<DistributedCommon::DIM_DISTRIBUTED_TEST>, DistributedCommon::DIM_DISTRIBUTED_TEST>*>& mdBoxes);
 
-  std::vector<coord_t> getWorkspaceExtents() const;
+  void setRankResponsibilityMap();
+
+  int getResponsibleRank(size_t leafNodeIndex);
+
+
+    std::vector<coord_t> getWorkspaceExtents() const;
 
   DistributedCommon::BoxStructureInformation extractBoxStructure(
       Mantid::DataObjects::MDEventWorkspace3Lean &workspace) const;
@@ -126,6 +131,11 @@ private:
   /// Responsibility map which maps a rank to a start and stop index pair of the box array which is obtained from
   /// IMDNode::getBoxes. This shows which boxes are associated with which rank.
   std::vector<std::pair<size_t, size_t>> m_responsibility;
+  /// Is a variation of the m_responsibility vector, which stores the end index of the box range that a rank is
+  /// responsible for against the rank which carries that responsibility
+  std::unordered_map<size_t, int> m_endBoxIndexRangeVsRank;
+  std::vector<size_t> m_endBoxIndexRange;
+
   size_t m_maxIDBeforeSplit;
 };
 

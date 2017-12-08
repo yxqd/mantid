@@ -107,7 +107,7 @@ public:
 
   size_t getChildIndexFromID(size_t childId) const;
   API::IMDNode *getChild(size_t index) override;
-  void setChild(size_t index, MDGridBox<MDE, nd> *newChild);
+  void setChild(size_t index, MDBoxBase<MDE, nd> *newChild);
 
   void setChildren(const std::vector<API::IMDNode *> &otherBoxes,
                    const size_t indexStart, const size_t indexEnd) override;

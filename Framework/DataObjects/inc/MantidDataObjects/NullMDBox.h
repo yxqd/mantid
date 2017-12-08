@@ -13,13 +13,50 @@ class MANTID_DATAOBJECTS_DLL NullMDBox : public MDBoxBase<MDE, nd>  {
 public:
   NullMDBox(Mantid::API::BoxController *const splitter, const uint32_t depth,
   const std::vector<Mantid::Geometry::MDDimensionExtents<coord_t>> & extentsVector,
-  const size_t boxID = UNDEF_SIZET) :
-    MDBoxBase<MDE, nd>(splitter, depth, boxID, extentsVector) {
+  const size_t boxID = UNDEF_SIZET,   const int rank=0) :
+    MDBoxBase<MDE, nd>(splitter, depth, boxID, extentsVector), m_rank(rank) {
     if (this->m_BoxController->getNDims() != nd)
       throw std::invalid_argument(
         "NullMDBox::ctor(): controller passed has the wrong number of dimensions.");
   }
 
+  void setShowGlobalValues(bool show) {
+    m_showGlobalValues = show;
+  }
+
+  int getRank(int rank) {
+    return m_rank;
+  }
+
+  void setSignalFromOwningRank(signal_t signal) {
+    m_signalOnOwningRank = signal;
+    this->m_signal = 0;
+  }
+
+  void setErrorFromOwningRank(signal_t error) {
+    m_errorSquaredOnOwningRank = error;
+    this->m_errorSquared = 0.;
+  }
+
+  signal_t getSignal() const override {
+    if (m_showGlobalValues) {
+      return m_signalOnOwningRank;
+    } else {
+      return this->m_signal;
+    }
+  }
+
+  signal_t getErrorSquared() const override {
+    if (m_showGlobalValues) {
+      return m_errorSquaredOnOwningRank;
+    } else {
+      return this->m_errorSquared;
+    }
+  }
+
+  signal_t getError() const override {
+    return sqrt(getErrorSquared());
+  }
 
   // ----------------------------- ISaveable Methods
   // ------------------------------------------------------
@@ -67,7 +104,10 @@ public:
     throw std::runtime_error("Not implemented");
   }
 
-  uint64_t getNPoints() const override;
+  uint64_t getNPoints() const override {
+    return getSignal();
+  }
+
   size_t getDataInMemorySize() const override {
     throw std::runtime_error("Not implemented");
   }
@@ -156,8 +196,8 @@ public:
   }
 
   void
-  generalBin(MDBin<MDE, nd> &bin,
-             Mantid::Geometry::MDImplicitFunction &function) const override{
+  generalBin(MDBin<MDE, nd> &,
+             Mantid::Geometry::MDImplicitFunction &) const override{
     throw std::runtime_error("Not implemented");
   }
 
@@ -166,11 +206,9 @@ public:
     throw std::runtime_error("Not implemented");
   }
 
-  //---------------------------------------------------------------------------------------------------------------------------------
-  /** Recalculate signal and various averages dependent on signal and the signal
-   * coordinates */
+
   void refreshCache(Kernel::ThreadScheduler * /*ts*/ = nullptr) override{
-    throw std::runtime_error("Not implemented");
+    this->m_totalWeight = static_cast<double>(this->getNPoints());
   }
 
   void calculateCentroid(coord_t *) const override {
@@ -186,16 +224,16 @@ public:
   }
 
   void integrateSphere(
-    Mantid::API::CoordTransform &radiusTransform, coord_t radiusSquared,
-    signal_t &signal, signal_t &errorSquared,
-    const coord_t innerRadiusSquared = 0.0,
-    const bool useOnePercentBackgroundCorrection = true) const override{
+    Mantid::API::CoordTransform &, coord_t ,
+    signal_t &, signal_t &,
+    const coord_t,
+    const bool) const override{
     throw std::runtime_error("Not implemented");
   }
 
   void centroidSphere(Mantid::API::CoordTransform &radiusTransform,
-                      coord_t radiusSquared, coord_t *centroid,
-                      signal_t &signal) const override{
+                      coord_t , coord_t *,
+                      signal_t &) const override{
     throw std::runtime_error("Not implemented");
   }
 
@@ -209,11 +247,11 @@ public:
   //------------------------------------------------------------------------------------------------------------------------------------
   void getBoxes(std::vector<MDBoxBase<MDE, nd> *> &, size_t /*maxDepth*/,
   bool /*leafOnly*/){
-    throw std::runtime_error("Not implemented");
+    // Don't add to boxes request
   }
   void getBoxes(std::vector<API::IMDNode *> &boxes, size_t /*maxDepth*/,
                 bool /*leafOnly*/) override{
-    throw std::runtime_error("Not implemented");
+    // Don't add to boxes request
   }
 
   void getBoxes(std::vector<MDBoxBase<MDE, nd> *> &, size_t ,
@@ -226,6 +264,7 @@ public:
                 Mantid::Geometry::MDImplicitFunction *) override{
     throw std::runtime_error("Not implemented");
   }
+  //------------------------------------------------------------------------------------------------------------------------------------
   //------------------------------------------------------------------------------------------------------------------------------------
   void transformDimensions(std::vector<double> &,
                            std::vector<double> &) override{
@@ -250,6 +289,12 @@ private:
   /// private default copy constructor as the only correct constructor is the
   /// one with the boxController;
   NullMDBox(const NullMDBox &);
+
+  signal_t m_signalOnOwningRank = 0;
+  signal_t m_errorSquaredOnOwningRank = 0;
+  int m_rank;
+  bool m_showGlobalValues = false;
+
 };
 
 } // namespace DataObjects

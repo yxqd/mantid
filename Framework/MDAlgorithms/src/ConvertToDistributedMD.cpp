@@ -14,7 +14,6 @@
 #include "MantidKernel/StringTokenizer.h"
 #include "MantidKernel/ListValidator.h"
 
-#include <boost/mpi/collectives.hpp>
 #include <boost/serialization/utility.hpp>
 #include <fstream>
 
@@ -212,20 +211,20 @@ void ConvertToDistributedMD::exec() {
   // ----------------------------------------------------------
   continueSplitting();
 
-  std::cout << "BEFORE RANK " << this->communicator().rank() <<"\n";
-  std::cout << m_boxStructureInformation.boxController->getMaxId() <<"\n";
-
   // --------------------------------------- -------------------
   // 9. Ensure that box controller and fileIDs are correct
   // ----------------------------------------------------------
   updateMetaData();
-  std::cout << "AFTER RANK " << this->communicator().rank() <<"\n";
-  std::cout << m_boxStructureInformation.boxController->getMaxId() <<"\n";
+
+  std::cout << "RANK " << this->communicator().rank() << "\n";
+  m_boxStructureInformation.boxStructure->refreshCache();
+  std::cout << m_boxStructureInformation.boxStructure->getSignal() <<"\n";
 
 
   // ----------------------------------------------------------
   // 9. Save?
   // ----------------------------------------------------------
+
 }
 
 
@@ -326,8 +325,19 @@ void ConvertToDistributedMD::setupPreliminaryBoxStructure(
   auto hollowBoxStructureInformation =
     deserializeBoxStructure(serialBoxStructureInformation);
 
+  // Create a rank responsibility map
+  setRankResponsibilityMap();
+
+
   // Set results
   m_boxStructureInformation = std::move(hollowBoxStructureInformation);
+}
+
+void ConvertToDistributedMD::setRankResponsibilityMap() {
+  for (auto rank = 0; rank < m_responsibility.size(); ++rank) {
+    m_endBoxIndexRangeVsRank.emplace(m_responsibility[rank].second, rank);
+    m_endBoxIndexRange.push_back(m_responsibility[rank].second);
+  }
 }
 
 
@@ -495,6 +505,101 @@ BoxStructureInformation ConvertToDistributedMD::extractBoxStructure(
   return boxStructureInformation;
 }
 
+
+MDEventWorkspace3Lean::sptr
+ConvertToDistributedMD::createTemporaryWorkspace() const {
+  auto imdWorkspace = DataObjects::MDEventFactory::CreateMDWorkspace(
+    DIM_DISTRIBUTED_TEST, "MDLeanEvent");
+  auto workspace =
+    boost::dynamic_pointer_cast<DataObjects::MDEventWorkspace3Lean>(
+      imdWorkspace);
+  auto frameInformation = createFrame();
+  auto extents = getWorkspaceExtents();
+  for (size_t d = 0; d < DIM_DISTRIBUTED_TEST; d++) {
+    MDHistoDimension *dim = new MDHistoDimension(
+      frameInformation.dimensionNames[d], frameInformation.dimensionNames[d],
+      *frameInformation.frame, static_cast<coord_t>(extents[d * 2]),
+      static_cast<coord_t>(extents[d * 2 + 1]), 10);
+    workspace->addDimension(MDHistoDimension_sptr(dim));
+  }
+  workspace->initialize();
+
+  // Build up the box controller
+  auto bc = workspace->getBoxController();
+  this->setBoxController(bc);
+  workspace->splitBox();
+
+  // Perform minimum recursion depth splitting
+  int minDepth = this->getProperty("MinRecursionDepth");
+  int maxDepth = this->getProperty("MaxRecursionDepth");
+  if (minDepth > maxDepth)
+    throw std::invalid_argument(
+      "MinRecursionDepth must be <= MaxRecursionDepth ");
+  workspace->setMinRecursionDepth(size_t(minDepth));
+
+  workspace->setCoordinateSystem(frameInformation.specialCoordinateSystem);
+  return workspace;
+}
+
+FrameInformation ConvertToDistributedMD::createFrame() const {
+  using Mantid::Kernel::SpecialCoordinateSystem;
+  FrameInformation information;
+  std::string outputDimensions = getProperty("OutputDimensions");
+  auto frameFactory = makeMDFrameFactoryChain();
+
+  if (outputDimensions == "Q (sample frame)") {
+    // Names
+    information.dimensionNames[0] = "Q_sample_x";
+    information.dimensionNames[1] = "Q_sample_y";
+    information.dimensionNames[2] = "Q_sample_z";
+    information.specialCoordinateSystem = Mantid::Kernel::QSample;
+    // Frame
+    MDFrameArgument frameArgQSample(QSample::QSampleName, "");
+    information.frame = frameFactory->create(frameArgQSample);
+  } else if (outputDimensions == "HKL") {
+    information.dimensionNames[0] = "H";
+    information.dimensionNames[1] = "K";
+    information.dimensionNames[2] = "L";
+    information.specialCoordinateSystem = Mantid::Kernel::HKL;
+    MDFrameArgument frameArgQLab(HKL::HKLName,
+                                 Mantid::Kernel::Units::Symbol::RLU.ascii());
+    information.frame = frameFactory->create(frameArgQLab);
+  } else {
+    information.dimensionNames[0] = "Q_lab_x";
+    information.dimensionNames[1] = "Q_lab_y";
+    information.dimensionNames[2] = "Q_lab_z";
+    information.specialCoordinateSystem = Mantid::Kernel::QLab;
+    MDFrameArgument frameArgQLab(QLab::QLabName, "");
+    information.frame = frameFactory->create(frameArgQLab);
+  }
+
+  return information;
+}
+
+void ConvertToDistributedMD::setBoxController(
+  Mantid::API::BoxController_sptr bc) const {
+  size_t numberOfDimensions = bc->getNDims();
+
+  int splitThreshold = this->getProperty("SplitThreshold");
+  bc->setSplitThreshold(static_cast<size_t>(splitThreshold));
+  int maxRecursionDepth = this->getProperty("MaxRecursionDepth");
+  bc->setMaxDepth(static_cast<size_t>(maxRecursionDepth));
+
+  std::vector<int> splits = getProperty("SplitInto");
+  if (splits.size() == 1) {
+    bc->setSplitInto(static_cast<size_t>(splits[0]));
+  } else if (splits.size() == numberOfDimensions) {
+    for (size_t d = 0; d < numberOfDimensions; ++d)
+      bc->setSplitInto(d, static_cast<size_t>(splits[d]));
+  } else
+    throw std::invalid_argument("SplitInto parameter has " +
+                                Strings::toString(splits.size()) +
+                                " arguments. It should have either 1, or the "
+                                  "same as the number of dimensions.");
+  bc->resetNumBoxes();
+}
+
+
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 // Definitions for: 5 + 6 Add all events to the box structure
@@ -528,6 +633,7 @@ void ConvertToDistributedMD::redistributeData() {
                            MDBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST> *>(box));
   }
 
+
   // Determine the number of events per rank per box
   auto relevantEventsPerRankPerBox =
     getRelevantEventsPerRankPerBox(communicator, boxes);
@@ -542,53 +648,69 @@ void ConvertToDistributedMD::redistributeData() {
   auto stopIndex = m_responsibility[localRank].second;
   for (auto index = startIndex; index <= stopIndex; ++index) {
     auto mdBox = mdBoxes[index];
+
     auto &events = boxVsMDEvents.at(index);
-    mdBox->swapData(events);
+    auto& oldEvents = mdBox->getEvents();
+    oldEvents.swap(events);
     MDEventList().swap(events);
   }
 
+  auto clearData = [&mdBoxes](size_t index) {
+    mdBoxes[index]->clearDataFromMemory();
+  };
+
+
   // Remove the data which is not relevant for the local rank which is before
   // the startIndex
-  // const auto numberOfDimensions = mdBoxes[0]->getNumDims();
+  const auto numberOfDimensions = mdBoxes[0]->getNumDims();
   for (auto index = 0ul; index < startIndex; ++index) {
-    // TODO: Add a different box type -> NULLMDBOX. Issue is to find position in
-    // parent
-    //    auto mdBox = mdBoxes[index];
-    //    const auto boxController  = mdBox->getBoxController();
-    //    const auto depth = mdBox->getDepth();
-    //    std::vector<Mantid::Geometry::MDDimensionExtents<coord_t>> extents;
-    //    for (auto dimension = 0ul; dimension < numberOfDimensions;
-    //    ++dimension) {
-    //      extents.emplace_back(mdBox->getExtents(dimension));
-    //    }
-    //    const auto boxID = mdBox->getID();
-    //    NullMDBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST>
-    //    nullMDBox(boxController, depth, extents, boxID);
-    //    auto parent = mdBox->getParent();
-
-    // For now we just clean out the data
     auto mdBox = mdBoxes[index];
-    auto temp = MDEventList();
-    mdBox->swapData(temp);
-    MDEventList().swap(temp);
+    // On this rank the box has to be an MDEventBox
+    if (!mdBox->isBox()) {
+      throw std::runtime_error("Expected an MDBox, but got an MDGridBox");
+    }
+
+    const auto& boxController  = mdBox->getBoxController();
+    const auto depth = mdBox->getDepth();
+    std::vector<Mantid::Geometry::MDDimensionExtents<coord_t>> extents;
+    for (auto dimension = 0ul; dimension < numberOfDimensions; ++dimension) {
+        extents.emplace_back(mdBox->getExtents(dimension));
+    }
+    const auto boxID = mdBox->getID();
+    auto responsibleRank = getResponsibleRank(index);
+
+    // Create a new NullMDBox
+    auto parent = mdBox->getParent();
+    auto newNullMDBox = Mantid::Kernel::make_unique<NullMDBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST>>(boxController, depth, extents, boxID, responsibleRank);
+    newNullMDBox->setShowGlobalValues(false);
+    newNullMDBox->setParent(parent);
+
+    // Find the child index and replace it in the parent
+    auto mdGridBoxParent = dynamic_cast<MDGridBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST> *>(parent);
+    const auto childIndex = mdGridBoxParent->getChildIndexFromID(boxID);
+    mdGridBoxParent->setChild(childIndex, newNullMDBox.release());
   }
 
   // Remove the data which is not relevant for the local rank which is after the
   // stopIndex
   for (auto index = stopIndex + 1; index < boxes.size(); ++index) {
-    auto mdBox = mdBoxes[index];
-    auto temp = MDEventList();
-    mdBox->swapData(temp);
-    MDEventList().swap(temp);
   }
+
 
   // We need to refresh the cache
   m_boxStructureInformation.boxStructure->refreshCache(nullptr);
+
 
   // Cache the max ID, we need it later when updating the fileIDs on all the
   // ranks. Note that getMaxId will return the next available id, ie it is
   // not really the max id.
   m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
+}
+
+
+int ConvertToDistributedMD::getResponsibleRank(size_t leafNodeIndex) {
+  auto result = std::lower_bound(m_endBoxIndexRange.begin(), m_endBoxIndexRange.end(), leafNodeIndex);
+  return m_endBoxIndexRangeVsRank[*result];
 }
 
 
@@ -755,8 +877,8 @@ ConvertToDistributedMD::sendDataToCorrectRank(
         // number of events
         // that we have already in the right place
         if (rank == localRank) {
-
-          auto start = mdBox->rawDataBegin();
+          auto& boxEvent = mdBox->getEvents();
+          auto start = boxEvent.data();
           auto size = mdBox->getDataInMemorySize();
 
           if (size != numberOfEvents) {
@@ -773,8 +895,9 @@ ConvertToDistributedMD::sendDataToCorrectRank(
                              static_cast<int>(numberOfEvents)));
       }
     } else {
+      auto& events = mdBox->getEvents();
       requests.emplace_back(communicator.isend(
-        rankOfCurrentIndex, static_cast<int>(index), mdBox->rawDataBegin(),
+        rankOfCurrentIndex, static_cast<int>(index), events.data(),
         static_cast<int>(mdBox->getDataInMemorySize())));
     }
   }
@@ -832,15 +955,6 @@ void ConvertToDistributedMD::updateMetaData() {
     }
   }
 
-  std::string fileName = "/home/anton/BoxIDs__Rank_" + std::to_string(localRank);
-  std::ofstream file;
-  file.open(fileName, std::ios::out);
-  for (auto box : boxes) {
-    auto boxID = box->getID();
-    file << boxID <<"\n";
-  }
-  file.close();
-
   // --------------------------------------
   // 2. Update the box controller settings. This requires updating:
   //   a. The maxID
@@ -895,10 +1009,10 @@ std::vector<size_t> ConvertToDistributedMD::getBoxPerDepthInformation(
   numberBoxesPerDepth.resize(maxDepth);
   std::vector<size_t> allNumberBoxes;
   all_gather(communicator, numberBoxesPerDepth.data(),
-             numberBoxesPerDepth.size(), allNumberBoxes);
+             static_cast<int>(numberBoxesPerDepth.size()), allNumberBoxes);
 
   std::vector<size_t> accumulatedAllNumberBoxes;
-  const auto numberOfRanks = communicator.size();
+  const auto numberOfRanks = static_cast<size_t>(communicator.size());
   for (auto depth = 0ul; depth < maxDepth; ++depth) {
     auto sum = 0ul;
     for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
@@ -907,114 +1021,6 @@ std::vector<size_t> ConvertToDistributedMD::getBoxPerDepthInformation(
     accumulatedAllNumberBoxes.push_back(sum);
   }
   return accumulatedAllNumberBoxes;
-}
-
-
-
-
-
-
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// Methods below are from ConvertToDiffractionMD and
-// BoxControllerSettingsAlgorithm. In actual implementation
-// we need to re-implement ConvertToMD
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-
-MDEventWorkspace3Lean::sptr
-ConvertToDistributedMD::createTemporaryWorkspace() const {
-  auto imdWorkspace = DataObjects::MDEventFactory::CreateMDWorkspace(
-      DIM_DISTRIBUTED_TEST, "MDLeanEvent");
-  auto workspace =
-      boost::dynamic_pointer_cast<DataObjects::MDEventWorkspace3Lean>(
-          imdWorkspace);
-  auto frameInformation = createFrame();
-  auto extents = getWorkspaceExtents();
-  for (size_t d = 0; d < DIM_DISTRIBUTED_TEST; d++) {
-    MDHistoDimension *dim = new MDHistoDimension(
-        frameInformation.dimensionNames[d], frameInformation.dimensionNames[d],
-        *frameInformation.frame, static_cast<coord_t>(extents[d * 2]),
-        static_cast<coord_t>(extents[d * 2 + 1]), 10);
-    workspace->addDimension(MDHistoDimension_sptr(dim));
-  }
-  workspace->initialize();
-
-  // Build up the box controller
-  auto bc = workspace->getBoxController();
-  this->setBoxController(bc);
-  workspace->splitBox();
-
-  // Perform minimum recursion depth splitting
-  int minDepth = this->getProperty("MinRecursionDepth");
-  int maxDepth = this->getProperty("MaxRecursionDepth");
-  if (minDepth > maxDepth)
-    throw std::invalid_argument(
-        "MinRecursionDepth must be <= MaxRecursionDepth ");
-  workspace->setMinRecursionDepth(size_t(minDepth));
-
-  workspace->setCoordinateSystem(frameInformation.specialCoordinateSystem);
-  return workspace;
-}
-
-FrameInformation ConvertToDistributedMD::createFrame() const {
-  using Mantid::Kernel::SpecialCoordinateSystem;
-  FrameInformation information;
-  std::string outputDimensions = getProperty("OutputDimensions");
-  auto frameFactory = makeMDFrameFactoryChain();
-
-  if (outputDimensions == "Q (sample frame)") {
-    // Names
-    information.dimensionNames[0] = "Q_sample_x";
-    information.dimensionNames[1] = "Q_sample_y";
-    information.dimensionNames[2] = "Q_sample_z";
-    information.specialCoordinateSystem = Mantid::Kernel::QSample;
-    // Frame
-    MDFrameArgument frameArgQSample(QSample::QSampleName, "");
-    information.frame = frameFactory->create(frameArgQSample);
-  } else if (outputDimensions == "HKL") {
-    information.dimensionNames[0] = "H";
-    information.dimensionNames[1] = "K";
-    information.dimensionNames[2] = "L";
-    information.specialCoordinateSystem = Mantid::Kernel::HKL;
-    MDFrameArgument frameArgQLab(HKL::HKLName,
-                                 Mantid::Kernel::Units::Symbol::RLU.ascii());
-    information.frame = frameFactory->create(frameArgQLab);
-  } else {
-    information.dimensionNames[0] = "Q_lab_x";
-    information.dimensionNames[1] = "Q_lab_y";
-    information.dimensionNames[2] = "Q_lab_z";
-    information.specialCoordinateSystem = Mantid::Kernel::QLab;
-    MDFrameArgument frameArgQLab(QLab::QLabName, "");
-    information.frame = frameFactory->create(frameArgQLab);
-  }
-
-  return information;
-}
-
-void ConvertToDistributedMD::setBoxController(
-    Mantid::API::BoxController_sptr bc) const {
-  size_t numberOfDimensions = bc->getNDims();
-
-  int splitThreshold = this->getProperty("SplitThreshold");
-  bc->setSplitThreshold(static_cast<size_t>(splitThreshold));
-  int maxRecursionDepth = this->getProperty("MaxRecursionDepth");
-  bc->setMaxDepth(static_cast<size_t>(maxRecursionDepth));
-
-  std::vector<int> splits = getProperty("SplitInto");
-  if (splits.size() == 1) {
-    bc->setSplitInto(static_cast<size_t>(splits[0]));
-  } else if (splits.size() == numberOfDimensions) {
-    for (size_t d = 0; d < numberOfDimensions; ++d)
-      bc->setSplitInto(d, static_cast<size_t>(splits[d]));
-  } else
-    throw std::invalid_argument("SplitInto parameter has " +
-                                Strings::toString(splits.size()) +
-                                " arguments. It should have either 1, or the "
-                                "same as the number of dimensions.");
-  bc->resetNumBoxes();
 }
 
 } // namespace MDAlgorithms

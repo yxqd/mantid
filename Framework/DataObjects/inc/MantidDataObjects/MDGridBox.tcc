@@ -1683,14 +1683,14 @@ TMDE(inline size_t MDGridBox)::addEventUnsafe(const MDE &event) {
     return 0;
 }
 
-/**Sets particular child MDgridBox at the index, specified by the input
+/**Sets particular child MDBoxBase at the index, specified by the input
 *parameters
 *@param index     -- the position of the new child in the list of GridBox
 *children
 *@param newChild  -- the pointer to the new child grid box
 */
 TMDE(inline void MDGridBox)::setChild(size_t index,
-                                      MDGridBox<MDE, nd> *newChild) {
+                                      MDBoxBase<MDE, nd> *newChild) {
   // Delete the old box  (supposetly ungridded);
   delete this->m_Children[index];
   // set new box, supposetly gridded
