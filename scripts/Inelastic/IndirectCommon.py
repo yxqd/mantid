@@ -24,6 +24,19 @@ def EndTime(prog):
     logger.notice('----------')
 
 
+def retrieve_workspace(workspace):
+    """
+    Retrieves a workspace from the specified variable.
+
+    :param workspace: A name or a pointer to a workspace
+    :return:          The retrieved workspace.
+    """
+    if isinstance(workspace, str):
+        return s_api.mtd[workspace]
+    else:
+        return workspace
+
+
 def get_run_number(ws_name):
     """
     Gets the run number for a given workspace.
@@ -34,8 +47,8 @@ def get_run_number(ws_name):
     @param ws_name Name of workspace
     @return Parsed run number
     """
+    workspace = retrieve_workspace(ws_name)
 
-    workspace = s_api.mtd[ws_name]
     run_number = str(workspace.getRunNumber())
     if run_number == '0':
         # Attempt to parse run number off of name
@@ -55,10 +68,10 @@ def getInstrRun(ws_name):
     @param ws_name - name of the workspace
     @return tuple of form (instrument, run number)
     """
+    workspace = retrieve_workspace(ws_name)
+    run_number = get_run_number(workspace)
 
-    run_number = get_run_number(ws_name)
-
-    instrument = s_api.mtd[ws_name].getInstrument().getName()
+    instrument = workspace.getInstrument().getName()
     if instrument != '':
         for facility in config.getFacilities():
             try:
@@ -80,7 +93,7 @@ def getWSprefix(wsname):
     if wsname == '':
         return ''
 
-    workspace = s_api.mtd[wsname]
+    workspace = retrieve_workspace(wsname)
     facility = config['default.facility']
 
     ws_run = workspace.getRun()
@@ -109,7 +122,7 @@ def getWSprefix(wsname):
 
 
 def getEfixed(workspace):
-    inst = s_api.mtd[workspace].getInstrument()
+    inst = retrieve_workspace(workspace).getInstrument()
 
     if inst.hasParameter('Efixed'):
         return inst.getNumberParameter('EFixed')[0]
@@ -148,7 +161,7 @@ def getDefaultWorkingDirectory():
 
 def createQaxis(inputWS):
     result = []
-    workspace = s_api.mtd[inputWS]
+    workspace = retrieve_workspace(inputWS)
     num_hist = workspace.getNumberHistograms()
     if workspace.getAxis(1).isSpectra():
         inst = workspace.getInstrument()
@@ -176,13 +189,14 @@ def createQaxis(inputWS):
 
 
 def GetWSangles(inWS):
-    num_hist = s_api.mtd[inWS].getNumberHistograms()  # get no. of histograms/groups
-    source_pos = s_api.mtd[inWS].getInstrument().getSource().getPos()
-    sample_pos = s_api.mtd[inWS].getInstrument().getSample().getPos()
+    workspace = retrieve_workspace(inWS)
+    num_hist = workspace.getNumberHistograms()  # get no. of histograms/groups
+    source_pos = workspace.getInstrument().getSource().getPos()
+    sample_pos = workspace.getInstrument().getSample().getPos()
     beam_pos = sample_pos - source_pos
     angles = []  # will be list of angles
     for index in range(0, num_hist):
-        detector = s_api.mtd[inWS].getDetector(index)  # get index
+        detector = workspace.getDetector(index)  # get index
         two_theta = detector.getTwoTheta(sample_pos, beam_pos) * 180.0 / math.pi  # calc angle
         angles.append(two_theta)  # add angle
     return angles
@@ -200,7 +214,7 @@ def GetThetaQ(ws):
     wavelas = math.sqrt(81.787 / e_fixed)  # Elastic wavelength
     k0 = 4.0 * math.pi / wavelas
 
-    axis = s_api.mtd[ws].getAxis(1)
+    axis = retrieve_workspace(ws).getAxis(1)
 
     # If axis is in spec number need to retrieve angles and calculate Q
     if axis.isSpectra():
@@ -269,18 +283,18 @@ def CheckAnalysers(in1WS, in2WS):
       @exception Valuerror - workspaces have different analysers
       @exception Valuerror - workspaces have different reflections
     """
-    ws1 = s_api.mtd[in1WS]
+    ws1 = retrieve_workspace(in1WS)
     try:
         analyser_1 = ws1.getInstrument().getStringParameter('analyser')[0]
         reflection_1 = ws1.getInstrument().getStringParameter('reflection')[0]
     except IndexError:
-        raise RuntimeError('Could not find analyser or reflection for workspace %s' % in1WS)
-    ws2 = s_api.mtd[in2WS]
+        raise RuntimeError('Could not find analyser or reflection for workspace %s' % str(in1WS))
+    ws2 = retrieve_workspace(in2WS)
     try:
         analyser_2 = ws2.getInstrument().getStringParameter('analyser')[0]
         reflection_2 = ws2.getInstrument().getStringParameter('reflection')[0]
     except:
-        raise RuntimeError('Could not find analyser or reflection for workspace %s' % in2WS)
+        raise RuntimeError('Could not find analyser or reflection for workspace %s' % str(in2WS))
 
     if analyser_1 != analyser_2:
         raise ValueError('Workspace %s and %s have different analysers' % (ws1, ws2))
@@ -309,10 +323,11 @@ def CheckHistZero(inWS):
     Raises:
       @exception ValueError - Worskpace has no histograms
     """
-    num_hist = s_api.mtd[inWS].getNumberHistograms()  # no. of hist/groups in WS
+    workspace = retrieve_workspace(inWS)
+    num_hist = workspace.getNumberHistograms()  # no. of hist/groups in WS
     if num_hist == 0:
         raise ValueError('Workspace ' + inWS + ' has NO histograms')
-    x_in = s_api.mtd[inWS].readX(0)
+    x_in = workspace.readX(0)
     ntc = len(x_in) - 1  # no. points from length of x array
     if ntc == 0:
         raise ValueError('Workspace ' + inWS + ' has NO points')
@@ -336,11 +351,13 @@ def CheckHistSame(in1WS, name1, in2WS, name2):
       Valuerror: number of histograms is different
       Valuerror: number of bin boundaries in the histograms is different
     """
-    num_hist_1 = s_api.mtd[in1WS].getNumberHistograms()  # no. of hist/groups in WS1
-    x_1 = s_api.mtd[in1WS].readX(0)
+    workspace1 = retrieve_workspace(in1WS)
+    workspace2 = retrieve_workspace(in2WS)
+    num_hist_1 = workspace1.getNumberHistograms()  # no. of hist/groups in WS1
+    x_1 = workspace1.readX(0)
     x_len_1 = len(x_1)
-    num_hist_2 = s_api.mtd[in2WS].getNumberHistograms()  # no. of hist/groups in WS2
-    x_2 = s_api.mtd[in2WS].readX(0)
+    num_hist_2 = workspace2.getNumberHistograms()  # no. of hist/groups in WS2
+    x_2 = workspace2.readX(0)
     x_len_2 = len(x_2)
     if num_hist_1 != num_hist_2:  # Check that no. groups are the same
         error_1 = '%s (%s) histograms (%d)' % (name1, in1WS, num_hist_1)
@@ -389,7 +406,7 @@ def getInstrumentParameter(ws, param_name):
       @param ws The workspace to get the instrument from.
       @param param_name The name of the parameter to look up.
     """
-    inst = s_api.mtd[ws].getInstrument()
+    inst = retrieve_workspace(ws).getInstrument()
 
     # Create a map of type parameters to functions. This is so we avoid writing lots of
     # if statements becuase there's no way to dynamically get the type.
@@ -419,10 +436,11 @@ def convertToElasticQ(input_ws, output_ws=None):
     if output_ws is None:
         output_ws = input_ws
 
-    axis = s_api.mtd[input_ws].getAxis(1)
+    workspace = retrieve_workspace(input_ws)
+    axis = retrieve_workspace(workspace).getAxis(1)
     if axis.isSpectra():
-        e_fixed = getEfixed(input_ws)
-        s_api.ConvertSpectrumAxis(input_ws, Target='ElasticQ', EMode='Indirect', EFixed=e_fixed,
+        e_fixed = getEfixed(workspace)
+        s_api.ConvertSpectrumAxis(workspace, Target='ElasticQ', EMode='Indirect', EFixed=e_fixed,
                                   OutputWorkspace=output_ws)
 
     elif axis.isNumeric():
@@ -430,7 +448,7 @@ def convertToElasticQ(input_ws, output_ws=None):
         if axis.getUnit().unitID() != 'MomentumTransfer':
             raise RuntimeError('Input must have axis values of Q')
 
-        s_api.CloneWorkspace(input_ws, OutputWorkspace=output_ws)
+        s_api.CloneWorkspace(workspace, OutputWorkspace=output_ws)
 
     else:
         raise RuntimeError('Input workspace must have either spectra or numeric axis.')
@@ -445,7 +463,7 @@ def transposeFitParametersTable(params_table, output_table=None):
     @param output_table - name to call the transposed table. If omitted,
             the output_table will be the same as the params_table
     """
-    params_table = s_api.mtd[params_table]
+    params_table = retrieve_workspace(params_table)
 
     table_ws = '__tmp_table_ws'
     table_ws = s_api.CreateEmptyTableWorkspace(OutputWorkspace=table_ws)
@@ -493,7 +511,7 @@ def IndentifyDataBoundaries(sample_ws):
     out of all the spectra in the workspace are returned
     """
 
-    sample_ws = s_api.mtd[sample_ws]
+    sample_ws = retrieve_workspace(sample_ws)
     nhists = sample_ws.getNumberHistograms()
     start_data_idx, end_data_idx = 0, 0
     # For all spectra in the workspace
