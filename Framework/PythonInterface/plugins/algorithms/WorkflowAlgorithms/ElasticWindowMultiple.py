@@ -1,6 +1,6 @@
 from __future__ import (absolute_import, division, print_function)
 
-from mantid.simpleapi import *
+from mantid.simpleapi import (AppendSpectra, CloneWorkspace, ElasticWindow, LoadLog, Logarithm, SortXAxis, Transpose)
 from mantid.kernel import *
 from mantid.api import *
 
@@ -9,8 +9,8 @@ import numpy as np
 
 def _normalize_by_index(workspace, index):
     """
-    Normalize each spectra of the specified workspace by the
-    y-value at the specified index in that spectra.
+    Normalize each spectra of the specified workspace by the y-value at the
+    specified index in that spectra, while accounting for errors on those values.
 
     @param workspace    The workspace to normalize.
     @param index        The index of the y-value to normalize by.
@@ -21,19 +21,66 @@ def _normalize_by_index(workspace, index):
     # Normalize each spectrum in the workspace
     for idx in range(0, num_hist):
         y_vals = workspace.readY(idx)
-        scale = 1.0 / y_vals[index]
-        y_vals_scaled = scale * y_vals
+        y_vals_e = workspace.readE(idx)
+        scale = y_vals[index]
+        scale_e = y_vals_e[index]
+        y_vals_scaled = y_vals / scale
+        # error propagation: C = A / B ; dC = sqrt( (dA/B)^2 + (A*dB/B^2)^2 ) ||
+        # !! wrong for A=B (index by which is scaled = index) !!
+        if idx == index:
+            y_vals_e_scaled = y_vals_e / scale
+        else:
+            y_vals_e_scaled = np.sqrt((y_vals_e / scale) ** 2 + (y_vals_scaled * scale_e / scale) ** 2)
         workspace.setY(idx, y_vals_scaled)
+        workspace.setE(idx, y_vals_e_scaled)
+
+
+def _append_workspaces(workspace1, workspace2):
+    """
+    Appends the spectra of the second workspace to the first.
+
+    :param workspace1: The workspace to append spectra to.
+    :param workspace2: The workspace whose spectra to append.
+    :return:           The workspace containing the second workspace appended to the first.
+    """
+    return AppendSpectra(InputWorkspace1=workspace1, InputWorkspace2=workspace2,
+                         OutputWorkspace="appended", StoreInADS=False, EnableLogging=False)
+
+def _transpose_workspace(workspace):
+    """
+    Transposes the specified workspace.
+
+    :param workspace:   The workspace to transpose.
+    :return:            The tranposed workspace.
+    """
+    return Transpose(InputWorkspace=workspace, OutputWorkspace="transpose",
+                     StoreInADS=False, EnableLogging=False)
+
+def _clone_workspace(workspace):
+    """
+    Clones the specified workspace.
+
+    :param workspace:   The workspace to clone.
+    :return:            The cloned workspace.
+    """
+    return CloneWorkspace(InputWorkspace=workspace, OutputWorkspace="cloned",
+                          StoreInADS=False, EnableLogging=False)
+
+def _sort_workspace(workspace):
+    """
+    Sorts the specified workspace by it's X-Axis.
+
+    :param workspace:   The workspace to sort.
+    :return:            The sorted workspace.
+    """
+    return SortXAxis(InputWorkspace=workspace, OutputWorkspace="sorted",
+                     StoreInADS=False, EnableLogging=False)
 
 
 class ElasticWindowMultiple(DataProcessorAlgorithm):
     _sample_log_name = None
     _sample_log_value = None
     _input_workspaces = None
-    _q_workspace = None
-    _q2_workspace = None
-    _elf_workspace = None
-    _elt_workspace = None
     _integration_range_start = None
     _integration_range_end = None
     _background_range_start = None
@@ -113,6 +160,7 @@ class ElasticWindowMultiple(DataProcessorAlgorithm):
         sample_param = list()
 
         progress = Progress(self, 0.0, 0.05, 3)
+        q_ws, log_ws = None, None
 
         # Perform the ElasticWindow algorithms
         for input_ws in input_workspace_names:
@@ -120,29 +168,17 @@ class ElasticWindowMultiple(DataProcessorAlgorithm):
             logger.information('Running ElasticWindow for workspace: %s' % input_ws)
             progress.report('ElasticWindow for workspace: %s' % input_ws)
 
-            q_ws = '__' + input_ws + '_q'
-            q2_ws = '__' + input_ws + '_q2'
+            q_ws, q2_ws = ElasticWindow(InputWorkspace=input_ws,
+                                        IntegrationRangeStart=self._integration_range_start,
+                                        IntegrationRangeEnd=self._integration_range_end,
+                                        OutputInQ="q_output", OutputInQSquared="q2_output",
+                                        StoreInADS=False, EnableLogging=False)
 
-            elwin_alg = self.createChildAlgorithm("ElasticWindow", enableLogging=False)
-            elwin_alg.setProperty("InputWorkspace", input_ws)
-            elwin_alg.setProperty("IntegrationRangeStart", self._integration_range_start)
-            elwin_alg.setProperty("IntegrationRangeEnd", self._integration_range_end)
-            elwin_alg.setProperty("OutputInQ", q_ws)
-            elwin_alg.setProperty("OutputInQSquared", q2_ws)
+            log_ws = Logarithm(InputWorkspace=q2_ws, OutputWorkspace="log_output",
+                               StoreInADS=False, EnableLogging=False)
 
-            if self._background_range_start != Property.EMPTY_DBL and self._background_range_end != Property.EMPTY_DBL:
-                elwin_alg.setProperty("BackgroundRangeStart", self._background_range_start)
-                elwin_alg.setProperty("BackgroundRangeEnd", self._background_range_end)
-
-            elwin_alg.execute()
-
-            log_alg = self.createChildAlgorithm("Logarithm", enableLogging=False)
-            log_alg.setProperty("InputWorkspace", elwin_alg.getProperty("OutputInQSquared").value)
-            log_alg.setProperty("OutputWorkspace", q2_ws)
-            log_alg.execute()
-
-            q_workspaces.append(elwin_alg.getProperty("OutputInQ").value)
-            q2_workspaces.append(log_alg.getProperty("OutputWorkspace").value)
+            q_workspaces.append(q_ws)
+            q2_workspaces.append(log_ws)
 
             # Get the run number
             run_no = getInstrRun(input_ws)[1]
@@ -161,34 +197,15 @@ class ElasticWindowMultiple(DataProcessorAlgorithm):
 
         if len(input_workspace_names) == 1:
             # Just rename single workspaces
-            self._q_workspace = elwin_alg.getProperty("OutputInQ").value
-            self._q2_workspace = log_alg.getProperty("OutputWorkspace").value
+            q_workspace = q_ws
+            q2_workspace = log_ws
         else:
-            # Append the spectra of the first two workspaces
-            append_alg = self.createChildAlgorithm("AppendSpectra", enableLogging=False)
-            append_alg.setProperty("InputWorkspace1", q_workspaces[0])
-            append_alg.setProperty("InputWorkspace2", q_workspaces[1])
-            append_alg.setProperty("OutputWorkspace", self._q_workspace)
-            append_alg.execute()
-            self._q_workspace = append_alg.getProperty("OutputWorkspace").value
-            append_alg.setProperty("InputWorkspace1", q2_workspaces[0])
-            append_alg.setProperty("InputWorkspace2", q2_workspaces[1])
-            append_alg.setProperty("OutputWorkspace", self._q2_workspace)
-            append_alg.execute()
-            self._q2_workspace = append_alg.getProperty("OutputWorkspace").value
+            q_workspace = q_workspaces[0]
+            q2_workspace = q2_workspaces[0]
 
-            # Append to the spectra of each remaining workspace
-            for idx in range(2, len(input_workspace_names)):
-                append_alg.setProperty("InputWorkspace1", self._q_workspace)
-                append_alg.setProperty("InputWorkspace2", q_workspaces[idx])
-                append_alg.setProperty("OutputWorkspace", self._q_workspace)
-                append_alg.execute()
-                self._q_workspace = append_alg.getProperty("OutputWorkspace").value
-                append_alg.setProperty("InputWorkspace1", self._q2_workspace)
-                append_alg.setProperty("InputWorkspace2", q2_workspaces[idx])
-                append_alg.setProperty("OutputWorkspace", self._q2_workspace)
-                append_alg.execute()
-                self._q2_workspace = append_alg.getProperty("OutputWorkspace").value
+            for idx in range(1, len(input_workspace_names)):
+                q_workspace = _append_workspaces(q_workspace, q_workspaces[idx])
+                q2_workspace = _append_workspaces(q2_workspace, q2_workspaces[idx])
 
         # Set the vertical axis units
         v_axis_is_sample = len(input_workspace_names) == len(sample_param)
@@ -217,24 +234,15 @@ class ElasticWindowMultiple(DataProcessorAlgorithm):
                 q2_ws_axis.setValue(idx, float(run_numbers[idx][-3:]))
 
         # Add the new vertical axis to each workspace
-        self._q_workspace.replaceAxis(1, q_ws_axis)
-        self._q2_workspace.replaceAxis(1, q2_ws_axis)
+        q_workspace.replaceAxis(1, q_ws_axis)
+        q2_workspace.replaceAxis(1, q2_ws_axis)
 
         progress.report('Creating ELF workspaces')
-        transpose_alg = self.createChildAlgorithm("Transpose", enableLogging=False)
-        sort_alg = self.createChildAlgorithm("SortXAxis", enableLogging=False)
         # Process the ELF workspace
         if self._elf_ws_name != '':
             logger.information('Creating ELF workspace')
-            transpose_alg.setProperty("InputWorkspace", self._q_workspace)
-            transpose_alg.setProperty("OutputWorkspace", self._elf_ws_name)
-            transpose_alg.execute()
-
-            sort_alg.setProperty("InputWorkspace", transpose_alg.getProperty("OutputWorkspace").value)
-            sort_alg.setProperty("OutputWorkspace", self._elf_ws_name)
-            sort_alg.execute()
-
-            self.setProperty('OutputELF', sort_alg.getProperty("OutputWorkspace").value)
+            tranposed_q = _transpose_workspace(q_workspace)
+            self.setProperty('OutputELF', _sort_workspace(tranposed_q))
 
         # Do temperature normalisation
         if self._elt_ws_name != '':
@@ -243,27 +251,17 @@ class ElasticWindowMultiple(DataProcessorAlgorithm):
             # If the ELF workspace was not created, create the ELT workspace
             # from the Q workspace. Else, clone the ELF workspace.
             if self._elf_ws_name == '':
-                transpose_alg.setProperty("InputWorkspace", self._q_workspace)
-                transpose_alg.setProperty("OutputWorkspace", self._elt_ws_name)
-                transpose_alg.execute()
-                sort_alg.setProperty("InputWorkspace", self._elt_ws_name)
-                sort_alg.setProperty("OutputWorkspace", self._elt_ws_name)
-                sort_alg.execute()
-                elt_workspace = sort_alg.getProperty("OutputWorkspace").value
+                tranposed_q = _transpose_workspace(q_workspace)
+                elt_workspace = _sort_workspace(tranposed_q)
             else:
-                clone_alg = self.createChildAlgorithm("CloneWorkspace", enableLogging=False)
-                clone_alg.setProperty("InputWorkspace", self.getProperty("OutputELF").value)
-                clone_alg.setProperty("OutputWorkspace", self._elt_ws_name)
-                clone_alg.execute()
-                elt_workspace = clone_alg.getProperty("OutputWorkspace").value
+                elt_workspace = _clone_workspace(self.getProperty('OutputELF').value)
 
             _normalize_by_index(elt_workspace, np.argmin(sample_param))
-
             self.setProperty('OutputELT', elt_workspace)
 
         # Set the output workspace
-        self.setProperty('OutputInQ', self._q_workspace)
-        self.setProperty('OutputInQSquared', self._q2_workspace)
+        self.setProperty('OutputInQ', q_workspace)
+        self.setProperty('OutputInQSquared', q2_workspace)
 
     def _setup(self):
         """
@@ -274,27 +272,28 @@ class ElasticWindowMultiple(DataProcessorAlgorithm):
         self._sample_log_value = self.getPropertyValue('SampleEnvironmentLogValue')
 
         self._input_workspaces = self.getProperty('InputWorkspaces').value
-        self._q_workspace = self.getPropertyValue('OutputInQ')
-        self._q2_workspace = self.getPropertyValue('OutputInQSquared')
-        self._elf_ws_name = self.getPropertyValue('OutputELF')
-        self._elt_ws_name = self.getPropertyValue('OutputELT')
-
-        self._integration_range_start = self.getProperty('IntegrationRangeStart').value
-        self._integration_range_end = self.getProperty('IntegrationRangeEnd').value
 
         self._background_range_start = self.getProperty('BackgroundRangeStart').value
         self._background_range_end = self.getProperty('BackgroundRangeEnd').value
 
-    def _get_sample_units(self, ws_name):
+        if self._background_range_start != Property.EMPTY_DBL and self._background_range_end != Property.EMPTY_DBL:
+            self._integration_range_start = self._background_range_start
+            self._integration_range_end = self._background_range_end
+        else:
+            self._integration_range_start = self.getProperty('IntegrationRangeStart').value
+            self._integration_range_end = self.getProperty('IntegrationRangeEnd').value
+
+
+    def _get_sample_units(self, workspace):
         """
         Gets the sample environment units for a given workspace.
 
-        @param ws_name Name of workspace
+        @param workspace The workspace
         @returns sample in given units or None if not found
         """
         from IndirectCommon import getInstrRun
 
-        instr, run_number = getInstrRun(ws_name)
+        instr, run_number = getInstrRun(workspace)
 
         facility = config.getFacility()
         pad_num = facility.instrument(instr).zeroPadding(int(run_number))
@@ -303,7 +302,7 @@ class ElasticWindowMultiple(DataProcessorAlgorithm):
         run_name = instr + zero_padding + run_number
         log_filename = run_name.upper() + '.log'
 
-        run = mtd[ws_name].getRun()
+        run = workspace.getRun()
 
         if self._sample_log_name == 'Position':
             # Look for sample changer position in logs in workspace
@@ -338,8 +337,8 @@ class ElasticWindowMultiple(DataProcessorAlgorithm):
 
             if log_path != '':
                 # Get temperature from log file
-                LoadLog(Workspace=ws_name, Filename=log_path)
-                run_logs = mtd[ws_name].getRun()
+                LoadLog(Workspace=workspace, Filename=log_path)
+                run_logs = workspace.getRun()
                 if self._sample_log_name in run_logs:
                     tmp = run_logs[self._sample_log_name].value
                     sample = tmp[len(tmp) - 1]
