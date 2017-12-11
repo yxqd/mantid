@@ -93,6 +93,7 @@ public:
   // to avoid casting (which need also the number of dimensions) method say if
   // Node is a box. if not, it is gridbox
   bool isBox() const override { return true; }
+  bool isNullBox() const override { return false; }
 
   /// Return the indexth child MDBoxBase.
   API::IMDNode *getChild(size_t /*index*/) override {

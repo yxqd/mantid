@@ -105,7 +105,7 @@ public:
   }
 
   uint64_t getNPoints() const override {
-    return getSignal();
+    return static_cast<uint64_t>(getSignal());
   }
 
   size_t getDataInMemorySize() const override {
@@ -117,7 +117,7 @@ public:
   }
 
   size_t getNumDims() const override {
-    throw std::runtime_error("Not implemented");
+    return nd;
   }
 
   size_t getNumMDBoxes() const override {
@@ -127,8 +127,10 @@ public:
   size_t getNumChildren() const override { return 0; }
 
   bool isBox() const override {
-    throw std::runtime_error("Not implemented");
+    return false;
   }
+  bool isNullBox() const override { return true; }
+
 
   API::IMDNode *getChild(size_t /*index*/) override {
     throw std::runtime_error("MDBox does not have children.");
@@ -231,7 +233,7 @@ public:
     throw std::runtime_error("Not implemented");
   }
 
-  void centroidSphere(Mantid::API::CoordTransform &radiusTransform,
+  void centroidSphere(Mantid::API::CoordTransform &,
                       coord_t , coord_t *,
                       signal_t &) const override{
     throw std::runtime_error("Not implemented");
@@ -249,7 +251,7 @@ public:
   bool /*leafOnly*/){
     // Don't add to boxes request
   }
-  void getBoxes(std::vector<API::IMDNode *> &boxes, size_t /*maxDepth*/,
+  void getBoxes(std::vector<API::IMDNode *> &, size_t /*maxDepth*/,
                 bool /*leafOnly*/) override{
     // Don't add to boxes request
   }

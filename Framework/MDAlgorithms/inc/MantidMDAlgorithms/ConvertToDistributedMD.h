@@ -73,6 +73,9 @@ private:
                                                                 const std::unordered_map<size_t, std::vector<uint64_t>>& relevantEventsPerRankPerBox,
                                                                 const std::vector<Mantid::DataObjects::MDBox<Mantid::DataObjects::MDLeanEvent<DistributedCommon::DIM_DISTRIBUTED_TEST>, DistributedCommon::DIM_DISTRIBUTED_TEST>*>& mdBoxes);
 
+  void setNullMDBox(std::vector<Mantid::DataObjects::MDBox<Mantid::DataObjects::MDLeanEvent<DistributedCommon::DIM_DISTRIBUTED_TEST>, DistributedCommon::DIM_DISTRIBUTED_TEST>*>& mdBoxes,
+                    size_t startIndex, size_t stopIndex, size_t numberOfDimensions);
+
   void setRankResponsibilityMap();
 
   int getResponsibleRank(size_t leafNodeIndex);

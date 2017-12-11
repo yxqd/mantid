@@ -5,7 +5,6 @@
 #include "MantidMDAlgorithms/RankResponsibility.h"
 #include "MantidParallel/Communicator.h"
 #include "MantidParallel/Collectives.h"
-#include "MantidParallel/Nonblocking.h"
 #include "MantidDataObjects/NullMDBox.h"
 #include "MantidKernel/UnitLabelTypes.h"
 #include "MantidKernel/Strings.h"
@@ -16,6 +15,17 @@
 
 #include <boost/serialization/utility.hpp>
 #include <fstream>
+
+#include <chrono>
+#include <fstream>
+
+namespace {
+  std::vector<double> cpuClock;
+  std::vector<double> wallClock;
+  constexpr bool measure = true;
+  const std::string fileNameBase = "/home/anton/builds/Mantid_debug_clion/mpi_test/results/result_";
+}
+
 
 namespace Mantid {
 namespace MDAlgorithms {
@@ -35,6 +45,7 @@ const std::string ConvertToDistributedMD::boxSplittingGroupName =
 
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(ConvertToDistributedMD)
+
 
 //----------------------------------------------------------------------------------------------
 
@@ -175,8 +186,14 @@ void ConvertToDistributedMD::exec() {
   // 9. Ensure that the fileIDs and the box controller stats are correct.
   // 10. Maybe save in this algorithm already
 
+  const auto startTotalCPU = std::clock();
+  const auto startTotalWall = std::chrono::high_resolution_clock::now();
+
+
   // Get the users's inputs
   EventWorkspace_sptr inputWorkspace = getProperty("InputWorkspace");
+  auto start_cpu = std::clock();
+  auto start_wall = std::chrono::high_resolution_clock::now();
   {
     // ----------------------------------------------------------
     // 1. Get a n-percent fraction
@@ -190,9 +207,16 @@ void ConvertToDistributedMD::exec() {
     // -----------------------------------------------------------------
     setupPreliminaryBoxStructure(nPercentEvents);
   }
+  auto stop_cpu = std::clock();
+  auto stop_wall = std::chrono::high_resolution_clock::now();
+  cpuClock.emplace_back(stop_cpu - start_cpu);
+  wallClock.emplace_back(std::chrono::duration<double, std::milli>(stop_wall - start_wall).count());
+
   // ----------------------------------------------------------
   // 5. Convert all events
   // ----------------------------------------------------------
+  start_cpu = std::clock();
+  start_wall = std::chrono::high_resolution_clock::now();
   {
     auto allEvents = getFractionEvents(*inputWorkspace, 1.);
 
@@ -201,25 +225,58 @@ void ConvertToDistributedMD::exec() {
     // ----------------------------------------------------------
     addEventsToPreliminaryBoxStructure(allEvents);
   }
-  // ----------------------------------------------------------
+  stop_cpu = std::clock();
+  stop_wall = std::chrono::high_resolution_clock::now();
+  cpuClock.emplace_back(stop_cpu - start_cpu);
+  wallClock.emplace_back(std::chrono::duration<double, std::milli>(stop_wall - start_wall).count());
+
+  // ------------------------------------------------------
   // 7. Redistribute data
   // ----------------------------------------------------------
+  start_cpu = std::clock();
+  start_wall = std::chrono::high_resolution_clock::now();
   redistributeData();
+  stop_cpu = std::clock();
+  stop_wall = std::chrono::high_resolution_clock::now();
+  cpuClock.emplace_back(stop_cpu - start_cpu);
+  wallClock.emplace_back(std::chrono::duration<double, std::milli>(stop_wall - start_wall).count());
 
   // ----------------------------------------------------------
   // 8. Continue to split locally
   // ----------------------------------------------------------
+  start_cpu = std::clock();
+  start_wall = std::chrono::high_resolution_clock::now();
   continueSplitting();
-
+  stop_cpu = std::clock();
+  stop_wall = std::chrono::high_resolution_clock::now();
+  cpuClock.emplace_back(stop_cpu - start_cpu);
+  wallClock.emplace_back(std::chrono::duration<double, std::milli>(stop_wall - start_wall).count());
   // --------------------------------------- -------------------
   // 9. Ensure that box controller and fileIDs are correct
   // ----------------------------------------------------------
+  start_cpu = std::clock();
+  start_wall = std::chrono::high_resolution_clock::now();
   updateMetaData();
+  stop_cpu = std::clock();
+  stop_wall = std::chrono::high_resolution_clock::now();
+  cpuClock.emplace_back(stop_cpu - start_cpu);
+  wallClock.emplace_back(std::chrono::duration<double, std::milli>(stop_wall - start_wall).count());
 
-  std::cout << "RANK " << this->communicator().rank() << "\n";
-  m_boxStructureInformation.boxStructure->refreshCache();
-  std::cout << m_boxStructureInformation.boxStructure->getSignal() <<"\n";
+  cpuClock.emplace_back(std::clock() - startTotalCPU);
+  wallClock.emplace_back(std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - startTotalWall).count());
 
+  if (measure) {
+    const auto rank = this->communicator().rank();
+    const auto size = this->communicator().size();
+    std::string fileName = fileNameBase +std::to_string(size) + std::string("__") + std::to_string(rank) + std::string(".txt");
+    std::fstream stream;
+    stream.open(fileName, std::ios::out | std::ios::app);
+    for (auto index=0ul; index < wallClock.size(); ++index) {
+      stream << wallClock[index]/1000. <<","<< cpuClock[index]/CLOCKS_PER_SEC <<"\n";
+    }
+    stream << m_boxStructureInformation.boxStructure->getNPoints() <<"," <<m_boxStructureInformation.boxStructure->getSignal() <<"\n";
+    stream.close();
+  }
 
   // ----------------------------------------------------------
   // 9. Save?
@@ -334,7 +391,7 @@ void ConvertToDistributedMD::setupPreliminaryBoxStructure(
 }
 
 void ConvertToDistributedMD::setRankResponsibilityMap() {
-  for (auto rank = 0; rank < m_responsibility.size(); ++rank) {
+  for (auto rank = 0ul; rank < m_responsibility.size(); ++rank) {
     m_endBoxIndexRangeVsRank.emplace(m_responsibility[rank].second, rank);
     m_endBoxIndexRange.push_back(m_responsibility[rank].second);
   }
@@ -655,16 +712,31 @@ void ConvertToDistributedMD::redistributeData() {
     MDEventList().swap(events);
   }
 
-  auto clearData = [&mdBoxes](size_t index) {
-    mdBoxes[index]->clearDataFromMemory();
-  };
-
-
   // Remove the data which is not relevant for the local rank which is before
   // the startIndex
-  const auto numberOfDimensions = mdBoxes[0]->getNumDims();
-  for (auto index = 0ul; index < startIndex; ++index) {
+  auto const numberOfDimensions = mdBoxes[0]->getNumDims();
+  setNullMDBox(mdBoxes, 0ul, startIndex, numberOfDimensions);
+
+  // Remove the data which is not relevant for the local rank which is after the
+  // stopIndex
+  setNullMDBox(mdBoxes, stopIndex + 1, boxes.size(), numberOfDimensions);
+
+  // We need to refresh the cache
+  m_boxStructureInformation.boxStructure->refreshCache(nullptr);
+
+
+  // Cache the max ID, we need it later when updating the fileIDs on all the
+  // ranks. Note that getMaxId will return the next available id, ie it is
+  // not really the max id.
+  m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
+}
+
+
+void ConvertToDistributedMD::setNullMDBox(std::vector<MDBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST>*>& mdBoxes,
+                  size_t startIndex, size_t stopIndex, const size_t numberOfDimensions) {
+  for (auto index = startIndex; index < stopIndex; ++index) {
     auto mdBox = mdBoxes[index];
+
     // On this rank the box has to be an MDEventBox
     if (!mdBox->isBox()) {
       throw std::runtime_error("Expected an MDBox, but got an MDGridBox");
@@ -672,10 +744,12 @@ void ConvertToDistributedMD::redistributeData() {
 
     const auto& boxController  = mdBox->getBoxController();
     const auto depth = mdBox->getDepth();
+
     std::vector<Mantid::Geometry::MDDimensionExtents<coord_t>> extents;
     for (auto dimension = 0ul; dimension < numberOfDimensions; ++dimension) {
-        extents.emplace_back(mdBox->getExtents(dimension));
+      extents.emplace_back(mdBox->getExtents(dimension));
     }
+
     const auto boxID = mdBox->getID();
     auto responsibleRank = getResponsibleRank(index);
 
@@ -690,21 +764,6 @@ void ConvertToDistributedMD::redistributeData() {
     const auto childIndex = mdGridBoxParent->getChildIndexFromID(boxID);
     mdGridBoxParent->setChild(childIndex, newNullMDBox.release());
   }
-
-  // Remove the data which is not relevant for the local rank which is after the
-  // stopIndex
-  for (auto index = stopIndex + 1; index < boxes.size(); ++index) {
-  }
-
-
-  // We need to refresh the cache
-  m_boxStructureInformation.boxStructure->refreshCache(nullptr);
-
-
-  // Cache the max ID, we need it later when updating the fileIDs on all the
-  // ranks. Note that getMaxId will return the next available id, ie it is
-  // not really the max id.
-  m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
 }
 
 
@@ -929,6 +988,7 @@ void ConvertToDistributedMD::updateMetaData() {
   // 1. The fileID in the boxes will be incorrect for most boxes.
   // 2. A box controller which has the information about all of the boxes needs
   // to be created
+  // 3. Update the data in the NullMDBoxes
 
   // --------------------------
   // 1. Updating file IDs
@@ -982,6 +1042,13 @@ void ConvertToDistributedMD::updateMetaData() {
   boxController.setMaxId(maxId);
   access.setNumMDBoxes(boxController, mdBoxPerDepth);
   access.setNumMDGridBoxes(boxController, mdGridBoxPerDepth);
+
+
+  // --------------------------------------
+  // 2. Update values in NullMDBoxes
+  //    TODO: Update the singals stored in the NullMDBoxes. This would be nice to have as a check but
+  //          to check scaling up to this point.
+  // --------------------------------------
 }
 
 
