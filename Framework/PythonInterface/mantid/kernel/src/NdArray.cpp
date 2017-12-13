@@ -23,6 +23,10 @@ inline PyArrayObject *rawArray(const NdArray &obj) {
 // -----------------------------------------------------------------------------
 // NdArray - public methods
 // -----------------------------------------------------------------------------
+/**
+ * Default constructor. Sets internal object to None
+ */
+NdArray::NdArray() : object() {}
 
 /**
  * Check if a python object points to an array type object

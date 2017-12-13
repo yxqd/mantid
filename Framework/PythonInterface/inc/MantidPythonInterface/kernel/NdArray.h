@@ -19,6 +19,7 @@ class PYTHON_KERNEL_DLL NdArray : public boost::python::object {
 public:
   static bool check(const boost::python::object &obj);
 
+  NdArray();
   NdArray(const boost::python::object &obj);
   BOOST_PYTHON_FORWARD_OBJECT_CONSTRUCTORS(NdArray, boost::python::object);
 
