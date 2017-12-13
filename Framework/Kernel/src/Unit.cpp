@@ -138,9 +138,7 @@ void Unit::toTOF(std::vector<double> &xdata, std::vector<double> &ydata,
                  const double &_delta) {
   UNUSED_ARG(ydata);
   this->initialize(_l1, _l2, _twoTheta, _emode, _efixed, _delta);
-  size_t numX = xdata.size();
-  for (size_t i = 0; i < numX; i++)
-    xdata[i] = this->singleToTOF(xdata[i]);
+  doToTOF(xdata);
 }
 
 /** Convert a single value to TOF
@@ -169,9 +167,7 @@ void Unit::fromTOF(std::vector<double> &xdata, std::vector<double> &ydata,
                    const double &_efixed, const double &_delta) {
   UNUSED_ARG(ydata);
   this->initialize(_l1, _l2, _twoTheta, _emode, _efixed, _delta);
-  size_t numX = xdata.size();
-  for (size_t i = 0; i < numX; i++)
-    xdata[i] = this->singleFromTOF(xdata[i]);
+  doFromTOF(xdata);
 }
 
 /** Convert a single value from TOF
@@ -210,13 +206,13 @@ const UnitLabel Empty::label() const { return Symbol::EmptyLabel; }
 
 void Empty::init() {}
 
-double Empty::singleToTOF(const double x) const {
+double Empty::doSingleToTOF(const double x) const {
   UNUSED_ARG(x);
   throw Kernel::Exception::NotImplementedError(
       "Cannot convert unit " + this->unitID() + " to time of flight");
 }
 
-double Empty::singleFromTOF(const double tof) const {
+double Empty::doSingleFromTOF(const double tof) const {
   UNUSED_ARG(tof);
   throw Kernel::Exception::NotImplementedError(
       "Cannot convert to unit " + this->unitID() + " from time of flight");
@@ -273,16 +269,14 @@ DECLARE_UNIT(TOF)
 
 const UnitLabel TOF::label() const { return Symbol::Microsecond; }
 
-TOF::TOF() : Unit() {}
-
 void TOF::init() {}
 
-double TOF::singleToTOF(const double x) const {
+double TOF::doSingleToTOF(const double x) const {
   // Nothing to do
   return x;
 }
 
-double TOF::singleFromTOF(const double tof) const {
+double TOF::doSingleFromTOF(const double tof) const {
   // Nothing to do
   return tof;
 }
@@ -302,8 +296,8 @@ double TOF::conversionTOFMax() const { return DBL_MAX; }
 DECLARE_UNIT(Wavelength)
 
 Wavelength::Wavelength()
-    : Unit(), sfpTo(DBL_MIN), factorTo(DBL_MIN), sfpFrom(DBL_MIN),
-      factorFrom(DBL_MIN), do_sfpFrom(false) {
+    : UnitDevirtualizer<Wavelength>(), sfpTo(DBL_MIN), factorTo(DBL_MIN),
+      sfpFrom(DBL_MIN), factorFrom(DBL_MIN), do_sfpFrom(false) {
   const double AngstromsSquared = 1e20;
   const double factor =
       (AngstromsSquared * PhysicalConstants::h * PhysicalConstants::h) /
@@ -381,14 +375,14 @@ void Wavelength::init() {
   factorFrom *= toAngstroms / TOFisinMicroseconds;
 }
 
-double Wavelength::singleToTOF(const double x) const {
+double Wavelength::doSingleToTOF(const double x) const {
   double tof = x * factorTo;
   // If Direct or Indirect we want to correct TOF values..
   if (emode == 1 || emode == 2)
     tof += sfpTo;
   return tof;
 }
-double Wavelength::singleFromTOF(const double tof) const {
+double Wavelength::doSingleFromTOF(const double tof) const {
   double x = tof;
   if (do_sfpFrom)
     x -= sfpFrom;
@@ -428,7 +422,8 @@ DECLARE_UNIT(Energy)
 const UnitLabel Energy::label() const { return Symbol::MilliElectronVolts; }
 
 /// Constructor
-Energy::Energy() : Unit(), factorTo(DBL_MIN), factorFrom(DBL_MIN) {
+Energy::Energy()
+    : UnitDevirtualizer<Energy>(), factorTo(DBL_MIN), factorFrom(DBL_MIN) {
   addConversion("Energy_inWavenumber", PhysicalConstants::meVtoWavenumber);
   const double toAngstroms = 1e10;
   const double factor =
@@ -454,7 +449,7 @@ void Energy::init() {
   }
 }
 
-double Energy::singleToTOF(const double x) const {
+double Energy::doSingleToTOF(const double x) const {
   double temp = x;
   if (temp == 0.0)
     temp = DBL_MIN; // Protect against divide by zero
@@ -464,7 +459,7 @@ double Energy::singleToTOF(const double x) const {
 double Energy::conversionTOFMin() const { return factorTo / sqrt(DBL_MAX); }
 double Energy::conversionTOFMax() const { return sqrt(DBL_MAX); }
 
-double Energy::singleFromTOF(const double tof) const {
+double Energy::doSingleFromTOF(const double tof) const {
   double temp = tof;
   if (temp == 0.0)
     temp = DBL_MIN; // Protect against divide by zero
@@ -485,7 +480,8 @@ const UnitLabel Energy_inWavenumber::label() const { return Symbol::InverseCM; }
 
 /// Constructor
 Energy_inWavenumber::Energy_inWavenumber()
-    : Unit(), factorTo(DBL_MIN), factorFrom(DBL_MIN) {
+    : UnitDevirtualizer<Energy_inWavenumber>(), factorTo(DBL_MIN),
+      factorFrom(DBL_MIN) {
   addConversion("Energy", 1.0 / PhysicalConstants::meVtoWavenumber);
   const double toAngstroms = 1e10;
   const double factor =
@@ -515,7 +511,7 @@ void Energy_inWavenumber::init() {
   }
 }
 
-double Energy_inWavenumber::singleToTOF(const double x) const {
+double Energy_inWavenumber::doSingleToTOF(const double x) const {
   double temp = x;
   if (temp <= DBL_MIN)
     temp =
@@ -531,7 +527,7 @@ double Energy_inWavenumber::conversionTOFMax() const {
   return factorTo / sqrt(std::numeric_limits<double>::max());
 }
 
-double Energy_inWavenumber::singleFromTOF(const double tof) const {
+double Energy_inWavenumber::doSingleFromTOF(const double tof) const {
   double temp = tof;
   if (temp == 0.0)
     temp = DBL_MIN; // Protect against divide by zero
@@ -552,7 +548,8 @@ DECLARE_UNIT(dSpacing)
 
 const UnitLabel dSpacing::label() const { return Symbol::Angstrom; }
 
-dSpacing::dSpacing() : Unit(), factorTo(DBL_MIN), factorFrom(DBL_MIN) {
+dSpacing::dSpacing()
+    : UnitDevirtualizer<dSpacing>(), factorTo(DBL_MIN), factorFrom(DBL_MIN) {
   const double factor = 2.0 * M_PI;
   addConversion("MomentumTransfer", factor, -1.0);
   addConversion("QSquared", (factor * factor), -2.0);
@@ -573,8 +570,8 @@ void dSpacing::init() {
     factorFrom = DBL_MIN; // Protect against divide by zero
 }
 
-double dSpacing::singleToTOF(const double x) const { return x * factorTo; }
-double dSpacing::singleFromTOF(const double tof) const {
+double dSpacing::doSingleToTOF(const double x) const { return x * factorTo; }
+double dSpacing::doSingleFromTOF(const double tof) const {
   return tof / factorFrom;
 }
 double dSpacing::conversionTOFMin() const { return 0; }
@@ -595,7 +592,8 @@ const UnitLabel dSpacingPerpendicular::label() const {
 }
 
 dSpacingPerpendicular::dSpacingPerpendicular()
-    : Unit(), factorTo(DBL_MIN), factorFrom(DBL_MIN) {}
+    : UnitDevirtualizer<dSpacingPerpendicular>(), factorTo(DBL_MIN),
+      factorFrom(DBL_MIN) {}
 
 void dSpacingPerpendicular::init() {
   factorTo =
@@ -615,14 +613,14 @@ void dSpacingPerpendicular::init() {
   sfpFrom = sfpTo;
 }
 
-double dSpacingPerpendicular::singleToTOF(const double x) const {
+double dSpacingPerpendicular::doSingleToTOF(const double x) const {
   double sqrtarg = x * x + sfpTo;
   // consider very small values to be a rounding error
   if (sqrtarg < 1.0e-17)
     return 0.0;
   return sqrt(sqrtarg) * factorTo;
 }
-double dSpacingPerpendicular::singleFromTOF(const double tof) const {
+double dSpacingPerpendicular::doSingleFromTOF(const double tof) const {
   double temp = tof / factorFrom;
   return sqrt(temp * temp - sfpFrom);
 }
@@ -650,7 +648,8 @@ const UnitLabel MomentumTransfer::label() const {
 }
 
 MomentumTransfer::MomentumTransfer()
-    : Unit(), factorTo(DBL_MIN), factorFrom(DBL_MIN) {
+    : UnitDevirtualizer<MomentumTransfer>(), factorTo(DBL_MIN),
+      factorFrom(DBL_MIN) {
   addConversion("QSquared", 1.0, 2.0);
   const double factor = 2.0 * M_PI;
   addConversion("dSpacing", factor, -1.0);
@@ -674,14 +673,14 @@ void MomentumTransfer::init() {
   factorFrom *= TOFisinMicroseconds / toAngstroms;
 }
 
-double MomentumTransfer::singleToTOF(const double x) const {
+double MomentumTransfer::doSingleToTOF(const double x) const {
   double temp = x;
   if (temp == 0.0)
     temp = DBL_MIN; // Protect against divide by zero
   return factorTo / temp;
 }
 //
-double MomentumTransfer::singleFromTOF(const double tof) const {
+double MomentumTransfer::doSingleFromTOF(const double tof) const {
   double temp = tof;
   if (temp == 0.0)
     temp = DBL_MIN; // Protect against divide by zero
@@ -703,7 +702,8 @@ DECLARE_UNIT(QSquared)
 
 const UnitLabel QSquared::label() const { return Symbol::InverseAngstromSq; }
 
-QSquared::QSquared() : Unit(), factorTo(DBL_MIN), factorFrom(DBL_MIN) {
+QSquared::QSquared()
+    : UnitDevirtualizer<QSquared>(), factorTo(DBL_MIN), factorFrom(DBL_MIN) {
   addConversion("MomentumTransfer", 1.0, 0.5);
   const double factor = 2.0 * M_PI;
   addConversion("dSpacing", factor, -0.5);
@@ -728,13 +728,13 @@ void QSquared::init() {
   factorFrom = factorFrom * factorFrom;
 }
 
-double QSquared::singleToTOF(const double x) const {
+double QSquared::doSingleToTOF(const double x) const {
   double temp = x;
   if (temp == 0.0)
     temp = DBL_MIN; // Protect against divide by zero
   return factorTo / sqrt(temp);
 }
-double QSquared::singleFromTOF(const double tof) const {
+double QSquared::doSingleFromTOF(const double tof) const {
   double temp = tof;
   if (temp == 0.0)
     temp = DBL_MIN; // Protect against divide by zero
@@ -765,8 +765,8 @@ DECLARE_UNIT(DeltaE)
 const UnitLabel DeltaE::label() const { return Symbol::MilliElectronVolts; }
 
 DeltaE::DeltaE()
-    : Unit(), factorTo(DBL_MIN), factorFrom(DBL_MIN), t_other(DBL_MIN),
-      t_otherFrom(DBL_MIN), unitScaling(DBL_MIN) {
+    : UnitDevirtualizer<DeltaE>(), factorTo(DBL_MIN), factorFrom(DBL_MIN),
+      t_other(DBL_MIN), t_otherFrom(DBL_MIN), unitScaling(DBL_MIN) {
   addConversion("DeltaE_inWavenumber", PhysicalConstants::meVtoWavenumber, 1.);
   addConversion("DeltaE_inFrequency", PhysicalConstants::meVtoFrequency, 1.);
 }
@@ -812,7 +812,7 @@ void DeltaE::init() {
   unitScaling = 1;
 }
 
-double DeltaE::singleToTOF(const double x) const {
+double DeltaE::doSingleToTOF(const double x) const {
   if (emode == 1) {
     const double e2 = efixed - x / unitScaling;
     if (e2 <=
@@ -838,7 +838,7 @@ double DeltaE::singleToTOF(const double x) const {
   }
 }
 
-double DeltaE::singleFromTOF(const double tof) const {
+double DeltaE::doSingleFromTOF(const double tof) const {
   if (emode == 1) {
     // This is t2
     const double this_t = tof - t_otherFrom;
@@ -955,8 +955,8 @@ DECLARE_UNIT(Momentum)
 const UnitLabel Momentum::label() const { return Symbol::InverseAngstrom; }
 
 Momentum::Momentum()
-    : Unit(), sfpTo(DBL_MIN), factorTo(DBL_MIN), sfpFrom(DBL_MIN),
-      factorFrom(DBL_MIN), do_sfpFrom(false) {
+    : UnitDevirtualizer<Momentum>(), sfpTo(DBL_MIN), factorTo(DBL_MIN),
+      sfpFrom(DBL_MIN), factorFrom(DBL_MIN), do_sfpFrom(false) {
 
   const double AngstromsSquared = 1e20;
   const double factor =
@@ -1032,7 +1032,7 @@ void Momentum::init() {
   factorFrom = 2 * M_PI / factorFrom;
 }
 
-double Momentum::singleToTOF(const double ki) const {
+double Momentum::doSingleToTOF(const double ki) const {
   double tof = factorTo / ki;
   // If Direct or Indirect we want to correct TOF values..
   if (emode == 1 || emode == 2)
@@ -1053,7 +1053,7 @@ double Momentum::conversionTOFMax() const {
   return range;
 }
 
-double Momentum::singleFromTOF(const double tof) const {
+double Momentum::doSingleFromTOF(const double tof) const {
   double x = tof;
   if (do_sfpFrom)
     x -= sfpFrom;
@@ -1089,7 +1089,7 @@ void SpinEchoLength::init() {
   Wavelength::init();
 }
 
-double SpinEchoLength::singleToTOF(const double x) const {
+double SpinEchoLength::doSingleToTOF(const double x) const {
   double wavelength = sqrt(x / efixed);
   double tof = Wavelength::singleToTOF(wavelength);
   return tof;
@@ -1108,7 +1108,7 @@ double SpinEchoLength::conversionTOFMax() const {
   return sel;
 }
 
-double SpinEchoLength::singleFromTOF(const double tof) const {
+double SpinEchoLength::doSingleFromTOF(const double tof) const {
   double wavelength = Wavelength::singleFromTOF(tof);
   double x = efixed * wavelength * wavelength;
   return x;
@@ -1140,7 +1140,7 @@ void SpinEchoTime::init() {
   Wavelength::init();
 }
 
-double SpinEchoTime::singleToTOF(const double x) const {
+double SpinEchoTime::doSingleToTOF(const double x) const {
   double wavelength = pow(x / efixed, 1.0 / 3.0);
   double tof = Wavelength::singleToTOF(wavelength);
   return tof;
@@ -1153,7 +1153,7 @@ double SpinEchoTime::conversionTOFMax() const {
   return tm;
 }
 
-double SpinEchoTime::singleFromTOF(const double tof) const {
+double SpinEchoTime::doSingleFromTOF(const double tof) const {
   double wavelength = Wavelength::singleFromTOF(tof);
   double x = efixed * wavelength * wavelength * wavelength;
   return x;
@@ -1171,16 +1171,17 @@ DECLARE_UNIT(Time)
 
 const UnitLabel Time::label() const { return Symbol::Second; }
 
-Time::Time() : Unit(), factorTo(DBL_MIN), factorFrom(DBL_MIN) {}
+Time::Time()
+    : UnitDevirtualizer<Time>(), factorTo(DBL_MIN), factorFrom(DBL_MIN) {}
 
 void Time::init() {}
 
-double Time::singleToTOF(const double x) const {
+double Time::doSingleToTOF(const double x) const {
   UNUSED_ARG(x);
   throw std::runtime_error("Time is not allowed to be convert to TOF. ");
 }
 
-double Time::singleFromTOF(const double tof) const {
+double Time::doSingleFromTOF(const double tof) const {
   UNUSED_ARG(tof);
   throw std::runtime_error("Time is not allwed to be converted from TOF. ");
 }
@@ -1209,12 +1210,12 @@ const UnitLabel Degrees::label() const { return m_label; }
 
 void Degrees::init() {}
 
-double Degrees::singleToTOF(const double x) const {
+double Degrees::doSingleToTOF(const double x) const {
   UNUSED_ARG(x);
   throw std::runtime_error("Degrees is not allowed to be convert to TOF. ");
 }
 
-double Degrees::singleFromTOF(const double tof) const {
+double Degrees::doSingleFromTOF(const double tof) const {
   UNUSED_ARG(tof);
   throw std::runtime_error("Degrees is not allwed to be converted from TOF. ");
 }

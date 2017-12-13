@@ -207,6 +207,9 @@ protected:
   /// Removes all registered 'quick conversions'
   void clearConversions() const;
 
+  virtual void doToTOF(std::vector<double> &xdata) const = 0;
+  virtual void doFromTOF(std::vector<double> &xdata) const = 0;
+
   /// The unit values have been initialized
   bool initialized;
   /// l1 ::       The source-sample distance (in metres)
@@ -244,6 +247,27 @@ typedef boost::shared_ptr<Unit> Unit_sptr;
 /// Shared pointer to the Unit base class (const version)
 typedef boost::shared_ptr<const Unit> Unit_const_sptr;
 
+template <class T> class UnitDevirtualizer : public Unit {
+public:
+  double singleToTOF(const double x) const override {
+    return static_cast<const T *>(this)->doSingleToTOF(x);
+  }
+
+  double singleFromTOF(const double tof) const override {
+    return static_cast<const T *>(this)->doSingleFromTOF(tof);
+  }
+
+protected:
+  void doToTOF(std::vector<double> &xdata) const override {
+    for (auto &x : xdata)
+      x = static_cast<const T *>(this)->singleToTOF(x);
+  }
+  void doFromTOF(std::vector<double> &xdata) const override {
+    for (auto &x : xdata)
+      x = static_cast<const T *>(this)->singleFromTOF(x);
+  }
+};
+
 //----------------------------------------------------------------------
 // Now the concrete units classes
 //----------------------------------------------------------------------
@@ -253,22 +277,19 @@ namespace Units {
 
 //=================================================================================================
 /// Empty unit
-class MANTID_KERNEL_DLL Empty : public Unit {
+class MANTID_KERNEL_DLL Empty : public UnitDevirtualizer<Empty> {
 public:
   const std::string unitID() const override; ///< "Empty"
   const std::string caption() const override { return ""; }
   const UnitLabel label() const override;
 
-  double singleToTOF(const double x) const override;
-  double singleFromTOF(const double tof) const override;
+  double doSingleToTOF(const double x) const;
+  double doSingleFromTOF(const double tof) const;
   void init() override;
   Unit *clone() const override;
 
   double conversionTOFMin() const override;
   double conversionTOFMax() const override;
-
-  /// Constructor
-  Empty() : Unit() {}
 };
 
 //=================================================================================================
@@ -293,16 +314,15 @@ private:
 
 //=================================================================================================
 /// Time of flight in microseconds
-class MANTID_KERNEL_DLL TOF : public Unit {
+class MANTID_KERNEL_DLL TOF : public UnitDevirtualizer<TOF> {
 public:
   const std::string unitID() const override; ///< "TOF"
   const std::string caption() const override { return "Time-of-flight"; }
   const UnitLabel label() const override;
 
-  TOF();
   void init() override;
-  double singleToTOF(const double x) const override;
-  double singleFromTOF(const double tof) const override;
+  double doSingleToTOF(const double x) const;
+  double doSingleFromTOF(const double tof) const;
   Unit *clone() const override;
   ///@return -DBL_MAX as ToF convertible to TOF for in any time range
   double conversionTOFMin() const override;
@@ -312,14 +332,14 @@ public:
 
 //=================================================================================================
 /// Wavelength in Angstrom
-class MANTID_KERNEL_DLL Wavelength : public Unit {
+class MANTID_KERNEL_DLL Wavelength : public UnitDevirtualizer<Wavelength> {
 public:
   const std::string unitID() const override; ///< "Wavelength"
   const std::string caption() const override { return "Wavelength"; }
   const UnitLabel label() const override;
 
-  double singleToTOF(const double x) const override;
-  double singleFromTOF(const double tof) const override;
+  double doSingleToTOF(const double x) const;
+  double doSingleFromTOF(const double tof) const;
   void init() override;
   Unit *clone() const override;
 
@@ -339,14 +359,14 @@ protected:
 
 //=================================================================================================
 /// Energy in milli-electronvolts
-class MANTID_KERNEL_DLL Energy : public Unit {
+class MANTID_KERNEL_DLL Energy : public UnitDevirtualizer<Energy> {
 public:
   const std::string unitID() const override; ///< "Energy"
   const std::string caption() const override { return "Energy"; }
   const UnitLabel label() const override;
 
-  double singleToTOF(const double x) const override;
-  double singleFromTOF(const double tof) const override;
+  double doSingleToTOF(const double x) const;
+  double doSingleFromTOF(const double tof) const;
   void init() override;
   Unit *clone() const override;
 
@@ -363,14 +383,15 @@ protected:
 
 //=================================================================================================
 /// Absolute energy in units of wavenumber (cm^-1)
-class MANTID_KERNEL_DLL Energy_inWavenumber : public Unit {
+class MANTID_KERNEL_DLL Energy_inWavenumber
+    : public UnitDevirtualizer<Energy_inWavenumber> {
 public:
   const std::string unitID() const override; ///< "Energy_inWavenumber"
   const std::string caption() const override { return "Energy"; }
   const UnitLabel label() const override;
 
-  double singleToTOF(const double x) const override;
-  double singleFromTOF(const double tof) const override;
+  double doSingleToTOF(const double x) const;
+  double doSingleFromTOF(const double tof) const;
   void init() override;
   Unit *clone() const override;
   double conversionTOFMin() const override;
@@ -386,14 +407,14 @@ protected:
 
 //=================================================================================================
 /// d-Spacing in Angstrom
-class MANTID_KERNEL_DLL dSpacing : public Unit {
+class MANTID_KERNEL_DLL dSpacing : public UnitDevirtualizer<dSpacing> {
 public:
   const std::string unitID() const override; ///< "dSpacing"
   const std::string caption() const override { return "d-Spacing"; }
   const UnitLabel label() const override;
 
-  double singleToTOF(const double x) const override;
-  double singleFromTOF(const double tof) const override;
+  double doSingleToTOF(const double x) const;
+  double doSingleFromTOF(const double tof) const;
   void init() override;
   Unit *clone() const override;
   double conversionTOFMin() const override;
@@ -409,7 +430,8 @@ protected:
 
 //=================================================================================================
 /// d-SpacingPerpendicular in Angstrom
-class MANTID_KERNEL_DLL dSpacingPerpendicular : public Unit {
+class MANTID_KERNEL_DLL dSpacingPerpendicular
+    : public UnitDevirtualizer<dSpacingPerpendicular> {
 public:
   const std::string unitID() const override; ///< "dSpacingPerpendicular"
   const std::string caption() const override {
@@ -417,8 +439,8 @@ public:
   }
   const UnitLabel label() const override;
 
-  double singleToTOF(const double x) const override;
-  double singleFromTOF(const double tof) const override;
+  double doSingleToTOF(const double x) const;
+  double doSingleFromTOF(const double tof) const;
   void init() override;
   Unit *clone() const override;
   double conversionTOFMin() const override;
@@ -436,14 +458,15 @@ protected:
 
 //=================================================================================================
 /// Momentum Transfer in Angstrom^-1
-class MANTID_KERNEL_DLL MomentumTransfer : public Unit {
+class MANTID_KERNEL_DLL MomentumTransfer
+    : public UnitDevirtualizer<MomentumTransfer> {
 public:
   const std::string unitID() const override; ///< "MomentumTransfer"
   const std::string caption() const override { return "q"; }
   const UnitLabel label() const override;
 
-  double singleToTOF(const double x) const override;
-  double singleFromTOF(const double tof) const override;
+  double doSingleToTOF(const double x) const;
+  double doSingleFromTOF(const double tof) const;
   void init() override;
   Unit *clone() const override;
   double conversionTOFMin() const override;
@@ -458,14 +481,14 @@ protected:
 
 //=================================================================================================
 /// Momentum transfer squared in Angstrom^-2
-class MANTID_KERNEL_DLL QSquared : public Unit {
+class MANTID_KERNEL_DLL QSquared : public UnitDevirtualizer<QSquared> {
 public:
   const std::string unitID() const override; ///< "QSquared"
   const std::string caption() const override { return "Q2"; }
   const UnitLabel label() const override;
 
-  double singleToTOF(const double x) const override;
-  double singleFromTOF(const double tof) const override;
+  double doSingleToTOF(const double x) const;
+  double doSingleFromTOF(const double tof) const;
   void init() override;
   Unit *clone() const override;
   double conversionTOFMin() const override;
@@ -481,14 +504,14 @@ protected:
 
 //=================================================================================================
 /// Energy transfer in milli-electronvolts
-class MANTID_KERNEL_DLL DeltaE : public Unit {
+class MANTID_KERNEL_DLL DeltaE : public UnitDevirtualizer<DeltaE> {
 public:
   const std::string unitID() const override; ///< "DeltaE"
   const std::string caption() const override { return "Energy transfer"; }
   const UnitLabel label() const override;
 
-  double singleToTOF(const double x) const override;
-  double singleFromTOF(const double tof) const override;
+  double doSingleToTOF(const double x) const;
+  double doSingleFromTOF(const double tof) const;
   void init() override;
   Unit *clone() const override;
 
@@ -540,14 +563,14 @@ public:
 
 //=================================================================================================
 /// Momentum in Angstrom^-1
-class MANTID_KERNEL_DLL Momentum : public Unit {
+class MANTID_KERNEL_DLL Momentum : public UnitDevirtualizer<Momentum> {
 public:
   const std::string unitID() const override; ///< "Momentum"
   const std::string caption() const override { return "Momentum"; }
   const UnitLabel label() const override;
 
-  double singleToTOF(const double ki) const override;
-  double singleFromTOF(const double tof) const override;
+  double doSingleToTOF(const double ki) const;
+  double doSingleFromTOF(const double tof) const;
   void init() override;
   Unit *clone() const override;
   double conversionTOFMin() const override;
@@ -572,8 +595,8 @@ public:
   const std::string caption() const override { return "Spin Echo Length"; }
   const UnitLabel label() const override;
 
-  double singleToTOF(const double x) const override;
-  double singleFromTOF(const double tof) const override;
+  double doSingleToTOF(const double x) const;
+  double doSingleFromTOF(const double tof) const;
   void init() override;
   Unit *clone() const override;
   double conversionTOFMin() const override;
@@ -591,8 +614,8 @@ public:
   const std::string caption() const override { return "Spin Echo Time"; }
   const UnitLabel label() const override;
 
-  double singleToTOF(const double x) const override;
-  double singleFromTOF(const double tof) const override;
+  double doSingleToTOF(const double x) const;
+  double doSingleFromTOF(const double tof) const;
   void init() override;
   Unit *clone() const override;
   double conversionTOFMin() const override;
@@ -604,14 +627,14 @@ public:
 
 //=================================================================================================
 /// Time In Second
-class MANTID_KERNEL_DLL Time : public Unit {
+class MANTID_KERNEL_DLL Time : public UnitDevirtualizer<Time> {
 public:
   const std::string unitID() const override; ///< "Time"
   const std::string caption() const override { return "t"; }
   const UnitLabel label() const override;
 
-  double singleToTOF(const double x) const override;
-  double singleFromTOF(const double tof) const override;
+  double doSingleToTOF(const double x) const;
+  double doSingleFromTOF(const double tof) const;
   double conversionTOFMax() const override;
   double conversionTOFMin() const override;
   void init() override;
@@ -637,8 +660,8 @@ public:
   void init() override;
   Unit *clone() const override;
 
-  double singleToTOF(const double x) const override;
-  double singleFromTOF(const double tof) const override;
+  double doSingleToTOF(const double x) const;
+  double doSingleFromTOF(const double tof) const;
   double conversionTOFMin() const override;
   double conversionTOFMax() const override;
 
