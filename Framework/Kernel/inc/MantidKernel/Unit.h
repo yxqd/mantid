@@ -595,8 +595,8 @@ public:
   const std::string caption() const override { return "Spin Echo Length"; }
   const UnitLabel label() const override;
 
-  double doSingleToTOF(const double x) const;
-  double doSingleFromTOF(const double tof) const;
+  double singleToTOF(const double x) const override;
+  double singleFromTOF(const double tof) const override;
   void init() override;
   Unit *clone() const override;
   double conversionTOFMin() const override;
@@ -614,8 +614,8 @@ public:
   const std::string caption() const override { return "Spin Echo Time"; }
   const UnitLabel label() const override;
 
-  double doSingleToTOF(const double x) const;
-  double doSingleFromTOF(const double tof) const;
+  double singleToTOF(const double x) const override;
+  double singleFromTOF(const double tof) const override;
   void init() override;
   Unit *clone() const override;
   double conversionTOFMin() const override;
@@ -660,8 +660,8 @@ public:
   void init() override;
   Unit *clone() const override;
 
-  double doSingleToTOF(const double x) const;
-  double doSingleFromTOF(const double tof) const;
+  double singleToTOF(const double x) const override;
+  double singleFromTOF(const double tof) const override;
   double conversionTOFMin() const override;
   double conversionTOFMax() const override;
 

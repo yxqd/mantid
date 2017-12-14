@@ -1089,7 +1089,7 @@ void SpinEchoLength::init() {
   Wavelength::init();
 }
 
-double SpinEchoLength::doSingleToTOF(const double x) const {
+double SpinEchoLength::singleToTOF(const double x) const {
   double wavelength = sqrt(x / efixed);
   double tof = Wavelength::singleToTOF(wavelength);
   return tof;
@@ -1108,7 +1108,7 @@ double SpinEchoLength::conversionTOFMax() const {
   return sel;
 }
 
-double SpinEchoLength::doSingleFromTOF(const double tof) const {
+double SpinEchoLength::singleFromTOF(const double tof) const {
   double wavelength = Wavelength::singleFromTOF(tof);
   double x = efixed * wavelength * wavelength;
   return x;
@@ -1140,7 +1140,7 @@ void SpinEchoTime::init() {
   Wavelength::init();
 }
 
-double SpinEchoTime::doSingleToTOF(const double x) const {
+double SpinEchoTime::singleToTOF(const double x) const {
   double wavelength = pow(x / efixed, 1.0 / 3.0);
   double tof = Wavelength::singleToTOF(wavelength);
   return tof;
@@ -1153,7 +1153,7 @@ double SpinEchoTime::conversionTOFMax() const {
   return tm;
 }
 
-double SpinEchoTime::doSingleFromTOF(const double tof) const {
+double SpinEchoTime::singleFromTOF(const double tof) const {
   double wavelength = Wavelength::singleFromTOF(tof);
   double x = efixed * wavelength * wavelength * wavelength;
   return x;
@@ -1210,12 +1210,12 @@ const UnitLabel Degrees::label() const { return m_label; }
 
 void Degrees::init() {}
 
-double Degrees::doSingleToTOF(const double x) const {
+double Degrees::singleToTOF(const double x) const {
   UNUSED_ARG(x);
   throw std::runtime_error("Degrees is not allowed to be convert to TOF. ");
 }
 
-double Degrees::doSingleFromTOF(const double tof) const {
+double Degrees::singleFromTOF(const double tof) const {
   UNUSED_ARG(tof);
   throw std::runtime_error("Degrees is not allwed to be converted from TOF. ");
 }

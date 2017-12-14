@@ -120,6 +120,16 @@ class UnitTest : public CxxTest::TestSuite {
     }
 
     Unit *clone() const override { return new UnitTester(); }
+
+  protected:
+    void doToTOF(std::vector<double> &xdata) const override {
+      for (auto &x : xdata)
+        x = singleToTOF(x);
+    }
+    void doFromTOF(std::vector<double> &xdata) const override {
+      for (auto &x : xdata)
+        x = singleFromTOF(x);
+    }
   };
 
 public:
