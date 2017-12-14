@@ -50,6 +50,56 @@ std::map<std::string, std::string> inverseLabel = {{"s", "Hz"},
                                                    {"Angstrom^-1", "Angstrom"}};
 // A threshold for small singular values
 const double THRESHOLD = 1E-6;
+MatrixWorkspace_const_sptr addPadding(const MatrixWorkspace_const_sptr &ws,const size_t pointsToAdd) {
+
+	auto &xData = ws->x(0);
+	auto &yData = ws->y(0);
+	auto &eData = ws->e(0);
+	auto incEData = eData.size() > 0 ? true : false;
+	// assume approx evenly spaced
+	if (xData.size() < 2) {
+		throw std::invalid_argument("The xData does not contain "
+			"enought data points to add padding"
+			"dx = 0");
+	}	
+	const double dx = xData[1] - xData[0];
+	const auto dataSize = yData.size() + pointsToAdd;
+
+	// Create histogram with the same structure as histogram
+	MatrixWorkspace_sptr result = WorkspaceFactory::Instance().create(ws, ws->getNumberHistograms(), dataSize, dataSize);
+	for (size_t spec = 0; spec<ws->getNumberHistograms(); spec++) {
+		// Resize result to new size.
+		auto hist=result->histogram(spec);
+		auto &newXData = hist.mutableX();
+		auto &newYData = hist.mutableY();
+		auto &newEData = hist.mutableE();
+
+		// Start x counter at 1 dx below the first value to make
+		// the std::generate algorithm work correctly.
+		double x = xData.front() - dx;
+
+		// This covers all x values, no need to copy from xData
+		std::generate(newXData.begin(), newXData.end(), [&x, &dx] {
+			x += dx;
+			return x;
+		});
+		// Do not rely on Histogram::resize to fill the extra elements with 0s
+		// Fill in all ys with 0s first
+		std::fill(newYData.begin(), newYData.end(), 0.0);
+		// Then copy the old yData to the appropriate positions
+		std::copy(yData.begin(), yData.end(), newYData.begin());
+
+		if (incEData) {
+			// The same reasoning as for ys
+			std::fill(newEData.begin(), newEData.end(), 100000.0);
+			std::copy(eData.begin(), eData.end(), newEData.begin());
+		}
+		result->setHistogram(spec, hist);
+	}
+	return result->clone();
+}
+
+
 }
 
 //----------------------------------------------------------------------------------------------
@@ -248,10 +298,15 @@ void MaxEnt::exec() {
   const size_t alphaIter = getProperty("AlphaChopIterations");
   // Number of spectra and datapoints
   // Read input workspace
-  MatrixWorkspace_const_sptr inWS = getProperty("InputWorkspace");
+  size_t numberToAdd = 0;	  
+  MatrixWorkspace_const_sptr inputWS = getProperty("InputWorkspace");
+
   if (powerOfTwo) {
-	  int numberOfPoints = inWS->readX(0).size();
+	  size_t numberOfPoints = inputWS->readX(0).size();
+	  double riseToPower = ceil(log(numberOfPoints) / log(2.0));
+	  numberToAdd = static_cast<size_t>(pow(2., riseToPower)) - numberOfPoints;
   }
+	  MatrixWorkspace_const_sptr inWS = addPadding(inputWS, numberToAdd);
   // Number of spectra
   size_t nspec = inWS->getNumberHistograms();
   // Number of data points - assumed to be constant between spectra or
@@ -408,7 +463,7 @@ void MaxEnt::exec() {
 
   } // Next spectrum
 
-  setProperty("EvolChi", outEvolChi);
+  setProperty("EvolChi",  outEvolChi);
   setProperty("EvolAngle", outEvolTest);
   setProperty("ReconstructedImage", outImageWS);
   setProperty("ReconstructedData", outDataWS);
