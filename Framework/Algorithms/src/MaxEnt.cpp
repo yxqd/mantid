@@ -110,6 +110,10 @@ void MaxEnt::init() {
                   "X axis is assumed to be in the first bin. If it is not, "
                   "setting this property will automatically correct for this.");
 
+  declareProperty("PadToPowerOfTwo", false,
+	  "Automatically pad the data to a power of two."
+	  "This is done after the resolution factor");
+
   auto mustBePositive = boost::make_shared<BoundedValidator<size_t>>();
   mustBePositive->setLower(0);
   declareProperty(make_unique<PropertyWithValue<size_t>>(
@@ -224,6 +228,8 @@ void MaxEnt::exec() {
   const bool positiveImage = getProperty("PositiveImage");
   // Autoshift
   const bool autoShift = getProperty("AutoShift");
+  // rounding
+  const bool powerOfTwo = getProperty("PadToPowerOfTwo");
   // Increase the number of points in the image by this factor
   const size_t resolutionFactor = getProperty("ResolutionFactor");
   // Background (default level, sky background, etc)
@@ -243,6 +249,9 @@ void MaxEnt::exec() {
   // Number of spectra and datapoints
   // Read input workspace
   MatrixWorkspace_const_sptr inWS = getProperty("InputWorkspace");
+  if (powerOfTwo) {
+	  int numberOfPoints = inWS->readX(0).size();
+  }
   // Number of spectra
   size_t nspec = inWS->getNumberHistograms();
   // Number of data points - assumed to be constant between spectra or
