@@ -15,25 +15,20 @@ def _normalize_by_index(workspace, index):
     @param workspace    The workspace to normalize.
     @param index        The index of the y-value to normalize by.
     """
-
-    num_hist = workspace.getNumberHistograms()
-
-    # Normalize each spectrum in the workspace
-    for idx in range(0, num_hist):
-        y_vals = workspace.readY(idx)
-        y_vals_e = workspace.readE(idx)
-        scale = y_vals[index]
-        scale_e = y_vals_e[index]
-        y_vals_scaled = y_vals / scale
-        # error propagation: C = A / B ; dC = sqrt( (dA/B)^2 + (A*dB/B^2)^2 ) ||
-        # !! wrong for A=B (index by which is scaled = index) !!
-        if idx == index:
-            y_vals_e_scaled = y_vals_e / scale
-        else:
-            y_vals_e_scaled = np.sqrt((y_vals_e / scale) ** 2 + (y_vals_scaled * scale_e / scale) ** 2)
-        workspace.setY(idx, y_vals_scaled)
-        workspace.setE(idx, y_vals_e_scaled)
-
+    y_vals = workspace.extractY()
+    y_vals_e = workspace.extractE()
+    scale = y_vals[:,index]
+    scale_e = y_vals_e[:,index]
+    np.reciprocal(scale, out=scale)
+    np.einsum('ij,i->ij', y_vals, scale, out=y_vals)
+    # error propagation: C = A / B ; dC = sqrt( (dA/B)^2 + (A*dB/B^2)^2 ) ||
+    # !! wrong for A=B (index by which is scaled = index) !!
+    a = np.einsum('ij,i->ij', y_vals_e, scale)
+    b = np.einsum('ij,i->ij', y_vals, scale_e * scale)
+    np.sqrt(a ** 2 + b ** 2, out=y_vals_e)
+    y_vals_e[index] = a[index]
+    workspace.setY(y_vals)
+    workspace.setE(y_vals_e)
 
 def _append_workspaces(workspace1, workspace2):
     """
