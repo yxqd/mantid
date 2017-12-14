@@ -97,9 +97,9 @@ std::string convert_units_check_range(const Unit &aUnit,
 
 class UnitTest : public CxxTest::TestSuite {
 
-  class UnitTester : public Unit {
+  class UnitTester : public UnitDevirtualizer<UnitTester> {
   public:
-    UnitTester() : Unit() {
+    UnitTester() {
       addConversion("a", 1.1);
       addConversion("b", 2.2, 0.5);
     }
@@ -110,8 +110,8 @@ class UnitTest : public CxxTest::TestSuite {
     const std::string caption() const override { return ""; }
     const UnitLabel label() const override { return UnitLabel(""); }
     void init() override {}
-    double singleToTOF(const double) const override { return 0; }
-    double singleFromTOF(const double) const override { return 0; }
+    double doSingleToTOF(const double) const { return 0; }
+    double doSingleFromTOF(const double) const { return 0; }
     double conversionTOFMax() const override {
       return std::numeric_limits<double>::quiet_NaN();
     }
@@ -120,16 +120,6 @@ class UnitTest : public CxxTest::TestSuite {
     }
 
     Unit *clone() const override { return new UnitTester(); }
-
-  protected:
-    void doToTOF(std::vector<double> &xdata) const override {
-      for (auto &x : xdata)
-        x = singleToTOF(x);
-    }
-    void doFromTOF(std::vector<double> &xdata) const override {
-      for (auto &x : xdata)
-        x = singleFromTOF(x);
-    }
   };
 
 public:

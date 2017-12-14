@@ -4765,14 +4765,16 @@ template <class T>
 void EventList::convertUnitsViaTofHelper(typename std::vector<T> &events,
                                          Mantid::Kernel::Unit *fromUnit,
                                          Mantid::Kernel::Unit *toUnit) {
-  auto itev = events.begin();
-  auto itev_end = events.end();
-  for (; itev != itev_end; itev++) {
-    // Conver to TOF
-    double tof = fromUnit->singleToTOF(itev->m_tof);
-    // And back from TOF to whatever
-    itev->m_tof = toUnit->singleFromTOF(tof);
-  }
+  fromUnit->toTOF(events);
+  toUnit->fromTOF(events);
+  // auto itev = events.begin();
+  // auto itev_end = events.end();
+  // for (; itev != itev_end; itev++) {
+  //  // Conver to TOF
+  //  double tof = fromUnit->singleToTOF(itev->m_tof);
+  //  // And back from TOF to whatever
+  //  itev->m_tof = toUnit->singleFromTOF(tof);
+  //}
 }
 
 //--------------------------------------------------------------------------

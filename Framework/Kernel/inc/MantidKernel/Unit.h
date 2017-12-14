@@ -5,6 +5,7 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidKernel/UnitLabel.h"
+#include "MantidTypes/Event/TofEvent.h"
 #include <vector>
 #ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
@@ -13,6 +14,10 @@
 #include "tbb/concurrent_unordered_map.h"
 
 namespace Mantid {
+namespace DataObjects {
+class WeightedEvent;
+class WeightedEventNoTime;
+}
 namespace Kernel {
 
 /** The base units (abstract) class. All concrete units should inherit from
@@ -97,6 +102,9 @@ public:
   void toTOF(std::vector<double> &xdata, std::vector<double> &ydata,
              const double &_l1, const double &_l2, const double &_twoTheta,
              const int &_emode, const double &_efixed, const double &_delta);
+  template <class EventT> void toTOF(std::vector<EventT> &data) const {
+    doToTOF(data);
+  }
 
   /** Convert from the concrete unit to time-of-flight. TOF is in microseconds.
    *  @param xvalue ::   A single X-value to convert
@@ -132,6 +140,9 @@ public:
   void fromTOF(std::vector<double> &xdata, std::vector<double> &ydata,
                const double &_l1, const double &_l2, const double &_twoTheta,
                const int &_emode, const double &_efixed, const double &_delta);
+  template <class EventT> void fromTOF(std::vector<EventT> &data) {
+    doFromTOF(data);
+  }
 
   /** Convert from the time-of-flight to the concrete unit. TOF is in
    * microseconds.
@@ -209,6 +220,16 @@ protected:
 
   virtual void doToTOF(std::vector<double> &xdata) const = 0;
   virtual void doFromTOF(std::vector<double> &xdata) const = 0;
+  virtual void doToTOF(std::vector<Types::Event::TofEvent> &xdata) const = 0;
+  virtual void doFromTOF(std::vector<Types::Event::TofEvent> &xdata) const = 0;
+  virtual void
+  doToTOF(std::vector<DataObjects::WeightedEvent> &xdata) const = 0;
+  virtual void
+  doFromTOF(std::vector<DataObjects::WeightedEvent> &xdata) const = 0;
+  virtual void
+  doToTOF(std::vector<DataObjects::WeightedEventNoTime> &xdata) const = 0;
+  virtual void
+  doFromTOF(std::vector<DataObjects::WeightedEventNoTime> &xdata) const = 0;
 
   /// The unit values have been initialized
   bool initialized;
@@ -266,6 +287,33 @@ protected:
     for (auto &x : xdata)
       x = static_cast<const T *>(this)->doSingleFromTOF(x);
   }
+  void doToTOF(std::vector<Types::Event::TofEvent> &xdata) const override {
+    for (auto &x : xdata)
+      x.m_tof = static_cast<const T *>(this)->doSingleToTOF(x.m_tof);
+  }
+  void doFromTOF(std::vector<Types::Event::TofEvent> &xdata) const override {
+    for (auto &x : xdata)
+      x.m_tof = static_cast<const T *>(this)->doSingleFromTOF(x.m_tof);
+  }
+  void doToTOF(std::vector<DataObjects::WeightedEvent> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void
+  doFromTOF(std::vector<DataObjects::WeightedEvent> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void
+  doToTOF(std::vector<DataObjects::WeightedEventNoTime> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void doFromTOF(
+      std::vector<DataObjects::WeightedEventNoTime> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
 };
 
 //----------------------------------------------------------------------
@@ -321,8 +369,16 @@ public:
   const UnitLabel label() const override;
 
   void init() override;
-  double doSingleToTOF(const double x) const;
-  double doSingleFromTOF(const double tof) const;
+
+  double doSingleToTOF(const double x) const {
+    // Nothing to do
+    return x;
+  }
+
+  double doSingleFromTOF(const double tof) const {
+    // Nothing to do
+    return tof;
+  }
   Unit *clone() const override;
   ///@return -DBL_MAX as ToF convertible to TOF for in any time range
   double conversionTOFMin() const override;
@@ -338,8 +394,20 @@ public:
   const std::string caption() const override { return "Wavelength"; }
   const UnitLabel label() const override;
 
-  double doSingleToTOF(const double x) const;
-  double doSingleFromTOF(const double tof) const;
+  double doSingleToTOF(const double x) const {
+    double tof = x * factorTo;
+    // If Direct or Indirect we want to correct TOF values..
+    if (emode == 1 || emode == 2)
+      tof += sfpTo;
+    return tof;
+  }
+  double doSingleFromTOF(const double tof) const {
+    double x = tof;
+    if (do_sfpFrom)
+      x -= sfpFrom;
+    x *= factorFrom;
+    return x;
+  }
   void init() override;
   Unit *clone() const override;
 
@@ -413,8 +481,8 @@ public:
   const std::string caption() const override { return "d-Spacing"; }
   const UnitLabel label() const override;
 
-  double doSingleToTOF(const double x) const;
-  double doSingleFromTOF(const double tof) const;
+  double doSingleToTOF(const double x) const { return x * factorTo; }
+  double doSingleFromTOF(const double tof) const { return tof / factorFrom; }
   void init() override;
   Unit *clone() const override;
   double conversionTOFMin() const override;
@@ -614,6 +682,33 @@ private:
     for (auto &x : xdata)
       x = singleFromTOF(x);
   }
+  void doToTOF(std::vector<Types::Event::TofEvent> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void doFromTOF(std::vector<Types::Event::TofEvent> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void doToTOF(std::vector<DataObjects::WeightedEvent> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void
+  doFromTOF(std::vector<DataObjects::WeightedEvent> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void
+  doToTOF(std::vector<DataObjects::WeightedEventNoTime> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void doFromTOF(
+      std::vector<DataObjects::WeightedEventNoTime> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
 };
 
 //=================================================================================================
@@ -642,6 +737,33 @@ private:
   void doFromTOF(std::vector<double> &xdata) const override {
     for (auto &x : xdata)
       x = singleFromTOF(x);
+  }
+  void doToTOF(std::vector<Types::Event::TofEvent> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void doFromTOF(std::vector<Types::Event::TofEvent> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void doToTOF(std::vector<DataObjects::WeightedEvent> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void
+  doFromTOF(std::vector<DataObjects::WeightedEvent> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void
+  doToTOF(std::vector<DataObjects::WeightedEventNoTime> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void doFromTOF(
+      std::vector<DataObjects::WeightedEventNoTime> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
   }
 };
 
@@ -693,6 +815,33 @@ private:
   void doFromTOF(std::vector<double> &xdata) const override {
     for (auto &x : xdata)
       x = singleFromTOF(x);
+  }
+  void doToTOF(std::vector<Types::Event::TofEvent> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void doFromTOF(std::vector<Types::Event::TofEvent> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void doToTOF(std::vector<DataObjects::WeightedEvent> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void
+  doFromTOF(std::vector<DataObjects::WeightedEvent> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void
+  doToTOF(std::vector<DataObjects::WeightedEventNoTime> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
+  }
+  void doFromTOF(
+      std::vector<DataObjects::WeightedEventNoTime> &xdata) const override {
+    static_cast<void>(xdata);
+    throw std::runtime_error("");
   }
 
 private:

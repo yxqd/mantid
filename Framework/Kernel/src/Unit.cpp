@@ -271,16 +271,6 @@ const UnitLabel TOF::label() const { return Symbol::Microsecond; }
 
 void TOF::init() {}
 
-double TOF::doSingleToTOF(const double x) const {
-  // Nothing to do
-  return x;
-}
-
-double TOF::doSingleFromTOF(const double tof) const {
-  // Nothing to do
-  return tof;
-}
-
 Unit *TOF::clone() const { return new TOF(*this); }
 double TOF::conversionTOFMin() const { return -DBL_MAX; }
 ///@return DBL_MAX as ToF convetanble to TOF for in any time range
@@ -375,20 +365,6 @@ void Wavelength::init() {
   factorFrom *= toAngstroms / TOFisinMicroseconds;
 }
 
-double Wavelength::doSingleToTOF(const double x) const {
-  double tof = x * factorTo;
-  // If Direct or Indirect we want to correct TOF values..
-  if (emode == 1 || emode == 2)
-    tof += sfpTo;
-  return tof;
-}
-double Wavelength::doSingleFromTOF(const double tof) const {
-  double x = tof;
-  if (do_sfpFrom)
-    x -= sfpFrom;
-  x *= factorFrom;
-  return x;
-}
 ///@return  Minimal time of flight, which can be reversively converted into
 /// wavelength
 double Wavelength::conversionTOFMin() const {
@@ -570,10 +546,6 @@ void dSpacing::init() {
     factorFrom = DBL_MIN; // Protect against divide by zero
 }
 
-double dSpacing::doSingleToTOF(const double x) const { return x * factorTo; }
-double dSpacing::doSingleFromTOF(const double tof) const {
-  return tof / factorFrom;
-}
 double dSpacing::conversionTOFMin() const { return 0; }
 double dSpacing::conversionTOFMax() const { return DBL_MAX / factorTo; }
 

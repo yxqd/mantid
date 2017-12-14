@@ -38,7 +38,6 @@ protected:
    * will have
    *  the unit of time-of-flight in microseconds.
    */
-  double m_tof;
 
   /**
    * The absolute time of the start of the pulse that generated this event.
@@ -49,9 +48,10 @@ protected:
    * 64 bits gives 1 ns resolution up to +- 292 years around 1990. Should be
    *enough.
    */
-  Core::DateAndTime m_pulsetime;
 
 public:
+  double m_tof;
+  Core::DateAndTime m_pulsetime;
   /// Constructor, specifying only the time of flight in microseconds
   TofEvent(double tof);
 
