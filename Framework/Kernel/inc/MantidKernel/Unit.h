@@ -260,11 +260,11 @@ public:
 protected:
   void doToTOF(std::vector<double> &xdata) const override {
     for (auto &x : xdata)
-      x = static_cast<const T *>(this)->singleToTOF(x);
+      x = static_cast<const T *>(this)->doSingleToTOF(x);
   }
   void doFromTOF(std::vector<double> &xdata) const override {
     for (auto &x : xdata)
-      x = static_cast<const T *>(this)->singleFromTOF(x);
+      x = static_cast<const T *>(this)->doSingleFromTOF(x);
   }
 };
 
@@ -604,6 +604,16 @@ public:
 
   /// Constructor
   SpinEchoLength();
+
+private:
+  void doToTOF(std::vector<double> &xdata) const override {
+    for (auto &x : xdata)
+      x = singleToTOF(x);
+  }
+  void doFromTOF(std::vector<double> &xdata) const override {
+    for (auto &x : xdata)
+      x = singleFromTOF(x);
+  }
 };
 
 //=================================================================================================
@@ -623,6 +633,16 @@ public:
 
   /// Constructor
   SpinEchoTime();
+
+private:
+  void doToTOF(std::vector<double> &xdata) const override {
+    for (auto &x : xdata)
+      x = singleToTOF(x);
+  }
+  void doFromTOF(std::vector<double> &xdata) const override {
+    for (auto &x : xdata)
+      x = singleFromTOF(x);
+  }
 };
 
 //=================================================================================================
@@ -664,6 +684,16 @@ public:
   double singleFromTOF(const double tof) const override;
   double conversionTOFMin() const override;
   double conversionTOFMax() const override;
+
+private:
+  void doToTOF(std::vector<double> &xdata) const override {
+    for (auto &x : xdata)
+      x = singleToTOF(x);
+  }
+  void doFromTOF(std::vector<double> &xdata) const override {
+    for (auto &x : xdata)
+      x = singleFromTOF(x);
+  }
 
 private:
   UnitLabel m_label;
