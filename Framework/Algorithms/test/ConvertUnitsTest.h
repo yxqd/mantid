@@ -838,6 +838,24 @@ public:
         "Load", "Filename=HET15869;OutputWorkspace=hist_tof");
     FrameworkManager::Instance().exec(
         "Load", "Filename=CNCS_7860_event;OutputWorkspace=event_tof");
+    auto ws =
+        AnalysisDataService::Instance().retrieveWS<EventWorkspace>("event_tof");
+    printf("%lu\n", ws->getNumberEvents());
+    ws += ws;
+    ws += ws;
+    ws += ws;
+    ws += ws;
+    ws += ws;
+    ws += ws;
+    ws += ws;
+    ws += ws;
+    ws += ws;
+    ws += ws;
+    ws += ws;
+    ws += ws;
+    printf("%lu\n", ws->getNumberEvents());
+    AnalysisDataService::Instance().addOrReplace("event_tof", ws);
+
     std::string WSname = "inputWS";
     setup_Points_WS(WSname);
   }
@@ -874,15 +892,23 @@ public:
   }
 
   void test_event_workspace() {
-    IAlgorithm *alg;
+    ConvertUnits alg;
+    alg.initialize();
+    alg.setPropertyValue("InputWorkspace", "event_tof");
+    alg.setPropertyValue("OutputWorkspace", "event_tof");
+    alg.setProperty("Target", "Wavelength");
+    alg.execute();
+
+    /*
     alg = FrameworkManager::Instance().exec(
-        "ConvertUnits", "InputWorkspace=event_tof;OutputWorkspace=event_wave;"
+        "ConvertUnits", "InputWorkspace=event_tof;OutputWorkspace=event_tof;"
                         "Target=Wavelength");
     TS_ASSERT(alg->isExecuted());
     alg = FrameworkManager::Instance().exec(
-        "ConvertUnits", "InputWorkspace=event_wave;OutputWorkspace=event_"
+        "ConvertUnits", "InputWorkspace=event_tof;OutputWorkspace=event_tof"
                         "dSpacing;Target=dSpacing");
     TS_ASSERT(alg->isExecuted());
+    */
   }
 
 private:
