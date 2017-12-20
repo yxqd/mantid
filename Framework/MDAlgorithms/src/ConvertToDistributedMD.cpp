@@ -17,13 +17,112 @@
 #include <fstream>
 
 #include <chrono>
-#include <fstream>
+
 
 namespace {
-  std::vector<double> cpuClock;
-  std::vector<double> wallClock;
-  constexpr bool measure = true;
-  const std::string fileNameBase = "/home/anton/builds/Mantid_debug_clion/mpi_test/results/result_";
+  class TimerParallel {
+  public:
+    TimerParallel(const Mantid::Parallel::Communicator& comm) : comm(comm) {
+      m_start_cpu_total = std::clock();
+      m_start_wall_total = std::chrono::high_resolution_clock::now();
+    }
+
+    void start () {
+      m_start_cpu = std::clock();
+      m_start_wall = std::chrono::high_resolution_clock::now();
+    }
+
+    void stop () {
+      auto stop_cpu = std::clock();
+      auto stop_wall = std::chrono::high_resolution_clock::now();
+      m_times_cpu.emplace_back((stop_cpu - m_start_cpu)/CLOCKS_PER_SEC);
+      m_times_wall.emplace_back(std::chrono::duration<double>(stop_wall - m_start_wall).count());
+    };
+
+    void recordNumEvents(size_t numEvents) {
+      m_numEvents = numEvents;
+    }
+
+    void dump() {
+      // Measure the total time
+      auto stop_cpu = std::clock();
+      auto stop_wall = std::chrono::high_resolution_clock::now();
+      m_times_cpu.emplace_back((stop_cpu - m_start_cpu_total)/CLOCKS_PER_SEC);
+      m_times_wall.emplace_back(std::chrono::duration<double>(stop_wall - m_start_wall_total).count());
+
+      // -----------------
+      // Receive times
+      std::vector<Mantid::Parallel::Request> requests;
+      std::vector<double> times_cpu;
+      std::vector<double> times_wall;
+      if (comm.rank() == 0) {
+        const auto numRanks = comm.size();
+        const auto size = m_times_cpu.size();
+
+        std::copy(m_times_cpu.begin(), m_times_cpu.end(), times_cpu.begin());
+        std::copy(m_times_wall.begin(), m_times_wall.end(), times_wall.begin());
+
+        times_cpu.resize(numRanks*size);
+        times_wall.resize(numRanks*size);
+        const auto offset = m_times_cpu.size();
+        for (int rank = 1; rank < numRanks; ++rank) {
+          requests.emplace_back(comm.irecv(rank, 1, times_cpu.data()+offset, static_cast<int>(size)));
+          requests.emplace_back(comm.irecv(rank, 2, m_times_wall.data()+offset, static_cast<int>(size)));
+        }
+      } else {
+        requests.emplace_back(comm.isend(0, 1, m_times_cpu.data(), static_cast<int>(m_times_cpu.size())));
+        requests.emplace_back(comm.isend(0, 2, m_times_wall.data(), static_cast<int>(m_times_wall.size())));
+      }
+      wait_all(requests.begin(), requests.end());
+      std::vector<Mantid::Parallel::Request>().swap(requests);
+
+      // -----------------
+      // Receive other
+      std::vector<size_t> numEvents(static_cast<size_t>(comm.size()));
+      if (comm.rank() == 0) {
+        Mantid::Parallel::gather(comm, m_numEvents, numEvents, 0);
+      } else {
+        Mantid::Parallel::gather(comm, m_numEvents, 0);
+      }
+
+      // -----------------
+      // Save to file
+      if (comm.rank() == 0) {
+        // Save times
+        const auto size = comm.size();
+        std::string fileName = fileNameBase + std::to_string(size) + std::string(".txt");
+        std::fstream stream;
+        stream.open(fileName, std::ios::out | std::ios::app);
+        for (auto index=0ul; index < times_cpu.size(); ++index) {
+           stream << times_cpu[index] <<","<< times_wall[index] <<"\n";
+        }
+
+        // Save other
+        saveOther(stream, numEvents);
+
+        stream.close();
+      }
+    }
+
+  private:
+    void saveOther(std::fstream& stream, const std::vector<size_t>& other) {
+      for (auto index = 0ul; index < other.size()-1; ++index) {
+        stream << other[index] << ",";
+      }
+      stream << other[other.size()-1] <<"\n";
+    }
+
+    std::clock_t m_start_cpu_total;
+    std::chrono::system_clock::time_point m_start_wall_total;
+    std::clock_t m_start_cpu;
+    std::chrono::system_clock::time_point m_start_wall;
+    std::vector<double> m_times_cpu;
+    std::vector<double> m_times_wall;
+    const Mantid::Parallel::Communicator& comm;
+    const std::string fileNameBase = "/home/anton/builds/Mantid_debug_clion/mpi_test/results/result_";
+    size_t m_numEvents;
+  };
+
 }
 
 
@@ -185,103 +284,73 @@ void ConvertToDistributedMD::exec() {
   // 8. Enable the box controller and start splitting the data
   // 9. Ensure that the fileIDs and the box controller stats are correct.
   // 10. Maybe save in this algorithm already
-
-  const auto startTotalCPU = std::clock();
-  const auto startTotalWall = std::chrono::high_resolution_clock::now();
+  TimerParallel timer(this->communicator());
 
 
   // Get the users's inputs
   EventWorkspace_sptr inputWorkspace = getProperty("InputWorkspace");
-  auto start_cpu = std::clock();
-  auto start_wall = std::chrono::high_resolution_clock::now();
   {
     // ----------------------------------------------------------
     // 1. Get a n-percent fraction
     // ----------------------------------------------------------
     double fraction = getProperty("Fraction");
+    timer.start();
     auto nPercentEvents = getFractionEvents(*inputWorkspace, fraction);
+    timer.stop();
 
     // -----------------------------------------------------------------
     // 2. + 3. = 4.  Get the preliminary box structure and the partition
     // behaviour
     // -----------------------------------------------------------------
+    timer.start();
     setupPreliminaryBoxStructure(nPercentEvents);
+    timer.stop();
   }
-  auto stop_cpu = std::clock();
-  auto stop_wall = std::chrono::high_resolution_clock::now();
-  cpuClock.emplace_back(stop_cpu - start_cpu);
-  wallClock.emplace_back(std::chrono::duration<double, std::milli>(stop_wall - start_wall).count());
 
   // ----------------------------------------------------------
   // 5. Convert all events
   // ----------------------------------------------------------
-  start_cpu = std::clock();
-  start_wall = std::chrono::high_resolution_clock::now();
   {
+    timer.start();
     auto allEvents = getFractionEvents(*inputWorkspace, 1.);
+    timer.stop();
 
     // ----------------------------------------------------------
     // 6. Add the local data to the preliminary box structure
     // ----------------------------------------------------------
+    timer.start();
     addEventsToPreliminaryBoxStructure(allEvents);
+    timer.stop();
   }
-  stop_cpu = std::clock();
-  stop_wall = std::chrono::high_resolution_clock::now();
-  cpuClock.emplace_back(stop_cpu - start_cpu);
-  wallClock.emplace_back(std::chrono::duration<double, std::milli>(stop_wall - start_wall).count());
 
   // ------------------------------------------------------
   // 7. Redistribute data
   // ----------------------------------------------------------
-  start_cpu = std::clock();
-  start_wall = std::chrono::high_resolution_clock::now();
+  timer.start();
   redistributeData();
-  stop_cpu = std::clock();
-  stop_wall = std::chrono::high_resolution_clock::now();
-  cpuClock.emplace_back(stop_cpu - start_cpu);
-  wallClock.emplace_back(std::chrono::duration<double, std::milli>(stop_wall - start_wall).count());
+  timer.stop();
+
 
   // ----------------------------------------------------------
   // 8. Continue to split locally
   // ----------------------------------------------------------
-  start_cpu = std::clock();
-  start_wall = std::chrono::high_resolution_clock::now();
+  timer.start();
   continueSplitting();
-  stop_cpu = std::clock();
-  stop_wall = std::chrono::high_resolution_clock::now();
-  cpuClock.emplace_back(stop_cpu - start_cpu);
-  wallClock.emplace_back(std::chrono::duration<double, std::milli>(stop_wall - start_wall).count());
+  timer.stop();
+
   // --------------------------------------- -------------------
   // 9. Ensure that box controller and fileIDs are correct
   // ----------------------------------------------------------
-  start_cpu = std::clock();
-  start_wall = std::chrono::high_resolution_clock::now();
+  timer.start();
   updateMetaData();
-  stop_cpu = std::clock();
-  stop_wall = std::chrono::high_resolution_clock::now();
-  cpuClock.emplace_back(stop_cpu - start_cpu);
-  wallClock.emplace_back(std::chrono::duration<double, std::milli>(stop_wall - start_wall).count());
-
-  cpuClock.emplace_back(std::clock() - startTotalCPU);
-  wallClock.emplace_back(std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - startTotalWall).count());
-
-  if (measure) {
-    const auto rank = this->communicator().rank();
-    const auto size = this->communicator().size();
-    std::string fileName = fileNameBase +std::to_string(size) + std::string("__") + std::to_string(rank) + std::string(".txt");
-    std::fstream stream;
-    stream.open(fileName, std::ios::out | std::ios::app);
-    for (auto index=0ul; index < wallClock.size(); ++index) {
-      stream << wallClock[index]/1000. <<","<< cpuClock[index]/CLOCKS_PER_SEC <<"\n";
-    }
-    stream << m_boxStructureInformation.boxStructure->getNPoints() <<"," <<m_boxStructureInformation.boxStructure->getSignal() <<"\n";
-    stream.close();
-  }
+  timer.stop();
 
   // ----------------------------------------------------------
   // 9. Save?
   // ----------------------------------------------------------
-
+  const auto numEvents = m_boxStructureInformation.boxStructure->getNPoints();
+  timer.recordNumEvents(numEvents);
+  timer.dump();
 }
 
 
@@ -400,13 +469,15 @@ void ConvertToDistributedMD::setRankResponsibilityMap() {
 
 void ConvertToDistributedMD::sendMDEventsToMaster(
   const Mantid::Parallel::Communicator &communicator,
-  const MDEventList &mdEvents) const {
+  MDEventList &mdEvents) const {
   // Send the totalNumberOfEvents
   auto totalNumberEvents = mdEvents.size();
   gather(communicator, totalNumberEvents, 0);
 
   // Send the vector of md events
-  communicator.send(0, 2, mdEvents.data(), static_cast<int>(mdEvents.size()));
+  auto sizeMdEvents = sizeof(std::remove_reference<decltype(mdEvents)>::type::value_type);
+  communicator.send(0, 2, reinterpret_cast<char*>(mdEvents.data()),
+                    static_cast<int>(mdEvents.size()*sizeMdEvents));
 }
 
 
@@ -449,13 +520,13 @@ MDEventList ConvertToDistributedMD::receiveMDEventsOnMaster(
   const auto numberOfRanks = communicator.size();
   std::vector<Mantid::Parallel::Request> requests;
   requests.reserve(static_cast<size_t>(numberOfRanks) - 1);
-
+  auto sizeMdEvents = sizeof(std::remove_reference<decltype(mdEvents)>::type::value_type);
   for (int rank = 1; rank < numberOfRanks; ++rank) {
     // Determine where to insert the array
     auto start = totalEvents.data() + strides[rank];
     auto length = numberOfEventsPerRank[rank];
     requests.emplace_back(
-      communicator.irecv(rank, 2, start, static_cast<int>(length)));
+      communicator.irecv(rank, 2, reinterpret_cast<char*>(start), static_cast<int>(length*sizeMdEvents)));
   }
   wait_all(requests.begin(), requests.end());
   return totalEvents;
@@ -663,7 +734,7 @@ void ConvertToDistributedMD::setBoxController(
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 void ConvertToDistributedMD::addEventsToPreliminaryBoxStructure(
-  const DistributedCommon::MDEventList &allEvents) {
+  DistributedCommon::MDEventList &allEvents) {
   // Add all events to the hollow box structure
   for (auto &event : allEvents) {
     // TODO: create a move-enabled addEvent
@@ -801,6 +872,7 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   };
 
   std::vector<Mantid::Parallel::Request> requests;
+
   for (auto index = 0ul; index < boxes.size(); ++index) {
 
     // Check if we are still on the same rank. If not then we need to
@@ -870,12 +942,14 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   auto startIndex = m_responsibility[localRank].first;
   auto stopIndex = m_responsibility[localRank].second;
   for (auto index = startIndex; index <= stopIndex; ++index) {
+    // Directly with MDLeanEvents
     auto &numberOfEvents = relevantEventsPerRankPerBox.at(index);
     auto totalNumEvents =
       std::accumulate(numberOfEvents.begin(), numberOfEvents.end(), 0ul);
     auto &entry = boxVsMDEvents[index];
     entry.resize(totalNumEvents);
   }
+
 
   // -------------------------
   // 2. Determine the strides
@@ -892,6 +966,7 @@ ConvertToDistributedMD::sendDataToCorrectRank(
               std::back_inserter(stride));
   }
 
+
   // -------------------------
   // 3. Send the data
   // -------------------------
@@ -903,6 +978,8 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   };
 
   std::vector<Mantid::Parallel::Request> requests;
+
+
   for (auto index = 0ul; index < mdBoxes.size(); ++index) {
 
     // Check if we are still on the same rank. If not then we need to
@@ -919,6 +996,7 @@ ConvertToDistributedMD::sendDataToCorrectRank(
     // We send a value if the local rank is not the same as the rank
     // which is associated with the box, else we receive a value
     // from all other boxes
+    const auto sizeOfMDLeanEvent = sizeof(Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>);
     if (localRank == rankOfCurrentIndex) {
       for (auto rank = 0; rank < static_cast<int>(numberOfRanks); ++rank) {
 
@@ -930,6 +1008,12 @@ ConvertToDistributedMD::sendDataToCorrectRank(
         const auto offset = stride[rank];
 
         auto &events = boxVsMDEvents.at(index);
+
+        // If we don't have events, then we don't do anything
+        if (numberOfEvents == 0) {
+          continue;
+        }
+
         auto insertionPoint = events.data() + offset;
 
         // We don't send anything to ourselves, however we want to record the
@@ -950,17 +1034,20 @@ ConvertToDistributedMD::sendDataToCorrectRank(
           continue;
         }
         requests.emplace_back(
-          communicator.irecv(rank, static_cast<int>(index), insertionPoint,
-                             static_cast<int>(numberOfEvents)));
+          communicator.irecv(rank, static_cast<int>(index), reinterpret_cast<char*>(insertionPoint),
+                             static_cast<int>(numberOfEvents*sizeOfMDLeanEvent)));
       }
     } else {
       auto& events = mdBox->getEvents();
-      requests.emplace_back(communicator.isend(
-        rankOfCurrentIndex, static_cast<int>(index), events.data(),
-        static_cast<int>(mdBox->getDataInMemorySize())));
+      if (!events.empty()) {
+        requests.emplace_back(communicator.isend(
+          rankOfCurrentIndex, static_cast<int>(index), reinterpret_cast<char*>(events.data()),
+          static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent)));
+      }
     }
   }
   Mantid::Parallel::wait_all(requests.begin(), requests.end());
+
   return boxVsMDEvents;
 }
 

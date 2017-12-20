@@ -42,7 +42,7 @@ private:
 
   /// Send MDEvents to master
   void sendMDEventsToMaster(const Mantid::Parallel::Communicator &communicator,
-                            const DistributedCommon::MDEventList &mdEvents) const;
+                            DistributedCommon::MDEventList &mdEvents) const;
 
   /// Receive MDEvents on master
   DistributedCommon::MDEventList
@@ -59,7 +59,7 @@ private:
   DistributedCommon::MDEventList
   getFractionEvents(const Mantid::DataObjects::EventWorkspace &workspace, double fraction) const;
 
-  void addEventsToPreliminaryBoxStructure(const DistributedCommon::MDEventList& allEvents);
+  void addEventsToPreliminaryBoxStructure(DistributedCommon::MDEventList& allEvents);
 
   void redistributeData();
 
