@@ -335,14 +335,14 @@ void ConvertToDistributedMD::exec() {
   // 8. Continue to split locally
   // ----------------------------------------------------------
   //timer.start();
-  continueSplitting();
+//  continueSplitting();
   //timer.stop();
 
   // --------------------------------------- -------------------
   // 9. Ensure that box controller and fileIDs are correct
   // ----------------------------------------------------------
   //timer.start();
-  updateMetaData();
+ // updateMetaData();
   //timer.stop();
 
   // ----------------------------------------------------------
@@ -978,7 +978,8 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   };
 
   std::vector<Mantid::Parallel::Request> requests;
-
+  std::vector<boost::mpi::request> boostRequests;
+  const boost::mpi::communicator & boostComm = communicator;
   for (auto index = 0ul; index < mdBoxes.size(); ++index) {
 
     // Check if we are still on the same rank. If not then we need to
@@ -1032,20 +1033,25 @@ ConvertToDistributedMD::sendDataToCorrectRank(
           }
           continue;
         }
-        requests.emplace_back(
-          communicator.irecv(rank, static_cast<int>(index), reinterpret_cast<char*>(insertionPoint),
-                             static_cast<int>(numberOfEvents*sizeOfMDLeanEvent)));
+        boostRequests.emplace_back(boostComm.irecv(rank, static_cast<int>(index), reinterpret_cast<char*>(insertionPoint),
+                                                   static_cast<int>(numberOfEvents*sizeOfMDLeanEvent)));
+//        requests.emplace_back(
+//          communicator.irecv(rank, static_cast<int>(index), reinterpret_cast<char*>(insertionPoint),
+//                             static_cast<int>(numberOfEvents*sizeOfMDLeanEvent)));
       }
     } else {
       auto& events = mdBox->getEvents();
       if (!events.empty()) {
-        requests.emplace_back(communicator.isend(
-          rankOfCurrentIndex, static_cast<int>(index), reinterpret_cast<char*>(events.data()),
-          static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent)));
+        boostRequests.emplace_back(boostComm.isend(rankOfCurrentIndex, static_cast<int>(index), reinterpret_cast<char*>(events.data()),
+                                                   static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent)));
+//        requests.emplace_back(communicator.isend(
+//          rankOfCurrentIndex, static_cast<int>(index), reinterpret_cast<char*>(events.data()),
+//          static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent)));
       }
     }
   }
-  Mantid::Parallel::wait_all(requests.begin(), requests.end());
+  boost::mpi::wait_all(boostRequests.begin(), boostRequests.end());
+  //Mantid::Parallel::wait_all(requests.begin(), requests.end());
   return boxVsMDEvents;
 }
 
