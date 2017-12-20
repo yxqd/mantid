@@ -284,7 +284,7 @@ void ConvertToDistributedMD::exec() {
   // 8. Enable the box controller and start splitting the data
   // 9. Ensure that the fileIDs and the box controller stats are correct.
   // 10. Maybe save in this algorithm already
-  TimerParallel timer(this->communicator());
+//  TimerParallel timer(this->communicator());
 
 
   // Get the users's inputs
@@ -294,63 +294,63 @@ void ConvertToDistributedMD::exec() {
     // 1. Get a n-percent fraction
     // ----------------------------------------------------------
     double fraction = getProperty("Fraction");
-    timer.start();
+    //   timer.start();
     auto nPercentEvents = getFractionEvents(*inputWorkspace, fraction);
-    timer.stop();
+    //  timer.stop();
 
     // -----------------------------------------------------------------
     // 2. + 3. = 4.  Get the preliminary box structure and the partition
     // behaviour
     // -----------------------------------------------------------------
-    timer.start();
+    // timer.start();
     setupPreliminaryBoxStructure(nPercentEvents);
-    timer.stop();
+    // timer.stop();
   }
 
   // ----------------------------------------------------------
   // 5. Convert all events
   // ----------------------------------------------------------
   {
-    timer.start();
+    //timer.start();
     auto allEvents = getFractionEvents(*inputWorkspace, 1.);
-    timer.stop();
+    //timer.stop();
 
     // ----------------------------------------------------------
     // 6. Add the local data to the preliminary box structure
     // ----------------------------------------------------------
-    timer.start();
+    // timer.start();
     addEventsToPreliminaryBoxStructure(allEvents);
-    timer.stop();
+    //  timer.stop();
   }
 
   // ------------------------------------------------------
   // 7. Redistribute data
   // ----------------------------------------------------------
-  timer.start();
+  //timer.start();
   redistributeData();
-  timer.stop();
+  // timer.stop();
 
 
   // ----------------------------------------------------------
   // 8. Continue to split locally
   // ----------------------------------------------------------
-  timer.start();
+  //timer.start();
   continueSplitting();
-  timer.stop();
+  //timer.stop();
 
   // --------------------------------------- -------------------
   // 9. Ensure that box controller and fileIDs are correct
   // ----------------------------------------------------------
-  timer.start();
+  //timer.start();
   updateMetaData();
-  timer.stop();
+  //timer.stop();
 
   // ----------------------------------------------------------
   // 9. Save?
   // ----------------------------------------------------------
-  const auto numEvents = m_boxStructureInformation.boxStructure->getNPoints();
-  timer.recordNumEvents(numEvents);
-  timer.dump();
+  //const auto numEvents = m_boxStructureInformation.boxStructure->getNPoints();
+  //timer.recordNumEvents(numEvents);
+  //timer.dump();
 }
 
 
@@ -979,7 +979,6 @@ ConvertToDistributedMD::sendDataToCorrectRank(
 
   std::vector<Mantid::Parallel::Request> requests;
 
-
   for (auto index = 0ul; index < mdBoxes.size(); ++index) {
 
     // Check if we are still on the same rank. If not then we need to
@@ -1047,7 +1046,6 @@ ConvertToDistributedMD::sendDataToCorrectRank(
     }
   }
   Mantid::Parallel::wait_all(requests.begin(), requests.end());
-
   return boxVsMDEvents;
 }
 
