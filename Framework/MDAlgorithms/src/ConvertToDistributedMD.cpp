@@ -1033,8 +1033,9 @@ ConvertToDistributedMD::sendDataToCorrectRank(
           }
           continue;
         }
-        boostRequests.emplace_back(boostComm.irecv(rank, static_cast<int>(index), reinterpret_cast<char*>(insertionPoint),
-                                                   static_cast<int>(numberOfEvents*sizeOfMDLeanEvent)));
+        std::cout << "RECV: Rank " << communicator.rank() << " from rank " << rank << ",tag " << index << ",num " << numberOfEvents <<"\n";
+//        boostRequests.emplace_back(boostComm.irecv(rank, static_cast<int>(index), reinterpret_cast<char*>(insertionPoint),
+//                                                   static_cast<int>(numberOfEvents*sizeOfMDLeanEvent)));
 //        requests.emplace_back(
 //          communicator.irecv(rank, static_cast<int>(index), reinterpret_cast<char*>(insertionPoint),
 //                             static_cast<int>(numberOfEvents*sizeOfMDLeanEvent)));
@@ -1042,8 +1043,10 @@ ConvertToDistributedMD::sendDataToCorrectRank(
     } else {
       auto& events = mdBox->getEvents();
       if (!events.empty()) {
-        boostRequests.emplace_back(boostComm.isend(rankOfCurrentIndex, static_cast<int>(index), reinterpret_cast<char*>(events.data()),
-                                                   static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent)));
+          std::cout << "SEND: Rank " << communicator.rank() << " to rank " << rankOfCurrentIndex << ",tag " << index << ",num " << mdBox->getDataInMemorySize() <<"\n";
+
+//        boostRequests.emplace_back(boostComm.isend(rankOfCurrentIndex, static_cast<int>(index), reinterpret_cast<char*>(events.data()),
+//                                                   static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent)));
 //        requests.emplace_back(communicator.isend(
 //          rankOfCurrentIndex, static_cast<int>(index), reinterpret_cast<char*>(events.data()),
 //          static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent)));
