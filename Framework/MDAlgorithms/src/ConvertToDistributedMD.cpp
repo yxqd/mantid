@@ -765,7 +765,22 @@ void ConvertToDistributedMD::redistributeData() {
   // Determine the number of events per rank per box
   auto relevantEventsPerRankPerBox =
     getRelevantEventsPerRankPerBox(communicator, boxes);
+  const boost::mpi::communicator& bC = communicator;
+  bC.barrier();
 
+  const auto localRank = communicator.rank();
+  std::cout << "Relevant Events Info on RANK " << communicator.rank() << " with range " << m_responsibility[localRank].first <<" "<< m_responsibility[localRank].second << "\n";
+  for (auto index = m_responsibility[localRank].first; index <= m_responsibility[localRank].second; ++index) {
+    auto& events = relevantEventsPerRankPerBox.at(index);
+    std::cout << "On Rank "<< communicator.rank() << " with index " << index <<": ";
+    for (auto& event : events) {
+      std::cout << event << " ";
+    }
+    std::cout <<"\n";
+  }
+
+
+/**
   // Send the actual data
   auto boxVsMDEvents =
     sendDataToCorrectRank(communicator, relevantEventsPerRankPerBox, mdBoxes);
@@ -800,6 +815,7 @@ void ConvertToDistributedMD::redistributeData() {
   // ranks. Note that getMaxId will return the next available id, ie it is
   // not really the max id.
   m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
+  **/
 }
 
 
@@ -859,8 +875,8 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   std::unordered_map<size_t, std::vector<uint64_t>> relevantEventsPerRankPerBox;
   auto range = m_responsibility[localRank];
   for (size_t index = range.first; index <= range.second; ++index) {
-    auto &stride = relevantEventsPerRankPerBox[index];
-    stride.resize(numberOfRanks);
+    auto &elements = relevantEventsPerRankPerBox[index];
+    elements.resize(numberOfRanks, 0);
   }
 
   // Get the ranges for rank 0
@@ -892,17 +908,16 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
     if (localRank == rankOfCurrentIndex) {
       for (auto rank = 0; rank < static_cast<int>(numberOfRanks); ++rank) {
         auto &eventsPerBox = relevantEventsPerRankPerBox.at(index);
-        auto &value = eventsPerBox[rank];
 
         // We don't send anything to ourselves, however we want to record the
         // number of events
         // that we have already in the right place
         if (rank == localRank) {
-          value = box->getNPoints();
+          eventsPerBox[rank] = box->getNPoints();
           continue;
         }
         requests.emplace_back(
-          communicator.irecv(rank, static_cast<int>(index), value));
+          communicator.irecv(rank, static_cast<int>(index), eventsPerBox[rank]));
       }
     } else {
       std::cout << "Send on rank " << communicator.rank() << " with index " << index << ", " << box->getNPoints() << " events\n";
