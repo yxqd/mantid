@@ -980,6 +980,23 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   std::vector<Mantid::Parallel::Request> requests;
   std::vector<boost::mpi::request> boostRequests;
   const boost::mpi::communicator & boostComm = communicator;
+
+  std::cout << "+++++++++++++ RESPONSIBILITY and EVENT INFO ON RANK " << communicator.rank() <<"\n";
+  for (auto rank= 0; rank < communicator.size(); ++rank) {
+    std::cout << "Rank " << rank << ": " << m_responsibility[rank].first <<" " << m_responsibility[rank].second <<"\n";
+  }
+
+  std::cout << "____________________Relevant Events Info on RANK " << communicator.rank() << " with range " << m_responsibility[localRank].first <<" "<< m_responsibility[localRank].second << "\n";
+  for (auto index = m_responsibility[localRank].first; index <= m_responsibility[localRank].second; ++index) {
+    auto& events = relevantEventsPerRankPerBox.at(index);
+    std::cout << "On Rank "<< communicator.rank() << " with index " << index <<": ";
+    for (auto& event : events) {
+      std::cout << event << " ";
+    }
+
+    std::cout <<"\n";
+  }
+
   for (auto index = 0ul; index < mdBoxes.size(); ++index) {
 
     // Check if we are still on the same rank. If not then we need to
