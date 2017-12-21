@@ -905,6 +905,7 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
           communicator.irecv(rank, static_cast<int>(index), value));
       }
     } else {
+      std::cout << "Send on rank " << communicator.rank() << " with index " << index << ", " << box->getNPoints() << " events\n";
       requests.emplace_back(communicator.isend(
         rankOfCurrentIndex, static_cast<int>(index), box->getNPoints()));
     }
