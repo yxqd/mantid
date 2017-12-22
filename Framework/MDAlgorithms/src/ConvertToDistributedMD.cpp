@@ -16,8 +16,8 @@
 #include <boost/serialization/utility.hpp>
 #include <fstream>
 
-#include <chrono>
-
+// !!!!!!!!!!!!! ONLY *ix
+#include <unistd.h>
 
 namespace {
   class TimerParallel {
@@ -44,6 +44,18 @@ namespace {
     }
 
     void dump() {
+      char cwd[1024];
+      if (getcwd(cwd, sizeof(cwd)) != nullptr) {
+        // This is the build directory
+        std::string base(cwd);
+
+        // The test data is in mpi_test in the parent directory
+        base = base.substr(0, base.find_last_of("\\/"));
+        fileNameBase = base + "/mpi_test/results/result_";
+      } else {
+        return;
+      }
+
       // Measure the total time
       auto stop_cpu = std::clock();
       auto stop_wall = std::chrono::high_resolution_clock::now();
@@ -58,13 +70,13 @@ namespace {
 
 
       if (comm.rank() == 0) {
-        std::copy(m_times_cpu.begin(), m_times_cpu.end(), times_cpu.begin());
-        std::copy(m_times_wall.begin(), m_times_wall.end(), times_wall.begin());
-
         const auto numRanks = comm.size();
         const auto size = m_times_cpu.size();
         times_cpu.resize(numRanks*size);
         times_wall.resize(numRanks*size);
+
+        std::copy(m_times_cpu.begin(), m_times_cpu.end(), times_cpu.begin());
+        std::copy(m_times_wall.begin(), m_times_wall.end(), times_wall.begin());
 
         const auto offset = m_times_cpu.size();
         for (int rank = 1; rank < numRanks; ++rank) {
@@ -121,7 +133,7 @@ namespace {
     std::vector<double> m_times_cpu;
     std::vector<double> m_times_wall;
     const Mantid::Parallel::Communicator& comm;
-    const std::string fileNameBase = "/home/anton/builds/Mantid_release_clion/mpi_test/results/result_";
+    std::string fileNameBase;
     size_t m_numEvents;
   };
 
