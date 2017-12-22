@@ -285,85 +285,6 @@ void ConvertToDistributedMD::exec() {
   // 9. Ensure that the fileIDs and the box controller stats are correct.
   // 10. Maybe save in this algorithm already
 
-
-//  const auto localRank = this->communicator().rank();
-//  const auto numberOfRanks = this->communicator().size();
-//  // We have 300 boxes with some data
-//  const auto size = 300;
-//  const auto rangeStart0 = 0ul;
-//  const auto rangeStop0 = size/2-1;
-//  const auto rangeStart1 = size/2;
-//  const auto rangeStop1 = size-1;
-//
-//  std::vector<uint64_t> data;
-//  data.resize(size, 0);
-//  if (localRank == 0) {
-//    std::generate(data.begin(), data.end(), [n=0]() mutable{return n++;});
-//  } else {
-//    std::generate(data.begin(), data.end(), [n=1000]() mutable{return n++;});
-//  }
-//
-//  // Set up the buffer
-//  std::unordered_map<size_t, std::vector<uint64_t >> buffer;
-//  size_t startIndex = localRank == 0 ? rangeStart0 : rangeStart1;
-//  size_t stopIndex = localRank == 0 ? rangeStop0 : rangeStop1;
-//
-//  for (auto index = startIndex; index <= stopIndex; ++index) {
-//    auto& element = buffer[index];
-//    element.resize(static_cast<size_t>(numberOfRanks));
-//  }
-//
-//  const auto& comm = this->communicator();
-//  std::vector<Parallel::Request> requests;
-//  for (auto index= 0ul; index < size; ++index) {
-//    if (index <= rangeStop0) {
-//      if (localRank == 0) {
-//        auto& dataPerRank = buffer.at(index);
-//        // Set the local data
-//        dataPerRank[0] = data[index];
-//
-//        // Set data on rank 1
-//        requests.emplace_back(comm.irecv(1, static_cast<int>(index), dataPerRank[1]));
-//      } else {
-//        requests.emplace_back(comm.isend(0, static_cast<int>(index), data[index]));
-//      }
-//    } else {
-//      if (localRank == 1) {
-//        auto& dataPerRank = buffer.at(index);
-//        // Set the local data
-//        dataPerRank[1] = data[index];
-//
-//        // Set data on rank 1
-//        requests.emplace_back(comm.irecv(0, static_cast<int>(index), dataPerRank[0]));
-//      } else {
-//        requests.emplace_back(comm.isend(1, static_cast<int>(index), data[index]));
-//      }
-//    }
-//  }
-//
-//  Parallel::wait_all(requests.begin(), requests.end());
-//
-//
-//  std::cout << "ON RANK " << localRank <<"\n";
-//  for (auto index = 0ul; index <= rangeStop0; ++index) {
-//    if (localRank == 0) {
-//      auto& val = buffer.at(index);
-//      std::cout << "On rank " << localRank <<" with index " << index << " got " << val[0] << " " << val[1] <<"\n";
-//    }
-//  }
-//
-//  for (auto index = rangeStart1; index <= rangeStop1; ++index) {
-//    if (localRank == 1) {
-//      auto& val = buffer.at(index);
-//      std::cout << "On rank " << localRank <<" with index " << index << " got " << val[0] << " " << val[1] <<"\n";
-//    }
-//  }
-//
-//
-
-
-
-
 //  TimerParallel timer(this->communicator());
 
 
@@ -415,14 +336,14 @@ void ConvertToDistributedMD::exec() {
   // 8. Continue to split locally
   // ----------------------------------------------------------
   //timer.start();
-//  continueSplitting();
+  continueSplitting();
   //timer.stop();
 
   // --------------------------------------- -------------------
   // 9. Ensure that box controller and fileIDs are correct
   // ----------------------------------------------------------
   //timer.start();
- // updateMetaData();
+  updateMetaData();
   //timer.stop();
 
   // ----------------------------------------------------------
@@ -845,22 +766,8 @@ void ConvertToDistributedMD::redistributeData() {
   // Determine the number of events per rank per box
   auto relevantEventsPerRankPerBox =
     getRelevantEventsPerRankPerBox(communicator, boxes);
-  const boost::mpi::communicator& bC = communicator;
-  bC.barrier();
-
-  const auto localRank = communicator.rank();
-  std::cout << "Relevant Events Info on RANK " << communicator.rank() << " with range " << m_responsibility[localRank].first <<" "<< m_responsibility[localRank].second << "\n";
-  for (auto index = m_responsibility[localRank].first; index <= m_responsibility[localRank].second; ++index) {
-    auto& events = relevantEventsPerRankPerBox.at(index);
-    std::cout << "On Rank "<< communicator.rank() << " with index " << index <<": ";
-    for (auto& event : events) {
-      std::cout << event << " ";
-    }
-    std::cout <<"\n";
-  }
 
 
-/**
   // Send the actual data
   auto boxVsMDEvents =
     sendDataToCorrectRank(communicator, relevantEventsPerRankPerBox, mdBoxes);
@@ -895,7 +802,6 @@ void ConvertToDistributedMD::redistributeData() {
   // ranks. Note that getMaxId will return the next available id, ie it is
   // not really the max id.
   m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
-  **/
 }
 
 
@@ -1073,25 +979,6 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   };
 
   std::vector<Mantid::Parallel::Request> requests;
-  std::vector<boost::mpi::request> boostRequests;
-  const boost::mpi::communicator & boostComm = communicator;
-
-  std::cout << "+++++++++++++ RESPONSIBILITY and EVENT INFO ON RANK " << communicator.rank() <<"\n";
-  for (auto rank= 0; rank < communicator.size(); ++rank) {
-    std::cout << "Rank " << rank << ": " << m_responsibility[rank].first <<" " << m_responsibility[rank].second <<"\n";
-  }
-
-  std::cout << "____________________Relevant Events Info on RANK " << communicator.rank() << " with range " << m_responsibility[localRank].first <<" "<< m_responsibility[localRank].second << "\n";
-  for (auto index = m_responsibility[localRank].first; index <= m_responsibility[localRank].second; ++index) {
-    auto& events = relevantEventsPerRankPerBox.at(index);
-    std::cout << "On Rank "<< communicator.rank() << " with index " << index <<": ";
-    for (auto& event : events) {
-      std::cout << event << " ";
-    }
-
-    std::cout <<"\n";
-  }
-
   for (auto index = 0ul; index < mdBoxes.size(); ++index) {
 
     // Check if we are still on the same rank. If not then we need to
@@ -1145,28 +1032,20 @@ ConvertToDistributedMD::sendDataToCorrectRank(
           }
           continue;
         }
-        std::cout << "RECV: Rank " << communicator.rank() << " from rank " << rank << ",tag " << index << ",num " << numberOfEvents <<"\n";
-//        boostRequests.emplace_back(boostComm.irecv(rank, static_cast<int>(index), reinterpret_cast<char*>(insertionPoint),
-//                                                   static_cast<int>(numberOfEvents*sizeOfMDLeanEvent)));
-//        requests.emplace_back(
-//          communicator.irecv(rank, static_cast<int>(index), reinterpret_cast<char*>(insertionPoint),
-//                             static_cast<int>(numberOfEvents*sizeOfMDLeanEvent)));
+        requests.emplace_back(
+          communicator.irecv(rank, static_cast<int>(index), reinterpret_cast<char*>(insertionPoint),
+                             static_cast<int>(numberOfEvents*sizeOfMDLeanEvent)));
       }
     } else {
       auto& events = mdBox->getEvents();
       if (!events.empty()) {
-          std::cout << "SEND: Rank " << communicator.rank() << " to rank " << rankOfCurrentIndex << ",tag " << index << ",num " << mdBox->getDataInMemorySize() <<"\n";
-
-//        boostRequests.emplace_back(boostComm.isend(rankOfCurrentIndex, static_cast<int>(index), reinterpret_cast<char*>(events.data()),
-//                                                   static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent)));
-//        requests.emplace_back(communicator.isend(
-//          rankOfCurrentIndex, static_cast<int>(index), reinterpret_cast<char*>(events.data()),
-//          static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent)));
+        requests.emplace_back(communicator.isend(
+          rankOfCurrentIndex, static_cast<int>(index), reinterpret_cast<char*>(events.data()),
+          static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent)));
       }
     }
   }
-  boost::mpi::wait_all(boostRequests.begin(), boostRequests.end());
-  //Mantid::Parallel::wait_all(requests.begin(), requests.end());
+  Mantid::Parallel::wait_all(requests.begin(), requests.end());
   return boxVsMDEvents;
 }
 
