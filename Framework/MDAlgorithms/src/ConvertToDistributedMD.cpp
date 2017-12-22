@@ -46,15 +46,13 @@ namespace {
     void dump() {
       char cwd[1024];
       if (getcwd(cwd, sizeof(cwd)) != nullptr) {
-        // This is the build directory
         std::string base(cwd);
-
-        // The test data is in mpi_test in the parent directory
         if (base.find("scarf") != std::string::npos) {
           fileNameBase = "/home/isisg/scarf672/Mantid2/mpi_test/results/result_";
         } else {
-          fileNameBase = "/home/anton/builds/mpi_test/results/result_";
+          fileNameBase = "/home/anton/builds";
         }
+      }
 
       // Measure the total time
       auto stop_cpu = std::clock();
