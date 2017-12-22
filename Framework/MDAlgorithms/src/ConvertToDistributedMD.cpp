@@ -286,129 +286,129 @@ void ConvertToDistributedMD::exec() {
   // 10. Maybe save in this algorithm already
 
 
-  const auto localRank = this->communicator().rank();
-  const auto numberOfRanks = this->communicator().size();
-  // We have 300 boxes with some data
-  const auto size = 100;
-  const auto rangeStart0 = 0ul;
-  const auto rangeStop0 = size/2-1;
-  const auto rangeStart1 = size/2;
-  const auto rangeStop1 = size-1;
-
-  std::vector<uint64_t> data;
-  data.resize(size, 0);
-  if (localRank == 0) {
-    std::generate(data.begin(), data.end(), [n=0]() mutable{return n++;});
-  } else {
-    std::generate(data.begin(), data.end(), [n=1000]() mutable{return n++;});
-  }
-
-  // Set up the buffer
-  std::unordered_map<size_t, std::vector<uint64_t >> buffer;
-  size_t startIndex = localRank == 0 ? rangeStart0 : rangeStart1;
-  size_t stopIndex = localRank == 0 ? rangeStop0 : rangeStop1;
-
-  for (auto index = startIndex; index <= stopIndex; ++index) {
-    auto& element = buffer[index];
-    element.resize(static_cast<size_t>(numberOfRanks));
-  }
-
-  const auto& comm = this->communicator();
-  std::vector<Parallel::Request> requests;
-  for (auto index= 0ul; index < size; ++index) {
-    if (index <= rangeStop0) {
-      if (localRank == 0) {
-        auto& dataPerRank = buffer.at(index);
-        // Set the local data
-        dataPerRank[0] = data[index];
-
-        // Set data on rank 1
-        requests.emplace_back(comm.irecv(1, static_cast<int>(index), dataPerRank[1]));
-      } else {
-        requests.emplace_back(comm.isend(0, static_cast<int>(index), data[index]));
-      }
-    } else {
-      if (localRank == 1) {
-        auto& dataPerRank = buffer.at(index);
-        // Set the local data
-        dataPerRank[1] = data[index];
-
-        // Set data on rank 1
-        requests.emplace_back(comm.irecv(0, static_cast<int>(index), dataPerRank[0]));
-      } else {
-        requests.emplace_back(comm.isend(1, static_cast<int>(index), data[index]));
-      }
-    }
-  }
-
-  Parallel::wait_all(requests.begin(), requests.end());
-
-
-  std::cout << "ON RANK " << localRank <<"\n";
-  for (auto index = 0ul; index <= rangeStop0; ++index) {
-    if (localRank == 0) {
-      auto& val = buffer.at(index);
-      std::cout << "On rank " << localRank <<" with index " << index << " got " << val[0] << " " << val[1] <<"\n";
-    }
-  }
-
-  for (auto index = rangeStart1; index <= rangeStop1; ++index) {
-    if (localRank == 1) {
-      auto& val = buffer.at(index);
-      std::cout << "On rank " << localRank <<" with index " << index << " got " << val[0] << " " << val[1] <<"\n";
-    }
-  }
-
-
+//  const auto localRank = this->communicator().rank();
+//  const auto numberOfRanks = this->communicator().size();
+//  // We have 300 boxes with some data
+//  const auto size = 300;
+//  const auto rangeStart0 = 0ul;
+//  const auto rangeStop0 = size/2-1;
+//  const auto rangeStart1 = size/2;
+//  const auto rangeStop1 = size-1;
+//
+//  std::vector<uint64_t> data;
+//  data.resize(size, 0);
+//  if (localRank == 0) {
+//    std::generate(data.begin(), data.end(), [n=0]() mutable{return n++;});
+//  } else {
+//    std::generate(data.begin(), data.end(), [n=1000]() mutable{return n++;});
+//  }
+//
+//  // Set up the buffer
+//  std::unordered_map<size_t, std::vector<uint64_t >> buffer;
+//  size_t startIndex = localRank == 0 ? rangeStart0 : rangeStart1;
+//  size_t stopIndex = localRank == 0 ? rangeStop0 : rangeStop1;
+//
+//  for (auto index = startIndex; index <= stopIndex; ++index) {
+//    auto& element = buffer[index];
+//    element.resize(static_cast<size_t>(numberOfRanks));
+//  }
+//
+//  const auto& comm = this->communicator();
+//  std::vector<Parallel::Request> requests;
+//  for (auto index= 0ul; index < size; ++index) {
+//    if (index <= rangeStop0) {
+//      if (localRank == 0) {
+//        auto& dataPerRank = buffer.at(index);
+//        // Set the local data
+//        dataPerRank[0] = data[index];
+//
+//        // Set data on rank 1
+//        requests.emplace_back(comm.irecv(1, static_cast<int>(index), dataPerRank[1]));
+//      } else {
+//        requests.emplace_back(comm.isend(0, static_cast<int>(index), data[index]));
+//      }
+//    } else {
+//      if (localRank == 1) {
+//        auto& dataPerRank = buffer.at(index);
+//        // Set the local data
+//        dataPerRank[1] = data[index];
+//
+//        // Set data on rank 1
+//        requests.emplace_back(comm.irecv(0, static_cast<int>(index), dataPerRank[0]));
+//      } else {
+//        requests.emplace_back(comm.isend(1, static_cast<int>(index), data[index]));
+//      }
+//    }
+//  }
+//
+//  Parallel::wait_all(requests.begin(), requests.end());
+//
+//
+//  std::cout << "ON RANK " << localRank <<"\n";
+//  for (auto index = 0ul; index <= rangeStop0; ++index) {
+//    if (localRank == 0) {
+//      auto& val = buffer.at(index);
+//      std::cout << "On rank " << localRank <<" with index " << index << " got " << val[0] << " " << val[1] <<"\n";
+//    }
+//  }
+//
+//  for (auto index = rangeStart1; index <= rangeStop1; ++index) {
+//    if (localRank == 1) {
+//      auto& val = buffer.at(index);
+//      std::cout << "On rank " << localRank <<" with index " << index << " got " << val[0] << " " << val[1] <<"\n";
+//    }
+//  }
+//
+//
 
 
 
 
 //  TimerParallel timer(this->communicator());
-//
-//
-//  // Get the users's inputs
-//  EventWorkspace_sptr inputWorkspace = getProperty("InputWorkspace");
-//  {
-//    // ----------------------------------------------------------
-//    // 1. Get a n-percent fraction
-//    // ----------------------------------------------------------
-//    double fraction = getProperty("Fraction");
-//    //   timer.start();
-//    auto nPercentEvents = getFractionEvents(*inputWorkspace, fraction);
-//    //  timer.stop();
-//
-//    // -----------------------------------------------------------------
-//    // 2. + 3. = 4.  Get the preliminary box structure and the partition
-//    // behaviour
-//    // -----------------------------------------------------------------
-//    // timer.start();
-//    setupPreliminaryBoxStructure(nPercentEvents);
-//    // timer.stop();
-//  }
-//
-//  // ----------------------------------------------------------
-//  // 5. Convert all events
-//  // ----------------------------------------------------------
-//  {
-//    //timer.start();
-//    auto allEvents = getFractionEvents(*inputWorkspace, 1.);
-//    //timer.stop();
-//
-//    // ----------------------------------------------------------
-//    // 6. Add the local data to the preliminary box structure
-//    // ----------------------------------------------------------
-//    // timer.start();
-//    addEventsToPreliminaryBoxStructure(allEvents);
-//    //  timer.stop();
-//  }
-//
-//  // ------------------------------------------------------
-//  // 7. Redistribute data
-//  // ----------------------------------------------------------
-//  //timer.start();
-//  redistributeData();
-//  // timer.stop();
+
+
+  // Get the users's inputs
+  EventWorkspace_sptr inputWorkspace = getProperty("InputWorkspace");
+  {
+    // ----------------------------------------------------------
+    // 1. Get a n-percent fraction
+    // ----------------------------------------------------------
+    double fraction = getProperty("Fraction");
+    //   timer.start();
+    auto nPercentEvents = getFractionEvents(*inputWorkspace, fraction);
+    //  timer.stop();
+
+    // -----------------------------------------------------------------
+    // 2. + 3. = 4.  Get the preliminary box structure and the partition
+    // behaviour
+    // -----------------------------------------------------------------
+    // timer.start();
+    setupPreliminaryBoxStructure(nPercentEvents);
+    // timer.stop();
+  }
+
+  // ----------------------------------------------------------
+  // 5. Convert all events
+  // ----------------------------------------------------------
+  {
+    //timer.start();
+    auto allEvents = getFractionEvents(*inputWorkspace, 1.);
+    //timer.stop();
+
+    // ----------------------------------------------------------
+    // 6. Add the local data to the preliminary box structure
+    // ----------------------------------------------------------
+    // timer.start();
+    addEventsToPreliminaryBoxStructure(allEvents);
+    //  timer.stop();
+  }
+
+  // ------------------------------------------------------
+  // 7. Redistribute data
+  // ----------------------------------------------------------
+  //timer.start();
+  redistributeData();
+  // timer.stop();
 
 
   // ----------------------------------------------------------
@@ -848,16 +848,16 @@ void ConvertToDistributedMD::redistributeData() {
   const boost::mpi::communicator& bC = communicator;
   bC.barrier();
 
-  const auto localRank = communicator.rank();
-  std::cout << "Relevant Events Info on RANK " << communicator.rank() << " with range " << m_responsibility[localRank].first <<" "<< m_responsibility[localRank].second << "\n";
-  for (auto index = m_responsibility[localRank].first; index <= m_responsibility[localRank].second; ++index) {
-    auto& events = relevantEventsPerRankPerBox.at(index);
-    std::cout << "On Rank "<< communicator.rank() << " with index " << index <<": ";
-    for (auto& event : events) {
-      std::cout << event << " ";
-    }
-    std::cout <<"\n";
-  }
+//  const auto localRank = communicator.rank();
+//  std::cout << "Relevant Events Info on RANK " << communicator.rank() << " with range " << m_responsibility[localRank].first <<" "<< m_responsibility[localRank].second << "\n";
+//  for (auto index = m_responsibility[localRank].first; index <= m_responsibility[localRank].second; ++index) {
+//    auto& events = relevantEventsPerRankPerBox.at(index);
+//    std::cout << "On Rank "<< communicator.rank() << " with index " << index <<": ";
+//    for (auto& event : events) {
+//      std::cout << event << " ";
+//    }
+//    std::cout <<"\n";
+//  }
 
 
 /**
@@ -969,6 +969,10 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
 
   std::vector<Mantid::Parallel::Request> requests;
 
+  const boost::mpi::communicator& bCom = communicator;
+ // MPI_Comm comm = bCom;
+
+
   for (auto index = 0ul; index < boxes.size(); ++index) {
 
     // Check if we are still on the same rank. If not then we need to
@@ -996,13 +1000,12 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
           eventsPerBox[rank] = box->getNPoints();
           continue;
         }
-        auto insertionPoint = eventsPerBox.data() + rank;
-
-        //requests.emplace_back(
-        //  communicator.irecv(rank, static_cast<int>(index), eventsPerBox[rank]));
+        std::cout << "Recv on rank " << communicator.rank() <<  " from rank " << rank << " with index " << index << ", " << box->getNPoints() << " events\n";
+        requests.emplace_back(
+          communicator.irecv(rank, static_cast<int>(index), eventsPerBox[rank]));
       }
     } else {
-      std::cout << "Send on rank " << communicator.rank() << " with index " << index << ", " << box->getNPoints() << " events\n";
+      std::cout << "Send on rank " << communicator.rank() <<  " to rank " << rankOfCurrentIndex << " with index " << index << ", " << box->getNPoints() << " events\n";
       requests.emplace_back(communicator.isend(
         rankOfCurrentIndex, static_cast<int>(index), box->getNPoints()));
     }
