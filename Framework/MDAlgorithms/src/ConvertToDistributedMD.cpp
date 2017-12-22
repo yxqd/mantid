@@ -970,8 +970,12 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   std::vector<Mantid::Parallel::Request> requests;
 
   const boost::mpi::communicator& bCom = communicator;
- // MPI_Comm comm = bCom;
+  MPI_Comm comm = bCom;
+  std::vector<MPI_Request> mpi_requests;
+  std::vector<MPI_Status> mpi_status;
 
+
+  std::vector<uint64_t > buffer;
 
   for (auto index = 0ul; index < boxes.size(); ++index) {
 
@@ -1001,16 +1005,25 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
           continue;
         }
         std::cout << "Recv on rank " << communicator.rank() <<  " from rank " << rank << " with index " << index << ", " << eventsPerBox[rank] << " events\n";
-        requests.emplace_back(
-          communicator.irecv(rank, static_cast<int>(index), eventsPerBox[rank]));
+        mpi_requests.emplace_back();
+        mpi_status.emplace_back();
+        MPI_Irecv(&eventsPerBox[rank], 1, MPI_UINT64_T, rank, static_cast<int>(index), comm, &mpi_requests.back());
+        //requests.emplace_back(
+        //  communicator.irecv(rank, static_cast<int>(index), eventsPerBox[rank]));
       }
     } else {
       std::cout << "Send on rank " << communicator.rank() <<  " to rank " << rankOfCurrentIndex << " with index " << index << ", " << box->getNPoints() << " events\n";
-      requests.emplace_back(communicator.isend(
-        rankOfCurrentIndex, static_cast<int>(index), box->getNPoints()));
+      buffer.emplace_back(box->getNPoints());
+      mpi_requests.emplace_back();
+      mpi_status.emplace_back();
+      MPI_Isend(&buffer.back(), 1, MPI_UINT64_T, rankOfCurrentIndex, static_cast<int>(index), comm, &mpi_requests.back());
+      //requests.emplace_back(communicator.isend(
+      //  rankOfCurrentIndex, static_cast<int>(index), box->getNPoints()));
     }
   }
-  Mantid::Parallel::wait_all(requests.begin(), requests.end());
+  MPI_Waitall(static_cast<int>(boxes.size()), mpi_requests.data(), mpi_status.data());
+
+  //Mantid::Parallel::wait_all(requests.begin(), requests.end());
   return relevantEventsPerRankPerBox;
 }
 
