@@ -55,19 +55,21 @@ namespace {
       std::vector<Mantid::Parallel::Request> requests;
       std::vector<double> times_cpu;
       std::vector<double> times_wall;
-      if (comm.rank() == 0) {
-        const auto numRanks = comm.size();
-        const auto size = m_times_cpu.size();
 
+
+      if (comm.rank() == 0) {
         std::copy(m_times_cpu.begin(), m_times_cpu.end(), times_cpu.begin());
         std::copy(m_times_wall.begin(), m_times_wall.end(), times_wall.begin());
 
+        const auto numRanks = comm.size();
+        const auto size = m_times_cpu.size();
         times_cpu.resize(numRanks*size);
         times_wall.resize(numRanks*size);
+
         const auto offset = m_times_cpu.size();
         for (int rank = 1; rank < numRanks; ++rank) {
-          requests.emplace_back(comm.irecv(rank, 1, times_cpu.data()+offset, static_cast<int>(size)));
-          requests.emplace_back(comm.irecv(rank, 2, m_times_wall.data()+offset, static_cast<int>(size)));
+          requests.emplace_back(comm.irecv(rank, 1, times_cpu.data()+offset*rank, static_cast<int>(size)));
+          requests.emplace_back(comm.irecv(rank, 2, times_wall.data()+offset*rank, static_cast<int>(size)));
         }
       } else {
         requests.emplace_back(comm.isend(0, 1, m_times_cpu.data(), static_cast<int>(m_times_cpu.size())));
@@ -119,7 +121,7 @@ namespace {
     std::vector<double> m_times_cpu;
     std::vector<double> m_times_wall;
     const Mantid::Parallel::Communicator& comm;
-    const std::string fileNameBase = "/home/anton/builds/Mantid_debug_clion/mpi_test/results/result_";
+    const std::string fileNameBase = "/home/anton/builds/Mantid_release_clion/mpi_test/results/result_";
     size_t m_numEvents;
   };
 
@@ -285,7 +287,7 @@ void ConvertToDistributedMD::exec() {
   // 9. Ensure that the fileIDs and the box controller stats are correct.
   // 10. Maybe save in this algorithm already
 
-//  TimerParallel timer(this->communicator());
+  TimerParallel timer(this->communicator());
 
 
   // Get the users's inputs
@@ -295,63 +297,63 @@ void ConvertToDistributedMD::exec() {
     // 1. Get a n-percent fraction
     // ----------------------------------------------------------
     double fraction = getProperty("Fraction");
-    //   timer.start();
+    timer.start();
     auto nPercentEvents = getFractionEvents(*inputWorkspace, fraction);
-    //  timer.stop();
+    timer.stop();
 
     // -----------------------------------------------------------------
     // 2. + 3. = 4.  Get the preliminary box structure and the partition
     // behaviour
     // -----------------------------------------------------------------
-    // timer.start();
+    timer.start();
     setupPreliminaryBoxStructure(nPercentEvents);
-    // timer.stop();
+    timer.stop();
   }
 
   // ----------------------------------------------------------
   // 5. Convert all events
   // ----------------------------------------------------------
   {
-    //timer.start();
+    timer.start();
     auto allEvents = getFractionEvents(*inputWorkspace, 1.);
-    //timer.stop();
+    timer.stop();
 
     // ----------------------------------------------------------
     // 6. Add the local data to the preliminary box structure
     // ----------------------------------------------------------
-    // timer.start();
+    timer.start();
     addEventsToPreliminaryBoxStructure(allEvents);
-    //  timer.stop();
+    timer.stop();
   }
 
   // ------------------------------------------------------
   // 7. Redistribute data
   // ----------------------------------------------------------
-  //timer.start();
+  timer.start();
   redistributeData();
-  // timer.stop();
+  timer.stop();
 
 
   // ----------------------------------------------------------
   // 8. Continue to split locally
   // ----------------------------------------------------------
-  //timer.start();
+  timer.start();
   continueSplitting();
-  //timer.stop();
+  timer.stop();
 
   // --------------------------------------- -------------------
   // 9. Ensure that box controller and fileIDs are correct
   // ----------------------------------------------------------
-  //timer.start();
+  timer.start();
   updateMetaData();
-  //timer.stop();
+  timer.stop();
 
   // ----------------------------------------------------------
   // 9. Save?
   // ----------------------------------------------------------
-  //const auto numEvents = m_boxStructureInformation.boxStructure->getNPoints();
-  //timer.recordNumEvents(numEvents);
-  //timer.dump();
+  const auto numEvents = m_boxStructureInformation.boxStructure->getNPoints();
+  timer.recordNumEvents(numEvents);
+  timer.dump();
 }
 
 
