@@ -848,16 +848,16 @@ void ConvertToDistributedMD::redistributeData() {
   const boost::mpi::communicator& bC = communicator;
   bC.barrier();
 
-//  const auto localRank = communicator.rank();
-//  std::cout << "Relevant Events Info on RANK " << communicator.rank() << " with range " << m_responsibility[localRank].first <<" "<< m_responsibility[localRank].second << "\n";
-//  for (auto index = m_responsibility[localRank].first; index <= m_responsibility[localRank].second; ++index) {
-//    auto& events = relevantEventsPerRankPerBox.at(index);
-//    std::cout << "On Rank "<< communicator.rank() << " with index " << index <<": ";
-//    for (auto& event : events) {
-//      std::cout << event << " ";
-//    }
-//    std::cout <<"\n";
-//  }
+  const auto localRank = communicator.rank();
+  std::cout << "Relevant Events Info on RANK " << communicator.rank() << " with range " << m_responsibility[localRank].first <<" "<< m_responsibility[localRank].second << "\n";
+  for (auto index = m_responsibility[localRank].first; index <= m_responsibility[localRank].second; ++index) {
+    auto& events = relevantEventsPerRankPerBox.at(index);
+    std::cout << "On Rank "<< communicator.rank() << " with index " << index <<": ";
+    for (auto& event : events) {
+      std::cout << event << " ";
+    }
+    std::cout <<"\n";
+  }
 
 
 /**
@@ -1000,7 +1000,7 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
           eventsPerBox[rank] = box->getNPoints();
           continue;
         }
-        std::cout << "Recv on rank " << communicator.rank() <<  " from rank " << rank << " with index " << index << ", " << box->getNPoints() << " events\n";
+        std::cout << "Recv on rank " << communicator.rank() <<  " from rank " << rank << " with index " << index << ", " << eventsPerBox[rank] << " events\n";
         requests.emplace_back(
           communicator.irecv(rank, static_cast<int>(index), eventsPerBox[rank]));
       }
