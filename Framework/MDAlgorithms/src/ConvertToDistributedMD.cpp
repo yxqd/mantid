@@ -945,9 +945,8 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
     }
   }
 
-  auto result = MPI_Waitall(static_cast<int>(requests.size()), mpi_requests.data(), mpi_status.data());
+  auto result = MPI_Waitall(static_cast<int>(mpi_requests.size()), mpi_requests.data(), mpi_status.data());
   //Mantid::Parallel::wait_all(requests.begin(), requests.end());
-
   #if 0
     if (localRank == 2) {
     for (auto& e : nEventBuffer) {
@@ -969,7 +968,11 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
       }
     }
   #endif
-
+  if (result) {
+    std::cout << "\n\n\nTHERE WAS NO ISSUE\n\n\n";
+  } else {
+    std::cout << "\n\n\nTHERE WAS NO ISSUE\n\n\n";
+  }
   return relevantEventsPerRankPerBox;
 }
 
