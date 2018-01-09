@@ -66,7 +66,7 @@ private:
   std::vector<size_t> getBoxPerDepthInformation(const Mantid::Parallel::Communicator &communicator,
                                                 std::vector<size_t> numberMDBoxesPerDepth) const;
 
-  std::unordered_map<size_t, std::vector<uint64_t>> getRelevantEventsPerRankPerBox(const Mantid::Parallel::Communicator& communicator,
+  std::unordered_map<size_t, std::vector<int>> getRelevantEventsPerRankPerBox(const Mantid::Parallel::Communicator& communicator,
                                                                                    const std::vector<Mantid::API::IMDNode*>& boxes);
 
   std::unordered_map<size_t, DistributedCommon::MDEventList> sendDataToCorrectRank(const Mantid::Parallel::Communicator& communicator,

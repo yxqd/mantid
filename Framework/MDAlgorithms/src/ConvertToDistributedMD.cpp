@@ -343,7 +343,7 @@ void ConvertToDistributedMD::exec() {
   redistributeData();
   timer.stop();
 
-
+#if 0
   // ----------------------------------------------------------
   // 8. Continue to split locally
   // ----------------------------------------------------------
@@ -364,6 +364,7 @@ void ConvertToDistributedMD::exec() {
   const auto numEvents = m_boxStructureInformation.boxStructure->getNPoints();
   timer.recordNumEvents(numEvents);
   timer.dump();
+#endif
 }
 
 
@@ -779,7 +780,7 @@ void ConvertToDistributedMD::redistributeData() {
   auto relevantEventsPerRankPerBox =
     getRelevantEventsPerRankPerBox(communicator, boxes);
 
-
+#if 0
   // Send the actual data
   auto boxVsMDEvents =
     sendDataToCorrectRank(communicator, relevantEventsPerRankPerBox, mdBoxes);
@@ -814,6 +815,7 @@ void ConvertToDistributedMD::redistributeData() {
   // ranks. Note that getMaxId will return the next available id, ie it is
   // not really the max id.
   m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
+#endif
 }
 
 
@@ -858,7 +860,7 @@ int ConvertToDistributedMD::getResponsibleRank(size_t leafNodeIndex) {
 }
 
 
-std::unordered_map<size_t, std::vector<uint64_t>>
+std::unordered_map<size_t, std::vector<int>>
 ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   const Mantid::Parallel::Communicator &communicator,
   const std::vector<Mantid::API::IMDNode *> &boxes) {
@@ -870,7 +872,7 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   const auto numberOfRanks = static_cast<size_t>(communicator.size());
 
   // Initialize Events
-  std::unordered_map<size_t, std::vector<uint64_t>> relevantEventsPerRankPerBox;
+  std::unordered_map<size_t, std::vector<int>> relevantEventsPerRankPerBox;
   auto range = m_responsibility[localRank];
   for (size_t index = range.first; index <= range.second; ++index) {
     auto &elements = relevantEventsPerRankPerBox[index];
@@ -886,7 +888,7 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   };
 
   std::vector<Mantid::Parallel::Request> requests;
-  std::vector<uint64_t > nEventBuffer;
+  std::vector<int > nEventBuffer;
   for (auto index = 0ul; index < boxes.size(); ++index) {
 
     // Check if we are still on the same rank. If not then we need to
@@ -911,18 +913,54 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
         // number of events
         // that we have already in the right place
         if (rank == localRank) {
-          eventsPerBox[rank] = box->getNPoints();
+          auto value = box->getNPoints();
+          if (value > std::numeric_limits<int>::max()) {
+            throw std::runtime_error("TOO LARGE");
+          }
+          eventsPerBox[rank] = static_cast<int>(value);
           continue;
         }
         requests.emplace_back(communicator.irecv(rank, static_cast<int>(index), eventsPerBox[rank]));
       }
     } else {
-      nEventBuffer.emplace_back(box->getNPoints());
-      requests.emplace_back(communicator.isend(rankOfCurrentIndex, static_cast<int>(index), nEventBuffer.back()));
+      auto value = box->getNPoints();
+      if (value > std::numeric_limits<int>::max()) {
+        throw std::runtime_error("TOO LARGE");
+      }
+      nEventBuffer.emplace_back(static_cast<int>(value));
+      if (localRank == 2) {
+        std::cout << "RANK2, index "<<index <<" " << nEventBuffer.back() <<"\n";
+        requests.emplace_back(communicator.isend(rankOfCurrentIndex, static_cast<int>(index), nEventBuffer.back()));
+      } else {
+        requests.emplace_back(communicator.isend(rankOfCurrentIndex, static_cast<int>(index), nEventBuffer.back()));
+      }
     }
   }
 
   Mantid::Parallel::wait_all(requests.begin(), requests.end());
+
+  #if 0
+    if (localRank == 2) {
+    for (auto& e : nEventBuffer) {
+      std::cout << e << " ";
+    }
+    std::cout << "\n\n\n\n";
+  }
+  #endif
+
+  #if 1
+    if (localRank == 0) {
+      std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++\n";
+      for (auto& element : relevantEventsPerRankPerBox) {
+        std::cout << element.first << ":  ";
+        for (auto& e : element.second) {
+          std::cout << e <<" ";
+        }
+        std::cout << "\n";
+      }
+    }
+  #endif
+
   return relevantEventsPerRankPerBox;
 }
 
