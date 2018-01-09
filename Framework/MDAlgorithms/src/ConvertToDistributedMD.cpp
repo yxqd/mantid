@@ -343,7 +343,6 @@ void ConvertToDistributedMD::exec() {
   redistributeData();
   timer.stop();
 
-#if 0
   // ----------------------------------------------------------
   // 8. Continue to split locally
   // ----------------------------------------------------------
@@ -364,7 +363,6 @@ void ConvertToDistributedMD::exec() {
   const auto numEvents = m_boxStructureInformation.boxStructure->getNPoints();
   timer.recordNumEvents(numEvents);
   timer.dump();
-#endif
 }
 
 
@@ -780,7 +778,6 @@ void ConvertToDistributedMD::redistributeData() {
   auto relevantEventsPerRankPerBox =
     getRelevantEventsPerRankPerBox(communicator, boxes);
 
-#if 0
   // Send the actual data
   auto boxVsMDEvents =
     sendDataToCorrectRank(communicator, relevantEventsPerRankPerBox, mdBoxes);
@@ -815,7 +812,6 @@ void ConvertToDistributedMD::redistributeData() {
   // ranks. Note that getMaxId will return the next available id, ie it is
   // not really the max id.
   m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
-#endif
 }
 
 
@@ -860,7 +856,7 @@ int ConvertToDistributedMD::getResponsibleRank(size_t leafNodeIndex) {
 }
 
 
-std::unordered_map<size_t, std::vector<int>>
+std::unordered_map<size_t, std::vector<uint64_t>>
 ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   const Mantid::Parallel::Communicator &communicator,
   const std::vector<Mantid::API::IMDNode *> &boxes) {
@@ -872,7 +868,7 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   const auto numberOfRanks = static_cast<size_t>(communicator.size());
 
   // Initialize Events
-  std::unordered_map<size_t, std::vector<int>> relevantEventsPerRankPerBox;
+  std::unordered_map<size_t, std::vector<uint64_t>> relevantEventsPerRankPerBox;
   auto range = m_responsibility[localRank];
   for (size_t index = range.first; index <= range.second; ++index) {
     auto &elements = relevantEventsPerRankPerBox[index];
@@ -888,7 +884,7 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   };
 
   std::vector<Mantid::Parallel::Request> requests;
-  std::vector<int > nEventBuffer;
+  std::vector<uint64_t> nEventBuffer;
   const boost::mpi::communicator& boostComm = communicator;
   const MPI_Comm comm = boostComm;
 
@@ -919,60 +915,27 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
         // number of events
         // that we have already in the right place
         if (rank == localRank) {
-          auto value = box->getNPoints();
-          if (value > std::numeric_limits<int>::max()) {
-            throw std::runtime_error("TOO LARGE");
-          }
-          eventsPerBox[rank] = static_cast<int>(value);
+          eventsPerBox[rank] = box->getNPoints();
           continue;
         }
-        //requests.emplace_back(communicator.irecv(rank, static_cast<int>(index), eventsPerBox[rank]));
-
         mpi_status.emplace_back();
         mpi_requests.emplace_back();
-        MPI_Irecv(&eventsPerBox[rank], 1, MPI_INT, rank, static_cast<int>(index), comm, &mpi_requests.back());
+        MPI_Irecv(&eventsPerBox[rank], 1, MPI_UINT64_T, rank, static_cast<int>(index), comm, &mpi_requests.back());
       }
     } else {
-      auto value = box->getNPoints();
-      if (value > std::numeric_limits<int>::max()) {
-        throw std::runtime_error("TOO LARGE");
-      }
-      nEventBuffer.emplace_back(static_cast<int>(value));
-      //requests.emplace_back(communicator.isend(rankOfCurrentIndex, static_cast<int>(index), nEventBuffer.back()));
+      nEventBuffer.emplace_back(box->getNPoints());
       mpi_status.emplace_back();
       mpi_requests.emplace_back();
-      MPI_Isend(&nEventBuffer.back(), 1, MPI_INT, rankOfCurrentIndex, static_cast<int>(index), comm, &mpi_requests.back());
+      MPI_Isend(&nEventBuffer.back(), 1, MPI_UINT64_T, rankOfCurrentIndex, static_cast<int>(index), comm, &mpi_requests.back());
     }
   }
 
   auto result = MPI_Waitall(static_cast<int>(mpi_requests.size()), mpi_requests.data(), mpi_status.data());
-  //Mantid::Parallel::wait_all(requests.begin(), requests.end());
-  #if 0
-    if (localRank == 2) {
-    for (auto& e : nEventBuffer) {
-      std::cout << e << " ";
-    }
-    std::cout << "\n\n\n\n";
+  if (result != MPI_SUCCESS) {
+    std::string message = "There has been an issue sharing the event numbers on rank " + std::to_string(localRank);
+    throw std::runtime_error(message);
   }
-  #endif
 
-  #if 1
-    if (localRank == 0) {
-      std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++\n";
-      for (auto& element : relevantEventsPerRankPerBox) {
-        std::cout << element.first << ":  ";
-        for (auto& e : element.second) {
-          std::cout << e <<" ";
-        }
-        std::cout << "\n";
-      }
-    }
-  #endif
-  if (result) {
-    std::cout << "\n\n\nTHERE WAS NO ISSUE\n\n\n";
-  } else {
-    std::cout << "\n\n\nTHERE WAS NO ISSUE\n\n\n";
-  }
   return relevantEventsPerRankPerBox;
 }
 
