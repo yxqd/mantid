@@ -889,6 +889,12 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
 
   std::vector<Mantid::Parallel::Request> requests;
   std::vector<int > nEventBuffer;
+  const boost::mpi::communicator& boostComm = communicator;
+  const MPI_Comm comm = boostComm;
+
+  std::vector<MPI_Request> mpi_requests;
+  std::vector<MPI_Status> mpi_status;
+
   for (auto index = 0ul; index < boxes.size(); ++index) {
 
     // Check if we are still on the same rank. If not then we need to
@@ -920,7 +926,11 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
           eventsPerBox[rank] = static_cast<int>(value);
           continue;
         }
-        requests.emplace_back(communicator.irecv(rank, static_cast<int>(index), eventsPerBox[rank]));
+        //requests.emplace_back(communicator.irecv(rank, static_cast<int>(index), eventsPerBox[rank]));
+
+        mpi_status.emplace_back();
+        mpi_requests.emplace_back();
+        MPI_Irecv(&eventsPerBox[rank], 1, MPI_INT, rank, static_cast<int>(index), comm, &mpi_requests.back());
       }
     } else {
       auto value = box->getNPoints();
@@ -928,16 +938,15 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
         throw std::runtime_error("TOO LARGE");
       }
       nEventBuffer.emplace_back(static_cast<int>(value));
-      if (localRank == 2) {
-        std::cout << "RANK2, index "<<index <<" " << nEventBuffer.back() <<"\n";
-        requests.emplace_back(communicator.isend(rankOfCurrentIndex, static_cast<int>(index), nEventBuffer.back()));
-      } else {
-        requests.emplace_back(communicator.isend(rankOfCurrentIndex, static_cast<int>(index), nEventBuffer.back()));
-      }
+      //requests.emplace_back(communicator.isend(rankOfCurrentIndex, static_cast<int>(index), nEventBuffer.back()));
+      mpi_status.emplace_back();
+      mpi_requests.emplace_back();
+      MPI_Isend(&nEventBuffer.back(), 1, MPI_INT, rankOfCurrentIndex, static_cast<int>(index), comm, &mpi_requests.back());
     }
   }
 
-  Mantid::Parallel::wait_all(requests.begin(), requests.end());
+  auto result = MPI_Waitall(static_cast<int>(requests.size()), mpi_requests.data(), mpi_status.data());
+  //Mantid::Parallel::wait_all(requests.begin(), requests.end());
 
   #if 0
     if (localRank == 2) {
