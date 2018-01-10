@@ -1078,6 +1078,7 @@ ConvertToDistributedMD::sendDataToCorrectRank(
         #else
         mpi_requests.emplace_back();
         mpi_status.emplace_back();
+        std::cout << "RECV: " << rank << " -> " << localRank << ", tag " << index <<" length " << static_cast<int>(numberOfEvents*sizeOfMDLeanEvent) <<"\n";
         MPI_Irecv(reinterpret_cast<char*>(insertionPoint),
                   static_cast<int>(numberOfEvents*sizeOfMDLeanEvent),
                   MPI_CHAR,
@@ -1097,6 +1098,7 @@ ConvertToDistributedMD::sendDataToCorrectRank(
         #else
         mpi_requests.emplace_back();
         mpi_status.emplace_back();
+        std::cout << "SEND: " << localRank << " -> " << rankOfCurrentIndex << ", tag " << index <<" length " << static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent) <<"\n";
         MPI_Isend(reinterpret_cast<char*>(events.data()),
                   static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent),
                   MPI_CHAR,
@@ -1118,6 +1120,7 @@ ConvertToDistributedMD::sendDataToCorrectRank(
     throw std::runtime_error(message);
   }
 #endif
+  std::cout << "Finished sending data on rank " << localRank <<"\n";
   return boxVsMDEvents;
 }
 
