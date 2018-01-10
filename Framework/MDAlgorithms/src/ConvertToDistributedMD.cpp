@@ -16,8 +16,6 @@
 #include <boost/serialization/utility.hpp>
 #include <fstream>
 
-// !!!!!!!!!!!!! ONLY *ix
-#include <unistd.h>
 
 namespace {
   class TimerParallel {
@@ -299,7 +297,10 @@ void ConvertToDistributedMD::exec() {
 
   TimerParallel timer(this->communicator());
 
+  const auto localRank = this->communicator().rank();
 
+
+  std::cout << "Starting rank " << localRank <<"\n";
   // Get the users's inputs
   EventWorkspace_sptr inputWorkspace = getProperty("InputWorkspace");
   {
@@ -320,6 +321,7 @@ void ConvertToDistributedMD::exec() {
     timer.stop();
   }
 
+
   // ----------------------------------------------------------
   // 5. Convert all events
   // ----------------------------------------------------------
@@ -336,13 +338,17 @@ void ConvertToDistributedMD::exec() {
     timer.stop();
   }
 
+  std::cout << "Finished setting up the box strucutre on rank " << localRank <<"\n";
+
+
   // ------------------------------------------------------
   // 7. Redistribute data
   // ----------------------------------------------------------
   timer.start();
   redistributeData();
   timer.stop();
-
+  std::cout << "Finished redistributing the data on " << localRank <<"\n";
+#if 0
   // ----------------------------------------------------------
   // 8. Continue to split locally
   // ----------------------------------------------------------
@@ -363,6 +369,7 @@ void ConvertToDistributedMD::exec() {
   const auto numEvents = m_boxStructureInformation.boxStructure->getNPoints();
   timer.recordNumEvents(numEvents);
   timer.dump();
+#endif
 }
 
 
@@ -1004,6 +1011,13 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   };
 
   std::vector<Mantid::Parallel::Request> requests;
+
+  const boost::mpi::communicator& boostComm = communicator;
+  MPI_Comm comm = boostComm;
+
+  std::vector<MPI_Request> mpi_requests;
+  std::vector<MPI_Status> mpi_status;
+
   for (auto index = 0ul; index < mdBoxes.size(); ++index) {
 
     // Check if we are still on the same rank. If not then we need to
@@ -1057,20 +1071,53 @@ ConvertToDistributedMD::sendDataToCorrectRank(
           }
           continue;
         }
+        #if 0
         requests.emplace_back(
           communicator.irecv(rank, static_cast<int>(index), reinterpret_cast<char*>(insertionPoint),
                              static_cast<int>(numberOfEvents*sizeOfMDLeanEvent)));
+        #else
+        mpi_requests.emplace_back();
+        mpi_status.emplace_back();
+        MPI_Irecv(reinterpret_cast<char*>(insertionPoint),
+                  static_cast<int>(numberOfEvents*sizeOfMDLeanEvent),
+                  MPI_CHAR,
+                  rank,
+                  static_cast<int>(index),
+                  comm,
+                  &mpi_requests.back());
+        #endif
       }
     } else {
       auto& events = mdBox->getEvents();
       if (!events.empty()) {
+        #if 0
         requests.emplace_back(communicator.isend(
           rankOfCurrentIndex, static_cast<int>(index), reinterpret_cast<char*>(events.data()),
           static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent)));
+        #else
+        mpi_requests.emplace_back();
+        mpi_status.emplace_back();
+        MPI_Isend(reinterpret_cast<char*>(events.data()),
+                  static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent),
+                  MPI_CHAR,
+                  rankOfCurrentIndex,
+                  static_cast<int>(index),
+                  comm,
+                  &mpi_requests.back());
+        #endif
       }
     }
   }
+
+#if 0
   Mantid::Parallel::wait_all(requests.begin(), requests.end());
+#else
+  auto result = MPI_Waitall(static_cast<int>(mpi_requests.size()), mpi_requests.data(), mpi_status.data());
+  if (result != MPI_SUCCESS) {
+    std::string message = "There has been an issue sharing the event numbers on rank " + std::to_string(localRank);
+    throw std::runtime_error(message);
+  }
+#endif
   return boxVsMDEvents;
 }
 
