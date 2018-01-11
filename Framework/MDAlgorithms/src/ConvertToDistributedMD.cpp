@@ -136,6 +136,43 @@ namespace {
 }
 
 
+namespace {
+ struct Measurement {
+   Measurement(int from, int to, int tag, int length) : from(from), to(to), tag(tag), length(length){}
+   int from;
+   int to;
+   int tag;
+   int length;
+ };
+
+
+std::vector<Measurement> sendMeasurement;
+std::vector<Measurement> recvMeasurement;
+
+void save(const std::vector<Measurement>& measurement, int rank, const std::string& prefix) {
+  char cwd[1024];
+  std::string fileNameBase;
+  if (getcwd(cwd, sizeof(cwd)) != nullptr) {
+    std::string base(cwd);
+    if (base.find("scarf") != std::string::npos) {
+      fileNameBase = "/home/isisg/scarf672/Mantid2/mpi_test/archive/";
+    } else {
+      fileNameBase = "/home/anton/builds/Mantid_debug_clion/mpi_test/archive";
+    }
+
+    fileNameBase += prefix + std::to_string(rank) + ".txt";
+
+    std::fstream stream;
+    stream.open(fileNameBase, std::ios::out | std::ios::app);
+    for (auto& e : measurement) {
+      stream << prefix <<": " << e.from << "->" << e.to << ", tag " << e.tag << " length " << e.length <<"\n";
+    }
+    stream.close();
+  }
+}
+}
+
+
 namespace Mantid {
 namespace MDAlgorithms {
 
@@ -338,7 +375,7 @@ void ConvertToDistributedMD::exec() {
     timer.stop();
   }
 
-  std::cout << "Finished setting up the box strucutre on rank " << localRank <<"\n";
+ // std::cout << "Finished setting up the box strucutre on rank " << localRank <<"\n";
 
 
   // ------------------------------------------------------
@@ -347,7 +384,7 @@ void ConvertToDistributedMD::exec() {
   timer.start();
   redistributeData();
   timer.stop();
-  std::cout << "Finished redistributing the data on " << localRank <<"\n";
+  //std::cout << "Finished redistributing the data on " << localRank <<"\n";
 #if 0
   // ----------------------------------------------------------
   // 8. Continue to split locally
@@ -943,6 +980,11 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
     throw std::runtime_error(message);
   }
 
+  auto sync = MPI_Barrier(comm);
+  if (sync != MPI_SUCCESS) {
+    throw std::runtime_error("Sync failed");
+  }
+
   return relevantEventsPerRankPerBox;
 }
 
@@ -981,6 +1023,10 @@ ConvertToDistributedMD::sendDataToCorrectRank(
       std::accumulate(numberOfEvents.begin(), numberOfEvents.end(), 0ul);
     auto &entry = boxVsMDEvents[index];
     entry.resize(totalNumEvents);
+  }
+
+  if (localRank == 0) {
+
   }
 
 
@@ -1078,7 +1124,7 @@ ConvertToDistributedMD::sendDataToCorrectRank(
         #else
         mpi_requests.emplace_back();
         mpi_status.emplace_back();
-        std::cout << "RECV: " << rank << " -> " << localRank << ", tag " << index <<" length " << static_cast<int>(numberOfEvents*sizeOfMDLeanEvent) <<"\n";
+        //std::cout << "RECV: " << rank << " -> " << localRank << ", tag " << index <<" length " << static_cast<int>(numberOfEvents*sizeOfMDLeanEvent) <<"\n";
         MPI_Irecv(reinterpret_cast<char*>(insertionPoint),
                   static_cast<int>(numberOfEvents*sizeOfMDLeanEvent),
                   MPI_CHAR,
@@ -1086,6 +1132,7 @@ ConvertToDistributedMD::sendDataToCorrectRank(
                   static_cast<int>(index),
                   comm,
                   &mpi_requests.back());
+        recvMeasurement.emplace_back(rank, localRank, index, static_cast<int>(numberOfEvents*sizeOfMDLeanEvent));
         #endif
       }
     } else {
@@ -1098,7 +1145,7 @@ ConvertToDistributedMD::sendDataToCorrectRank(
         #else
         mpi_requests.emplace_back();
         mpi_status.emplace_back();
-        std::cout << "SEND: " << localRank << " -> " << rankOfCurrentIndex << ", tag " << index <<" length " << static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent) <<"\n";
+       // std::cout << "SEND: " << localRank << " -> " << rankOfCurrentIndex << ", tag " << index <<" length " << static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent) <<"\n";
         MPI_Isend(reinterpret_cast<char*>(events.data()),
                   static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent),
                   MPI_CHAR,
@@ -1106,7 +1153,8 @@ ConvertToDistributedMD::sendDataToCorrectRank(
                   static_cast<int>(index),
                   comm,
                   &mpi_requests.back());
-        #endif
+        sendMeasurement.emplace_back(localRank, rankOfCurrentIndex, index, static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent));
+      #endif
       }
     }
   }
@@ -1118,9 +1166,19 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   if (result != MPI_SUCCESS) {
     std::string message = "There has been an issue sharing the event numbers on rank " + std::to_string(localRank);
     throw std::runtime_error(message);
+  } else {
+    //std::cout << "Finished sending data on rank " << localRank <<"\n";
   }
 #endif
-  std::cout << "Finished sending data on rank " << localRank <<"\n";
+  auto sync = MPI_Barrier(comm);
+  if (sync != MPI_SUCCESS) {
+    throw std::runtime_error("Sync failed");
+  }
+
+  //std::cout << "GOT HERE " << localRank <<"\n";
+  save(sendMeasurement, localRank, "SEND");
+  save(recvMeasurement, localRank, "RECV");
+
   return boxVsMDEvents;
 }
 
@@ -1206,7 +1264,7 @@ void ConvertToDistributedMD::updateMetaData() {
 
   // --------------------------------------
   // 2. Update values in NullMDBoxes
-  //    TODO: Update the singals stored in the NullMDBoxes. This would be nice to have as a check but
+  //    TODO: Update the signals stored in the NullMDBoxes. This would be nice to have as a check but
   //          to check scaling up to this point.
   // --------------------------------------
 }
