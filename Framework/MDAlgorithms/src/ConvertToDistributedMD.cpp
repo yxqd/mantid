@@ -1124,7 +1124,7 @@ ConvertToDistributedMD::sendDataToCorrectRank(
 
         // If we don't have events, then we don't do anything
         if (numberOfEvents == 0) {
-#if 1
+#if 0
           recvMeasurementNull.emplace_back(rank, localRank, index, static_cast<int>(numberOfEvents*sizeOfMDLeanEvent));
 #endif
           continue;
@@ -1165,7 +1165,7 @@ ConvertToDistributedMD::sendDataToCorrectRank(
                   static_cast<int>(index),
                   comm,
                   &mpi_requests.back());
-  #if 1
+  #if 0
         recvMeasurement.emplace_back(rank, localRank, index, static_cast<int>(numberOfEvents*sizeOfMDLeanEvent));
   #endif
 #endif
@@ -1188,12 +1188,12 @@ ConvertToDistributedMD::sendDataToCorrectRank(
                   static_cast<int>(index),
                   comm,
                   &mpi_requests.back());
-  #if 1
+  #if 0
         sendMeasurement.emplace_back(localRank, rankOfCurrentIndex, index, static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent));
   #endif
 #endif
       } else {
-#if 1
+#if 0
         sendMeasurementNull.emplace_back(localRank, rankOfCurrentIndex, index, static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent));
 #endif
       }
@@ -1215,7 +1215,7 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   if (sync != MPI_SUCCESS) {
     throw std::runtime_error("Sync failed");
   }
-#if 1
+#if 0
   //std::cout << "GOT HERE " << localRank <<"\n";;
   save(sendMeasurement, localRank, "SEND");
   save(recvMeasurement, localRank, "RECV");
