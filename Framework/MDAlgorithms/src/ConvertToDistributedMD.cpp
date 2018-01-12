@@ -844,12 +844,11 @@ void ConvertToDistributedMD::redistributeData() {
     getRelevantEventsPerRankPerBox(communicator, boxes);
 
 
-#if 0
-
-
   // Send the actual data
   auto boxVsMDEvents =
     sendDataToCorrectRank(communicator, relevantEventsPerRankPerBox, mdBoxes);
+#if 0
+
   // Place the data into the correct boxes
   auto localRank = communicator.rank();
   auto startIndex = m_responsibility[localRank].first;
