@@ -963,10 +963,6 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   std::vector<MPI_Request> mpi_requests;
   std::vector<MPI_Status> mpi_status;
 
-
-  int sendCount = 0;
-  int recCount = 0;
-
   for (auto index = 0ul; index < boxes.size(); ++index) {
 
     // Check if we are still on the same rank. If not then we need to
@@ -997,15 +993,15 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
         mpi_status.emplace_back();
         mpi_requests.emplace_back();
         MPI_Irecv(&eventsPerBox[rank], 1, MPI_UINT64_T, rank, static_cast<int>(index), comm, &mpi_requests.back());
-        recCount++;
       }
     } else {
       nEventBuffer.emplace_back(box->getNPoints());
       mpi_status.emplace_back();
       mpi_requests.emplace_back();
       MPI_Isend(&nEventBuffer.back(), 1, MPI_UINT64_T, rankOfCurrentIndex, static_cast<int>(index), comm, &mpi_requests.back());
-      sendNumEvents.emplace_back(localRank, rankOfCurrentIndex, index, nEventBuffer.back());
-      sendCount++;
+#if 0
+      //sendNumEvents.emplace_back(localRank, rankOfCurrentIndex, index, nEventBuffer.back());
+#endif
     }
   }
 
@@ -1019,9 +1015,10 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   if (sync != MPI_SUCCESS) {
     throw std::runtime_error("Sync failed");
   }
-
+#if 0
   // Save out the expected number of events
   saveSingleNum(sendNumEvents, localRank, relevantEventsPerRankPerBox);
+#endif
 
   return relevantEventsPerRankPerBox;
 }
@@ -1129,7 +1126,9 @@ ConvertToDistributedMD::sendDataToCorrectRank(
 
         // If we don't have events, then we don't do anything
         if (numberOfEvents == 0) {
+#if 0
           recvMeasurementNull.emplace_back(rank, localRank, index, static_cast<int>(numberOfEvents*sizeOfMDLeanEvent));
+#endif
           continue;
         }
 
@@ -1152,12 +1151,12 @@ ConvertToDistributedMD::sendDataToCorrectRank(
           }
           continue;
         }
-        #if 0
+#if 0
         requests.emplace_back(
           communicator.irecv(rank, static_cast<int>(index), reinterpret_cast<char*>(insertionPoint),
                              static_cast<int>(numberOfEvents*sizeOfMDLeanEvent)));
-        #else
-        #if 0
+#else
+
         mpi_requests.emplace_back();
         mpi_status.emplace_back();
         //std::cout << "RECV: " << rank << " -> " << localRank << ", tag " << index <<" length " << static_cast<int>(numberOfEvents*sizeOfMDLeanEvent) <<"\n";
@@ -1168,19 +1167,19 @@ ConvertToDistributedMD::sendDataToCorrectRank(
                   static_cast<int>(index),
                   comm,
                   &mpi_requests.back());
-        #endif
+  #if 0
         recvMeasurement.emplace_back(rank, localRank, index, static_cast<int>(numberOfEvents*sizeOfMDLeanEvent));
-        #endif
+  #endif
+#endif
       }
     } else {
       auto& events = mdBox->getEvents();
       if (!events.empty()) {
-        #if 0
+#if 0
         requests.emplace_back(communicator.isend(
           rankOfCurrentIndex, static_cast<int>(index), reinterpret_cast<char*>(events.data()),
           static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent)));
-        #else
-        #if 0
+#else
         mpi_requests.emplace_back();
         mpi_status.emplace_back();
        // std::cout << "SEND: " << localRank << " -> " << rankOfCurrentIndex << ", tag " << index <<" length " << static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent) <<"\n";
@@ -1191,11 +1190,14 @@ ConvertToDistributedMD::sendDataToCorrectRank(
                   static_cast<int>(index),
                   comm,
                   &mpi_requests.back());
-        #endif
+  #if 0
         sendMeasurement.emplace_back(localRank, rankOfCurrentIndex, index, static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent));
-      #endif
+  #endif
+#endif
       } else {
+#if 0
         sendMeasurementNull.emplace_back(localRank, rankOfCurrentIndex, index, static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent));
+#endif
       }
     }
   }
@@ -1208,20 +1210,20 @@ ConvertToDistributedMD::sendDataToCorrectRank(
     std::string message = "There has been an issue sharing the event numbers on rank " + std::to_string(localRank);
     throw std::runtime_error(message);
   } else {
-    //std::cout << "Finished sending data on rank " << localRank <<"\n";
+    std::cout << "Finished sending data on rank " << localRank <<"\n";
   }
 #endif
   auto sync = MPI_Barrier(comm);
   if (sync != MPI_SUCCESS) {
     throw std::runtime_error("Sync failed");
   }
-
+#if 0
   //std::cout << "GOT HERE " << localRank <<"\n";;
   save(sendMeasurement, localRank, "SEND");
   save(recvMeasurement, localRank, "RECV");
   save(sendMeasurementNull, localRank, "SENDNULL");
   save(recvMeasurementNull, localRank, "RECVNULL");
-
+#endif
   return boxVsMDEvents;
 }
 
