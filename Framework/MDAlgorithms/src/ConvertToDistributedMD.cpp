@@ -138,19 +138,20 @@ namespace {
 
 namespace {
 struct Measurement {
-  Measurement(int from, int to, int tag, int length) : from(from), to(to), tag(tag), length(length){}
+  Measurement(int from, int to, int tag, int cargo) : from(from), to(to), tag(tag), cargo(cargo){}
   int from;
   int to;
   int tag;
-  int length;
+  int cargo;
 };
+
 
 
 std::vector<Measurement> sendMeasurement;
 std::vector<Measurement> recvMeasurement;
 std::vector<Measurement> sendMeasurementNull;
 std::vector<Measurement> recvMeasurementNull;
-
+std::vector<Measurement> sendNumEvents;
 
 void save(const std::vector<Measurement>& measurement, int rank, const std::string& prefix) {
   char cwd[1024];
@@ -168,11 +169,31 @@ void save(const std::vector<Measurement>& measurement, int rank, const std::stri
     std::fstream stream;
     stream.open(fileNameBase, std::ios::out | std::ios::app);
     for (auto& e : measurement) {
-      stream << prefix <<": " << e.from << "->" << e.to << ", tag " << e.tag << " length " << e.length <<"\n";
+      stream << prefix <<": " << e.from << "->" << e.to << ", tag " << e.tag << " payload " << e.cargo <<"\n";
     }
     stream.close();
   }
 }
+
+
+void saveSingleNum(const std::vector<Measurement>& measurment, int localRank, const std::unordered_map<size_t, std::vector<uint64_t>>& relevantEventsPerRankPerBox) {
+  save(measurment, localRank, "SENDSINGLE");
+
+  // Save out the received values
+  std::vector<Measurement> recvNumEvents;
+  for (auto & element : relevantEventsPerRankPerBox) {
+    auto tag = element.first;
+    auto data = element.second;
+    for (auto index = 0ul; index < data.size(); ++index) {
+      if (index != localRank) {
+        recvNumEvents.emplace_back(index, localRank, tag, data[index]);
+      }
+    }
+  }
+
+  save(recvNumEvents, localRank, "RECVSINGLE");
+}
+
 }
 
 
@@ -827,10 +848,13 @@ void ConvertToDistributedMD::redistributeData() {
   auto relevantEventsPerRankPerBox =
     getRelevantEventsPerRankPerBox(communicator, boxes);
 
+
+
+
   // Send the actual data
   auto boxVsMDEvents =
     sendDataToCorrectRank(communicator, relevantEventsPerRankPerBox, mdBoxes);
-
+#if 0
   // Place the data into the correct boxes
   auto localRank = communicator.rank();
   auto startIndex = m_responsibility[localRank].first;
@@ -861,6 +885,7 @@ void ConvertToDistributedMD::redistributeData() {
   // ranks. Note that getMaxId will return the next available id, ie it is
   // not really the max id.
   m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
+#endif
 }
 
 
@@ -976,6 +1001,7 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
       mpi_status.emplace_back();
       mpi_requests.emplace_back();
       MPI_Isend(&nEventBuffer.back(), 1, MPI_UINT64_T, rankOfCurrentIndex, static_cast<int>(index), comm, &mpi_requests.back());
+      sendNumEvents.emplace_back(rankOfCurrentIndex, localRank, index, nEventBuffer.back());
     }
   }
 
@@ -989,6 +1015,11 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   if (sync != MPI_SUCCESS) {
     throw std::runtime_error("Sync failed");
   }
+
+
+  // Save out the expected number of events
+  saveSingleNum(sendNumEvents, localRank, relevantEventsPerRankPerBox);
+
 
   return relevantEventsPerRankPerBox;
 }
