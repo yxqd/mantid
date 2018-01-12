@@ -176,42 +176,6 @@ void save(const std::vector<Measurement>& measurement, int rank, const std::stri
 }
 
 
-namespace {
- struct Measurement {
-   Measurement(int from, int to, int tag, int length) : from(from), to(to), tag(tag), length(length){}
-   int from;
-   int to;
-   int tag;
-   int length;
- };
-
-
-std::vector<Measurement> sendMeasurement;
-std::vector<Measurement> recvMeasurement;
-
-void save(const std::vector<Measurement>& measurement, int rank, const std::string& prefix) {
-  char cwd[1024];
-  std::string fileNameBase;
-  if (getcwd(cwd, sizeof(cwd)) != nullptr) {
-    std::string base(cwd);
-    if (base.find("scarf") != std::string::npos) {
-      fileNameBase = "/home/isisg/scarf672/Mantid2/mpi_test/archive/";
-    } else {
-      fileNameBase = "/home/anton/builds/Mantid_debug_clion/mpi_test/archive";
-    }
-
-    fileNameBase += prefix + std::to_string(rank) + ".txt";
-
-    std::fstream stream;
-    stream.open(fileNameBase, std::ios::out | std::ios::app);
-    for (auto& e : measurement) {
-      stream << prefix <<": " << e.from << "->" << e.to << ", tag " << e.tag << " length " << e.length <<"\n";
-    }
-    stream.close();
-  }
-}
-}
-
 
 namespace Mantid {
 namespace MDAlgorithms {
