@@ -178,22 +178,19 @@ void save(const std::vector<Measurement>& measurement, int rank, const std::stri
 
 void saveSingleNum(const std::vector<Measurement>& measurment, int localRank, const std::unordered_map<size_t, std::vector<uint64_t>>& relevantEventsPerRankPerBox) {
   save(measurment, localRank, "SENDSINGLE");
-
   // Save out the received values
   std::vector<Measurement> recvNumEvents;
   for (auto & element : relevantEventsPerRankPerBox) {
     auto tag = element.first;
     auto data = element.second;
     for (auto index = 0ul; index < data.size(); ++index) {
-      if (index != localRank) {
+      if (static_cast<int>(index) != localRank) {
         recvNumEvents.emplace_back(index, localRank, tag, data[index]);
       }
     }
   }
-
   save(recvNumEvents, localRank, "RECVSINGLE");
 }
-
 }
 
 
@@ -399,8 +396,6 @@ void ConvertToDistributedMD::exec() {
     addEventsToPreliminaryBoxStructure(allEvents);
     timer.stop();
   }
-
- // std::cout << "Finished setting up the box strucutre on rank " << localRank <<"\n";
 
 
   // ------------------------------------------------------
@@ -849,12 +844,12 @@ void ConvertToDistributedMD::redistributeData() {
     getRelevantEventsPerRankPerBox(communicator, boxes);
 
 
+#if 0
 
 
   // Send the actual data
   auto boxVsMDEvents =
     sendDataToCorrectRank(communicator, relevantEventsPerRankPerBox, mdBoxes);
-#if 0
   // Place the data into the correct boxes
   auto localRank = communicator.rank();
   auto startIndex = m_responsibility[localRank].first;
@@ -965,6 +960,10 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   std::vector<MPI_Request> mpi_requests;
   std::vector<MPI_Status> mpi_status;
 
+
+  int sendCount = 0;
+  int recCount = 0;
+
   for (auto index = 0ul; index < boxes.size(); ++index) {
 
     // Check if we are still on the same rank. If not then we need to
@@ -995,13 +994,15 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
         mpi_status.emplace_back();
         mpi_requests.emplace_back();
         MPI_Irecv(&eventsPerBox[rank], 1, MPI_UINT64_T, rank, static_cast<int>(index), comm, &mpi_requests.back());
+        recCount++;
       }
     } else {
       nEventBuffer.emplace_back(box->getNPoints());
       mpi_status.emplace_back();
       mpi_requests.emplace_back();
       MPI_Isend(&nEventBuffer.back(), 1, MPI_UINT64_T, rankOfCurrentIndex, static_cast<int>(index), comm, &mpi_requests.back());
-      sendNumEvents.emplace_back(rankOfCurrentIndex, localRank, index, nEventBuffer.back());
+      sendNumEvents.emplace_back(localRank, rankOfCurrentIndex, index, nEventBuffer.back());
+      sendCount++;
     }
   }
 
@@ -1016,10 +1017,8 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
     throw std::runtime_error("Sync failed");
   }
 
-
   // Save out the expected number of events
   saveSingleNum(sendNumEvents, localRank, relevantEventsPerRankPerBox);
-
 
   return relevantEventsPerRankPerBox;
 }
