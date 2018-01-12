@@ -406,7 +406,7 @@ void ConvertToDistributedMD::exec() {
   timer.stop();
 
 
-#if 0
+#if 1
   // ----------------------------------------------------------
   // 8. Continue to split locally
   // ----------------------------------------------------------
@@ -847,7 +847,7 @@ void ConvertToDistributedMD::redistributeData() {
   // Send the actual data
   auto boxVsMDEvents =
     sendDataToCorrectRank(communicator, relevantEventsPerRankPerBox, mdBoxes);
-#if 0
+
 
   // Place the data into the correct boxes
   auto localRank = communicator.rank();
@@ -879,7 +879,6 @@ void ConvertToDistributedMD::redistributeData() {
   // ranks. Note that getMaxId will return the next available id, ie it is
   // not really the max id.
   m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
-#endif
 }
 
 
