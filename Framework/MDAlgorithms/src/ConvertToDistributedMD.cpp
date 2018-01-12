@@ -954,6 +954,9 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
 
   std::vector<Mantid::Parallel::Request> requests;
   std::vector<uint64_t> nEventBuffer;
+  // Note that we won't need that many entries, but we want to be safe
+  nEventBuffer.reserve(boxes.size());
+
   const boost::mpi::communicator& boostComm = communicator;
   const MPI_Comm comm = boostComm;
 
