@@ -18,6 +18,13 @@
 
 
 namespace {
+
+
+#define MEASURE_ALL 0
+#define MEASURE_PRELIM 1
+#define MEASURE_PRELIM_MASTER 1
+#define MEASURE_PRELIM_NON_MASTER 0
+
   class TimerParallel {
   public:
     TimerParallel(const Mantid::Parallel::Communicator& comm) : comm(comm) {
@@ -48,7 +55,7 @@ namespace {
         if (base.find("scarf") != std::string::npos) {
           fileNameBase = "/home/isisg/scarf672/Mantid2/mpi_test/results/result_";
         } else {
-          fileNameBase = "/home/anton/builds";
+          fileNameBase = "/home/anton/builds/Mantid_debug_clion/mpi_test/results/result_";
         }
       }
 
@@ -68,32 +75,42 @@ namespace {
       if (comm.rank() == 0) {
         const auto numRanks = comm.size();
         const auto size = m_times_cpu.size();
+#if MEASURE_PRELIM
+        times_cpu.resize(size);
+        times_wall.resize(size);
+#else
         times_cpu.resize(numRanks*size);
         times_wall.resize(numRanks*size);
-
+#endif
         std::copy(m_times_cpu.begin(), m_times_cpu.end(), times_cpu.begin());
         std::copy(m_times_wall.begin(), m_times_wall.end(), times_wall.begin());
 
+#ifndef MEASURE_PRELIM
         const auto offset = m_times_cpu.size();
         for (int rank = 1; rank < numRanks; ++rank) {
           requests.emplace_back(comm.irecv(rank, 1, times_cpu.data()+offset*rank, static_cast<int>(size)));
           requests.emplace_back(comm.irecv(rank, 2, times_wall.data()+offset*rank, static_cast<int>(size)));
         }
+#endif
       } else {
+#ifndef MEASURE_PRELIM
         requests.emplace_back(comm.isend(0, 1, m_times_cpu.data(), static_cast<int>(m_times_cpu.size())));
         requests.emplace_back(comm.isend(0, 2, m_times_wall.data(), static_cast<int>(m_times_wall.size())));
+#endif
       }
       wait_all(requests.begin(), requests.end());
       std::vector<Mantid::Parallel::Request>().swap(requests);
 
       // -----------------
       // Receive other
+#ifndef MEASURE_PRELIM
       std::vector<size_t> numEvents(static_cast<size_t>(comm.size()));
       if (comm.rank() == 0) {
         Mantid::Parallel::gather(comm, m_numEvents, numEvents, 0);
       } else {
         Mantid::Parallel::gather(comm, m_numEvents, 0);
       }
+#endif
 
       // -----------------
       // Save to file
@@ -107,9 +124,10 @@ namespace {
            stream << times_cpu[index] <<","<< times_wall[index] <<"\n";
         }
 
+#ifndef MEASURE_PRELIM
         // Save other
         saveOther(stream, numEvents);
-
+#endif
         stream.close();
       }
     }
@@ -132,14 +150,6 @@ namespace {
     std::string fileNameBase;
     size_t m_numEvents;
   };
-
-
-
-#define MEASURE_ALL 0
-#define MEASURE_PRELIM 1
-#define MEASURE_PRELIM_MASTER 1
-#define MEASURE_PRELIM_NON_MASTER 0
-
 }
 
 
@@ -151,7 +161,6 @@ struct Measurement {
   int tag;
   int cargo;
 };
-
 
 
 std::vector<Measurement> sendMeasurement;
