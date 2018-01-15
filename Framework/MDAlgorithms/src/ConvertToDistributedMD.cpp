@@ -133,6 +133,13 @@ namespace {
     size_t m_numEvents;
   };
 
+
+
+#define MEASURE_ALL 0
+#define MEASURE_PRELIM 1
+#define MEASURE_PRELIM_MASTER 1
+#define MEASURE_PRELIM_NON_MASTER 0
+
 }
 
 
@@ -353,8 +360,9 @@ void ConvertToDistributedMD::exec() {
   // 8. Enable the box controller and start splitting the data
   // 9. Ensure that the fileIDs and the box controller stats are correct.
   // 10. Maybe save in this algorithm already
-
+#if MEASURE_ALL
   TimerParallel timer(this->communicator());
+#endif
 
   const auto localRank = this->communicator().rank();
 
@@ -367,17 +375,25 @@ void ConvertToDistributedMD::exec() {
     // 1. Get a n-percent fraction
     // ----------------------------------------------------------
     double fraction = getProperty("Fraction");
+#if MEASURE_ALL
     timer.start();
+#endif
     auto nPercentEvents = getFractionEvents(*inputWorkspace, fraction);
+#if MEASURE_ALL
     timer.stop();
+#endif
 
     // -----------------------------------------------------------------
     // 2. + 3. = 4.  Get the preliminary box structure and the partition
     // behaviour
     // -----------------------------------------------------------------
+#if MEASURE_ALL
     timer.start();
+#endif
     setupPreliminaryBoxStructure(nPercentEvents);
+#if MEASURE_ALL
     timer.stop();
+#endif
   }
 
 
@@ -385,45 +401,65 @@ void ConvertToDistributedMD::exec() {
   // 5. Convert all events
   // ----------------------------------------------------------
   {
+#if MEASURE_ALL
     timer.start();
+#endif
     auto allEvents = getFractionEvents(*inputWorkspace, 1.);
+#if MEASURE_ALL
     timer.stop();
+#endif
 
     // ----------------------------------------------------------
     // 6. Add the local data to the preliminary box structure
     // ----------------------------------------------------------
+#if MEASURE_ALL
     timer.start();
+#endif
     addEventsToPreliminaryBoxStructure(allEvents);
+#if MEASURE_ALL
     timer.stop();
+#endif
   }
 
 
   // ------------------------------------------------------
   // 7. Redistribute data
   // ----------------------------------------------------------
+#if MEASURE_ALL
   timer.start();
+#endif
   redistributeData();
+#if MEASURE_ALL
   timer.stop();
+#endif
 
 
-#if 1
   // ----------------------------------------------------------
   // 8. Continue to split locally
   // ----------------------------------------------------------
+#if MEASURE_ALL
   timer.start();
+#endif
   continueSplitting();
+#if MEASURE_ALL
   timer.stop();
+#endif
 
   // --------------------------------------- -------------------
   // 9. Ensure that box controller and fileIDs are correct
   // ----------------------------------------------------------
+#if MEASURE_ALL
   timer.start();
+#endif
   updateMetaData();
+#if MEASURE_ALL
   timer.stop();
+#endif
 
   // ----------------------------------------------------------
   // 9. Save?
   // ----------------------------------------------------------
+#if MEASURE_ALL
   const auto numEvents = m_boxStructureInformation.boxStructure->getNPoints();
   timer.recordNumEvents(numEvents);
   timer.dump();
@@ -488,30 +524,68 @@ void ConvertToDistributedMD::setupPreliminaryBoxStructure(
   const auto &communicator = this->communicator();
 
   SerialBoxStructureInformation serialBoxStructureInformation;
-
+#if MEASURE_PRELIM
+  TimerParallel timer(this->communicator());
+#endif
+  
   if (communicator.rank() == 0) {
     // 1.b Receive the data from all the other ranks
+#if MEASURE_PRELIM_MASTER
+    timer.start();
+#endif
     auto allEvents = receiveMDEventsOnMaster(communicator, mdEvents);
-
+#if MEASURE_PRELIM_MASTER
+    timer.stop();
+#endif
+    
     // 2. Build the box structure on the master rank
+#if MEASURE_PRELIM_MASTER
+    timer.start();
+#endif
     auto boxStructureInformation = generatePreliminaryBoxStructure(allEvents);
+#if MEASURE_PRELIM_MASTER
+    timer.stop();
+#endif
 
     // 3. Determine splitting
+#if MEASURE_PRELIM_MASTER
+    timer.start();
+#endif
     RankResponsibility rankResponsibility;
     m_responsibility = rankResponsibility.getResponsibilites(
       communicator.size(), boxStructureInformation.boxStructure.get());
+#if MEASURE_PRELIM_MASTER
+    timer.stop();
+#endif
 
     // 4.a Broadcast splitting behaviour
+#if MEASURE_PRELIM_MASTER
+    timer.start();
+#endif
     sendRankResponsibility(communicator, m_responsibility);
+#if MEASURE_PRELIM_MASTER
+    timer.stop();
+#endif
 
     // 5. Serialize the box structure
+#if MEASURE_PRELIM_MASTER
+    timer.start();
+#endif
     serialBoxStructureInformation =
       serializeBoxStructure(boxStructureInformation);
+#if MEASURE_PRELIM_MASTER
+    timer.stop();
+#endif
 
     // 6.a Broadcast serialized box structure to all other ranks
+#if MEASURE_PRELIM_MASTER
+    timer.start();
+#endif
     sendSerializedBoxStructureInformation(communicator,
                                           serialBoxStructureInformation);
-
+#if MEASURE_PRELIM_MASTER
+    timer.stop();
+#endif
   } else {
     // 1.a Send the event data to the master rank
     sendMDEventsToMaster(communicator, mdEvents);
@@ -524,12 +598,24 @@ void ConvertToDistributedMD::setupPreliminaryBoxStructure(
       receiveSerializedBoxStructureInformation(communicator);
   }
 
+#if MEASURE_PRELIM
+  timer.start();
+#endif
   // 7. Deserialize on all ranks
   auto hollowBoxStructureInformation =
     deserializeBoxStructure(serialBoxStructureInformation);
+#if MEASURE_PRELIM
+  timer.stop();
+#endif
 
   // Create a rank responsibility map
   setRankResponsibilityMap();
+
+
+#if MEASURE_PRELIM
+  timer.recordNumEvents(0);
+  timer.dump();
+#endif
 
 
   // Set results
