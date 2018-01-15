@@ -664,19 +664,31 @@ MDEventList ConvertToDistributedMD::receiveMDEventsOnMaster(
   // 4. Send the data to master. This would be a natural operation for gatherv,
   // however this is not available in
   //    boost 1.58 (in 1.59+ it is).
+  std::cout << "MEASUREMENT ========================================================" << "\n";
 
+  auto start_wall = std::chrono::high_resolution_clock::now();
   // 1. Get the totalNumberOfEvents for each rank
   std::vector<size_t> numberOfEventsPerRank;
   auto masterNumberOfEvents = mdEvents.size();
   gather(communicator, masterNumberOfEvents, numberOfEventsPerRank, 0);
+  auto stop_wall = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration<double>(stop_wall - start_wall).count();
+  std::cout << " TOTAL NUM RANKS GATHER " << duration <<"\n";
+
 
   // 2. Create a buffer
+  start_wall = std::chrono::high_resolution_clock::now();
   auto totalNumberOfEvents = std::accumulate(numberOfEventsPerRank.begin(),
                                              numberOfEventsPerRank.end(), 0ul);
   MDEventList totalEvents(totalNumberOfEvents);
   std::copy(mdEvents.begin(), mdEvents.end(), totalEvents.begin());
+  stop_wall = std::chrono::high_resolution_clock::now();
+  duration = std::chrono::duration<double>(stop_wall - start_wall).count();
+  std::cout << " BUFFER CREATION " << duration <<"\n";
+
 
   // 3. Determine the strides
+  start_wall = std::chrono::high_resolution_clock::now();
   std::vector<int> strides;
   strides.reserve(numberOfEventsPerRank.size());
   strides.push_back(0);
@@ -687,8 +699,12 @@ MDEventList ConvertToDistributedMD::receiveMDEventsOnMaster(
     std::move(tempStrides.begin(), tempStrides.end(),
               std::back_inserter(strides));
   }
+  stop_wall = std::chrono::high_resolution_clock::now();
+  duration = std::chrono::duration<double>(stop_wall - start_wall).count();
+  std::cout << " STRIDES  " << duration <<"\n";
 
   // 4. Send the data from all ranks to the master rank
+  start_wall = std::chrono::high_resolution_clock::now();
   const auto numberOfRanks = communicator.size();
   std::vector<Mantid::Parallel::Request> requests;
   requests.reserve(static_cast<size_t>(numberOfRanks) - 1);
@@ -701,6 +717,9 @@ MDEventList ConvertToDistributedMD::receiveMDEventsOnMaster(
       communicator.irecv(rank, 2, reinterpret_cast<char*>(start), static_cast<int>(length*sizeMdEvents)));
   }
   wait_all(requests.begin(), requests.end());
+  stop_wall = std::chrono::high_resolution_clock::now();
+  duration = std::chrono::duration<double>(stop_wall - start_wall).count();
+  std::cout << " SEND TO MASTER  " << duration <<"\n";
   return totalEvents;
 }
 
