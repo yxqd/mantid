@@ -21,9 +21,7 @@ namespace {
 
 
 #define MEASURE_ALL 0
-#define MEASURE_PRELIM 1
-#define MEASURE_PRELIM_MASTER 1
-#define MEASURE_PRELIM_NON_MASTER 0
+#define MEASURE_PRELIM
 
   class TimerParallel {
   public:
@@ -75,42 +73,31 @@ namespace {
       if (comm.rank() == 0) {
         const auto numRanks = comm.size();
         const auto size = m_times_cpu.size();
-#if MEASURE_PRELIM
-        times_cpu.resize(size);
-        times_wall.resize(size);
-#else
-        times_cpu.resize(numRanks*size);
-        times_wall.resize(numRanks*size);
-#endif
+
         std::copy(m_times_cpu.begin(), m_times_cpu.end(), times_cpu.begin());
         std::copy(m_times_wall.begin(), m_times_wall.end(), times_wall.begin());
 
-#ifndef MEASURE_PRELIM
         const auto offset = m_times_cpu.size();
         for (int rank = 1; rank < numRanks; ++rank) {
           requests.emplace_back(comm.irecv(rank, 1, times_cpu.data()+offset*rank, static_cast<int>(size)));
           requests.emplace_back(comm.irecv(rank, 2, times_wall.data()+offset*rank, static_cast<int>(size)));
         }
-#endif
       } else {
-#ifndef MEASURE_PRELIM
         requests.emplace_back(comm.isend(0, 1, m_times_cpu.data(), static_cast<int>(m_times_cpu.size())));
         requests.emplace_back(comm.isend(0, 2, m_times_wall.data(), static_cast<int>(m_times_wall.size())));
-#endif
       }
       wait_all(requests.begin(), requests.end());
       std::vector<Mantid::Parallel::Request>().swap(requests);
 
       // -----------------
       // Receive other
-#ifndef MEASURE_PRELIM
+
       std::vector<size_t> numEvents(static_cast<size_t>(comm.size()));
       if (comm.rank() == 0) {
         Mantid::Parallel::gather(comm, m_numEvents, numEvents, 0);
       } else {
         Mantid::Parallel::gather(comm, m_numEvents, 0);
       }
-#endif
 
       // -----------------
       // Save to file
@@ -124,10 +111,8 @@ namespace {
            stream << times_cpu[index] <<","<< times_wall[index] <<"\n";
         }
 
-#ifndef MEASURE_PRELIM
         // Save other
         saveOther(stream, numEvents);
-#endif
         stream.close();
       }
     }
@@ -533,68 +518,34 @@ void ConvertToDistributedMD::setupPreliminaryBoxStructure(
   const auto &communicator = this->communicator();
 
   SerialBoxStructureInformation serialBoxStructureInformation;
-#if MEASURE_PRELIM
-  TimerParallel timer(this->communicator());
-#endif
-  
   if (communicator.rank() == 0) {
     // 1.b Receive the data from all the other ranks
-#if MEASURE_PRELIM_MASTER
-    timer.start();
-#endif
+
     auto allEvents = receiveMDEventsOnMaster(communicator, mdEvents);
-#if MEASURE_PRELIM_MASTER
-    timer.stop();
-#endif
+
     
     // 2. Build the box structure on the master rank
-#if MEASURE_PRELIM_MASTER
-    timer.start();
-#endif
     auto boxStructureInformation = generatePreliminaryBoxStructure(allEvents);
-#if MEASURE_PRELIM_MASTER
-    timer.stop();
-#endif
+
 
     // 3. Determine splitting
-#if MEASURE_PRELIM_MASTER
-    timer.start();
-#endif
     RankResponsibility rankResponsibility;
     m_responsibility = rankResponsibility.getResponsibilites(
       communicator.size(), boxStructureInformation.boxStructure.get());
-#if MEASURE_PRELIM_MASTER
-    timer.stop();
-#endif
 
     // 4.a Broadcast splitting behaviour
-#if MEASURE_PRELIM_MASTER
-    timer.start();
-#endif
     sendRankResponsibility(communicator, m_responsibility);
-#if MEASURE_PRELIM_MASTER
-    timer.stop();
-#endif
+
 
     // 5. Serialize the box structure
-#if MEASURE_PRELIM_MASTER
-    timer.start();
-#endif
+
     serialBoxStructureInformation =
       serializeBoxStructure(boxStructureInformation);
-#if MEASURE_PRELIM_MASTER
-    timer.stop();
-#endif
 
     // 6.a Broadcast serialized box structure to all other ranks
-#if MEASURE_PRELIM_MASTER
-    timer.start();
-#endif
+
     sendSerializedBoxStructureInformation(communicator,
                                           serialBoxStructureInformation);
-#if MEASURE_PRELIM_MASTER
-    timer.stop();
-#endif
   } else {
     // 1.a Send the event data to the master rank
     sendMDEventsToMaster(communicator, mdEvents);
@@ -607,24 +558,12 @@ void ConvertToDistributedMD::setupPreliminaryBoxStructure(
       receiveSerializedBoxStructureInformation(communicator);
   }
 
-#if MEASURE_PRELIM
-  timer.start();
-#endif
   // 7. Deserialize on all ranks
   auto hollowBoxStructureInformation =
     deserializeBoxStructure(serialBoxStructureInformation);
-#if MEASURE_PRELIM
-  timer.stop();
-#endif
 
   // Create a rank responsibility map
   setRankResponsibilityMap();
-
-
-#if MEASURE_PRELIM
-  timer.recordNumEvents(0);
-  timer.dump();
-#endif
 
 
   // Set results
@@ -647,9 +586,15 @@ void ConvertToDistributedMD::sendMDEventsToMaster(
   gather(communicator, totalNumberEvents, 0);
 
   // Send the vector of md events
+  auto start_wall = std::chrono::high_resolution_clock::now();
+  std::cout << "START SEND MD EVENT VECTOR \n" ;
+  const boost::mpi::communicator& boostComm = communicator;
+  MPI_Comm comm = boostComm;
   auto sizeMdEvents = sizeof(std::remove_reference<decltype(mdEvents)>::type::value_type);
-  communicator.send(0, 2, reinterpret_cast<char*>(mdEvents.data()),
-                    static_cast<int>(mdEvents.size()*sizeMdEvents));
+  MPI_Send(reinterpret_cast<char*>(mdEvents.data()), static_cast<int>(mdEvents.size()*sizeMdEvents), MPI_CHAR, 0, 2, comm);
+  auto stop_wall = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration<double>(stop_wall - start_wall).count();
+  std::cout << "STOP SEND MD EVENT " << duration  <<"\n";
 }
 
 
@@ -664,31 +609,21 @@ MDEventList ConvertToDistributedMD::receiveMDEventsOnMaster(
   // 4. Send the data to master. This would be a natural operation for gatherv,
   // however this is not available in
   //    boost 1.58 (in 1.59+ it is).
-  std::cout << "MEASUREMENT ========================================================" << "\n";
 
-  auto start_wall = std::chrono::high_resolution_clock::now();
   // 1. Get the totalNumberOfEvents for each rank
   std::vector<size_t> numberOfEventsPerRank;
   auto masterNumberOfEvents = mdEvents.size();
   gather(communicator, masterNumberOfEvents, numberOfEventsPerRank, 0);
-  auto stop_wall = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration<double>(stop_wall - start_wall).count();
-  std::cout << " TOTAL NUM RANKS GATHER " << duration <<"\n";
 
 
   // 2. Create a buffer
-  start_wall = std::chrono::high_resolution_clock::now();
   auto totalNumberOfEvents = std::accumulate(numberOfEventsPerRank.begin(),
                                              numberOfEventsPerRank.end(), 0ul);
   MDEventList totalEvents(totalNumberOfEvents);
   std::copy(mdEvents.begin(), mdEvents.end(), totalEvents.begin());
-  stop_wall = std::chrono::high_resolution_clock::now();
-  duration = std::chrono::duration<double>(stop_wall - start_wall).count();
-  std::cout << " BUFFER CREATION " << duration <<"\n";
 
 
   // 3. Determine the strides
-  start_wall = std::chrono::high_resolution_clock::now();
   std::vector<int> strides;
   strides.reserve(numberOfEventsPerRank.size());
   strides.push_back(0);
@@ -699,27 +634,28 @@ MDEventList ConvertToDistributedMD::receiveMDEventsOnMaster(
     std::move(tempStrides.begin(), tempStrides.end(),
               std::back_inserter(strides));
   }
-  stop_wall = std::chrono::high_resolution_clock::now();
-  duration = std::chrono::duration<double>(stop_wall - start_wall).count();
-  std::cout << " STRIDES  " << duration <<"\n";
 
   // 4. Send the data from all ranks to the master rank
-  start_wall = std::chrono::high_resolution_clock::now();
   const auto numberOfRanks = communicator.size();
-  std::vector<Mantid::Parallel::Request> requests;
-  requests.reserve(static_cast<size_t>(numberOfRanks) - 1);
+  const boost::mpi::communicator& boostComm = communicator;
+  MPI_Comm comm = boostComm;
+  std::vector<MPI_Request> mpi_requests;
+  mpi_requests.reserve(numberOfRanks-1);
+  std::vector<MPI_Status> mpi_status;
+  mpi_requests.reserve(numberOfRanks-1);
   auto sizeMdEvents = sizeof(std::remove_reference<decltype(mdEvents)>::type::value_type);
   for (int rank = 1; rank < numberOfRanks; ++rank) {
     // Determine where to insert the array
     auto start = totalEvents.data() + strides[rank];
     auto length = numberOfEventsPerRank[rank];
-    requests.emplace_back(
-      communicator.irecv(rank, 2, reinterpret_cast<char*>(start), static_cast<int>(length*sizeMdEvents)));
+    mpi_requests.emplace_back();
+    mpi_status.emplace_back();
+
+    MPI_Irecv(reinterpret_cast<char*>(start), static_cast<int>(length*sizeMdEvents), MPI_CHAR,
+                rank, 2, comm, &mpi_requests.back());
   }
-  wait_all(requests.begin(), requests.end());
-  stop_wall = std::chrono::high_resolution_clock::now();
-  duration = std::chrono::duration<double>(stop_wall - start_wall).count();
-  std::cout << " SEND TO MASTER  " << duration <<"\n";
+
+  MPI_Waitall(static_cast<int>(mpi_requests.size()), mpi_requests.data(), mpi_status.data());
   return totalEvents;
 }
 
