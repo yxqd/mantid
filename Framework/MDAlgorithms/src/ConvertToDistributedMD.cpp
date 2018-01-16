@@ -20,9 +20,7 @@
 namespace {
 
 
-#define MEASURE_ALL 0
-#define MEASURE_PRELIM
-
+#define MEASURE_ALL 1
   class TimerParallel {
   public:
     TimerParallel(const Mantid::Parallel::Communicator& comm) : comm(comm) {
@@ -146,52 +144,6 @@ struct Measurement {
   int tag;
   int cargo;
 };
-
-
-std::vector<Measurement> sendMeasurement;
-std::vector<Measurement> recvMeasurement;
-std::vector<Measurement> sendMeasurementNull;
-std::vector<Measurement> recvMeasurementNull;
-std::vector<Measurement> sendNumEvents;
-
-void save(const std::vector<Measurement>& measurement, int rank, const std::string& prefix) {
-  char cwd[1024];
-  std::string fileNameBase;
-  if (getcwd(cwd, sizeof(cwd)) != nullptr) {
-    std::string base(cwd);
-    if (base.find("scarf") != std::string::npos) {
-      fileNameBase = "/home/isisg/scarf672/Mantid2/archive/";
-    } else {
-      fileNameBase = "/home/anton/builds/Mantid_debug_clion/mpi_test/archive";
-    }
-
-    fileNameBase += prefix + std::to_string(rank) + ".txt";
-
-    std::fstream stream;
-    stream.open(fileNameBase, std::ios::out | std::ios::app);
-    for (auto& e : measurement) {
-      stream << prefix <<": " << e.from << "->" << e.to << ", tag " << e.tag << " payload " << e.cargo <<"\n";
-    }
-    stream.close();
-  }
-}
-
-
-void saveSingleNum(const std::vector<Measurement>& measurment, int localRank, const std::unordered_map<size_t, std::vector<uint64_t>>& relevantEventsPerRankPerBox) {
-  save(measurment, localRank, "SENDSINGLE");
-  // Save out the received values
-  std::vector<Measurement> recvNumEvents;
-  for (auto & element : relevantEventsPerRankPerBox) {
-    auto tag = element.first;
-    auto data = element.second;
-    for (auto index = 0ul; index < data.size(); ++index) {
-      if (static_cast<int>(index) != localRank) {
-        recvNumEvents.emplace_back(index, localRank, tag, data[index]);
-      }
-    }
-  }
-  save(recvNumEvents, localRank, "RECVSINGLE");
-}
 }
 
 
@@ -357,6 +309,10 @@ void ConvertToDistributedMD::exec() {
 #if MEASURE_ALL
   TimerParallel timer(this->communicator());
 #endif
+
+  const boost::mpi::communicator& communicator = this->communicator();
+  MPI_Comm comm = communicator;
+  MPI_Barrier(comm);
 
   const auto localRank = this->communicator().rank();
 
@@ -879,6 +835,7 @@ void ConvertToDistributedMD::addEventsToPreliminaryBoxStructure(
 void ConvertToDistributedMD::redistributeData() {
   const auto &communicator = this->communicator();
   // Build up the data which needs to be transmitted
+
   std::vector<Mantid::API::IMDNode *> boxes;
   m_boxStructureInformation.boxStructure->getBoxes(boxes, 1000, true);
   std::vector<MDBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST> *>
@@ -889,16 +846,29 @@ void ConvertToDistributedMD::redistributeData() {
   }
 
 
+
+
   // Determine the number of events per rank per box
+  auto start_wall = std::chrono::high_resolution_clock::now();
+  std::cout << "START Relevant box \n";
   auto relevantEventsPerRankPerBox =
     getRelevantEventsPerRankPerBox(communicator, boxes);
+  auto stop_wall = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration<double>(stop_wall - start_wall).count();
+  std::cout << "STOP Relevant box " << duration  <<"\n";
 
 
   // Send the actual data
+  start_wall = std::chrono::high_resolution_clock::now();
+  std::cout << "START Send all \n";
   auto boxVsMDEvents =
     sendDataToCorrectRank(communicator, relevantEventsPerRankPerBox, mdBoxes);
+  stop_wall = std::chrono::high_resolution_clock::now();
+  duration = std::chrono::duration<double>(stop_wall - start_wall).count();
+  std::cout << "STOP Send all " << duration  <<"\n";
 
-
+  start_wall = std::chrono::high_resolution_clock::now();
+  std::cout << "START Rest \n";
   // Place the data into the correct boxes
   auto localRank = communicator.rank();
   auto startIndex = m_responsibility[localRank].first;
@@ -929,6 +899,9 @@ void ConvertToDistributedMD::redistributeData() {
   // ranks. Note that getMaxId will return the next available id, ie it is
   // not really the max id.
   m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
+  stop_wall = std::chrono::high_resolution_clock::now();
+  duration = std::chrono::duration<double>(stop_wall - start_wall).count();
+  std::cout << "STOP Rest " << duration  <<"\n";
 }
 
 
@@ -1006,7 +979,7 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   nEventBuffer.reserve(boxes.size());
 
   const boost::mpi::communicator& boostComm = communicator;
-  const MPI_Comm comm = boostComm;
+  MPI_Comm comm = boostComm;
 
   std::vector<MPI_Request> mpi_requests;
   std::vector<MPI_Status> mpi_status;
@@ -1047,9 +1020,6 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
       mpi_status.emplace_back();
       mpi_requests.emplace_back();
       MPI_Isend(&nEventBuffer.back(), 1, MPI_UINT64_T, rankOfCurrentIndex, static_cast<int>(index), comm, &mpi_requests.back());
-#if 0
-      //sendNumEvents.emplace_back(localRank, rankOfCurrentIndex, index, nEventBuffer.back());
-#endif
     }
   }
 
@@ -1063,11 +1033,6 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   if (sync != MPI_SUCCESS) {
     throw std::runtime_error("Sync failed");
   }
-#if 0
-  // Save out the expected number of events
-  saveSingleNum(sendNumEvents, localRank, relevantEventsPerRankPerBox);
-#endif
-
   return relevantEventsPerRankPerBox;
 }
 
@@ -1174,9 +1139,6 @@ ConvertToDistributedMD::sendDataToCorrectRank(
 
         // If we don't have events, then we don't do anything
         if (numberOfEvents == 0) {
-#if 0
-          recvMeasurementNull.emplace_back(rank, localRank, index, static_cast<int>(numberOfEvents*sizeOfMDLeanEvent));
-#endif
           continue;
         }
 
@@ -1199,15 +1161,8 @@ ConvertToDistributedMD::sendDataToCorrectRank(
           }
           continue;
         }
-#if 0
-        requests.emplace_back(
-          communicator.irecv(rank, static_cast<int>(index), reinterpret_cast<char*>(insertionPoint),
-                             static_cast<int>(numberOfEvents*sizeOfMDLeanEvent)));
-#else
-
         mpi_requests.emplace_back();
         mpi_status.emplace_back();
-        //std::cout << "RECV: " << rank << " -> " << localRank << ", tag " << index <<" length " << static_cast<int>(numberOfEvents*sizeOfMDLeanEvent) <<"\n";
         MPI_Irecv(reinterpret_cast<char*>(insertionPoint),
                   static_cast<int>(numberOfEvents*sizeOfMDLeanEvent),
                   MPI_CHAR,
@@ -1215,22 +1170,12 @@ ConvertToDistributedMD::sendDataToCorrectRank(
                   static_cast<int>(index),
                   comm,
                   &mpi_requests.back());
-  #if 0
-        recvMeasurement.emplace_back(rank, localRank, index, static_cast<int>(numberOfEvents*sizeOfMDLeanEvent));
-  #endif
-#endif
       }
     } else {
       auto& events = mdBox->getEvents();
       if (!events.empty()) {
-#if 0
-        requests.emplace_back(communicator.isend(
-          rankOfCurrentIndex, static_cast<int>(index), reinterpret_cast<char*>(events.data()),
-          static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent)));
-#else
         mpi_requests.emplace_back();
         mpi_status.emplace_back();
-       // std::cout << "SEND: " << localRank << " -> " << rankOfCurrentIndex << ", tag " << index <<" length " << static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent) <<"\n";
         MPI_Isend(reinterpret_cast<char*>(events.data()),
                   static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent),
                   MPI_CHAR,
@@ -1238,21 +1183,10 @@ ConvertToDistributedMD::sendDataToCorrectRank(
                   static_cast<int>(index),
                   comm,
                   &mpi_requests.back());
-  #if 0
-        sendMeasurement.emplace_back(localRank, rankOfCurrentIndex, index, static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent));
-  #endif
-#endif
-      } else {
-#if 0
-        sendMeasurementNull.emplace_back(localRank, rankOfCurrentIndex, index, static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent));
-#endif
       }
     }
   }
 
-#if 0
-  Mantid::Parallel::wait_all(requests.begin(), requests.end());
-#else
   auto result = MPI_Waitall(static_cast<int>(mpi_requests.size()), mpi_requests.data(), mpi_status.data());
   if (result != MPI_SUCCESS) {
     std::string message = "There has been an issue sharing the event numbers on rank " + std::to_string(localRank);
@@ -1260,18 +1194,11 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   } else {
     std::cout << "Finished sending data on rank " << localRank <<"\n";
   }
-#endif
+
   auto sync = MPI_Barrier(comm);
   if (sync != MPI_SUCCESS) {
     throw std::runtime_error("Sync failed");
   }
-#if 0
-  //std::cout << "GOT HERE " << localRank <<"\n";;
-  save(sendMeasurement, localRank, "SEND");
-  save(recvMeasurement, localRank, "RECV");
-  save(sendMeasurementNull, localRank, "SENDNULL");
-  save(recvMeasurementNull, localRank, "RECVNULL");
-#endif
   return boxVsMDEvents;
 }
 
