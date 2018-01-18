@@ -421,7 +421,7 @@ void ConvertToDistributedMD::exec() {
   timer.stop();
 #endif
 
-
+#if 0
   // ----------------------------------------------------------
   // 8. Continue to split locally
   // ----------------------------------------------------------
@@ -452,6 +452,7 @@ void ConvertToDistributedMD::exec() {
   timer.recordNumEvents(numEvents);
   const auto& comm = this->communicator();
   timer.dump(comm);
+#endif
 #endif
 }
 
@@ -885,7 +886,7 @@ void ConvertToDistributedMD::redistributeData() {
     getRelevantEventsPerRankPerBox(communicator, boxes);
   auto stop_wall = std::chrono::high_resolution_clock::now();
   std::cout << "RELEVANT " << (std::chrono::duration<double>(stop_wall - start_wall).count()) <<" " << communicator.rank() <<"\n";
-
+#if 0
   // Send the actual data
   start_wall = std::chrono::high_resolution_clock::now();
   auto boxVsMDEvents =
@@ -926,6 +927,7 @@ void ConvertToDistributedMD::redistributeData() {
   m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
   stop_wall = std::chrono::high_resolution_clock::now();
   std::cout << "REST " << (std::chrono::duration<double>(stop_wall - start_wall).count()) <<" " << communicator.rank() <<"\n";
+#endif
 }
 
 
@@ -989,82 +991,93 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
     elements.resize(numberOfRanks, 0);
   }
 
-  // Get the ranges for rank 0
-  auto rankOfCurrentIndex = 0;
-  auto startIndex = m_responsibility[rankOfCurrentIndex].first;
-  auto stopIndex = m_responsibility[rankOfCurrentIndex].second;
-  auto isInBounds = [&startIndex, &stopIndex](size_t index) {
-    return (startIndex <= index) && (index <= stopIndex);
-  };
-
-  std::vector<Mantid::Parallel::Request> requests;
-  std::vector<uint64_t> nEventBuffer;
-  // Note that we won't need that many entries, but we want to be safe
-  nEventBuffer.reserve(boxes.size());
-
-  const boost::mpi::communicator& boostComm = communicator;
-  const MPI_Comm comm = boostComm;
-
-  std::vector<MPI_Request> mpi_requests;
-  std::vector<MPI_Status> mpi_status;
-
-  for (auto index = 0ul; index < boxes.size(); ++index) {
-
-    // Check if we are still on the same rank. If not then we need to
-    // change the current rank and the corresponding indices
-    if (!isInBounds(index)) {
-      ++rankOfCurrentIndex;
-      startIndex = m_responsibility[rankOfCurrentIndex].first;
-      stopIndex = m_responsibility[rankOfCurrentIndex].second;
-    }
-
-    auto box = boxes[index];
-
-    // Now check if the local rank sends or receives a value for this
-    // We send a value if the local rank is not the same as the rank
-    // which is associated with the box, else we receive a value
-    // from all other boxes
-    if (localRank == rankOfCurrentIndex) {
-      for (auto rank = 0; rank < static_cast<int>(numberOfRanks); ++rank) {
-        auto &eventsPerBox = relevantEventsPerRankPerBox.at(index);
-
-        // We don't send anything to ourselves, however we want to record the
-        // number of events
-        // that we have already in the right place
-        if (rank == localRank) {
-          eventsPerBox[rank] = box->getNPoints();
-          continue;
-        }
-        mpi_status.emplace_back();
-        mpi_requests.emplace_back();
-        MPI_Irecv(&eventsPerBox[rank], 1, MPI_UINT64_T, rank, static_cast<int>(index), comm, &mpi_requests.back());
-      }
-    } else {
-      nEventBuffer.emplace_back(box->getNPoints());
-      mpi_status.emplace_back();
-      mpi_requests.emplace_back();
-      MPI_Isend(&nEventBuffer.back(), 1, MPI_UINT64_T, rankOfCurrentIndex, static_cast<int>(index), comm, &mpi_requests.back());
-#if 0
-      //sendNumEvents.emplace_back(localRank, rankOfCurrentIndex, index, nEventBuffer.back());
-#endif
-    }
+  // -------------------------------------------------------------------------------------------------------------------
+  // Now we share the number of events per box with the relevant boxes. Since a rank is responsible for a set of
+  // boxes, we can group the information together and have a single communication between a pair of ranks. On the
+  // the receiving end, we need to unravel this information.
+  // Sending the information one by one has shown to be a performance issue.
+  // In order to achieve the exchange we:
+  // Setup receive buffer
+  auto start_wall = std::chrono::high_resolution_clock::now();
+  std::vector<std::vector<uint64_t>> receiveBuffer(numberOfRanks);
+  const auto numberOfBoxesThatThisRankIsResponsibleFor = m_responsibility[localRank].second - m_responsibility[localRank].first + 1;
+  for (auto& element : receiveBuffer) {
+    element.resize(numberOfBoxesThatThisRankIsResponsibleFor);
   }
 
-  auto result = MPI_Waitall(static_cast<int>(mpi_requests.size()), mpi_requests.data(), mpi_status.data());
-  if (result != MPI_SUCCESS) {
+  // Set up send buffer
+  std::vector<std::vector<uint64_t>> sendBuffer(numberOfRanks);
+
+  for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
+    auto startIndex = m_responsibility[rank].first;
+    auto stopIndex = m_responsibility[rank].second;
+
+    auto& sendBufferForRank = sendBuffer[rank];
+    std::transform(boxes.begin()+startIndex, boxes.begin() + stopIndex +1, std::back_inserter(sendBufferForRank), [](API::IMDNode* box) {
+      return box->getNPoints();
+    });
+  }
+
+  // Send the data
+  const boost::mpi::communicator& boostComm = communicator;
+  MPI_Comm comm = boostComm;
+  std::vector<MPI_Request> mpiRequests;
+  std::vector<MPI_Status> mpiStatus;
+  mpiRequests.reserve(numberOfRanks);
+  mpiStatus.reserve(numberOfRanks);
+
+  for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
+    if (rank == static_cast<size_t>(localRank)) {
+      // We need to setup a receive for all the other ranks
+      for (auto receiveFromRank=0ul; receiveFromRank < numberOfRanks; ++receiveFromRank) {
+        // We don't want to receive or send anything from ourselves, so just copy
+        if (receiveFromRank == static_cast<size_t>(localRank)) {
+          std::copy(sendBuffer[rank].begin(), sendBuffer[rank].end(), receiveBuffer[rank].begin());
+        } else {
+          mpiRequests.emplace_back();
+          mpiStatus.emplace_back();
+          MPI_Irecv(receiveBuffer[receiveFromRank].data(), static_cast<int>(receiveBuffer[receiveFromRank].size()),
+                    MPI_UINT64_T, static_cast<int>(receiveFromRank),
+                    static_cast<int>(receiveFromRank), comm, &mpiRequests.back());
+        }
+      }
+    } else {
+      // We need to send to this rank
+      mpiRequests.emplace_back();
+      mpiStatus.emplace_back();
+      MPI_Isend(sendBuffer[rank].data(), static_cast<int>(sendBuffer[rank].size()), MPI_UINT64_T,
+                static_cast<int>(rank), localRank, comm, &mpiRequests.back());
+    }
+  }
+  auto resultSend = MPI_Waitall(static_cast<int>(mpiRequests.size()), mpiRequests.data(), mpiStatus.data());
+  if (resultSend != MPI_SUCCESS) {
     std::string message = "There has been an issue sharing the event numbers on rank " + std::to_string(localRank);
     throw std::runtime_error(message);
+  }
+
+  // Unravel the data such that it can be consumed later on
+  auto startIndex = m_responsibility[localRank].first;
+  auto stopIndex = m_responsibility[localRank].second;
+  for (auto index = startIndex; index <= stopIndex; ++index) {
+    // Add for each box the relevant number of events
+    auto &elements = relevantEventsPerRankPerBox[index];
+    for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
+      elements.push_back(receiveBuffer[rank][index - startIndex]);
+    }
   }
 
   auto sync = MPI_Barrier(comm);
   if (sync != MPI_SUCCESS) {
     throw std::runtime_error("Sync failed");
   }
+
+  auto stop_wall = std::chrono::high_resolution_clock::now();
+  std::cout << "RELEVANT SEND " << (std::chrono::duration<double>(stop_wall - start_wall).count()) <<" " << communicator.rank() <<"\n";
+
 #if 0
   // Save out the expected number of events
   saveSingleNum(sendNumEvents, localRank, relevantEventsPerRankPerBox);
 #endif
-
   return relevantEventsPerRankPerBox;
 }
 
