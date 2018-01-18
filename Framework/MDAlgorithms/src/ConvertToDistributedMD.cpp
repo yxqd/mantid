@@ -20,12 +20,12 @@
 namespace {
 
 
-#define MEASURE_ALL 0
+#define MEASURE_ALL 1
 #define MEASURE_PRELIM
 
   class TimerParallel {
   public:
-    TimerParallel(const Mantid::Parallel::Communicator& comm) : comm(comm) {
+    TimerParallel() {
       m_start_cpu_total = std::clock();
       m_start_wall_total = std::chrono::high_resolution_clock::now();
     }
@@ -46,7 +46,7 @@ namespace {
       m_numEvents = numEvents;
     }
 
-    void dump() {
+    void dump(const Mantid::Parallel::Communicator& comm) {
       char cwd[1024];
       if (getcwd(cwd, sizeof(cwd)) != nullptr) {
         std::string base(cwd);
@@ -66,25 +66,22 @@ namespace {
       // -----------------
       // Receive times
       std::vector<Mantid::Parallel::Request> requests;
-      std::vector<double> times_cpu;
-      std::vector<double> times_wall;
-
+      const auto numRanks = comm.size();
+      const auto size = m_times_cpu.size();
+      std::vector<double> times_cpu(numRanks*size);
+      std::vector<double> times_wall(numRanks*size);
 
       if (comm.rank() == 0) {
-        const auto numRanks = comm.size();
-        const auto size = m_times_cpu.size();
-
         std::copy(m_times_cpu.begin(), m_times_cpu.end(), times_cpu.begin());
         std::copy(m_times_wall.begin(), m_times_wall.end(), times_wall.begin());
 
-        const auto offset = m_times_cpu.size();
         for (int rank = 1; rank < numRanks; ++rank) {
-          requests.emplace_back(comm.irecv(rank, 1, times_cpu.data()+offset*rank, static_cast<int>(size)));
-          requests.emplace_back(comm.irecv(rank, 2, times_wall.data()+offset*rank, static_cast<int>(size)));
+          requests.emplace_back(comm.irecv(rank, 1, times_cpu.data()+size*rank, static_cast<int>(size)));
+          requests.emplace_back(comm.irecv(rank, 2, times_wall.data()+size*rank, static_cast<int>(size)));
         }
       } else {
-        requests.emplace_back(comm.isend(0, 1, m_times_cpu.data(), static_cast<int>(m_times_cpu.size())));
-        requests.emplace_back(comm.isend(0, 2, m_times_wall.data(), static_cast<int>(m_times_wall.size())));
+        requests.emplace_back(comm.isend(0, 1, m_times_cpu.data(), static_cast<int>(size)));
+        requests.emplace_back(comm.isend(0, 2, m_times_wall.data(), static_cast<int>(size)));
       }
       wait_all(requests.begin(), requests.end());
       std::vector<Mantid::Parallel::Request>().swap(requests);
@@ -92,7 +89,7 @@ namespace {
       // -----------------
       // Receive other
 
-      std::vector<size_t> numEvents(static_cast<size_t>(comm.size()));
+      std::vector<size_t> numEvents(static_cast<size_t>(numRanks));
       if (comm.rank() == 0) {
         Mantid::Parallel::gather(comm, m_numEvents, numEvents, 0);
       } else {
@@ -131,7 +128,6 @@ namespace {
     std::chrono::system_clock::time_point m_start_wall;
     std::vector<double> m_times_cpu;
     std::vector<double> m_times_wall;
-    const Mantid::Parallel::Communicator& comm;
     std::string fileNameBase;
     size_t m_numEvents;
   };
@@ -355,12 +351,10 @@ void ConvertToDistributedMD::exec() {
   // 9. Ensure that the fileIDs and the box controller stats are correct.
   // 10. Maybe save in this algorithm already
 #if MEASURE_ALL
-  TimerParallel timer(this->communicator());
+  TimerParallel timer;
 #endif
 
   const auto localRank = this->communicator().rank();
-
-
   std::cout << "Starting rank " << localRank <<"\n";
   // Get the users's inputs
   EventWorkspace_sptr inputWorkspace = getProperty("InputWorkspace");
@@ -456,7 +450,8 @@ void ConvertToDistributedMD::exec() {
 #if MEASURE_ALL
   const auto numEvents = m_boxStructureInformation.boxStructure->getNPoints();
   timer.recordNumEvents(numEvents);
-  timer.dump();
+  const auto& comm = this->communicator();
+  timer.dump(comm);
 #endif
 }
 
@@ -586,15 +581,10 @@ void ConvertToDistributedMD::sendMDEventsToMaster(
   gather(communicator, totalNumberEvents, 0);
 
   // Send the vector of md events
-  auto start_wall = std::chrono::high_resolution_clock::now();
-  std::cout << "START SEND MD EVENT VECTOR \n" ;
   const boost::mpi::communicator& boostComm = communicator;
   MPI_Comm comm = boostComm;
   auto sizeMdEvents = sizeof(std::remove_reference<decltype(mdEvents)>::type::value_type);
   MPI_Send(reinterpret_cast<char*>(mdEvents.data()), static_cast<int>(mdEvents.size()*sizeMdEvents), MPI_CHAR, 0, 2, comm);
-  auto stop_wall = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration<double>(stop_wall - start_wall).count();
-  std::cout << "STOP SEND MD EVENT " << duration  <<"\n";
 }
 
 
@@ -1207,7 +1197,6 @@ ConvertToDistributedMD::sendDataToCorrectRank(
 
         mpi_requests.emplace_back();
         mpi_status.emplace_back();
-        //std::cout << "RECV: " << rank << " -> " << localRank << ", tag " << index <<" length " << static_cast<int>(numberOfEvents*sizeOfMDLeanEvent) <<"\n";
         MPI_Irecv(reinterpret_cast<char*>(insertionPoint),
                   static_cast<int>(numberOfEvents*sizeOfMDLeanEvent),
                   MPI_CHAR,
@@ -1230,7 +1219,6 @@ ConvertToDistributedMD::sendDataToCorrectRank(
 #else
         mpi_requests.emplace_back();
         mpi_status.emplace_back();
-       // std::cout << "SEND: " << localRank << " -> " << rankOfCurrentIndex << ", tag " << index <<" length " << static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent) <<"\n";
         MPI_Isend(reinterpret_cast<char*>(events.data()),
                   static_cast<int>(mdBox->getDataInMemorySize()*sizeOfMDLeanEvent),
                   MPI_CHAR,
@@ -1257,8 +1245,6 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   if (result != MPI_SUCCESS) {
     std::string message = "There has been an issue sharing the event numbers on rank " + std::to_string(localRank);
     throw std::runtime_error(message);
-  } else {
-    std::cout << "Finished sending data on rank " << localRank <<"\n";
   }
 #endif
   auto sync = MPI_Barrier(comm);
