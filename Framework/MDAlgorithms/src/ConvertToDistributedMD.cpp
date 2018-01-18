@@ -511,6 +511,9 @@ void ConvertToDistributedMD::setupPreliminaryBoxStructure(
   // 7. The other ranks deserialize the box structure (but without the event
   // information)
   const auto &communicator = this->communicator();
+  const boost::mpi::communicator& boostComm = communicator;
+  MPI_Comm comm = boostComm;
+  MPI_Barrier(comm);
 
   SerialBoxStructureInformation serialBoxStructureInformation;
   if (communicator.rank() == 0) {
@@ -531,14 +534,11 @@ void ConvertToDistributedMD::setupPreliminaryBoxStructure(
     // 4.a Broadcast splitting behaviour
     sendRankResponsibility(communicator, m_responsibility);
 
-
     // 5. Serialize the box structure
-
     serialBoxStructureInformation =
       serializeBoxStructure(boxStructureInformation);
 
     // 6.a Broadcast serialized box structure to all other ranks
-
     sendSerializedBoxStructureInformation(communicator,
                                           serialBoxStructureInformation);
   } else {
@@ -880,16 +880,22 @@ void ConvertToDistributedMD::redistributeData() {
 
 
   // Determine the number of events per rank per box
+  auto start_wall = std::chrono::high_resolution_clock::now();
   auto relevantEventsPerRankPerBox =
     getRelevantEventsPerRankPerBox(communicator, boxes);
-
+  auto stop_wall = std::chrono::high_resolution_clock::now();
+  std::cout << "RELEVANT " << (std::chrono::duration<double>(stop_wall - start_wall).count()) <<" " << communicator.rank() <<"\n";
 
   // Send the actual data
+  start_wall = std::chrono::high_resolution_clock::now();
   auto boxVsMDEvents =
     sendDataToCorrectRank(communicator, relevantEventsPerRankPerBox, mdBoxes);
-
+  stop_wall = std::chrono::high_resolution_clock::now();
+  std::cout << "SEND " << (std::chrono::duration<double>(stop_wall - start_wall).count()) <<" " << communicator.rank() <<"\n";
 
   // Place the data into the correct boxes
+  start_wall = std::chrono::high_resolution_clock::now();
+
   auto localRank = communicator.rank();
   auto startIndex = m_responsibility[localRank].first;
   auto stopIndex = m_responsibility[localRank].second;
@@ -914,11 +920,12 @@ void ConvertToDistributedMD::redistributeData() {
   // We need to refresh the cache
   m_boxStructureInformation.boxStructure->refreshCache(nullptr);
 
-
   // Cache the max ID, we need it later when updating the fileIDs on all the
   // ranks. Note that getMaxId will return the next available id, ie it is
   // not really the max id.
   m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
+  stop_wall = std::chrono::high_resolution_clock::now();
+  std::cout << "REST " << (std::chrono::duration<double>(stop_wall - start_wall).count()) <<" " << communicator.rank() <<"\n";
 }
 
 
