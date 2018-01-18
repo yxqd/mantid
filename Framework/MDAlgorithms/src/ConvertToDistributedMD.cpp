@@ -421,7 +421,6 @@ void ConvertToDistributedMD::exec() {
   timer.stop();
 #endif
 
-#if 0
   // ----------------------------------------------------------
   // 8. Continue to split locally
   // ----------------------------------------------------------
@@ -452,7 +451,6 @@ void ConvertToDistributedMD::exec() {
   timer.recordNumEvents(numEvents);
   const auto& comm = this->communicator();
   timer.dump(comm);
-#endif
 #endif
 }
 
@@ -886,7 +884,7 @@ void ConvertToDistributedMD::redistributeData() {
     getRelevantEventsPerRankPerBox(communicator, boxes);
   auto stop_wall = std::chrono::high_resolution_clock::now();
   std::cout << "RELEVANT " << (std::chrono::duration<double>(stop_wall - start_wall).count()) <<" " << communicator.rank() <<"\n";
-#if 0
+
   // Send the actual data
   start_wall = std::chrono::high_resolution_clock::now();
   auto boxVsMDEvents =
@@ -927,7 +925,6 @@ void ConvertToDistributedMD::redistributeData() {
   m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
   stop_wall = std::chrono::high_resolution_clock::now();
   std::cout << "REST " << (std::chrono::duration<double>(stop_wall - start_wall).count()) <<" " << communicator.rank() <<"\n";
-#endif
 }
 
 
