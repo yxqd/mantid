@@ -888,7 +888,7 @@ void ConvertToDistributedMD::redistributeData() {
     sendDataToCorrectRank(communicator, relevantEventsPerRankPerBox, mdBoxes);
   auto stop_wall = std::chrono::high_resolution_clock::now();
   std::cout << "SEND " << (std::chrono::duration<double>(stop_wall - start_wall).count()) <<" " << communicator.rank() <<"\n";
-
+#if 0
   // Place the data into the correct boxes
   start_wall = std::chrono::high_resolution_clock::now();
 
@@ -922,6 +922,7 @@ void ConvertToDistributedMD::redistributeData() {
   m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
   stop_wall = std::chrono::high_resolution_clock::now();
   std::cout << "REST " << (std::chrono::duration<double>(stop_wall - start_wall).count()) <<" " << communicator.rank() <<"\n";
+#endif
 }
 
 
@@ -1180,37 +1181,37 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   // -------------------------
   // First rearrange the data. The strides are a vector of vectors where the first index is the rank and the second
   // index is the box index
-    std::unordered_map<size_t, MDEventList> boxVsMDEvents;
+  std::unordered_map<size_t, MDEventList> boxVsMDEvents;
 
-//  std::vector<std::vector<uint64_t>> rearrangedNumberOfEvents(numberOfRanks);
-//  for (auto index = startIndex; index <= stopIndex; ++index) {
-//    auto &numberOfEventsPerRank = relevantEventsPerRankPerBox.at(index);
-//    for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
-//      //rearrangedNumberOfEvents[rank].push_back(numberOfEventsPerRank[rank]);
-//    }
-//  }
+  std::vector<std::vector<uint64_t>> rearrangedNumberOfEvents(numberOfRanks);
+  for (auto index = startIndex; index <= stopIndex; ++index) {
+    auto &numberOfEventsPerRank = relevantEventsPerRankPerBox.at(index);
+    for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
+      rearrangedNumberOfEvents[rank].push_back(numberOfEventsPerRank[rank]);
+    }
+  }
 
-//  // Now calculate the actual stride
-//  std::vector<std::vector<uint64_t>> offsets(numberOfRanks);
-//  for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
-//    auto & offset = offsets[rank];
-//    offset.push_back(0);
-//    std::vector<uint64_t> tempOffsets(rearrangedNumberOfEvents[rank].size() - 1);
-//    std::partial_sum(rearrangedNumberOfEvents[rank].begin(),
-//                     rearrangedNumberOfEvents[rank].end() - 1, tempOffsets.begin());
-//    std::move(tempOffsets.begin(), tempOffsets.end(),
-//              std::back_inserter(offset));
-//  }
+  // Now calculate the actual stride
+  std::vector<std::vector<uint64_t>> offsets(numberOfRanks);
+  for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
+    auto & offset = offsets[rank];
+    offset.push_back(0);
+    std::vector<uint64_t> tempOffsets(rearrangedNumberOfEvents[rank].size() - 1);
+    std::partial_sum(rearrangedNumberOfEvents[rank].begin(),
+                     rearrangedNumberOfEvents[rank].end() - 1, tempOffsets.begin());
+    std::move(tempOffsets.begin(), tempOffsets.end(),
+              std::back_inserter(offset));
+  }
 
-//  for (auto index = startIndex; index <= stopIndex; ++index) {
-//    auto& eventList = boxVsMDEvents[index];
-//    auto& numberOfEventsPerRank = relevantEventsPerRankPerBox.at(index);
-//    for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
-//      auto offset = offsets[rank][index];
-//      auto length = numberOfEventsPerRank[rank];
-//      std::move(receiveBuffer[rank].begin() + offset, receiveBuffer[rank].begin() + offset + length, std::back_inserter(eventList));
-//    }
-//  }
+  for (auto index = startIndex; index <= stopIndex; ++index) {
+    auto& eventList = boxVsMDEvents[index];
+    auto& numberOfEventsPerRank = relevantEventsPerRankPerBox.at(index);
+    for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
+      auto offset = offsets[rank][index];
+      auto length = numberOfEventsPerRank[rank];
+      std::move(receiveBuffer[rank].begin() + offset, receiveBuffer[rank].begin() + offset + length, std::back_inserter(eventList));
+    }
+  }
 
   auto sync = MPI_Barrier(comm);
   if (sync != MPI_SUCCESS) {
