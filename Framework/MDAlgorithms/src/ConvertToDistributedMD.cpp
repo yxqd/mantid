@@ -879,17 +879,14 @@ void ConvertToDistributedMD::redistributeData() {
 
 
   // Determine the number of events per rank per box
-  auto start_wall = std::chrono::high_resolution_clock::now();
   auto relevantEventsPerRankPerBox =
     getRelevantEventsPerRankPerBox(communicator, boxes);
-  auto stop_wall = std::chrono::high_resolution_clock::now();
-  std::cout << "RELEVANT " << (std::chrono::duration<double>(stop_wall - start_wall).count()) <<" " << communicator.rank() <<"\n";
 
   // Send the actual data
-  start_wall = std::chrono::high_resolution_clock::now();
+  auto start_wall = std::chrono::high_resolution_clock::now();
   auto boxVsMDEvents =
     sendDataToCorrectRank(communicator, relevantEventsPerRankPerBox, mdBoxes);
-  stop_wall = std::chrono::high_resolution_clock::now();
+  auto stop_wall = std::chrono::high_resolution_clock::now();
   std::cout << "SEND " << (std::chrono::duration<double>(stop_wall - start_wall).count()) <<" " << communicator.rank() <<"\n";
 
   // Place the data into the correct boxes
@@ -974,19 +971,10 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   const Mantid::Parallel::Communicator &communicator,
   const std::vector<Mantid::API::IMDNode *> &boxes) {
   // We want to get the number of events per rank per box for the boxes which
-  // are relevant for the local
-  // rank, ie the boxes for which the local rank is responsible.
+  // are relevant for the local rank, ie the boxes for which the local rank is responsible.
 
   const auto localRank = communicator.rank();
   const auto numberOfRanks = static_cast<size_t>(communicator.size());
-
-  // Initialize Events
-  std::unordered_map<size_t, std::vector<uint64_t>> relevantEventsPerRankPerBox;
-  auto range = m_responsibility[localRank];
-  for (size_t index = range.first; index <= range.second; ++index) {
-    auto &elements = relevantEventsPerRankPerBox[index];
-    elements.resize(numberOfRanks, 0);
-  }
 
   // -------------------------------------------------------------------------------------------------------------------
   // Now we share the number of events per box with the relevant boxes. Since a rank is responsible for a set of
@@ -995,7 +983,6 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   // Sending the information one by one has shown to be a performance issue.
   // In order to achieve the exchange we:
   // Setup receive buffer
-  auto start_wall = std::chrono::high_resolution_clock::now();
   std::vector<std::vector<uint64_t>> receiveBuffer(numberOfRanks);
   const auto numberOfBoxesThatThisRankIsResponsibleFor = m_responsibility[localRank].second - m_responsibility[localRank].first + 1;
   for (auto& element : receiveBuffer) {
@@ -1053,6 +1040,7 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   }
 
   // Unravel the data such that it can be consumed later on
+  std::unordered_map<size_t, std::vector<uint64_t>> relevantEventsPerRankPerBox;
   auto startIndex = m_responsibility[localRank].first;
   auto stopIndex = m_responsibility[localRank].second;
   for (auto index = startIndex; index <= stopIndex; ++index) {
@@ -1067,9 +1055,6 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   if (sync != MPI_SUCCESS) {
     throw std::runtime_error("Sync failed");
   }
-
-  auto stop_wall = std::chrono::high_resolution_clock::now();
-  std::cout << "RELEVANT SEND " << (std::chrono::duration<double>(stop_wall - start_wall).count()) <<" " << communicator.rank() <<"\n";
 
 #if 0
   // Save out the expected number of events
@@ -1103,18 +1088,92 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   const auto localRank = communicator.rank();
   const auto numberOfRanks = static_cast<size_t>(communicator.size());
 
-  std::unordered_map<size_t, MDEventList> boxVsMDEvents;
+//  auto startIndex = m_responsibility[localRank].first;
+//  auto stopIndex = m_responsibility[localRank].second;
+//  for (auto index = startIndex; index <= stopIndex; ++index) {
+//    // Directly with MDLeanEvents
+//    auto &numberOfEvents = relevantEventsPerRankPerBox.at(index);
+//    auto totalNumEvents =
+//      std::accumulate(numberOfEvents.begin(), numberOfEvents.end(), 0ul);
+//    auto &entry = boxVsMDEvents[index];
+//    entry.resize(totalNumEvents);
+//  }
+
+
+  // -------------------------
+  // 3. Send the data
+  // -------------------------
+  // We want to group the data that is sent between the ranks in a similar way that we did when sending the length
+  // number of events information in the previous step.
+
+  // Setup a receive buffer
+  std::vector<MDEventList> receiveBuffer(numberOfRanks);
   auto startIndex = m_responsibility[localRank].first;
   auto stopIndex = m_responsibility[localRank].second;
-  for (auto index = startIndex; index <= stopIndex; ++index) {
-    // Directly with MDLeanEvents
-    auto &numberOfEvents = relevantEventsPerRankPerBox.at(index);
-    auto totalNumEvents =
-      std::accumulate(numberOfEvents.begin(), numberOfEvents.end(), 0ul);
-    auto &entry = boxVsMDEvents[index];
-    entry.resize(totalNumEvents);
+  for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
+    auto totalNumberEvents = 0ul;
+    for (auto index = startIndex; index <= stopIndex; ++index) {
+      totalNumberEvents += relevantEventsPerRankPerBox.at(index)[rank];
+    }
+    receiveBuffer[rank].resize(totalNumberEvents);
   }
 
+  // Setup a send buffer
+  std::vector<MDEventList> sendBuffer(numberOfRanks);
+  for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
+    auto start = m_responsibility[rank].first;
+    auto stop = m_responsibility[rank].second;
+    auto& eventsList = sendBuffer[rank];
+    for (auto index = start; index <= stop; ++index) {
+      auto& events = mdBoxes[index]->getEvents();
+      std::copy(events.begin(), events.end(), std::back_inserter(eventsList));
+    }
+  }
+
+  // Exchange the data between the ranks
+  const boost::mpi::communicator& boostComm = communicator;
+  MPI_Comm comm = boostComm;
+  std::vector<MPI_Request> mpiRequests;
+  std::vector<MPI_Status> mpiStatus;
+  const auto sizeOfMDLeanEvent = sizeof(Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>);
+  for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
+    if (rank == static_cast<size_t>(localRank)) {
+      for (auto receiveFromRank=0ul; receiveFromRank < numberOfRanks; ++receiveFromRank) {
+        // We don't want to receive or send anything from ourselves, so just copy
+        if (receiveFromRank == static_cast<size_t>(localRank)) {
+          std::copy(sendBuffer[rank].begin(), sendBuffer[rank].end(), receiveBuffer[rank].begin());
+        } else {
+          mpiRequests.emplace_back();
+          mpiStatus.emplace_back();
+          MPI_Irecv(reinterpret_cast<char*>(receiveBuffer[receiveFromRank].data()),
+                    static_cast<int>(receiveBuffer[receiveFromRank].size()*sizeOfMDLeanEvent),
+                    MPI_CHAR,
+                    static_cast<int>(receiveFromRank),
+                    static_cast<int>(receiveFromRank),
+                    comm,
+                    &mpiRequests.back());
+        }
+      }
+    } else {
+      // We send the data to the receiving rank
+      mpiRequests.emplace_back();
+      mpiStatus.emplace_back();
+      MPI_Isend(reinterpret_cast<char*>(sendBuffer[rank].data()),
+                static_cast<int>(sendBuffer[rank].size()*sizeOfMDLeanEvent),
+                MPI_CHAR, static_cast<int>(rank),
+                localRank,
+                comm,
+                &mpiRequests.back());
+    }
+  }
+
+  auto resultSend = MPI_Waitall(static_cast<int>(mpiRequests.size()), mpiRequests.data(), mpiStatus.data());
+  if (resultSend != MPI_SUCCESS) {
+    std::string message = "There has been an issue sharing the event numbers on rank " + std::to_string(localRank);
+    throw std::runtime_error(message);
+  }
+
+  // Unravel the data
 
   // -------------------------
   // 2. Determine the strides
@@ -1131,10 +1190,26 @@ ConvertToDistributedMD::sendDataToCorrectRank(
               std::back_inserter(stride));
   }
 
+  std::unordered_map<size_t, MDEventList> boxVsMDEvents;
+  for (auto index = startIndex; index <= stopIndex; ++index) {
+    auto& eventList = boxVsMDEvents[index];
+    auto& stride = strides.at(index);
+    auto& relevantEventsPerRank = relevantEventsPerRankPerBox.at(index);
+    for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
+      auto offset = stride[rank];
+      auto length = relevantEventsPerRank[rank];
+      std::copy(receiveBuffer[rank].begin() + offset, receiveBuffer[rank].begin() + offset + length, std::back_inserter(eventList));
+    }
+  }
 
-  // -------------------------
-  // 3. Send the data
-  // -------------------------
+  auto sync = MPI_Barrier(comm);
+  if (sync != MPI_SUCCESS) {
+    throw std::runtime_error("Sync failed");
+  }
+
+
+#if 0
+
   auto rankOfCurrentIndex = 0;
   startIndex = m_responsibility[rankOfCurrentIndex].first;
   stopIndex = m_responsibility[rankOfCurrentIndex].second;
@@ -1144,11 +1219,6 @@ ConvertToDistributedMD::sendDataToCorrectRank(
 
   std::vector<Mantid::Parallel::Request> requests;
 
-  const boost::mpi::communicator& boostComm = communicator;
-  MPI_Comm comm = boostComm;
-
-  std::vector<MPI_Request> mpi_requests;
-  std::vector<MPI_Status> mpi_status;
 
   for (auto index = 0ul; index < mdBoxes.size(); ++index) {
 
@@ -1166,7 +1236,6 @@ ConvertToDistributedMD::sendDataToCorrectRank(
     // We send a value if the local rank is not the same as the rank
     // which is associated with the box, else we receive a value
     // from all other boxes
-    const auto sizeOfMDLeanEvent = sizeof(Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>);
     if (localRank == rankOfCurrentIndex) {
       for (auto rank = 0; rank < static_cast<int>(numberOfRanks); ++rank) {
 
@@ -1274,6 +1343,7 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   save(recvMeasurement, localRank, "RECV");
   save(sendMeasurementNull, localRank, "SENDNULL");
   save(recvMeasurementNull, localRank, "RECVNULL");
+#endif
 #endif
   return boxVsMDEvents;
 }
