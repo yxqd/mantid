@@ -1178,6 +1178,46 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   // -------------------------
   // 2. Determine the strides
   // -------------------------
+  // First rearrange the data. The strides are a vector of vectors where the first index is the rank and the second
+  // index is the box index
+    std::unordered_map<size_t, MDEventList> boxVsMDEvents;
+
+//  std::vector<std::vector<uint64_t>> rearrangedNumberOfEvents(numberOfRanks);
+//  for (auto index = startIndex; index <= stopIndex; ++index) {
+//    auto &numberOfEventsPerRank = relevantEventsPerRankPerBox.at(index);
+//    for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
+//      //rearrangedNumberOfEvents[rank].push_back(numberOfEventsPerRank[rank]);
+//    }
+//  }
+
+//  // Now calculate the actual stride
+//  std::vector<std::vector<uint64_t>> offsets(numberOfRanks);
+//  for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
+//    auto & offset = offsets[rank];
+//    offset.push_back(0);
+//    std::vector<uint64_t> tempOffsets(rearrangedNumberOfEvents[rank].size() - 1);
+//    std::partial_sum(rearrangedNumberOfEvents[rank].begin(),
+//                     rearrangedNumberOfEvents[rank].end() - 1, tempOffsets.begin());
+//    std::move(tempOffsets.begin(), tempOffsets.end(),
+//              std::back_inserter(offset));
+//  }
+
+//  for (auto index = startIndex; index <= stopIndex; ++index) {
+//    auto& eventList = boxVsMDEvents[index];
+//    auto& numberOfEventsPerRank = relevantEventsPerRankPerBox.at(index);
+//    for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
+//      auto offset = offsets[rank][index];
+//      auto length = numberOfEventsPerRank[rank];
+//      std::move(receiveBuffer[rank].begin() + offset, receiveBuffer[rank].begin() + offset + length, std::back_inserter(eventList));
+//    }
+//  }
+
+  auto sync = MPI_Barrier(comm);
+  if (sync != MPI_SUCCESS) {
+    throw std::runtime_error("Sync failed");
+  }
+
+#if 0
   std::unordered_map<size_t, std::vector<uint64_t>> strides;
   for (auto index = startIndex; index <= stopIndex; ++index) {
     auto &stride = strides[index];
@@ -1189,26 +1229,6 @@ ConvertToDistributedMD::sendDataToCorrectRank(
     std::move(tempStrides.begin(), tempStrides.end(),
               std::back_inserter(stride));
   }
-
-  std::unordered_map<size_t, MDEventList> boxVsMDEvents;
-  for (auto index = startIndex; index <= stopIndex; ++index) {
-    auto& eventList = boxVsMDEvents[index];
-    auto& stride = strides.at(index);
-    auto& relevantEventsPerRank = relevantEventsPerRankPerBox.at(index);
-    for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
-      auto offset = stride[rank];
-      auto length = relevantEventsPerRank[rank];
-      std::copy(receiveBuffer[rank].begin() + offset, receiveBuffer[rank].begin() + offset + length, std::back_inserter(eventList));
-    }
-  }
-
-  auto sync = MPI_Barrier(comm);
-  if (sync != MPI_SUCCESS) {
-    throw std::runtime_error("Sync failed");
-  }
-
-
-#if 0
 
   auto rankOfCurrentIndex = 0;
   startIndex = m_responsibility[rankOfCurrentIndex].first;
