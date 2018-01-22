@@ -174,11 +174,11 @@ void DiffractionFocussing2::exec() {
   std::unique_ptr<Progress> prog = make_unique<API::Progress>(
       this, 0.2, 1.0, static_cast<int>(totalHistProcess) + nGroups);
 
-  PARALLEL_FOR_IF(Kernel::threadSafe(*m_matrixInputW, *out))
+  // Temp-Remove PARALLEL_FOR_IF(Kernel::threadSafe(*m_matrixInputW, *out))
   for (int outWorkspaceIndex = 0;
        outWorkspaceIndex < static_cast<int>(m_validGroups.size());
        outWorkspaceIndex++) {
-    PARALLEL_START_INTERUPT_REGION
+    // Temp-Remove PARALLEL_START_INTERUPT_REGION
     int group = static_cast<int>(m_validGroups[outWorkspaceIndex]);
 
     // Get the group
@@ -312,9 +312,9 @@ void DiffractionFocussing2::exec() {
                    std::bind2nd(std::multiplies<double>(), groupSize));
 
     prog->report();
-    PARALLEL_END_INTERUPT_REGION
+    // Temp-Remove PARALLEL_END_INTERUPT_REGION
   } // end of loop for groups
-  PARALLEL_CHECK_INTERUPT_REGION
+  // Temp-Remove PARALLEL_CHECK_INTERUPT_REGION
 
   out->setIndexInfo(Indexing::group(m_matrixInputW->indexInfo(),
                                     std::move(m_validGroups),

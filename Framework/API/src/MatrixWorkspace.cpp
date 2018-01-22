@@ -2061,9 +2061,9 @@ IPropertyManager::getValue<Mantid::API::MatrixWorkspace_const_sptr>(
   if (prop) {
     return prop->operator()();
   } else {
-    std::string message =
-        "Attempt to assign property " + name +
-        " to incorrect type. Expected const shared_ptr<MatrixWorkspace>.";
+    std::string message = "Attempt to assign property " + name +
+                          " to incorrect type. Expected const "
+                          "shared_ptr<MatrixWorkspace>. for const";
     throw std::runtime_error(message);
   }
 }

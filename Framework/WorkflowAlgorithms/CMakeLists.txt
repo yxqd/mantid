@@ -39,6 +39,7 @@ set ( SRC_FILES
 	src/SetupILLD33Reduction.cpp
 	src/StepScan.cpp
 	src/WorkflowAlgorithmHelpers.cpp
+	src/ChopAndReducePowder.cpp
 )
 
 set ( SRC_UNITY_IGNORE_FILES
@@ -85,6 +86,7 @@ set ( INC_FILES
 	inc/MantidWorkflowAlgorithms/SetupILLD33Reduction.h
 	inc/MantidWorkflowAlgorithms/StepScan.h
 	inc/MantidWorkflowAlgorithms/WorkflowAlgorithmHelpers.h
+	inc/MantidWorkflowAlgorithms/ChopAndReducePowder.h
 )
 
 set ( TEST_FILES
