@@ -6,6 +6,8 @@
 #include <QMessageBox>
 #include <QHeaderView>
 #include <QVBoxLayout>
+#include <QScrollBar>
+#include <QTableView>
 
 #include <iostream>
 
@@ -13,7 +15,7 @@ using namespace Mantid::API;
 using namespace MantidQt::MantidWidgets;
 
 MatrixWorkspaceViewer::MatrixWorkspaceViewer(QString wsName, QWidget *parent) : 
-  QFrame(parent), WorkspaceObserver()
+  QFrame(parent), WorkspaceObserver(), m_layout(nullptr)
 {
   auto ws = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(wsName.toStdString());
   setWorkspace(ws);
@@ -62,7 +64,6 @@ void MatrixWorkspaceViewer::setup(
 
 
 void MatrixWorkspaceViewer::setWorkspace(Mantid::API::MatrixWorkspace_sptr ws, int start, int end) {
-  try{
   m_workspace = ws;
 
   setup(ws, start, end);
@@ -95,15 +96,20 @@ void MatrixWorkspaceViewer::setWorkspace(Mantid::API::MatrixWorkspace_sptr ws, i
   m_XTabLabel = QString("X values");
   m_ETabLabel = QString("Errors");
 
+  if (!m_layout) {
+    m_layout = new QVBoxLayout();
+    setLayout(m_layout);
+  } else {
+    m_layout->takeAt(0);
+    m_tabs->close();
+  }
+
   m_tabs = new QTabWidget(this);
   m_tabs->insertTab(0, m_table_viewY, m_YTabLabel);
   m_tabs->insertTab(1, m_table_viewX, m_XTabLabel);
   m_tabs->insertTab(2, m_table_viewE, m_ETabLabel);
 
-  //setWidget(m_tabs);
-  auto layout = new QVBoxLayout();
-  layout->addWidget(m_tabs);
-  setLayout(layout);
+  m_layout->addWidget(m_tabs);
 
   // for synchronizing the views
   // index is zero for the defualt view
@@ -138,9 +144,6 @@ void MatrixWorkspaceViewer::setWorkspace(Mantid::API::MatrixWorkspace_sptr ws, i
 
   connect(this, SIGNAL(closedWindow(MdiSubWindow *)), this,
           SLOT(selfClosed(MdiSubWindow *)));
-  } catch(...) {
-    std::cerr << "Stuff thrown" << std::endl;
-  }
 }
 
 void MatrixWorkspaceViewer::connectTableView(QTableView *view,
@@ -179,4 +182,49 @@ void MatrixWorkspaceViewer::connectTableView(QTableView *view,
   vHeader->setSectionResizeMode(QHeaderView::Fixed);
   vHeader->setSectionsMovable(false);
 #endif
+}
+
+/** Called when switching between tabs
+*  @param index :: The index of the new active tab
+*/
+void MatrixWorkspaceViewer::viewChanged(int index) {
+  std::cerr << "\nView changed " << index << ' ' << m_PrevIndex << std::endl;
+  // get the previous view and selection model
+  QTableView *prevView = (QTableView *)m_tabs->widget(m_PrevIndex);
+  if (prevView) {
+    QItemSelectionModel *oldSelModel = prevView->selectionModel();
+    QItemSelectionModel *selModel = activeView()->selectionModel();
+    // Copy the selection from the previous tab into the newly-activated one
+    selModel->select(oldSelModel->selection(), QItemSelectionModel::Select);
+    // Clear the selection on the now-hidden tab
+    oldSelModel->clearSelection();
+
+    m_PrevIndex = index;
+    // get the previous tab scrollbar positions
+    int hValue = prevView->horizontalScrollBar()->value();
+    int vValue = prevView->verticalScrollBar()->value();
+    // to synchronize the views
+    // set  the previous view  scrollbar positions to current view
+    activeView()->horizontalScrollBar()->setValue(hValue);
+    activeView()->verticalScrollBar()->setValue(vValue);
+  } else {
+    std::cerr << "\nOops... Prev index " << m_PrevIndex << std::endl;
+  }
+}
+
+/**  Return the pointer to the active table view.
+*/
+QTableView *MatrixWorkspaceViewer::activeView() {
+  auto currentIndex = m_tabs->currentIndex();
+  switch (currentIndex) {
+  case 0:
+    return m_table_viewY;
+  case 1:
+    return m_table_viewX;
+  case 2:
+    return m_table_viewE;
+  //default:
+  //  return m_extensionRequest.getActiveView(intToModelType(currentIndex),
+  //                                          m_extensions, m_table_viewY);
+  }
 }

@@ -11,8 +11,10 @@
 #include <QFrame>
 #include <QPixmap>
 #include <QPointer>
-#include <QTabWidget>
-#include <QTableView>
+
+class QTabWidget;
+class QTableView;
+class QVBoxLayout;
 
 namespace MantidQt {
 namespace MantidWidgets {
@@ -51,6 +53,7 @@ class EXPORT_OPT_MANTIDQT_COMMON MatrixWorkspaceViewer : public QFrame, MantidQt
 
 public:
   MatrixWorkspaceViewer(QString wsName, QWidget *parent=nullptr);
+
   void setWorkspace(Mantid::API::MatrixWorkspace_sptr ws, int start = -1, int end = -1);
   void setName(QString name) {m_name = name;}
   int numRows() const { return m_rows; }
@@ -59,10 +62,14 @@ public:
 private:
   void setup(Mantid::API::MatrixWorkspace_sptr ws, int start, int end);
   void connectTableView(QTableView *, MantidMatrixModel *);
+  // to synchronize the views
+  void viewChanged(int);
+  QTableView *activeView();
 
   QString m_label;
   QString m_name;
   Mantid::API::MatrixWorkspace_sptr m_workspace;
+  QVBoxLayout *m_layout;
   QTabWidget *m_tabs;
   QTableView *m_table_viewY;
   QTableView *m_table_viewX;
