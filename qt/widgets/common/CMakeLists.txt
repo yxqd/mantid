@@ -98,6 +98,14 @@ set ( SRC_FILES
 	src/MantidTreeWidget.cpp
 	src/MantidTreeWidgetItem.cpp
 	src/MantidWSIndexDialog.cpp
+	src/MatrixWorkspaceViewer/MantidMatrix.cpp
+	# src/MatrixWorkspaceViewer/MantidMatrixCurve.cpp
+	src/MatrixWorkspaceViewer/MantidMatrixDialog.cpp
+	src/MatrixWorkspaceViewer/MantidMatrixDxExtensionHandler.cpp
+	src/MatrixWorkspaceViewer/MantidMatrixExtensionRequest.cpp
+	# src/MatrixWorkspaceViewer/MantidMatrixFunction.cpp
+	src/MatrixWorkspaceViewer/MantidMatrixModel.cpp
+	src/MatrixWorkspaceViewer/MatrixWorkspaceViewer.cpp
 	src/MessageDisplay.cpp
 	src/MultifitSetupDialog.cpp
 	src/MuonFitDataSelector.cpp
@@ -202,6 +210,16 @@ set ( MOC_FILES
   inc/MantidQtWidgets/Common/MantidTreeModel.h
   inc/MantidQtWidgets/Common/MantidTreeWidget.h
   inc/MantidQtWidgets/Common/MantidHelpWindow.h
+  inc/MantidQtWidgets/Common/MatrixWorkspaceViewer/MantidMatrix.h
+  # inc/MantidQtWidgets/Common/MatrixWorkspaceViewer/MantidMatrixCurve.h
+  inc/MantidQtWidgets/Common/MatrixWorkspaceViewer/MantidMatrixDialog.h
+  inc/MantidQtWidgets/Common/MatrixWorkspaceViewer/MantidMatrixDxExtensionHandler.h
+  inc/MantidQtWidgets/Common/MatrixWorkspaceViewer/MantidMatrixExtensionRequest.h
+  # inc/MantidQtWidgets/Common/MatrixWorkspaceViewer/MantidMatrixFunction.h
+  inc/MantidQtWidgets/Common/MatrixWorkspaceViewer/MantidMatrixModel.h
+  inc/MantidQtWidgets/Common/MatrixWorkspaceViewer/MantidMatrixNullExtensionHandler.h
+  inc/MantidQtWidgets/Common/MatrixWorkspaceViewer/MantidMatrixTabExtension.h
+  inc/MantidQtWidgets/Common/MatrixWorkspaceViewer/MatrixWorkspaceViewer.h
   inc/MantidQtWidgets/Common/MessageDisplay.h
   inc/MantidQtWidgets/Common/MultifitSetupDialog.h
   inc/MantidQtWidgets/Common/MuonFitDataSelector.h

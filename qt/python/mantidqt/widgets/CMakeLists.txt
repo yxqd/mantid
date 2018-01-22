@@ -34,6 +34,7 @@ mtd_add_sip_module (
     ${PYTHON_LIBRARIES}
     ${Boost_LIBRARIES}
     API
+    HistogramData
   FOLDER Qt4
 )
 
@@ -59,5 +60,6 @@ mtd_add_sip_module (
     ${PYTHON_LIBRARIES}
     ${Boost_LIBRARIES}
     API
+    HistogramData
   FOLDER Qt5
 )

@@ -219,3 +219,31 @@ public:
   WorkspaceTreeWidgetSimple(MantidDisplayBase *mdb /Transfer/,
                             QWidget *parent /TransferThis/ = nullptr);
 };
+
+// ---------------------------------
+// MatrixWorkspaceViewer and dependencies
+// ---------------------------------
+
+class MatrixWorkspaceViewer : QFrame {
+%TypeHeaderCode
+#include "MantidQtWidgets/Common/MatrixWorkspaceViewer/MatrixWorkspaceViewer.h"
+#include "MantidAPI/MatrixWorkspace.h"
+#include <boost/python/extract.hpp>
+#include <iostream>
+%End
+public:
+  MatrixWorkspaceViewer(QWidget *parent=NULL);
+  void setWorkspace(SIP_PYOBJECT, int start = -1, int end = -1);
+%MethodCode
+  try {
+    Mantid::API::MatrixWorkspace_sptr ws = boost::python::extract<Mantid::API::MatrixWorkspace_sptr>(a0);
+    //sipCpp->setWorkspace(ws, a1, a2);
+  } catch (std::exception& e) {
+    std::cerr << "sip thrown " << e.what() << std::endl;
+  } catch (...) {
+    std::cerr << "\nsip thrown stuff" << std::endl;
+  }
+%End
+private:
+  MatrixWorkspaceViewer(const MatrixWorkspaceViewer&);
+};
