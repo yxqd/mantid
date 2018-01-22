@@ -232,18 +232,7 @@ class MatrixWorkspaceViewer : QFrame {
 #include <iostream>
 %End
 public:
-  MatrixWorkspaceViewer(QWidget *parent=NULL);
-  void setWorkspace(SIP_PYOBJECT, int start = -1, int end = -1);
-%MethodCode
-  try {
-    Mantid::API::MatrixWorkspace_sptr ws = boost::python::extract<Mantid::API::MatrixWorkspace_sptr>(a0);
-    //sipCpp->setWorkspace(ws, a1, a2);
-  } catch (std::exception& e) {
-    std::cerr << "sip thrown " << e.what() << std::endl;
-  } catch (...) {
-    std::cerr << "\nsip thrown stuff" << std::endl;
-  }
-%End
+  MatrixWorkspaceViewer(QString wsName, QWidget *parent=NULL);
 private:
   MatrixWorkspaceViewer(const MatrixWorkspaceViewer&);
 };

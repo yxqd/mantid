@@ -1,5 +1,6 @@
 #include "MantidQtWidgets/Common/MatrixWorkspaceViewer/MatrixWorkspaceViewer.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/AnalysisDataService.h"
 #include <MantidQtWidgets/Common/pixmaps.h>
 
 #include <QMessageBox>
@@ -8,14 +9,21 @@
 
 #include <iostream>
 
+using namespace Mantid::API;
 using namespace MantidQt::MantidWidgets;
 
-MatrixWorkspaceViewer::MatrixWorkspaceViewer(QWidget *parent) : QFrame(parent), WorkspaceObserver() {}
+MatrixWorkspaceViewer::MatrixWorkspaceViewer(QString wsName, QWidget *parent) : 
+  QFrame(parent), WorkspaceObserver()
+{
+  auto ws = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(wsName.toStdString());
+  setWorkspace(ws);
+}
 
-void MatrixWorkspaceViewer::setup(Mantid::API::MatrixWorkspace_sptr ws, int start,
-                         int end) {
-
-  std::cerr << "Hello!" << std::endl;
+void MatrixWorkspaceViewer::setup(
+  Mantid::API::MatrixWorkspace_sptr ws,
+  int start,
+  int end)
+{
   if (!ws) {
     QMessageBox::critical(0, "WorkspaceMatrixModel error",
                           "2D workspace expected.");

@@ -50,7 +50,7 @@ class EXPORT_OPT_MANTIDQT_COMMON MatrixWorkspaceViewer : public QFrame, MantidQt
   MatrixWorkspaceViewer(const MatrixWorkspaceViewer&) = delete;
 
 public:
-  MatrixWorkspaceViewer(QWidget *parent=nullptr);
+  MatrixWorkspaceViewer(QString wsName, QWidget *parent=nullptr);
   void setWorkspace(Mantid::API::MatrixWorkspace_sptr ws, int start = -1, int end = -1);
   void setName(QString name) {m_name = name;}
   int numRows() const { return m_rows; }
