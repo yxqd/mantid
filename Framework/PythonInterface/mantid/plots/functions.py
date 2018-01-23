@@ -150,13 +150,6 @@ def _getSpectrum(workspace, wkspIndex, distribution, withDy=False, withDx=False)
     return (x,y,dy,dx)
 
 
-def _commonX(arr):
-    '''
-    Helper function to check if all rows in a 2d :class:`numpy.ndarray` are identical
-    '''
-    return numpy.all(arr==arr[0,:],axis=(1,0))
-
-
 def _getMatrix2DData(workspace, distribution,histogram2D=False):
     '''
     Get all data from a Matrix workspace that has the same number of bins
@@ -190,7 +183,7 @@ def _getMatrix2DData(workspace, distribution,histogram2D=False):
                 y=points_from_boundaries(y)
     else:
         if histogram2D:
-            if _commonX(x):
+            if workspace.isCommonBins():
                 x=numpy.tile(boundaries_from_points(x[0]),z.shape[0]+1).reshape(z.shape[0]+1,-1)
             else:
                 x = numpy.vstack((x,x[-1]))
