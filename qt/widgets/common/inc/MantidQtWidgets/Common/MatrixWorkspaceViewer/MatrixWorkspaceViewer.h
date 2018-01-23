@@ -59,11 +59,12 @@ public:
   int numRows() const { return m_rows; }
   int numCols() const { return m_cols; }
 
+private slots:
+  void viewChanged(int);
+
 private:
   void setup(Mantid::API::MatrixWorkspace_sptr ws, int start, int end);
   void connectTableView(QTableView *, MantidMatrixModel *);
-  // to synchronize the views
-  void viewChanged(int);
   QTableView *activeView();
 
   QString m_label;

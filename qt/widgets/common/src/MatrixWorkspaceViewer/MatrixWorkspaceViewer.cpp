@@ -188,7 +188,6 @@ void MatrixWorkspaceViewer::connectTableView(QTableView *view,
 *  @param index :: The index of the new active tab
 */
 void MatrixWorkspaceViewer::viewChanged(int index) {
-  std::cerr << "\nView changed " << index << ' ' << m_PrevIndex << std::endl;
   // get the previous view and selection model
   QTableView *prevView = (QTableView *)m_tabs->widget(m_PrevIndex);
   if (prevView) {
@@ -207,8 +206,6 @@ void MatrixWorkspaceViewer::viewChanged(int index) {
     // set  the previous view  scrollbar positions to current view
     activeView()->horizontalScrollBar()->setValue(hValue);
     activeView()->verticalScrollBar()->setValue(vValue);
-  } else {
-    std::cerr << "\nOops... Prev index " << m_PrevIndex << std::endl;
   }
 }
 
