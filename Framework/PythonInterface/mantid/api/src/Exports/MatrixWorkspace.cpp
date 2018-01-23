@@ -210,8 +210,9 @@ void export_MatrixWorkspace() {
       .def("detectorSignedTwoTheta", &MatrixWorkspace::detectorSignedTwoTheta,
            (arg("self"), arg("det")),
            "Returns the signed two theta value for given detector")
-      .def("getSpectrum", (ISpectrum & (MatrixWorkspace::*)(const size_t)) &
-                              MatrixWorkspace::getSpectrum,
+      .def("getSpectrum",
+           (ISpectrum & (MatrixWorkspace::*)(const size_t)) &
+               MatrixWorkspace::getSpectrum,
            (arg("self"), arg("workspaceIndex")), return_internal_reference<>(),
            "Return the spectra at the given workspace index.")
       .def("getIndexFromSpectrumNumber",
@@ -235,8 +236,9 @@ void export_MatrixWorkspace() {
            "Get a pointer to a workspace axis")
       .def("isHistogramData", &MatrixWorkspace::isHistogramData, arg("self"),
            "Returns ``True`` if this is considered to be binned data.")
-      .def("isDistribution", (bool (MatrixWorkspace::*)() const) &
-                                 MatrixWorkspace::isDistribution,
+      .def("isDistribution",
+           (bool (MatrixWorkspace::*)() const) &
+               MatrixWorkspace::isDistribution,
            arg("self"), "Returns the status of the distribution flag")
       .def("YUnit", &MatrixWorkspace::YUnit, arg("self"),
            "Returns the current Y unit for the data (Y axis) in the workspace")
@@ -370,7 +372,9 @@ void export_MatrixWorkspace() {
            "some subsequent algorithms may expect it to be "
            "monitor workspace later.")
       .def("clearMonitorWorkspace", &clearMonitorWorkspace, args("self"),
-           "Forget about monitor workspace, attached to the current workspace");
+           "Forget about monitor workspace, attached to the current workspace")
+      .def("isCommonBins", &MatrixWorkspace::isCommonBins, args("self"),
+           "Whether the workspace contains common X bins");
 
   RegisterWorkspacePtrToPython<MatrixWorkspace>();
 }
