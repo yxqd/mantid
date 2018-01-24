@@ -100,8 +100,8 @@ namespace {
       // Save to file
       if (comm.rank() == 0) {
         // Save times
-        const auto size = comm.size();
-        std::string fileName = fileNameBase + std::to_string(size) + std::string(".txt");
+        const auto fileNumber = comm.size();
+        std::string fileName = fileNameBase + std::to_string(fileNumber) + std::string(".txt");
         std::fstream stream;
         stream.open(fileName, std::ios::out | std::ios::app);
         for (auto index=0ul; index < times_cpu.size(); ++index) {
@@ -132,64 +132,6 @@ namespace {
     size_t m_numEvents;
   };
 }
-
-
-namespace {
-struct Measurement {
-  Measurement(int from, int to, int tag, int cargo) : from(from), to(to), tag(tag), cargo(cargo){}
-  int from;
-  int to;
-  int tag;
-  int cargo;
-};
-
-
-std::vector<Measurement> sendMeasurement;
-std::vector<Measurement> recvMeasurement;
-std::vector<Measurement> sendMeasurementNull;
-std::vector<Measurement> recvMeasurementNull;
-std::vector<Measurement> sendNumEvents;
-
-void save(const std::vector<Measurement>& measurement, int rank, const std::string& prefix) {
-  char cwd[1024];
-  std::string fileNameBase;
-  if (getcwd(cwd, sizeof(cwd)) != nullptr) {
-    std::string base(cwd);
-    if (base.find("scarf") != std::string::npos) {
-      fileNameBase = "/home/isisg/scarf672/Mantid2/archive/";
-    } else {
-      fileNameBase = "/home/anton/builds/Mantid_debug_clion/mpi_test/archive";
-    }
-
-    fileNameBase += prefix + std::to_string(rank) + ".txt";
-
-    std::fstream stream;
-    stream.open(fileNameBase, std::ios::out | std::ios::app);
-    for (auto& e : measurement) {
-      stream << prefix <<": " << e.from << "->" << e.to << ", tag " << e.tag << " payload " << e.cargo <<"\n";
-    }
-    stream.close();
-  }
-}
-
-
-void saveSingleNum(const std::vector<Measurement>& measurment, int localRank, const std::unordered_map<size_t, std::vector<uint64_t>>& relevantEventsPerRankPerBox) {
-  save(measurment, localRank, "SENDSINGLE");
-  // Save out the received values
-  std::vector<Measurement> recvNumEvents;
-  for (auto & element : relevantEventsPerRankPerBox) {
-    auto tag = element.first;
-    auto data = element.second;
-    for (auto index = 0ul; index < data.size(); ++index) {
-      if (static_cast<int>(index) != localRank) {
-        recvNumEvents.emplace_back(index, localRank, tag, data[index]);
-      }
-    }
-  }
-  save(recvNumEvents, localRank, "RECVSINGLE");
-}
-}
-
 
 
 namespace Mantid {
@@ -1058,10 +1000,6 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
     throw std::runtime_error("Sync failed");
   }
 
-#if 0
-  // Save out the expected number of events
-  saveSingleNum(sendNumEvents, localRank, relevantEventsPerRankPerBox);
-#endif
   return relevantEventsPerRankPerBox;
 }
 
