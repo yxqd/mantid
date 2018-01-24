@@ -868,6 +868,8 @@ void ConvertToDistributedMD::addEventsToPreliminaryBoxStructure(
 void ConvertToDistributedMD::redistributeData() {
   const auto &communicator = this->communicator();
   // Build up the data which needs to be transmitted
+  
+  auto start_wall = std::chrono::high_resolution_clock::now();
   std::vector<Mantid::API::IMDNode *> boxes;
   m_boxStructureInformation.boxStructure->getBoxes(boxes, 1000, true);
   std::vector<MDBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST> *>
@@ -881,17 +883,17 @@ void ConvertToDistributedMD::redistributeData() {
   // Determine the number of events per rank per box
   auto relevantEventsPerRankPerBox =
     getRelevantEventsPerRankPerBox(communicator, boxes);
-
+  std::cout << "RELEVANT RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
+  
   // Send the actual data
-  auto start_wall = std::chrono::high_resolution_clock::now();
+
+  start_wall = std::chrono::high_resolution_clock::now();
   auto boxVsMDEvents =
     sendDataToCorrectRank(communicator, relevantEventsPerRankPerBox, mdBoxes);
-  auto stop_wall = std::chrono::high_resolution_clock::now();
-  std::cout << "SEND " << (std::chrono::duration<double>(stop_wall - start_wall).count()) <<" " << communicator.rank() <<"\n";
-#if 0
-  // Place the data into the correct boxes
+  std::cout << "SEND RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
+ 
+ // Place the data into the correct boxes
   start_wall = std::chrono::high_resolution_clock::now();
-
   auto localRank = communicator.rank();
   auto startIndex = m_responsibility[localRank].first;
   auto stopIndex = m_responsibility[localRank].second;
@@ -920,9 +922,8 @@ void ConvertToDistributedMD::redistributeData() {
   // ranks. Note that getMaxId will return the next available id, ie it is
   // not really the max id.
   m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
-  stop_wall = std::chrono::high_resolution_clock::now();
-  std::cout << "REST " << (std::chrono::duration<double>(stop_wall - start_wall).count()) <<" " << communicator.rank() <<"\n";
-#endif
+
+  std::cout << "REST RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
 }
 
 
@@ -1089,6 +1090,7 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   const auto localRank = communicator.rank();
   const auto numberOfRanks = static_cast<size_t>(communicator.size());
 
+  auto start_wall = std::chrono::high_resolution_clock::now();
 
 
   // -------------------------
@@ -1115,18 +1117,33 @@ ConvertToDistributedMD::sendDataToCorrectRank(
     auto start = m_responsibility[rank].first;
     auto stop = m_responsibility[rank].second;
     auto& eventsList = sendBuffer[rank];
+    auto totalNumberOfEventsForRank = 0ul;
+    for (auto index = start; index <= stop; ++index) {
+      totalNumberOfEventsForRank += mdBoxes[index]->getEvents().size();
+    }
+    eventsList.reserve(totalNumberOfEventsForRank);
+
     for (auto index = start; index <= stop; ++index) {
       auto& events = mdBoxes[index]->getEvents();
-      std::copy(events.begin(), events.end(), std::back_inserter(eventsList));
+      std::move(events.begin(), events.end(), std::back_inserter(eventsList));
     }
   }
 
+  std::cout << "SETUP BUFFER RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
+
+  start_wall = std::chrono::high_resolution_clock::now();
   // Exchange the data between the ranks
   const boost::mpi::communicator& boostComm = communicator;
   MPI_Comm comm = boostComm;
   std::vector<MPI_Request> mpiRequests;
   std::vector<MPI_Status> mpiStatus;
   const auto sizeOfMDLeanEvent = sizeof(Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>);
+
+  auto sync = MPI_Barrier(comm);
+  if (sync != MPI_SUCCESS) {
+    throw std::runtime_error("Sync failed");
+  }
+
   for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
     if (rank == static_cast<size_t>(localRank)) {
       for (auto receiveFromRank=0ul; receiveFromRank < numberOfRanks; ++receiveFromRank) {
@@ -1164,15 +1181,25 @@ ConvertToDistributedMD::sendDataToCorrectRank(
     throw std::runtime_error(message);
   }
 
-  // Unravel the data
+  sync = MPI_Barrier(comm);
+  if (sync != MPI_SUCCESS) {
+    throw std::runtime_error("Sync failed");
+  }
 
+  std::cout << "SEND ALL RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
+
+  // Unravel the data
   // -------------------------
   // 2. Determine the strides
   // -------------------------
   // First rearrange the data. The strides are a vector of vectors where the first index is the rank and the second
   // index is the box index but with a startIndex offset !!
-  std::unordered_map<size_t, MDEventList> boxVsMDEvents;
+  start_wall = std::chrono::high_resolution_clock::now();
   std::vector<std::vector<uint64_t>> rearrangedNumberOfEvents(numberOfRanks);
+  for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
+    rearrangedNumberOfEvents[rank].reserve(stopIndex - startIndex +1);
+  }
+
   for (auto index = startIndex; index <= stopIndex; ++index) {
     auto &numberOfEventsPerRank = relevantEventsPerRankPerBox.at(index);
     for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
@@ -1181,7 +1208,9 @@ ConvertToDistributedMD::sendDataToCorrectRank(
     }
   }
 
+  std::cout << "Set buffer  RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
   // Now calculate the actual stride
+  start_wall = std::chrono::high_resolution_clock::now();
   std::vector<std::vector<uint64_t>> offsets(numberOfRanks);
   for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
     auto & offset = offsets[rank];
@@ -1193,6 +1222,21 @@ ConvertToDistributedMD::sendDataToCorrectRank(
               std::back_inserter(offset));
   }
 
+  std::cout << "Calc stride  RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
+  start_wall = std::chrono::high_resolution_clock::now();
+  std::unordered_map<size_t, MDEventList> boxVsMDEvents;
+  for (auto index = startIndex; index <= stopIndex; ++index) {
+    auto numberOfEventsInBox = 0ul;
+    auto& numberOfEventsPerRank = relevantEventsPerRankPerBox.at(index);
+    for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
+	numberOfEventsInBox +=  numberOfEventsPerRank[rank];
+    }
+    auto& eventList = boxVsMDEvents[index];
+    eventList.reserve(numberOfEventsInBox);
+  }
+  std::cout << "Reserve move  RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
+
+  start_wall = std::chrono::high_resolution_clock::now();
   for (auto index = startIndex; index <= stopIndex; ++index) {
     auto& eventList = boxVsMDEvents[index];
     auto& numberOfEventsPerRank = relevantEventsPerRankPerBox.at(index);
@@ -1206,7 +1250,8 @@ ConvertToDistributedMD::sendDataToCorrectRank(
     }
   }
 
-  auto sync = MPI_Barrier(comm);
+  std::cout << "Move out of receive buffer  RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
+  sync = MPI_Barrier(comm);
   if (sync != MPI_SUCCESS) {
     throw std::runtime_error("Sync failed");
   }
