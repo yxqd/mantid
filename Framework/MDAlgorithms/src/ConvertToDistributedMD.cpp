@@ -882,13 +882,6 @@ void ConvertToDistributedMD::redistributeData() {
   auto localRank = communicator.rank();
   auto startIndex = m_responsibility[localRank].first;
   auto stopIndex = m_responsibility[localRank].second;
-  for (auto index = startIndex; index <= stopIndex; ++index) {
-    auto mdBox = mdBoxes[index];
-    auto &events = boxVsMDEvents.at(index);
-    auto &oldEvents = mdBox->getEvents();
-    oldEvents.swap(events);
-    MDEventList().swap(events);
-  }
 
   // Remove the data which is not relevant for the local rank which is before
   // the startIndex
@@ -1190,6 +1183,14 @@ ConvertToDistributedMD::sendDataToCorrectRank(
                             // difference.
   if (sync != MPI_SUCCESS) {
     throw std::runtime_error("Sync failed");
+  }
+
+  // Free up data that is not required any longer. Note that all the data we need is in the receive buffer, even the
+  // local data
+  for (auto index = startIndex; index <= stopIndex; ++index) {
+    auto mdBox = mdBoxes[index];
+    auto& oldEvents = mdBox->getEvents();
+    MDEventList().swap(oldEvents);
   }
 
   // -------------------------
