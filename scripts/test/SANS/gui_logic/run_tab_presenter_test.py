@@ -14,6 +14,8 @@ from sans.test_helper.user_file_test_helper import (create_user_file, sample_use
 from sans.test_helper.mock_objects import (create_mock_view)
 from sans.test_helper.common import (remove_file)
 from sans.common.enums import BatchReductionEntry
+from sans.gui_logic.models.load_model import perform_load
+from mock import ANY
 
 
 if sys.version_info.major == 3:
@@ -62,6 +64,14 @@ class RunTabPresenterTest(unittest.TestCase):
         self.os_patcher = mock.patch('sans.gui_logic.presenter.run_tab_presenter.os')
         self.addCleanup(self.os_patcher.stop)
         self.osMock = self.os_patcher.start()
+
+        work_handler_patcher = mock.patch('sans.gui_logic.presenter.run_tab_presenter.WorkHandler')
+        self.addCleanup(work_handler_patcher.stop)
+        self.WorkHandlerMock = work_handler_patcher.start()
+
+        self.work_handler = mock.MagicMock()
+
+        self.WorkHandlerMock.return_value = self.work_handler
 
     def test_that_will_load_user_file(self):
         # Setup presenter and mock view
@@ -445,6 +455,22 @@ class RunTabPresenterTest(unittest.TestCase):
         result = presenter.get_processing_options()
 
         self.assertEqual(expected_result, result)
+
+    def test_that_on_load_clicked_calls_correct_loader(self):
+        batch_file_path, user_file_path, presenter, _ = self._get_files_and_mock_presenter(BATCH_FILE_TEST_CONTENT_2)
+
+        presenter.on_user_file_load()
+        presenter.on_batch_file_load()
+
+        presenter.on_load_clicked()
+
+        self.work_handler.process.assert_called_once_with(ANY, perform_load, presenter.get_states())
+
+    # def test_that_load_button_disabled_when_user_file_and_batch_file_not_loaded(self):
+    #     self.assertTrue(False)
+    #
+    # def test_that_on_load_clicked_creates_correct_state(self):
+    #     self.assertTrue(False)
 
     @staticmethod
     def _clear_property_manager_data_service():

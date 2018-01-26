@@ -31,6 +31,7 @@ from sans.command_interface.batch_csv_file_parser import BatchCsvParser
 from sans.common.constants import ALL_PERIODS
 from sans.gui_logic.models.beam_centre_model import BeamCentreModel
 from ui.sans_isis.work_handler import WorkHandler
+from sans.gui_logic.models.load_model import perform_load
 
 try:
     import mantidplot
@@ -70,6 +71,20 @@ class RunTabPresenter(object):
         def on_manage_directories(self):
             self._presenter.on_manage_directories()
 
+        def on_load_clicked(self):
+            self._presenter.on_load_clicked()
+
+    class LoadListener(WorkHandler.WorkListener):
+        def __init__(self, presenter):
+            super(RunTabPresenter.LoadListener, self).__init__()
+            self._presenter = presenter
+
+        def on_processing_finished(self, result):
+            pass
+
+        def on_processing_error(self, error):
+            pass
+
     def __init__(self, facility, view=None):
         super(RunTabPresenter, self).__init__()
         self._facility = facility
@@ -105,6 +120,8 @@ class RunTabPresenter(object):
 
         # Beam centre presenter
         self._beam_centre_presenter = BeamCentrePresenter(self, WorkHandler, BeamCentreModel)
+
+        self._work_handler = WorkHandler()
 
     def __del__(self):
         self._delete_dummy_input_workspace()
@@ -302,6 +319,21 @@ class RunTabPresenter(object):
 
     def on_manage_directories(self):
         self._view.show_directory_manager()
+
+    def on_load_clicked(self):
+        self.sans_logger.information("Starting loading of batch table.")
+        # 0. Validate rows
+        self._validate_rows()
+
+        # 1. Set up the states
+        states = self.get_states()
+        if not states:
+            raise RuntimeError("There seems to have been an issue with setting the states. Make sure that a user file"
+                               " has been loaded")
+
+        states_copy = copy.copy(states)
+        listener = RunTabPresenter.LoadListener(self)
+        self._work_handler.process(listener, perform_load, states_copy)
 
     def on_mask_file_add(self):
         """
