@@ -16,123 +16,124 @@
 #include <boost/serialization/utility.hpp>
 #include <fstream>
 
-
 namespace {
-
-
 #define MEASURE_ALL 1
-#define MEASURE_PRELIM
 
-  class TimerParallel {
-  public:
-    TimerParallel() {
-      m_start_cpu_total = std::clock();
-      m_start_wall_total = std::chrono::high_resolution_clock::now();
-    }
+class TimerParallel {
+public:
+  TimerParallel() {
+    m_start_cpu_total = std::clock();
+    m_start_wall_total = std::chrono::high_resolution_clock::now();
+  }
 
-    void start () {
-      m_start_cpu = std::clock();
-      m_start_wall = std::chrono::high_resolution_clock::now();
-    }
+  void start() {
+    m_start_cpu = std::clock();
+    m_start_wall = std::chrono::high_resolution_clock::now();
+  }
 
-    void stop () {
-      auto stop_cpu = std::clock();
-      auto stop_wall = std::chrono::high_resolution_clock::now();
-      m_times_cpu.emplace_back((stop_cpu - m_start_cpu)/CLOCKS_PER_SEC);
-      m_times_wall.emplace_back(std::chrono::duration<double>(stop_wall - m_start_wall).count());
-    };
-
-    void recordNumEvents(size_t numEvents) {
-      m_numEvents = numEvents;
-    }
-
-    void dump(const Mantid::Parallel::Communicator& comm) {
-      char cwd[1024];
-      if (getcwd(cwd, sizeof(cwd)) != nullptr) {
-        std::string base(cwd);
-        if (base.find("scarf") != std::string::npos) {
-          fileNameBase = "/home/isisg/scarf672/Mantid2/mpi_test/results/result_";
-        } else {
-          fileNameBase = "/home/anton/builds/Mantid_debug_clion/mpi_test/results/result_";
-        }
-      }
-
-      // Measure the total time
-      auto stop_cpu = std::clock();
-      auto stop_wall = std::chrono::high_resolution_clock::now();
-      m_times_cpu.emplace_back((stop_cpu - m_start_cpu_total)/CLOCKS_PER_SEC);
-      m_times_wall.emplace_back(std::chrono::duration<double>(stop_wall - m_start_wall_total).count());
-
-      // -----------------
-      // Receive times
-      std::vector<Mantid::Parallel::Request> requests;
-      const auto numRanks = comm.size();
-      const auto size = m_times_cpu.size();
-      std::vector<double> times_cpu(numRanks*size);
-      std::vector<double> times_wall(numRanks*size);
-
-      if (comm.rank() == 0) {
-        std::copy(m_times_cpu.begin(), m_times_cpu.end(), times_cpu.begin());
-        std::copy(m_times_wall.begin(), m_times_wall.end(), times_wall.begin());
-
-        for (int rank = 1; rank < numRanks; ++rank) {
-          requests.emplace_back(comm.irecv(rank, 1, times_cpu.data()+size*rank, static_cast<int>(size)));
-          requests.emplace_back(comm.irecv(rank, 2, times_wall.data()+size*rank, static_cast<int>(size)));
-        }
-      } else {
-        requests.emplace_back(comm.isend(0, 1, m_times_cpu.data(), static_cast<int>(size)));
-        requests.emplace_back(comm.isend(0, 2, m_times_wall.data(), static_cast<int>(size)));
-      }
-      wait_all(requests.begin(), requests.end());
-      std::vector<Mantid::Parallel::Request>().swap(requests);
-
-      // -----------------
-      // Receive other
-
-      std::vector<size_t> numEvents(static_cast<size_t>(numRanks));
-      if (comm.rank() == 0) {
-        Mantid::Parallel::gather(comm, m_numEvents, numEvents, 0);
-      } else {
-        Mantid::Parallel::gather(comm, m_numEvents, 0);
-      }
-
-      // -----------------
-      // Save to file
-      if (comm.rank() == 0) {
-        // Save times
-        const auto fileNumber = comm.size();
-        std::string fileName = fileNameBase + std::to_string(fileNumber) + std::string(".txt");
-        std::fstream stream;
-        stream.open(fileName, std::ios::out | std::ios::app);
-        for (auto index=0ul; index < times_cpu.size(); ++index) {
-           stream << times_cpu[index] <<","<< times_wall[index] <<"\n";
-        }
-
-        // Save other
-        saveOther(stream, numEvents);
-        stream.close();
-      }
-    }
-
-  private:
-    void saveOther(std::fstream& stream, const std::vector<size_t>& other) {
-      for (auto index = 0ul; index < other.size()-1; ++index) {
-        stream << other[index] << ",";
-      }
-      stream << other[other.size()-1] <<"\n";
-    }
-
-    std::clock_t m_start_cpu_total;
-    std::chrono::system_clock::time_point m_start_wall_total;
-    std::clock_t m_start_cpu;
-    std::chrono::system_clock::time_point m_start_wall;
-    std::vector<double> m_times_cpu;
-    std::vector<double> m_times_wall;
-    std::string fileNameBase;
-    size_t m_numEvents;
+  void stop() {
+    auto stop_cpu = std::clock();
+    auto stop_wall = std::chrono::high_resolution_clock::now();
+    m_times_cpu.emplace_back((stop_cpu - m_start_cpu) / CLOCKS_PER_SEC);
+    m_times_wall.emplace_back(
+        std::chrono::duration<double>(stop_wall - m_start_wall).count());
   };
-}
 
+  void recordNumEvents(size_t numEvents) { m_numEvents = numEvents; }
+
+  void dump(const Mantid::Parallel::Communicator &comm) {
+    char cwd[1024];
+    if (getcwd(cwd, sizeof(cwd)) != nullptr) {
+      std::string base(cwd);
+      // IMPORTANT: Change these file locations to your appropriate location
+      if (base.find("scarf") != std::string::npos) {
+        fileNameBase = "/home/isisg/scarf672/Mantid2/mpi_test/results/result_";
+      } else {
+        fileNameBase =
+            "/home/anton/builds/Mantid_debug_clion/mpi_test/results/result_";
+      }
+    }
+
+    // Measure the total time
+    auto stop_cpu = std::clock();
+    auto stop_wall = std::chrono::high_resolution_clock::now();
+    m_times_cpu.emplace_back((stop_cpu - m_start_cpu_total) / CLOCKS_PER_SEC);
+    m_times_wall.emplace_back(
+        std::chrono::duration<double>(stop_wall - m_start_wall_total).count());
+
+    // -----------------
+    // Receive times
+    std::vector<Mantid::Parallel::Request> requests;
+    const auto numRanks = comm.size();
+    const auto size = m_times_cpu.size();
+    std::vector<double> times_cpu(numRanks * size);
+    std::vector<double> times_wall(numRanks * size);
+
+    if (comm.rank() == 0) {
+      std::copy(m_times_cpu.begin(), m_times_cpu.end(), times_cpu.begin());
+      std::copy(m_times_wall.begin(), m_times_wall.end(), times_wall.begin());
+
+      for (int rank = 1; rank < numRanks; ++rank) {
+        requests.emplace_back(comm.irecv(
+            rank, 1, times_cpu.data() + size * rank, static_cast<int>(size)));
+        requests.emplace_back(comm.irecv(
+            rank, 2, times_wall.data() + size * rank, static_cast<int>(size)));
+      }
+    } else {
+      requests.emplace_back(
+          comm.isend(0, 1, m_times_cpu.data(), static_cast<int>(size)));
+      requests.emplace_back(
+          comm.isend(0, 2, m_times_wall.data(), static_cast<int>(size)));
+    }
+    wait_all(requests.begin(), requests.end());
+    std::vector<Mantid::Parallel::Request>().swap(requests);
+
+    // -----------------
+    // Receive other
+    std::vector<size_t> numEvents(static_cast<size_t>(numRanks));
+    if (comm.rank() == 0) {
+      Mantid::Parallel::gather(comm, m_numEvents, numEvents, 0);
+    } else {
+      Mantid::Parallel::gather(comm, m_numEvents, 0);
+    }
+
+    // -----------------
+    // Save to file
+    if (comm.rank() == 0) {
+      // Save times
+      const auto fileNumber = comm.size();
+      std::string fileName =
+          fileNameBase + std::to_string(fileNumber) + std::string(".txt");
+      std::fstream stream;
+      stream.open(fileName, std::ios::out | std::ios::app);
+      for (auto index = 0ul; index < times_cpu.size(); ++index) {
+        stream << times_cpu[index] << "," << times_wall[index] << "\n";
+      }
+
+      // Save other
+      saveOther(stream, numEvents);
+      stream.close();
+    }
+  }
+
+private:
+  void saveOther(std::fstream &stream, const std::vector<size_t> &other) {
+    for (auto index = 0ul; index < other.size() - 1; ++index) {
+      stream << other[index] << ",";
+    }
+    stream << other[other.size() - 1] << "\n";
+  }
+
+  std::clock_t m_start_cpu_total;
+  std::chrono::system_clock::time_point m_start_wall_total;
+  std::clock_t m_start_cpu;
+  std::chrono::system_clock::time_point m_start_wall;
+  std::vector<double> m_times_cpu;
+  std::vector<double> m_times_wall;
+  std::string fileNameBase;
+  size_t m_numEvents;
+};
+}
 
 namespace Mantid {
 namespace MDAlgorithms {
@@ -152,7 +153,6 @@ const std::string ConvertToDistributedMD::boxSplittingGroupName =
 
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(ConvertToDistributedMD)
-
 
 //----------------------------------------------------------------------------------------------
 
@@ -278,26 +278,26 @@ void ConvertToDistributedMD::initBoxControllerProps(
 /** Execute the algorithm.
  */
 void ConvertToDistributedMD::exec() {
-  // The generation of the distributed MD data requires the following steps:
-  // 1. Convert the data which corresponds to the first n percent of the total
-  // measurement
-  // 2. Build a preliminary box structure on the master rank
-  // 3. Determine how the data will be split based on the preliminary box
-  // structure and share this information with all
-  //    ranks
-  // 4. Share the preliminary box structure with all ranks
-  // 5. Convert all events
-  // 6. Disable the box controller and add events to the local box structure
-  // 7. Send data from the each rank to the correct rank
-  // 8. Enable the box controller and start splitting the data
-  // 9. Ensure that the fileIDs and the box controller stats are correct.
-  // 10. Maybe save in this algorithm already
+// The generation of the distributed MD data requires the following steps:
+// 1. Convert the data which corresponds to the first n percent of the total
+// measurement
+// 2. Build a preliminary box structure on the master rank
+// 3. Determine how the data will be split based on the preliminary box
+// structure and share this information with all
+//    ranks
+// 4. Share the preliminary box structure with all ranks
+// 5. Convert all events
+// 6. Disable the box controller and add events to the local box structure
+// 7. Send data from the each rank to the correct rank
+// 8. Enable the box controller and start splitting the data
+// 9. Ensure that the fileIDs and the box controller stats are correct.
+// 10. Maybe save in this algorithm already
 #if MEASURE_ALL
   TimerParallel timer;
 #endif
 
   const auto localRank = this->communicator().rank();
-  std::cout << "Starting rank " << localRank <<"\n";
+  std::cout << "Starting rank " << localRank << "\n";
   // Get the users's inputs
   EventWorkspace_sptr inputWorkspace = getProperty("InputWorkspace");
   {
@@ -313,10 +313,10 @@ void ConvertToDistributedMD::exec() {
     timer.stop();
 #endif
 
-    // -----------------------------------------------------------------
-    // 2. + 3. = 4.  Get the preliminary box structure and the partition
-    // behaviour
-    // -----------------------------------------------------------------
+// -----------------------------------------------------------------
+// 2. + 3. = 4.  Get the preliminary box structure and the partition
+// behaviour
+// -----------------------------------------------------------------
 #if MEASURE_ALL
     timer.start();
 #endif
@@ -325,7 +325,6 @@ void ConvertToDistributedMD::exec() {
     timer.stop();
 #endif
   }
-
 
   // ----------------------------------------------------------
   // 5. Convert all events
@@ -339,9 +338,9 @@ void ConvertToDistributedMD::exec() {
     timer.stop();
 #endif
 
-    // ----------------------------------------------------------
-    // 6. Add the local data to the preliminary box structure
-    // ----------------------------------------------------------
+// ----------------------------------------------------------
+// 6. Add the local data to the preliminary box structure
+// ----------------------------------------------------------
 #if MEASURE_ALL
     timer.start();
 #endif
@@ -351,10 +350,9 @@ void ConvertToDistributedMD::exec() {
 #endif
   }
 
-
-  // ------------------------------------------------------
-  // 7. Redistribute data
-  // ----------------------------------------------------------
+// ------------------------------------------------------
+// 7. Redistribute data
+// ----------------------------------------------------------
 #if MEASURE_ALL
   timer.start();
 #endif
@@ -363,9 +361,9 @@ void ConvertToDistributedMD::exec() {
   timer.stop();
 #endif
 
-  // ----------------------------------------------------------
-  // 8. Continue to split locally
-  // ----------------------------------------------------------
+// ----------------------------------------------------------
+// 8. Continue to split locally
+// ----------------------------------------------------------
 #if MEASURE_ALL
   timer.start();
 #endif
@@ -374,9 +372,9 @@ void ConvertToDistributedMD::exec() {
   timer.stop();
 #endif
 
-  // --------------------------------------- -------------------
-  // 9. Ensure that box controller and fileIDs are correct
-  // ----------------------------------------------------------
+// --------------------------------------- -------------------
+// 9. Ensure that box controller and fileIDs are correct
+// ----------------------------------------------------------
 #if MEASURE_ALL
   timer.start();
 #endif
@@ -385,23 +383,33 @@ void ConvertToDistributedMD::exec() {
   timer.stop();
 #endif
 
-  // ----------------------------------------------------------
-  // 9. Save?
-  // ----------------------------------------------------------
 #if MEASURE_ALL
   const auto numEvents = m_boxStructureInformation.boxStructure->getNPoints();
   timer.recordNumEvents(numEvents);
-  const auto& comm = this->communicator();
+  const auto &comm = this->communicator();
   timer.dump(comm);
 #endif
-}
 
+  // ----------------------------------------------------------
+  // 9. Save: THIS NEEDS TO BE STILL IMPLEMENTED
+  // ----------------------------------------------------------
+}
 
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 // Definitions for: 1. Convert first n percent of the data
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
+/**
+ * Generates an MDEvent list from the events of an EventWorkspace. When a
+ * fraction is specified, only events from
+ * the start of the measurement until the fraction of the end of the measurement
+ * are considered.
+ * @param workspace : An EventWorkspace
+ * @param fraction : The fraction of the total measurement time which should be
+ * considered.
+ * @return A collection of MDEvents
+ */
 MDEventList
 ConvertToDistributedMD::getFractionEvents(const EventWorkspace &workspace,
                                           double fraction) const {
@@ -422,7 +430,7 @@ ConvertToDistributedMD::getWorkspaceExtents() const {
   // Replicate a single min,max into several
   if (extentsInput.size() != DIM_DISTRIBUTED_TEST * 2)
     throw std::invalid_argument(
-      "You must specify multiple of 2 extents, ie two for each dimension.");
+        "You must specify multiple of 2 extents, ie two for each dimension.");
 
   // Convert input to coordinate type
   std::vector<coord_t> extents;
@@ -438,8 +446,13 @@ ConvertToDistributedMD::getWorkspaceExtents() const {
 // Definitions for: 2 + 3 + 4. Get the prelim. box structure
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
+/**
+ * Sets up a preliminary box structure and establishes which ranks are
+ * associated with which boxes.
+ * @param mdEvents : A collection of MDEvents
+ */
 void ConvertToDistributedMD::setupPreliminaryBoxStructure(
-  MDEventList &mdEvents) {
+    MDEventList &mdEvents) {
   // The following steps are performed
   // 1. The first data is sent from all the ranks to the master rank
   // 2. The box structure is built on the master rank
@@ -452,7 +465,7 @@ void ConvertToDistributedMD::setupPreliminaryBoxStructure(
   // 7. The other ranks deserialize the box structure (but without the event
   // information)
   const auto &communicator = this->communicator();
-  const boost::mpi::communicator& boostComm = communicator;
+  const boost::mpi::communicator &boostComm = communicator;
   MPI_Comm comm = boostComm;
   MPI_Barrier(comm);
 
@@ -462,22 +475,20 @@ void ConvertToDistributedMD::setupPreliminaryBoxStructure(
 
     auto allEvents = receiveMDEventsOnMaster(communicator, mdEvents);
 
-    
     // 2. Build the box structure on the master rank
     auto boxStructureInformation = generatePreliminaryBoxStructure(allEvents);
-
 
     // 3. Determine splitting
     RankResponsibility rankResponsibility;
     m_responsibility = rankResponsibility.getResponsibilites(
-      communicator.size(), boxStructureInformation.boxStructure.get());
+        communicator.size(), boxStructureInformation.boxStructure.get());
 
     // 4.a Broadcast splitting behaviour
     sendRankResponsibility(communicator, m_responsibility);
 
     // 5. Serialize the box structure
     serialBoxStructureInformation =
-      serializeBoxStructure(boxStructureInformation);
+        serializeBoxStructure(boxStructureInformation);
 
     // 6.a Broadcast serialized box structure to all other ranks
     sendSerializedBoxStructureInformation(communicator,
@@ -491,16 +502,15 @@ void ConvertToDistributedMD::setupPreliminaryBoxStructure(
 
     // 6.b Receive the box structure from master
     serialBoxStructureInformation =
-      receiveSerializedBoxStructureInformation(communicator);
+        receiveSerializedBoxStructureInformation(communicator);
   }
 
   // 7. Deserialize on all ranks
   auto hollowBoxStructureInformation =
-    deserializeBoxStructure(serialBoxStructureInformation);
+      deserializeBoxStructure(serialBoxStructureInformation);
 
   // Create a rank responsibility map
   setRankResponsibilityMap();
-
 
   // Set results
   m_boxStructureInformation = std::move(hollowBoxStructureInformation);
@@ -513,28 +523,42 @@ void ConvertToDistributedMD::setRankResponsibilityMap() {
   }
 }
 
-
+/**
+ * Sends a collection of MDEvents to the master rank. This method is paired with
+ * `receiveMDEventsOnMaster`
+ * @param communicator : The MPI communicator
+ * @param mdEvents : A collection of MDEvents
+ */
 void ConvertToDistributedMD::sendMDEventsToMaster(
-  const Mantid::Parallel::Communicator &communicator,
-  MDEventList &mdEvents) const {
+    const Mantid::Parallel::Communicator &communicator,
+    MDEventList &mdEvents) const {
   // Send the totalNumberOfEvents
   auto totalNumberEvents = mdEvents.size();
   gather(communicator, totalNumberEvents, 0);
 
   // Send the vector of md events
-  const boost::mpi::communicator& boostComm = communicator;
+  const boost::mpi::communicator &boostComm = communicator;
   MPI_Comm comm = boostComm;
-  auto sizeMdEvents = sizeof(std::remove_reference<decltype(mdEvents)>::type::value_type);
-  MPI_Send(reinterpret_cast<char*>(mdEvents.data()), static_cast<int>(mdEvents.size()*sizeMdEvents), MPI_CHAR, 0, 2, comm);
+  auto sizeMdEvents =
+      sizeof(std::remove_reference<decltype(mdEvents)>::type::value_type);
+  MPI_Send(reinterpret_cast<char *>(mdEvents.data()),
+           static_cast<int>(mdEvents.size() * sizeMdEvents), MPI_CHAR, 0, 2,
+           comm);
 }
 
-
+/**
+ * Sends a collection of MDEvents to the master rank. This method is paired with
+ * `sendMDEventsToMaster`
+ * @param communicator : The MPI communicator
+ * @param mdEvents : A collection of MDEvents
+ * @return a collection of MDEvents
+ */
 MDEventList ConvertToDistributedMD::receiveMDEventsOnMaster(
-  const Mantid::Parallel::Communicator &communicator,
-  const MDEventList &mdEvents) const {
-  // In order to get all relevant md events onto the master rank we need to:
+    const Mantid::Parallel::Communicator &communicator,
+    const MDEventList &mdEvents) const {
+  // In order to get all relevant MDEvents onto the master rank we need to:
   // 1. Inform the master rank about the number of events on all ranks (gather)
-  // 2. Create a sufficiently large buff on master
+  // 2. Create a sufficiently large buffer on master
   // 3. Determine the stride that each rank requires, ie which offset each rank
   // requires
   // 4. Send the data to master. This would be a natural operation for gatherv,
@@ -546,13 +570,11 @@ MDEventList ConvertToDistributedMD::receiveMDEventsOnMaster(
   auto masterNumberOfEvents = mdEvents.size();
   gather(communicator, masterNumberOfEvents, numberOfEventsPerRank, 0);
 
-
   // 2. Create a buffer
   auto totalNumberOfEvents = std::accumulate(numberOfEventsPerRank.begin(),
                                              numberOfEventsPerRank.end(), 0ul);
   MDEventList totalEvents(totalNumberOfEvents);
   std::copy(mdEvents.begin(), mdEvents.end(), totalEvents.begin());
-
 
   // 3. Determine the strides
   std::vector<int> strides;
@@ -568,31 +590,37 @@ MDEventList ConvertToDistributedMD::receiveMDEventsOnMaster(
 
   // 4. Send the data from all ranks to the master rank
   const auto numberOfRanks = communicator.size();
-  const boost::mpi::communicator& boostComm = communicator;
+  const boost::mpi::communicator &boostComm = communicator;
   MPI_Comm comm = boostComm;
   std::vector<MPI_Request> mpi_requests;
-  mpi_requests.reserve(numberOfRanks-1);
+  mpi_requests.reserve(static_cast<size_t>(numberOfRanks) - 1);
   std::vector<MPI_Status> mpi_status;
-  mpi_requests.reserve(numberOfRanks-1);
-  auto sizeMdEvents = sizeof(std::remove_reference<decltype(mdEvents)>::type::value_type);
+  mpi_requests.reserve(static_cast<size_t>(numberOfRanks) - 1);
+  auto sizeMdEvents =
+      sizeof(std::remove_reference<decltype(mdEvents)>::type::value_type);
   for (int rank = 1; rank < numberOfRanks; ++rank) {
     // Determine where to insert the array
     auto start = totalEvents.data() + strides[rank];
     auto length = numberOfEventsPerRank[rank];
     mpi_requests.emplace_back();
     mpi_status.emplace_back();
-
-    MPI_Irecv(reinterpret_cast<char*>(start), static_cast<int>(length*sizeMdEvents), MPI_CHAR,
-                rank, 2, comm, &mpi_requests.back());
+    MPI_Irecv(reinterpret_cast<char *>(start),
+              static_cast<int>(length * sizeMdEvents), MPI_CHAR, rank, 2, comm,
+              &mpi_requests.back());
   }
 
-  MPI_Waitall(static_cast<int>(mpi_requests.size()), mpi_requests.data(), mpi_status.data());
+  MPI_Waitall(static_cast<int>(mpi_requests.size()), mpi_requests.data(),
+              mpi_status.data());
   return totalEvents;
 }
 
-
+/**
+ * Generates the preliminiary box structure.
+ * @param allEvents : A collection of all contributing events
+ * @return information regarding the box structure and the box controller
+ */
 BoxStructureInformation ConvertToDistributedMD::generatePreliminaryBoxStructure(
-  const MDEventList &allEvents) const {
+    const MDEventList &allEvents) const {
   // To build the box structure we need to:
   // 1. Generate a temporary MDEventWorkspace locally on the master rank
   // 2. Populate the workspace with the MDEvents
@@ -610,29 +638,29 @@ BoxStructureInformation ConvertToDistributedMD::generatePreliminaryBoxStructure(
 }
 
 void ConvertToDistributedMD::sendSerializedBoxStructureInformation(
-  const Mantid::Parallel::Communicator &communicator,
-  SerialBoxStructureInformation &serializedBoxStructureInformation) const {
+    const Mantid::Parallel::Communicator &communicator,
+    SerialBoxStructureInformation &serializedBoxStructureInformation) const {
   boost::mpi::broadcast(communicator, serializedBoxStructureInformation, 0);
 }
 
 SerialBoxStructureInformation
 ConvertToDistributedMD::receiveSerializedBoxStructureInformation(
-  const Mantid::Parallel::Communicator &communicator) const {
+    const Mantid::Parallel::Communicator &communicator) const {
   SerialBoxStructureInformation serializedBoxStructureInformation;
   boost::mpi::broadcast(communicator, serializedBoxStructureInformation, 0);
   return serializedBoxStructureInformation;
 }
 
 void ConvertToDistributedMD::sendRankResponsibility(
-  const Mantid::Parallel::Communicator &communicator,
-  std::vector<std::pair<size_t, size_t>> &responsibility) const {
+    const Mantid::Parallel::Communicator &communicator,
+    std::vector<std::pair<size_t, size_t>> &responsibility) const {
   boost::mpi::broadcast(communicator, responsibility.data(),
                         communicator.size(), 0);
 }
 
 std::vector<std::pair<size_t, size_t>>
 ConvertToDistributedMD::receiveRankResponsibility(
-  const Mantid::Parallel::Communicator &communicator) const {
+    const Mantid::Parallel::Communicator &communicator) const {
   std::vector<std::pair<size_t, size_t>> responsibility;
   responsibility.resize(static_cast<size_t>(communicator.size()));
   boost::mpi::broadcast(communicator, responsibility.data(),
@@ -641,21 +669,19 @@ ConvertToDistributedMD::receiveRankResponsibility(
 }
 
 SerialBoxStructureInformation ConvertToDistributedMD::serializeBoxStructure(
-  const BoxStructureInformation &boxStructureInformation) const {
+    const BoxStructureInformation &boxStructureInformation) const {
   BoxStructureSerializer serializer;
   return serializer.serializeBoxStructure(boxStructureInformation);
 }
 
-
 BoxStructureInformation ConvertToDistributedMD::deserializeBoxStructure(
-  SerialBoxStructureInformation &serializedBoxStructureInformation) const {
+    SerialBoxStructureInformation &serializedBoxStructureInformation) const {
   BoxStructureSerializer serializer;
   return serializer.deserializeBoxStructure(serializedBoxStructureInformation);
 }
 
-
 void ConvertToDistributedMD::addMDEventsToMDEventWorkspace(
-  MDEventWorkspace3Lean &workspace, const MDEventList &allEvents) const {
+    MDEventWorkspace3Lean &workspace, const MDEventList &allEvents) const {
   // We could call the addEvents method, but it seems to behave slightly
   // differently
   // to addEvent. TODO: Investigate if addEvents could be used.
@@ -664,12 +690,17 @@ void ConvertToDistributedMD::addMDEventsToMDEventWorkspace(
   auto boxController = workspace.getBoxController();
   size_t lastNumBoxes = boxController->getTotalNumMDBoxes();
 
+  // TODO: This part of the code is a bottle neck in the code. There are two
+  // ways to improve the situation:
+  //       1. We can adapt the n% threshold and which we should do, depending on
+  //       the data size
+  //       2. We could try and see if we can enable multi-threading at this
+  //       point.
   for (const auto &event : allEvents) {
     // We have a different situation here compared to ConvertToDiffractionMD,
-    // since we already have
-    // all events converted
+    // since we already have all events converted
     if (boxController->shouldSplitBoxes(
-      eventsAddedTotal, eventsAddedSinceLastSplit, lastNumBoxes)) {
+            eventsAddedTotal, eventsAddedSinceLastSplit, lastNumBoxes)) {
       workspace.splitAllIfNeeded(nullptr);
       eventsAddedSinceLastSplit = 0;
       lastNumBoxes = boxController->getTotalNumMDBoxes();
@@ -683,7 +714,7 @@ void ConvertToDistributedMD::addMDEventsToMDEventWorkspace(
 }
 
 BoxStructureInformation ConvertToDistributedMD::extractBoxStructure(
-  MDEventWorkspace3Lean &workspace) const {
+    MDEventWorkspace3Lean &workspace) const {
   // Extract the box controller
   BoxStructureInformation boxStructureInformation;
   workspace.transferInternals(boxStructureInformation.boxController,
@@ -691,21 +722,25 @@ BoxStructureInformation ConvertToDistributedMD::extractBoxStructure(
   return boxStructureInformation;
 }
 
-
+/**
+ * Generate a temporary MDEventWorkspace which is used in order to build up the
+ * preliminary box structure.
+ * @return an MDEventWorkspace
+ */
 MDEventWorkspace3Lean::sptr
 ConvertToDistributedMD::createTemporaryWorkspace() const {
   auto imdWorkspace = DataObjects::MDEventFactory::CreateMDWorkspace(
-    DIM_DISTRIBUTED_TEST, "MDLeanEvent");
+      DIM_DISTRIBUTED_TEST, "MDLeanEvent");
   auto workspace =
-    boost::dynamic_pointer_cast<DataObjects::MDEventWorkspace3Lean>(
-      imdWorkspace);
+      boost::dynamic_pointer_cast<DataObjects::MDEventWorkspace3Lean>(
+          imdWorkspace);
   auto frameInformation = createFrame();
   auto extents = getWorkspaceExtents();
   for (size_t d = 0; d < DIM_DISTRIBUTED_TEST; d++) {
     MDHistoDimension *dim = new MDHistoDimension(
-      frameInformation.dimensionNames[d], frameInformation.dimensionNames[d],
-      *frameInformation.frame, static_cast<coord_t>(extents[d * 2]),
-      static_cast<coord_t>(extents[d * 2 + 1]), 10);
+        frameInformation.dimensionNames[d], frameInformation.dimensionNames[d],
+        *frameInformation.frame, static_cast<coord_t>(extents[d * 2]),
+        static_cast<coord_t>(extents[d * 2 + 1]), 10);
     workspace->addDimension(MDHistoDimension_sptr(dim));
   }
   workspace->initialize();
@@ -720,7 +755,7 @@ ConvertToDistributedMD::createTemporaryWorkspace() const {
   int maxDepth = this->getProperty("MaxRecursionDepth");
   if (minDepth > maxDepth)
     throw std::invalid_argument(
-      "MinRecursionDepth must be <= MaxRecursionDepth ");
+        "MinRecursionDepth must be <= MaxRecursionDepth ");
   workspace->setMinRecursionDepth(size_t(minDepth));
 
   workspace->setCoordinateSystem(frameInformation.specialCoordinateSystem);
@@ -763,7 +798,7 @@ FrameInformation ConvertToDistributedMD::createFrame() const {
 }
 
 void ConvertToDistributedMD::setBoxController(
-  Mantid::API::BoxController_sptr bc) const {
+    Mantid::API::BoxController_sptr bc) const {
   size_t numberOfDimensions = bc->getNDims();
 
   int splitThreshold = this->getProperty("SplitThreshold");
@@ -781,69 +816,76 @@ void ConvertToDistributedMD::setBoxController(
     throw std::invalid_argument("SplitInto parameter has " +
                                 Strings::toString(splits.size()) +
                                 " arguments. It should have either 1, or the "
-                                  "same as the number of dimensions.");
+                                "same as the number of dimensions.");
   bc->resetNumBoxes();
 }
-
 
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 // Definitions for: 5 + 6 Add all events to the box structure
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
+/**
+ * This adds all MDEvents on each rank to their preliminary box structure.
+ * @param allEvents : A collection of MDEvents
+ */
 void ConvertToDistributedMD::addEventsToPreliminaryBoxStructure(
-  DistributedCommon::MDEventList &allEvents) {
+    DistributedCommon::MDEventList &allEvents) {
   // Add all events to the hollow box structure
   for (auto &event : allEvents) {
-    // TODO: create a move-enabled addEvent
+    // TODO: create a move-enabled addEvent.
     m_boxStructureInformation.boxStructure->addEvent(std::move(event));
   }
 }
-
 
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 // Definitions for: 7. Redistribute data
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
-
+/**
+ * Redistributes the data which is stored in the MDBoxes of the preliminary box
+ * structure.
+ */
 void ConvertToDistributedMD::redistributeData() {
+  // This step has the most complex communication pattern since all ranks need
+  // to communicate with each other.
+  // Note that we found that coalescing as many messages as possible improves
+  // performance considerably.
+  // The steps are:
+  // 1. Exchange information between ranks about how many events will be
+  // transmitted
+  // 2. Exchange the events beween ranks
+  // 3. Add the sent data and remove data in boxes for which the local rank is
+  // not responsible for
+
   const auto &communicator = this->communicator();
-  // Build up the data which needs to be transmitted
-  
-  auto start_wall = std::chrono::high_resolution_clock::now();
+  // Generate the MDBoxes
   std::vector<Mantid::API::IMDNode *> boxes;
   m_boxStructureInformation.boxStructure->getBoxes(boxes, 1000, true);
   std::vector<MDBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST> *>
-    mdBoxes;
+      mdBoxes;
   for (auto &box : boxes) {
     mdBoxes.emplace_back(dynamic_cast<
-                           MDBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST> *>(box));
+        MDBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST> *>(box));
   }
 
-
-  // Determine the number of events per rank per box
+  // 1. Determine the number of events per rank per box
   auto relevantEventsPerRankPerBox =
-    getRelevantEventsPerRankPerBox(communicator, boxes);
-  std::cout << "RELEVANT RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
-  
-  // Send the actual data
+      getRelevantEventsPerRankPerBox(communicator, boxes);
 
-  start_wall = std::chrono::high_resolution_clock::now();
+  // 2. Send the actual data
   auto boxVsMDEvents =
-    sendDataToCorrectRank(communicator, relevantEventsPerRankPerBox, mdBoxes);
-  std::cout << "SEND RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
- 
- // Place the data into the correct boxes
-  start_wall = std::chrono::high_resolution_clock::now();
+      sendDataToCorrectRank(communicator, relevantEventsPerRankPerBox, mdBoxes);
+
+  // 3. Place the data into the correct boxes
   auto localRank = communicator.rank();
   auto startIndex = m_responsibility[localRank].first;
   auto stopIndex = m_responsibility[localRank].second;
   for (auto index = startIndex; index <= stopIndex; ++index) {
     auto mdBox = mdBoxes[index];
-
     auto &events = boxVsMDEvents.at(index);
-    auto& oldEvents = mdBox->getEvents();
+    auto &oldEvents = mdBox->getEvents();
     oldEvents.swap(events);
     MDEventList().swap(events);
   }
@@ -864,13 +906,12 @@ void ConvertToDistributedMD::redistributeData() {
   // ranks. Note that getMaxId will return the next available id, ie it is
   // not really the max id.
   m_maxIDBeforeSplit = m_boxStructureInformation.boxController->getMaxId() - 1;
-
-  std::cout << "REST RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
 }
 
-
-void ConvertToDistributedMD::setNullMDBox(std::vector<MDBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST>*>& mdBoxes,
-                  size_t startIndex, size_t stopIndex, const size_t numberOfDimensions) {
+void ConvertToDistributedMD::setNullMDBox(
+    std::vector<MDBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>,
+                      DIM_DISTRIBUTED_TEST> *> &mdBoxes,
+    size_t startIndex, size_t stopIndex, const size_t numberOfDimensions) {
   for (auto index = startIndex; index < stopIndex; ++index) {
     auto mdBox = mdBoxes[index];
 
@@ -879,7 +920,7 @@ void ConvertToDistributedMD::setNullMDBox(std::vector<MDBox<MDLeanEvent<DIM_DIST
       throw std::runtime_error("Expected an MDBox, but got an MDGridBox");
     }
 
-    const auto& boxController  = mdBox->getBoxController();
+    const auto &boxController = mdBox->getBoxController();
     const auto depth = mdBox->getDepth();
 
     std::vector<Mantid::Geometry::MDDimensionExtents<coord_t>> extents;
@@ -892,44 +933,52 @@ void ConvertToDistributedMD::setNullMDBox(std::vector<MDBox<MDLeanEvent<DIM_DIST
 
     // Create a new NullMDBox
     auto parent = mdBox->getParent();
-    auto newNullMDBox = Mantid::Kernel::make_unique<NullMDBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST>>(boxController, depth, extents, boxID, responsibleRank);
+    auto newNullMDBox = Mantid::Kernel::make_unique<
+        NullMDBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST>>(
+        boxController, depth, extents, boxID, responsibleRank);
     newNullMDBox->setShowGlobalValues(false);
     newNullMDBox->setParent(parent);
 
     // Find the child index and replace it in the parent
-    auto mdGridBoxParent = dynamic_cast<MDGridBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST> *>(parent);
+    auto mdGridBoxParent = dynamic_cast<
+        MDGridBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>, DIM_DISTRIBUTED_TEST> *>(
+        parent);
     const auto childIndex = mdGridBoxParent->getChildIndexFromID(boxID);
     mdGridBoxParent->setChild(childIndex, newNullMDBox.release());
   }
 }
 
-
 int ConvertToDistributedMD::getResponsibleRank(size_t leafNodeIndex) {
-  auto result = std::lower_bound(m_endBoxIndexRange.begin(), m_endBoxIndexRange.end(), leafNodeIndex);
+  auto result = std::lower_bound(m_endBoxIndexRange.begin(),
+                                 m_endBoxIndexRange.end(), leafNodeIndex);
   return m_endBoxIndexRangeVsRank[*result];
 }
 
-
 std::unordered_map<size_t, std::vector<uint64_t>>
 ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
-  const Mantid::Parallel::Communicator &communicator,
-  const std::vector<Mantid::API::IMDNode *> &boxes) {
+    const Mantid::Parallel::Communicator &communicator,
+    const std::vector<Mantid::API::IMDNode *> &boxes) {
   // We want to get the number of events per rank per box for the boxes which
-  // are relevant for the local rank, ie the boxes for which the local rank is responsible.
+  // are relevant for the local rank, ie the boxes for which the local rank is
+  // responsible.
 
   const auto localRank = communicator.rank();
   const auto numberOfRanks = static_cast<size_t>(communicator.size());
 
   // -------------------------------------------------------------------------------------------------------------------
-  // Now we share the number of events per box with the relevant boxes. Since a rank is responsible for a set of
-  // boxes, we can group the information together and have a single communication between a pair of ranks. On the
+  // Now we share the number of events per box with the relevant boxes. Since a
+  // rank is responsible for a set of
+  // boxes, we can group the information together and have a single
+  // communication between a pair of ranks. On the
   // the receiving end, we need to unravel this information.
   // Sending the information one by one has shown to be a performance issue.
   // In order to achieve the exchange we:
   // Setup receive buffer
   std::vector<std::vector<uint64_t>> receiveBuffer(numberOfRanks);
-  const auto numberOfBoxesThatThisRankIsResponsibleFor = m_responsibility[localRank].second - m_responsibility[localRank].first + 1;
-  for (auto& element : receiveBuffer) {
+  const auto numberOfBoxesThatThisRankIsResponsibleFor =
+      m_responsibility[localRank].second - m_responsibility[localRank].first +
+      1;
+  for (auto &element : receiveBuffer) {
     element.resize(numberOfBoxesThatThisRankIsResponsibleFor);
   }
 
@@ -940,14 +989,14 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
     auto startIndex = m_responsibility[rank].first;
     auto stopIndex = m_responsibility[rank].second;
 
-    auto& sendBufferForRank = sendBuffer[rank];
-    std::transform(boxes.begin()+startIndex, boxes.begin() + stopIndex +1, std::back_inserter(sendBufferForRank), [](API::IMDNode* box) {
-      return box->getNPoints();
-    });
+    auto &sendBufferForRank = sendBuffer[rank];
+    std::transform(boxes.begin() + startIndex, boxes.begin() + stopIndex + 1,
+                   std::back_inserter(sendBufferForRank),
+                   [](API::IMDNode *box) { return box->getNPoints(); });
   }
 
   // Send the data
-  const boost::mpi::communicator& boostComm = communicator;
+  const boost::mpi::communicator &boostComm = communicator;
   MPI_Comm comm = boostComm;
   std::vector<MPI_Request> mpiRequests;
   std::vector<MPI_Status> mpiStatus;
@@ -957,29 +1006,38 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
     if (rank == static_cast<size_t>(localRank)) {
       // We need to setup a receive for all the other ranks
-      for (auto receiveFromRank=0ul; receiveFromRank < numberOfRanks; ++receiveFromRank) {
-        // We don't want to receive or send anything from ourselves, so just copy
+      for (auto receiveFromRank = 0ul; receiveFromRank < numberOfRanks;
+           ++receiveFromRank) {
+        // We don't want to receive or send anything from ourselves, so just
+        // copy
         if (receiveFromRank == static_cast<size_t>(localRank)) {
-          std::copy(sendBuffer[rank].begin(), sendBuffer[rank].end(), receiveBuffer[rank].begin());
+          std::copy(sendBuffer[rank].begin(), sendBuffer[rank].end(),
+                    receiveBuffer[rank].begin());
         } else {
           mpiRequests.emplace_back();
           mpiStatus.emplace_back();
-          MPI_Irecv(receiveBuffer[receiveFromRank].data(), static_cast<int>(receiveBuffer[receiveFromRank].size()),
+          MPI_Irecv(receiveBuffer[receiveFromRank].data(),
+                    static_cast<int>(receiveBuffer[receiveFromRank].size()),
                     MPI_UINT64_T, static_cast<int>(receiveFromRank),
-                    static_cast<int>(receiveFromRank), comm, &mpiRequests.back());
+                    static_cast<int>(receiveFromRank), comm,
+                    &mpiRequests.back());
         }
       }
     } else {
       // We need to send to this rank
       mpiRequests.emplace_back();
       mpiStatus.emplace_back();
-      MPI_Isend(sendBuffer[rank].data(), static_cast<int>(sendBuffer[rank].size()), MPI_UINT64_T,
+      MPI_Isend(sendBuffer[rank].data(),
+                static_cast<int>(sendBuffer[rank].size()), MPI_UINT64_T,
                 static_cast<int>(rank), localRank, comm, &mpiRequests.back());
     }
   }
-  auto resultSend = MPI_Waitall(static_cast<int>(mpiRequests.size()), mpiRequests.data(), mpiStatus.data());
+  auto resultSend = MPI_Waitall(static_cast<int>(mpiRequests.size()),
+                                mpiRequests.data(), mpiStatus.data());
   if (resultSend != MPI_SUCCESS) {
-    std::string message = "There has been an issue sharing the event numbers on rank " + std::to_string(localRank);
+    std::string message =
+        "There has been an issue sharing the event numbers on rank " +
+        std::to_string(localRank);
     throw std::runtime_error(message);
   }
 
@@ -1003,14 +1061,25 @@ ConvertToDistributedMD::getRelevantEventsPerRankPerBox(
   return relevantEventsPerRankPerBox;
 }
 
-
+/**
+ * Exchanges data between ranks. Each rank knows which rank is responsible for a
+ * particular box and sends the data
+ * to that box. If the local rank is responsible for a particular box, then it
+ * will receive data from all other ranks
+ * regarding the box.
+ * @param communicator : An MPI communicator
+ * @param relevantEventsPerRankPerBox : Maps boxId to the number of events per
+ * rank. Note that the index into the vector is the rank.
+ * @param mdBoxes : A collection of boxes
+ * @return a map with a boxId as the key and a vector MDEvents as the value
+ */
 std::unordered_map<size_t, DistributedCommon::MDEventList>
 ConvertToDistributedMD::sendDataToCorrectRank(
-  const Mantid::Parallel::Communicator &communicator,
-  const std::unordered_map<size_t, std::vector<uint64_t>> &
-  relevantEventsPerRankPerBox,
-  const std::vector<MDBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>,
-    DIM_DISTRIBUTED_TEST> *> &mdBoxes) {
+    const Mantid::Parallel::Communicator &communicator,
+    const std::unordered_map<size_t, std::vector<uint64_t>> &
+        relevantEventsPerRankPerBox,
+    const std::vector<MDBox<MDLeanEvent<DIM_DISTRIBUTED_TEST>,
+                            DIM_DISTRIBUTED_TEST> *> &mdBoxes) {
   // We send the data between all nodes. For this we:
   // 1. Set up a buffer which will accumulate the data. The buffer is a map from
   // boxIndex to an event vector
@@ -1018,24 +1087,18 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   // ranks into a single vector
   //    we need to determine at which starting position of the array the data of
   //    a particular rank should be added.
-  // 3. Iterate over all boxes and determine if a box is asociated with the
+  // 3. Iterate over all boxes and determine if a box is associated with the
   // local rank, in which case we want to
   //    receive data from all other ranks, else we need to send it
 
   // --------------------
   // 1. Set up the buffer
   // --------------------
+  // We want to group the data that is sent between the ranks in a similar way
+  // that we did when sending the length
+  // number of events information in the previous step.
   const auto localRank = communicator.rank();
   const auto numberOfRanks = static_cast<size_t>(communicator.size());
-
-  auto start_wall = std::chrono::high_resolution_clock::now();
-
-
-  // -------------------------
-  // 3. Send the data
-  // -------------------------
-  // We want to group the data that is sent between the ranks in a similar way that we did when sending the length
-  // number of events information in the previous step.
 
   // Setup a receive buffer
   std::vector<MDEventList> receiveBuffer(numberOfRanks);
@@ -1054,7 +1117,7 @@ ConvertToDistributedMD::sendDataToCorrectRank(
   for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
     auto start = m_responsibility[rank].first;
     auto stop = m_responsibility[rank].second;
-    auto& eventsList = sendBuffer[rank];
+    auto &eventsList = sendBuffer[rank];
     auto totalNumberOfEventsForRank = 0ul;
     for (auto index = start; index <= stop; ++index) {
       totalNumberOfEventsForRank += mdBoxes[index]->getEvents().size();
@@ -1062,20 +1125,20 @@ ConvertToDistributedMD::sendDataToCorrectRank(
     eventsList.reserve(totalNumberOfEventsForRank);
 
     for (auto index = start; index <= stop; ++index) {
-      auto& events = mdBoxes[index]->getEvents();
+      auto &events = mdBoxes[index]->getEvents();
       std::move(events.begin(), events.end(), std::back_inserter(eventsList));
     }
   }
 
-  std::cout << "SETUP BUFFER RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
-
-  start_wall = std::chrono::high_resolution_clock::now();
-  // Exchange the data between the ranks
-  const boost::mpi::communicator& boostComm = communicator;
+  // ---------------------------------------
+  // 2. Exchange the data between the ranks
+  // ---------------------------------------
+  const boost::mpi::communicator &boostComm = communicator;
   MPI_Comm comm = boostComm;
   std::vector<MPI_Request> mpiRequests;
   std::vector<MPI_Status> mpiStatus;
-  const auto sizeOfMDLeanEvent = sizeof(Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>);
+  const auto sizeOfMDLeanEvent =
+      sizeof(Mantid::DataObjects::MDLeanEvent<DIM_DISTRIBUTED_TEST>);
 
   auto sync = MPI_Barrier(comm);
   if (sync != MPI_SUCCESS) {
@@ -1084,58 +1147,60 @@ ConvertToDistributedMD::sendDataToCorrectRank(
 
   for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
     if (rank == static_cast<size_t>(localRank)) {
-      for (auto receiveFromRank=0ul; receiveFromRank < numberOfRanks; ++receiveFromRank) {
-        // We don't want to receive or send anything from ourselves, so just copy
+      for (auto receiveFromRank = 0ul; receiveFromRank < numberOfRanks;
+           ++receiveFromRank) {
+        // We don't want to receive or send anything from ourselves, so just
+        // copy
         if (receiveFromRank == static_cast<size_t>(localRank)) {
-          std::copy(sendBuffer[rank].begin(), sendBuffer[rank].end(), receiveBuffer[rank].begin());
+          std::copy(sendBuffer[rank].begin(), sendBuffer[rank].end(),
+                    receiveBuffer[rank].begin());
         } else {
           mpiRequests.emplace_back();
           mpiStatus.emplace_back();
-          MPI_Irecv(reinterpret_cast<char*>(receiveBuffer[receiveFromRank].data()),
-                    static_cast<int>(receiveBuffer[receiveFromRank].size()*sizeOfMDLeanEvent),
-                    MPI_CHAR,
-                    static_cast<int>(receiveFromRank),
-                    static_cast<int>(receiveFromRank),
-                    comm,
-                    &mpiRequests.back());
+          MPI_Irecv(
+              reinterpret_cast<char *>(receiveBuffer[receiveFromRank].data()),
+              static_cast<int>(receiveBuffer[receiveFromRank].size() *
+                               sizeOfMDLeanEvent),
+              MPI_CHAR, static_cast<int>(receiveFromRank),
+              static_cast<int>(receiveFromRank), comm, &mpiRequests.back());
         }
       }
     } else {
       // We send the data to the receiving rank
       mpiRequests.emplace_back();
       mpiStatus.emplace_back();
-      MPI_Isend(reinterpret_cast<char*>(sendBuffer[rank].data()),
-                static_cast<int>(sendBuffer[rank].size()*sizeOfMDLeanEvent),
-                MPI_CHAR, static_cast<int>(rank),
-                localRank,
-                comm,
+      MPI_Isend(reinterpret_cast<char *>(sendBuffer[rank].data()),
+                static_cast<int>(sendBuffer[rank].size() * sizeOfMDLeanEvent),
+                MPI_CHAR, static_cast<int>(rank), localRank, comm,
                 &mpiRequests.back());
     }
   }
 
-  auto resultSend = MPI_Waitall(static_cast<int>(mpiRequests.size()), mpiRequests.data(), mpiStatus.data());
+  auto resultSend = MPI_Waitall(static_cast<int>(mpiRequests.size()),
+                                mpiRequests.data(), mpiStatus.data());
   if (resultSend != MPI_SUCCESS) {
-    std::string message = "There has been an issue sharing the event numbers on rank " + std::to_string(localRank);
+    std::string message =
+        "There has been an issue sharing the event numbers on rank " +
+        std::to_string(localRank);
     throw std::runtime_error(message);
   }
 
-  sync = MPI_Barrier(comm);
+  sync = MPI_Barrier(comm); // Should not really be  required, can be removed
+                            // when there is time to measure that there is no
+                            // difference.
   if (sync != MPI_SUCCESS) {
     throw std::runtime_error("Sync failed");
   }
 
-  std::cout << "SEND ALL RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
-
-  // Unravel the data
   // -------------------------
-  // 2. Determine the strides
+  // 2. Break up the data
   // -------------------------
-  // First rearrange the data. The strides are a vector of vectors where the first index is the rank and the second
+  // First rearrange the data. The strides are a vector of vectors where the
+  // first index is the rank and the second
   // index is the box index but with a startIndex offset !!
-  start_wall = std::chrono::high_resolution_clock::now();
   std::vector<std::vector<uint64_t>> rearrangedNumberOfEvents(numberOfRanks);
   for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
-    rearrangedNumberOfEvents[rank].reserve(stopIndex - startIndex +1);
+    rearrangedNumberOfEvents[rank].reserve(stopIndex - startIndex + 1);
   }
 
   for (auto index = startIndex; index <= stopIndex; ++index) {
@@ -1146,49 +1211,45 @@ ConvertToDistributedMD::sendDataToCorrectRank(
     }
   }
 
-  std::cout << "Set buffer  RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
   // Now calculate the actual stride
-  start_wall = std::chrono::high_resolution_clock::now();
   std::vector<std::vector<uint64_t>> offsets(numberOfRanks);
   for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
-    auto & offset = offsets[rank];
+    auto &offset = offsets[rank];
     offset.push_back(0);
-    std::vector<uint64_t> tempOffsets(rearrangedNumberOfEvents[rank].size() - 1);
+    std::vector<uint64_t> tempOffsets(rearrangedNumberOfEvents[rank].size() -
+                                      1);
     std::partial_sum(rearrangedNumberOfEvents[rank].begin(),
-                     rearrangedNumberOfEvents[rank].end() - 1, tempOffsets.begin());
+                     rearrangedNumberOfEvents[rank].end() - 1,
+                     tempOffsets.begin());
     std::move(tempOffsets.begin(), tempOffsets.end(),
               std::back_inserter(offset));
   }
 
-  std::cout << "Calc stride  RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
-  start_wall = std::chrono::high_resolution_clock::now();
   std::unordered_map<size_t, MDEventList> boxVsMDEvents;
   for (auto index = startIndex; index <= stopIndex; ++index) {
     auto numberOfEventsInBox = 0ul;
-    auto& numberOfEventsPerRank = relevantEventsPerRankPerBox.at(index);
+    auto &numberOfEventsPerRank = relevantEventsPerRankPerBox.at(index);
     for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
-	numberOfEventsInBox +=  numberOfEventsPerRank[rank];
+      numberOfEventsInBox += numberOfEventsPerRank[rank];
     }
-    auto& eventList = boxVsMDEvents[index];
+    auto &eventList = boxVsMDEvents[index];
     eventList.reserve(numberOfEventsInBox);
   }
-  std::cout << "Reserve move  RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
 
-  start_wall = std::chrono::high_resolution_clock::now();
+  auto tot = 0ul;
   for (auto index = startIndex; index <= stopIndex; ++index) {
-    auto& eventList = boxVsMDEvents[index];
-    auto& numberOfEventsPerRank = relevantEventsPerRankPerBox.at(index);
+    auto &eventList = boxVsMDEvents[index];
+    auto &numberOfEventsPerRank = relevantEventsPerRankPerBox.at(index);
     for (auto rank = 0ul; rank < numberOfRanks; ++rank) {
-      const auto offset = offsets[rank][index-startIndex];
+      const auto offset = offsets[rank][index - startIndex];
       const auto length = numberOfEventsPerRank[rank];
       const auto total = offset + length;
+      tot += length;
       std::move(receiveBuffer[rank].begin() + offset,
                 receiveBuffer[rank].begin() + total,
                 std::back_inserter(eventList));
     }
   }
-
-  std::cout << "Move out of receive buffer  RANK " << communicator.rank() << ": " << (std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_wall).count())<<"\n";
   sync = MPI_Barrier(comm);
   if (sync != MPI_SUCCESS) {
     throw std::runtime_error("Sync failed");
@@ -1196,7 +1257,6 @@ ConvertToDistributedMD::sendDataToCorrectRank(
 
   return boxVsMDEvents;
 }
-
 
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1208,13 +1268,14 @@ void ConvertToDistributedMD::continueSplitting() {
   root->splitAllIfNeeded(nullptr);
 }
 
-
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 // Definitions for: 9. Update meta data
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
-
+/**
+ * Update the meta data stored in the boxes
+ */
 void ConvertToDistributedMD::updateMetaData() {
   // Since the box controller was duplicated onto several ranks we have several
   // things that we need to correct
@@ -1231,8 +1292,8 @@ void ConvertToDistributedMD::updateMetaData() {
   // --------------------------
   const auto &communicator = this->communicator();
   std::vector<size_t> maxIds;
-  all_gather(communicator, m_boxStructureInformation.boxController->getMaxId()-1,
-             maxIds);
+  all_gather(communicator,
+             m_boxStructureInformation.boxController->getMaxId() - 1, maxIds);
 
   const auto localRank = communicator.rank();
   const auto offset = getOffset(localRank, m_maxIDBeforeSplit, maxIds);
@@ -1257,17 +1318,17 @@ void ConvertToDistributedMD::updateMetaData() {
   // --------------------------------------
   // MaxID
   const auto offsetLastRank =
-    getOffset(communicator.size() - 1, m_maxIDBeforeSplit, maxIds);
+      getOffset(communicator.size() - 1, m_maxIDBeforeSplit, maxIds);
 
   const auto maxId = maxIds[communicator.size() - 1] + offsetLastRank;
   // Number of boxes per level
   const auto mdBoxPerDepth = getBoxPerDepthInformation(
-    communicator, m_boxStructureInformation.boxController->getNumMDBoxes());
+      communicator, m_boxStructureInformation.boxController->getNumMDBoxes());
 
   // Number of grid boxes per level
   const auto mdGridBoxPerDepth = getBoxPerDepthInformation(
-    communicator,
-    m_boxStructureInformation.boxController->getNumMDGridBoxes());
+      communicator,
+      m_boxStructureInformation.boxController->getNumMDGridBoxes());
 
   // Apply changes to the box controller
   Mantid::API::BoxControllerAccess access;
@@ -1276,14 +1337,13 @@ void ConvertToDistributedMD::updateMetaData() {
   access.setNumMDBoxes(boxController, mdBoxPerDepth);
   access.setNumMDGridBoxes(boxController, mdGridBoxPerDepth);
 
-
   // --------------------------------------
   // 2. Update values in NullMDBoxes
-  //    TODO: Update the signals stored in the NullMDBoxes. This would be nice to have as a check but
-  //          to check scaling up to this point.
+  //    TODO: Update the signals stored in the NullMDBoxes. This would be nice
+  //    to have as a check in order to
+  //          to evaluate scaling up to this point.
   // --------------------------------------
 }
-
 
 size_t
 ConvertToDistributedMD::getOffset(int rank, size_t initialMaxID,
@@ -1297,7 +1357,6 @@ ConvertToDistributedMD::getOffset(int rank, size_t initialMaxID,
   return std::accumulate(numberOfBoxesOnRanks.begin(),
                          numberOfBoxesOnRanks.begin() + rank, 0ul);
 }
-
 
 std::vector<size_t> ConvertToDistributedMD::getBoxPerDepthInformation(
     const Mantid::Parallel::Communicator &communicator,
