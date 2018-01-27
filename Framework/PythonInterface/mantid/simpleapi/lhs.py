@@ -1,65 +1,49 @@
+#  This file is part of the mantid workbench.
+#
+#  Copyright (C) 2018 mantidproject
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Dark magic to retrieve information about the left-hand side of an assignment
+from with a function call.
 """
-    Defines functions that can be used to inspect the properties of a
-    function call. For example
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 
-        lhs_info() can be used to get retrieve the names and number of
-                   arguments that are being assigned to a function
-                   return
-"""
-from __future__ import (absolute_import, division,
-                        print_function)
-import opcode
-import inspect
-import sys
+# std imports
 import dis
-from six import PY3
+import inspect
+import opcode
 
-#-------------------------------------------------------------------------------
-def replace_signature(func, varnames):
-    """
-    Replace the signature of the given function object with that given by
-    varnames
-    :param func: Function whose signature is to be replaced
-    :param varnames: A tuple of names of arguments and local variables
-    """
-    # Code object is different in Python 3
-    if hasattr(func, 'func_code'):
-        # Version 2
-        code_attr = 'func_code'
-        f = func.func_code
-        c = f.__new__(f.__class__, f.co_argcount, f.co_nlocals, f.co_stacksize,
-                      f.co_flags, f.co_code, f.co_consts, f.co_names,
-                      varnames, f.co_filename, f.co_name, f.co_firstlineno,
-                      f.co_lnotab, f.co_freevars)
-    else:
-        code_attr = '__code__'
-        f = func.__code__
-        c = f.__new__(f.__class__, f.co_argcount, f.co_kwonlyargcount,
-                      f.co_nlocals, f.co_stacksize, f.co_flags, f.co_code, 
-                      f.co_consts, f.co_names, varnames, 
-                      f.co_filename, f.co_name, f.co_firstlineno,
-                      f.co_lnotab, f.co_freevars)
-    #endif
-    setattr(func, code_attr, c)
+# 3rd party imports
+import six
 
-#-------------------------------------------------------------------------------
-def customise_func(func, name, signature, docstring):
-    """
-    Takes the definition of the algorithm function and replaces
-    the attributes of the instance to make it look like a handwritten
-    function definition
-    :param func: A function object holding the definition
-    :param name: The name of the algorithm
-    :param signature: A new signature for the function. Expecting a 2-tuple
-                      of arguments and local variables. See _replace_signature
-    :param docstring: A string containing the function documentation
-    """
-    func.__name__ = str(name)
-    func.__doc__ = docstring
-    replace_signature(func, signature)
-    return func
+# A set all of the operators that behave like a function calls in byte-code
+# This is for the lhs functionality
+OPERATOR_NAMES = {'CALL_FUNCTION', 'CALL_FUNCTION_VAR', 'CALL_FUNCTION_KW',
+                  'CALL_FUNCTION_VAR_KW', 'UNARY_POSITIVE',
+                  'UNARY_NEGATIVE', 'UNARY_NOT', 'UNARY_CONVERT', 'UNARY_INVERT',
+                  'GET_ITER', 'BINARY_POWER', 'BINARY_MULTIPLY', 'BINARY_DIVIDE',
+                  'BINARY_FLOOR_DIVIDE', 'BINARY_TRUE_DIVIDE', 'BINARY_MODULO',
+                  'BINARY_ADD', 'BINARY_SUBTRACT', 'BINARY_SUBSCR', 'BINARY_LSHIFT',
+                  'BINARY_RSHIFT', 'BINARY_AND', 'BINARY_XOR', 'BINARY_OR',
+                  'INPLACE_POWER', 'INPLACE_MULTIPLY', 'INPLACE_DIVIDE',
+                  'INPLACE_TRUE_DIVIDE', 'INPLACE_FLOOR_DIVIDE',
+                  'INPLACE_MODULO', 'INPLACE_ADD', 'INPLACE_SUBTRACT',
+                  'INPLACE_LSHIFT', 'INPLACE_RSHIFT', 'INPLACE_AND', 'INPLACE_XOR',
+                  'INPLACE_OR', 'COMPARE_OP',
+                  'CALL_FUNCTION_EX'}
 
-#-------------------------------------------------------------------------------
+
 def decompile(code_object):
     """
     Taken from
@@ -92,7 +76,7 @@ def decompile(code_object):
     """
     instructions = []
 
-    if PY3:
+    if six.PY3:
         for ins in dis.get_instructions(code_object):
             instructions.append( (ins.offset, ins.opcode, ins.opname, ins.arg, ins.argval) )
     else:
@@ -132,24 +116,6 @@ def decompile(code_object):
             instructions.append( (i_offset, i_opcode, opcode.opname[i_opcode], i_argument, i_arg_value) )
     return instructions
 
-#-------------------------------------------------------------------------------
-
-# A must list all of the operators that behave like a function calls in byte-code
-# This is for the lhs functionality
-__operator_names = set(['CALL_FUNCTION', 'CALL_FUNCTION_VAR', 'CALL_FUNCTION_KW',
-                        'CALL_FUNCTION_VAR_KW','UNARY_POSITIVE',
-                        'UNARY_NEGATIVE','UNARY_NOT', 'UNARY_CONVERT','UNARY_INVERT',
-                        'GET_ITER', 'BINARY_POWER', 'BINARY_MULTIPLY','BINARY_DIVIDE',
-                        'BINARY_FLOOR_DIVIDE', 'BINARY_TRUE_DIVIDE', 'BINARY_MODULO',
-                        'BINARY_ADD','BINARY_SUBTRACT', 'BINARY_SUBSCR','BINARY_LSHIFT',
-                        'BINARY_RSHIFT','BINARY_AND', 'BINARY_XOR','BINARY_OR',
-                        'INPLACE_POWER', 'INPLACE_MULTIPLY', 'INPLACE_DIVIDE',
-                        'INPLACE_TRUE_DIVIDE','INPLACE_FLOOR_DIVIDE',
-                        'INPLACE_MODULO', 'INPLACE_ADD', 'INPLACE_SUBTRACT',
-                        'INPLACE_LSHIFT','INPLACE_RSHIFT','INPLACE_AND', 'INPLACE_XOR',
-                        'INPLACE_OR', 'COMPARE_OP',
-                        'CALL_FUNCTION_EX'])
-#--------------------------------------------------------------------------------------
 
 def process_frame(frame):
     """Returns the number of arguments on the left of assignment along
@@ -175,7 +141,7 @@ def process_frame(frame):
 
     for index, instruction in enumerate(ins_stack):
         (offset, op, name, argument, argvalue) = instruction
-        if name in __operator_names:
+        if name in OPERATOR_NAMES:
             call_function_locs[start_offset] = (start_index, index)
             start_index = index
             start_offset = offset
@@ -237,7 +203,6 @@ def process_frame(frame):
 
     return (max_returns, tuple(output_var_names))
 
-# -------------------------------------------------------------------------------
 
 def lhs_info(output_type='both', frame=None):
     """Returns the number of arguments on the left of assignment along
@@ -292,4 +257,3 @@ def lhs_info(output_type='both', frame=None):
 
     return ret_vals
 
-#-------------------------------------------------------------------------------

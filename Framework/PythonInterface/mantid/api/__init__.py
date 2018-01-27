@@ -8,26 +8,27 @@ Defines Python objects that wrap the C++ API namespace.
 from __future__ import (absolute_import, division,
                         print_function)
 
-# Load the C++ library
+# Load the C++ libraries
+import mantid.kernel as _
 from . import _api
 from ._api import *
 
 # stdlib imports
-import atexit as _atexit
+#import atexit as _atexit
 
 ###############################################################################
 # Start the framework
 ###############################################################################
-FrameworkManagerImpl.Instance()
-_atexit.register(FrameworkManagerImpl.Instance().shutdown)
+#FrameworkManagerImpl.Instance()
+#_atexit.register(FrameworkManagerImpl.Instance().shutdown)
 
 # Declare any additional C++ algorithms defined in this package
-_api._declareCPPAlgorithms()
+#_api._declareCPPAlgorithms()
 
 ###############################################################################
 # Make aliases accessible in this namespace
 ###############################################################################
-from ._aliases import *
+#from ._aliases import *
 
 ###############################################################################
 # Add importAll member to ADS

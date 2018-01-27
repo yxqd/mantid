@@ -14,7 +14,7 @@ set ( OUTPUT_DIR ${PYTHON_PKG_ROOT} )
 # Select the pure Python files to be included in the distribution
 set ( PY_FILES
   __init__.py
-  simpleapi.py
+#  simpleapi.py
   fitfunctions.py
 )
 

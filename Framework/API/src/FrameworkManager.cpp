@@ -133,7 +133,6 @@ FrameworkManagerImpl::FrameworkManagerImpl()
   _set_output_format(_TWO_DIGIT_EXPONENT);
 #endif
 
-  g_log.notice() << Mantid::welcomeMessage() << '\n';
   loadPlugins();
   disableNexusOutput();
   setNumOMPThreadsToConfigValue();

@@ -1,4 +1,27 @@
-from mantid.api import FunctionFactory, Workspace, AlgorithmManager
+#  This file is part of the mantid workbench.
+#
+#  Copyright (C) 2018 mantidproject
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import (absolute_import, division, print_function, unicode_literals)
+
+
+from mantid.api import (
+    AlgorithmManagerImpl as AlgorithmManager,
+    FunctionFactoryImpl as FunctionFactory,
+    Workspace
+)
 
 
 class FunctionWrapper(object):
@@ -719,33 +742,3 @@ class MultiDomainFunctionWrapper(CompositeFunctionWrapper):
         Return number of domains
         """
         return self.fun.nDomains()
-
-
-def _create_wrapper_function(name):
-    """
-    Create fake functions for the given name
-
-    **It should not be called directly**
-
-    :param name: name of fake function
-    """
-    # ------------------------------------------------------------------------------------------------
-    def wrapper_function(*args, **kwargs):
-        name_to_constructor = {
-            'CompositeFunction': CompositeFunctionWrapper,
-            'ProductFunction': ProductFunctionWrapper,
-            'Convolution': ConvolutionWrapper,
-            'MultiDomainFunction': MultiDomainFunctionWrapper,
-            }
-        # constructor is FunctionWrapper if the name is not in the registry.
-        if name in name_to_constructor:
-            return name_to_constructor[name](*args, **kwargs)
-        return FunctionWrapper(name, **kwargs)
-
-    # ------------------------------------------------------------------------------------------------
-    wrapper_function.__name__ = name
-    globals()[name] = wrapper_function
-
-fnames = FunctionFactory.getFunctionNames()
-for i, val in enumerate(fnames):
-    _create_wrapper_function(val)
