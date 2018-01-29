@@ -33,6 +33,7 @@ import matplotlib.pyplot as plt
 PROJECTION = 'mantid'
 DEFAULT_COLORMAP = 'viridis'
 # See https://matplotlib.org/api/_as_gen/matplotlib.figure.SubplotParams.html#matplotlib.figure.SubplotParams
+SUBPLOT_BOTTOM = 0.15
 SUBPLOT_WSPACE = 0.5
 SUBPLOT_HSPACE = 0.5
 
@@ -86,7 +87,7 @@ def plot(workspaces, spectrum_nums=None, wksp_indices=None, errors=False):
         kw, nums = 'specNum', spectrum_nums
     else:
         kw, nums = 'wkspIndex', wksp_indices
-    # create figure
+    # create figure or retrieve the active figure
     fig = plt.figure()
     fig.clf()
     ax = fig.add_subplot(111, projection=PROJECTION)
@@ -97,6 +98,7 @@ def plot(workspaces, spectrum_nums=None, wksp_indices=None, errors=False):
 
     ax.legend()
     ax.set_title(workspaces[0].name())
+    fig.tight_layout()
     fig.canvas.draw()
     fig.show()
     return fig
@@ -127,11 +129,12 @@ def pcolormesh(workspaces):
         if workspaces_len <= (nrows-1)*ncols:
             nrows -= 1
 
-    fig, axes = plt.subplots(nrows, ncols, squeeze=False,
-                             subplot_kw=dict(projection=PROJECTION))
+    fig = plt.figure()
+    fig.clf()
     row_idx, col_idx = 0, 0
     for subplot_idx in range(nrows*ncols):
-        ax = axes[row_idx][col_idx]
+        ax = fig.add_subplot(nrows, ncols, subplot_idx + 1,
+                             projection=PROJECTION)
         if subplot_idx < workspaces_len:
             ws = workspaces[subplot_idx]
             ax.set_title(ws.name())
@@ -148,8 +151,9 @@ def pcolormesh(workspaces):
             ax.axis('off')
 
     # Adjust locations to ensure the plots don't overlap
-    fig.subplots_adjust(wspace=SUBPLOT_WSPACE, hspace=SUBPLOT_HSPACE)
-    fig.colorbar(pcm, ax=axes.ravel().tolist(), pad=0.06)
+    fig.subplots_adjust(bottom=SUBPLOT_BOTTOM,
+                        wspace=SUBPLOT_WSPACE, hspace=SUBPLOT_HSPACE)
+    fig.colorbar(pcm, ax=fig.get_axes(), pad=0.06)
     fig.canvas.draw()
     fig.show()
     return fig
