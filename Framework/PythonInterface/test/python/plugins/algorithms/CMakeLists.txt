@@ -21,6 +21,7 @@ set ( TEST_PY_FILES
   CreateLeBailFitInputTest.py
   CorrectTOFTest.py
   CreateWorkspaceTest.py
+  CropWorkspaceRaggedTest.py
   CylinderPaalmanPingsCorrection2Test.py
   DakotaChiSquaredTest.py
   DeltaPDF3DTest.py
@@ -39,19 +40,21 @@ set ( TEST_PY_FILES
   FindEPPTest.py
   FindReflectometryLinesTest.py
   FitGaussianTest.py
-  GSASIIRefineFitPeaksTest.py
   GetEiT0atSNSTest.py
   GetNegMuMuonicXRDTest.py
   IndirectTransmissionTest.py
+  LoadAndMergeTest.py
   LoadDNSLegacyTest.py
   LoadEmptyVesuvioTest.py
   LoadFullprofFileTest.py
   LoadLiveDataTest.py
+  LoadLampTest.py
   LoadLogPropertyTableTest.py
   LoadMultipleGSSTest.py
   LoadNMoldyn3AsciiTest.py
   LoadNMoldyn4Ascii1DTest.py
   LoadNMoldyn4AsciiTest.py
+  LRPeakSelectionTest.py
   MaskAngleTest.py
   MaskBTPTest.py
   MaskWorkspaceToCalFileTest.py
@@ -66,6 +69,7 @@ set ( TEST_PY_FILES
   SANSWideAngleCorrectionTest.py
   SaveNexusPDTest.py
   SavePlot1DAsJsonTest.py
+  SaveReflectionsTest.py
   SaveVulcanGSSTest.py
   ExtractMonitorsTest.py
   SetDetScaleTest.py

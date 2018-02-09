@@ -71,7 +71,6 @@ class VesuvioTOFFitInput(object):
         _back_scattering    True if back scattering spectra are being
                             loaded, false otherwise.
     """
-
     def __init__(self, sample_runs, container_runs, spectra, loader):
         # Load sample and container runs
         self.sample_runs, self.sample_data = \
@@ -152,7 +151,6 @@ class VesuvioTOFFitInput(object):
         :return:        A suffix for the TOF workspaces being loaded.
         """
         return runs + "_" + spectra + "_tof"
-
 
 # -----------------------------------------------------------------------------------------
 
