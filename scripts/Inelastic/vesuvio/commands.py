@@ -26,9 +26,9 @@ def fit_tof(runs, flags, iterations=1, convergence_threshold=None):
     vesuvio_loader = VesuvioLoadHelper(flags['diff_mode'], flags['fit_mode'],
                                        flags['ip_file'], flags['bin_parameters'],
                                        flags.get('load_log_files', True))
-
     vesuvio_input = VesuvioTOFFitInput(runs, flags['container_runs'],
                                        flags['spectra'], vesuvio_loader)
+
     ms_helper = None
     if flags.get('ms_enabled', True):
         hydrogen_constraints = flags['ms_flags'].pop("HydrogenConstraints", {})
@@ -138,7 +138,6 @@ class VesuvioTOFFitRoutineIteration(object):
                                      and profiles.
         _fit_mode                    The fit mode to use in the fitting routine.
     """
-
     def __init__(self, ms_helper, fit_helper, corrections_helper, fit_namer, mass_profile_collection, fit_mode):
         if ms_helper is not None:
             self._ms_corrections_args = ms_helper.to_dict()
