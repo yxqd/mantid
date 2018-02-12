@@ -88,7 +88,7 @@ MuonFitPropertyBrowser::MuonFitPropertyBrowser(QWidget *parent,
 */
 void MuonFitPropertyBrowser::init() {
   QWidget *w = new QWidget(this);
-
+  m_functionBrowser = new MuonFunctionBrowser(nullptr, true);
   QSettings settings;
   settings.beginGroup("Mantid/FitBrowser");
 
@@ -648,25 +648,44 @@ void MuonFitPropertyBrowser::doTFAsymmFit() {
     }
   }
   try {
-    m_initialParameters.resize(compositeFunction()->nParams());
-    for (size_t i = 0; i < compositeFunction()->nParams(); i++) {
-      m_initialParameters[i] = compositeFunction()->getParameter(i);
-    }
-    m_fitActionUndoFit->setEnabled(true);
+	  m_initialParameters.resize(compositeFunction()->nParams());
+	  for (size_t i = 0; i < compositeFunction()->nParams(); i++) {
+		  m_initialParameters[i] = compositeFunction()->getParameter(i);
+	  }
+	  m_fitActionUndoFit->setEnabled(true);
 
-    IAlgorithm_sptr alg = AlgorithmManager::Instance().create("Fit");
-    alg->initialize();
-    if (m_compositeFunction->name() == "MultiBG") {
-      alg->setPropertyValue("Function", "");
-    } else if (m_compositeFunction->nFunctions() > 1) {
-      IFunction_sptr userFunc = getFittingFunction();
-      auto TFAsymmFunc = getTFAsymmFitFunction(userFunc, normVec);
-      alg->setProperty("Function", TFAsymmFunc);
-    } else {
-      IFunction_sptr userFunc = m_compositeFunction->getFunction(0);
-      auto TFAsymmFunc = getTFAsymmFitFunction(userFunc, normVec);
-      alg->setProperty("Function", TFAsymmFunc);
-    }
+	  IAlgorithm_sptr alg = AlgorithmManager::Instance().create("Fit");
+	  alg->initialize();
+	  if (m_compositeFunction->name() == "MultiBG") {
+		  alg->setPropertyValue("Function", "");
+	  }
+	  else if (m_compositeFunction->nFunctions() > 1) {
+		  IFunction_sptr userFunc = getFittingFunction();
+
+		  // auto TFAsymmFunc = singleFitFunction(userFunc, normVec);
+		  auto TFAsymmFunc = singleFitFunction(userFunc, normVec);
+		  //FitPropertyBrowser::addFunction(TFAsymmFunc->asString());
+		  m_functionBrowser->clear();
+		  FitPropertyBrowser::clear();
+		  //need to somehow intialise the ties and values correctly.... 
+		  //TFAsymmFunc = tieFitFunction(userFunc, TFAsymmFunc, normVec);
+		  m_functionBrowser->setFunction(TFAsymmFunc);
+		  setFunc(normVec,userFunc);
+		  alg->setProperty("Function", TFAsymmFunc);
+	  }
+	  else {
+		  IFunction_sptr userFunc = m_compositeFunction->getFunction(0);
+
+		  auto TFAsymmFunc = singleFitFunction(userFunc, normVec);
+		  //TFAsymmFunc = tieFitFunction(userFunc, TFAsymmFunc, normVec);
+
+		  FitPropertyBrowser::clear();
+		  m_functionBrowser->setFunction(TFAsymmFunc);
+		  setFunc(normVec,userFunc);
+
+		  alg->setProperty("Function", TFAsymmFunc);
+	  }
+/*
     if (rawData()) {
       alg->setPropertyValue("InputWorkspace", wsName + "_Raw");
     } else {
@@ -719,13 +738,13 @@ void MuonFitPropertyBrowser::doTFAsymmFit() {
       // rescale WS:
       rescaleWS(norms, tmpWSNameNoRaw, -1.0);
     }
-
+*/
     updateMultipleNormalization(norms);
   } catch (const std::exception &e) {
     QString msg = "TF Asymmetry Fit failed.\n\n" + QString(e.what()) + "\n";
     QMessageBox::critical(this, "Mantid - Error", msg);
   }
-  runFit();
+ // runFit();
 }
 /**
 * Updates the normalization in the table WS
@@ -823,6 +842,69 @@ std::vector<double> readNormalization() {
   }
   return norm;
 }
+
+
+Mantid::API::IFunction_sptr MuonFitPropertyBrowser::singleFitFunction(
+	Mantid::API::IFunction_sptr original, const std::vector<double> norms) {
+
+	auto multi = boost::make_shared<MultiDomainFunction>();
+	auto tmp = boost::dynamic_pointer_cast<MultiDomainFunction>(original);
+	int j = 1;
+	size_t numDomains = original->getNumberDomains();
+		IFunction_sptr userFunc;
+		auto constant = FunctionFactory::Instance().createInitialized(
+			"name = FlatBackground, A0 = 1.0, ties = (A0 = 1.0)");
+		if (numDomains == 1) {
+			userFunc = original;
+		}
+		else {
+			userFunc = tmp->getFunction(j);
+			multi->setDomainIndex(j, j);
+		}
+		auto inBrace = boost::make_shared<CompositeFunction>();
+		inBrace->addFunction(constant);
+		inBrace->addFunction(userFunc);
+		auto norm = FunctionFactory::Instance().createInitialized(
+			"composite=CompositeFunction,NumDeriv=true;name = FlatBackground, A0 "
+			"=" +
+			std::to_string(norms[j]));
+		auto product = boost::dynamic_pointer_cast<CompositeFunction>(
+			FunctionFactory::Instance().createFunction("ProductFunction"));
+		product->addFunction(norm);
+		product->addFunction(inBrace);
+		multi->addFunction(product);
+	
+	return boost::dynamic_pointer_cast<IFunction>(multi);
+}
+
+void  MuonFitPropertyBrowser::setFunc(const std::vector<double> norms, Mantid::API::IFunction_sptr original) {
+	const int n = m_functionBrowser->getNumberOfDatasets();
+	QString constant = QString::fromStdString("f0.f1.f0.A0");
+	QString Norm = QString::fromStdString("f0.f0.f0.A0");
+	//auto tmp = parName.toStdString();
+	auto num=original->	nParams()/n;
+	for (int i = 0; i < n; ++i) {
+		// set the constant offset (is always equal to 1)
+		m_functionBrowser->setLocalParameterValue(constant, i, 1.0);
+		m_functionBrowser->setLocalParameterFixed(constant, i, TRUE);
+		// set the normalisations
+		m_functionBrowser->setLocalParameterValue(Norm, i, norms[i]);
+
+		auto names = original->getParameterNames();
+		// set the user's original values
+		for (int k = 0; k < num; k++) {
+			auto name = names[k];
+			int correctedIndex = stoi(name.substr(name.find("f") + 1, name.find(".")))+1;
+			auto paramName = "f" + std::to_string(correctedIndex) + name.substr(name.find("."));
+			QString userValues = QString::fromStdString("f0.f1."+paramName);
+			double value = original->getParameter(k + i*num);
+			m_functionBrowser->setLocalParameterValue(userValues, i, value);
+		}
+
+	}
+}
+
+
 /** Reads the normalization constants and which WS
 * they belong to
 * @returns :: A map of normalization constants and WS names
@@ -1133,6 +1215,19 @@ void MuonFitPropertyBrowser::addExtraWidget(QWidget *widget) {
   }
 }
 
+/**
+* Adds an extra widget in between the fit buttons and the browser
+* @param widget :: [input] Pointer to widget to add
+*/
+void MuonFitPropertyBrowser::addFitBrowserWidget(QWidget *widget, MantidQt::MantidWidgets::FunctionBrowser *functionBrowser) {
+	widget->setSizePolicy(QSizePolicy::Policy::Expanding,
+		QSizePolicy::Policy::Expanding);
+	if (m_widgetSplitter) {
+		m_widgetSplitter->addWidget(widget);
+	}
+
+	m_functionBrowser = functionBrowser;
+}
 /**
  * Called externally to set the function
  * @param func :: [input] Fit function to use

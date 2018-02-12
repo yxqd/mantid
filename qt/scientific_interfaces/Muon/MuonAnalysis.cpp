@@ -2211,7 +2211,7 @@ void MuonAnalysis::loadFittings() {
   // Add Function browser widget to the fit tab
   m_functionBrowser = new MuonFunctionBrowser(nullptr, true);
   m_functionBrowser->sizePolicy().setVerticalStretch(10);
-  m_uiForm.fitBrowser->addExtraWidget(m_functionBrowser);
+  m_uiForm.fitBrowser->addFitBrowserWidget(m_functionBrowser, m_functionBrowser);
   // Add Data Selector widget to the fit tab
   m_dataSelector = new MuonFitDataSelector(m_uiForm.fitBrowser);
   m_dataSelector->sizePolicy().setVerticalStretch(0);

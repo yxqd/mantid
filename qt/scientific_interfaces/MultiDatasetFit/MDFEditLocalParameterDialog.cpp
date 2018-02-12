@@ -61,6 +61,7 @@ EditLocalParameterDialog::EditLocalParameterDialog(
     : QDialog(parent), m_parName(parName) {
   m_uiForm.setupUi(this);
   const int n = funcBrowser->getNumberOfDatasets();
+  auto tmp = parName.toStdString();
   for (int i = 0; i < n; ++i) {
     const double value = funcBrowser->getLocalParameterValue(parName, i);
     m_values.push_back(value);

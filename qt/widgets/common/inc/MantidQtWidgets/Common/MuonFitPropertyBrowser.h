@@ -4,7 +4,7 @@
 #include "MantidQtWidgets/Common/FitPropertyBrowser.h"
 #include "MantidQtWidgets/Common/IMuonFitDataModel.h"
 #include "MantidQtWidgets/Common/IMuonFitFunctionModel.h"
-
+#include "MantidQtWidgets/Common/MuonFunctionBrowser.h"
 #include <QMap>
 /* Forward declarations */
 class QDockWidget;
@@ -38,7 +38,7 @@ class CompositeFunction;
 namespace MantidQt {
 namespace MantidWidgets {
 class PropertyHandler;
-
+class FunctionBrowser;
 class EXPORT_OPT_MANTIDQT_COMMON MuonFitPropertyBrowser
     : public MantidQt::MantidWidgets::FitPropertyBrowser,
       public MantidQt::MantidWidgets::IMuonFitFunctionModel,
@@ -56,7 +56,8 @@ public:
   /// Called when the fit is finished
   void finishHandle(const Mantid::API::IAlgorithm *alg) override;
   /// Add an extra widget into the browser
-  void addExtraWidget(QWidget *widget);
+  void addExtraWidget(QWidget *widget); 
+  void addFitBrowserWidget(QWidget *widget, MantidQt::MantidWidgets::FunctionBrowser *functionBrowser);
   /// Set function externally
   void setFunction(const Mantid::API::IFunction_sptr func) override;
   /// Run a non-sequential fit
@@ -171,7 +172,11 @@ private:
                  const double shift);
   Mantid::API::IFunction_sptr
   getTFAsymmFitFunction(Mantid::API::IFunction_sptr original,
-                        const std::vector<double> norms);
+		  const std::vector<double> norms);  
+  Mantid::API::IFunction_sptr
+  singleFitFunction(Mantid::API::IFunction_sptr original,
+			  const std::vector<double> norms);
+  void setFunc(const std::vector<double> norms, Mantid::API::IFunction_sptr original);
   void updateMultipleNormalization(std::map<std::string, double> norms);
   /// Get the registered function names
   void populateFunctionNames() override;
@@ -228,7 +233,7 @@ private:
   QDialog *m_groupWindow;
   QDialog *m_periodWindow;
   QDialog *m_comboWindow;
-
+  MantidQt::MantidWidgets::FunctionBrowser *m_functionBrowser;
   std::vector<std::string> m_groupsList;
 };
 
