@@ -176,6 +176,7 @@ private:
   singleFitFunction(Mantid::API::IFunction_sptr original,
 			  const std::vector<double> norms);
   void setFunc(const std::vector<double> norms, Mantid::API::IFunction_sptr original);
+std::string extractUserFunction(std::string normFunc);
   void updateMultipleNormalization(std::map<std::string, double> norms);
   /// Get the registered function names
   void populateFunctionNames() override;
@@ -187,6 +188,8 @@ private:
                                   const int nWorkspaces) const;
 
   void setTFAsymmMode(bool state);
+  void setTFAsymmFunc();
+  void unsetTFAsymmFunc();
   void clearGroupCheckboxes();
   void addGroupCheckbox(const QString &name);
   void genGroupWindow();

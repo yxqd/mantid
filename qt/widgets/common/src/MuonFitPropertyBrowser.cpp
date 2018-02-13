@@ -634,20 +634,7 @@ void MuonFitPropertyBrowser::doTFAsymmFit() {
   }
   for (int i = 0; i < nWorkspaces; i++) {
     rescaleWS(norms, m_workspacesToFit[i], 1.0);
-    std::string tmp = m_workspacesToFit[i];
-    std::replace(tmp.begin(), tmp.end(), ' ', ';');
-    // The order of the input is the same
-    // as the order of the workspace list
-    // create a vec of norms in the same order
-    auto it = norms.find(tmp);
-    if (it != norms.end()) {
-      normVec.push_back(it->second);
-    } else { // if raw data cannot be found
-      // use the binned data as initial norm
-      tmp = tmp.substr(0, tmp.size() - 4);
-      it = norms.find(tmp);
-      normVec.push_back(it->second);
-    }
+    
   }
   try {
 	  m_initialParameters.resize(compositeFunction()->nParams());
@@ -661,28 +648,7 @@ void MuonFitPropertyBrowser::doTFAsymmFit() {
 	  if (m_compositeFunction->name() == "MultiBG") {
 		  alg->setPropertyValue("Function", "");
 	  }
-	  else if (nWorkspaces > 1) {
-		  IFunction_sptr userFunc = getFittingFunction();
-
-		  auto TFAsymmFunc = singleFitFunction(userFunc, normVec);
-		  //FitPropertyBrowser::addFunction(TFAsymmFunc->asString());
-		 // m_functionBrowser->clear();
-		  FitPropertyBrowser::clear();
-		  //need to somehow intialise the ties and values correctly.... 
-		  //TFAsymmFunc = tieFitFunction(userFunc, TFAsymmFunc, normVec);
-		  m_functionBrowser->setFunction(TFAsymmFunc);
-		  setFunc(normVec,userFunc);
-		  alg->setProperty("Function", getFittingFunction());
-	  }
 	  else {
-		  IFunction_sptr userFunc =getFittingFunction(); //getFunction(0);
-
-		  auto TFAsymmFunc = getTFAsymmFitFunction(userFunc);
-		  //TFAsymmFunc = tieFitFunction(userFunc, TFAsymmFunc, normVec);
-
-		  FitPropertyBrowser::clear();
-		  FitPropertyBrowser::addFunction(TFAsymmFunc->asString());
-
 		  alg->setProperty("Function", getFittingFunction());
 	  }
 
@@ -1310,20 +1276,153 @@ void MuonFitPropertyBrowser::setMultiFittingMode(bool enabled) {
 * @param enabled :: [input] Whether to turn this mode on or off
 */
 void MuonFitPropertyBrowser::setTFAsymmMode(bool enabled) {
-  modifyFitMenu(m_fitActionTFAsymm, enabled);
+	modifyFitMenu(m_fitActionTFAsymm, enabled);
 
-  // Show or hide the TFAsymmetry fit
-  if (enabled) {
-    m_settingsGroup->property()->addSubProperty(m_normalization);
-    m_multiFitSettingsGroup->property()->addSubProperty(m_normalization);
-    m_settingsGroup->property()->addSubProperty(m_keepNorm);
-    setNormalization();
-  } else {
-    m_settingsGroup->property()->removeSubProperty(m_normalization);
-    m_multiFitSettingsGroup->property()->removeSubProperty(m_normalization);
-    m_settingsGroup->property()->removeSubProperty(m_keepNorm);
+	// Show or hide the TFAsymmetry fit
+	if (enabled) {
+		m_settingsGroup->property()->addSubProperty(m_normalization);
+		m_multiFitSettingsGroup->property()->addSubProperty(m_normalization);
+		m_settingsGroup->property()->addSubProperty(m_keepNorm);
+		setNormalization();
+		setTFAsymmFunc();
+	}
+	else {
+		m_settingsGroup->property()->removeSubProperty(m_normalization);
+		m_multiFitSettingsGroup->property()->removeSubProperty(m_normalization);
+		m_settingsGroup->property()->removeSubProperty(m_keepNorm);
+		unsetTFAsymmFunc();
+	}
+	// update fit function...
+}
+  /**
+  * Set TF asymmetry mode on or off.
+  * If turned off, the fit property browser looks like Mantid 3.8.
+  * If turned on, the fit menu has an extra button and
+  * normalization is shown in the data table
+  * @param enabled :: [input] Whether to turn this mode on or off
+  */
+  void MuonFitPropertyBrowser::setTFAsymmFunc() {
+	  const int nWorkspaces = static_cast<int>(m_workspacesToFit.size());
+	  if (nWorkspaces == 0) { return; }
+
+  std::vector<double> normVec;
+  auto norms = readMultipleNormalization();
+
+  if (nWorkspaces > 1) {
+	  emit functionUpdateRequested();
+  }
+  for (int i = 0; i < nWorkspaces; i++) {
+	  std::string tmp = m_workspacesToFit[i];
+	  std::replace(tmp.begin(), tmp.end(), ' ', ';');
+	  // The order of the input is the same
+	  // as the order of the workspace list
+	  // create a vec of norms in the same order
+	  auto it = norms.find(tmp);
+	  if (it != norms.end()) {
+		  normVec.push_back(it->second);
+	  }
+	  else { // if raw data cannot be found
+			 // use the binned data as initial norm
+		  tmp = tmp.substr(0, tmp.size() - 4);
+		  it = norms.find(tmp);
+		  normVec.push_back(it->second);
+	  }
+  }
+  IFunction_sptr userFunc = getFittingFunction();
+  if (nWorkspaces > 1) {
+	  
+
+	  auto TFAsymmFunc = singleFitFunction(userFunc, normVec);
+	  FitPropertyBrowser::clear();
+	  m_functionBrowser->setFunction(TFAsymmFunc);
+	  setFunc(normVec, userFunc);
+	  
+  }
+  else {
+	  auto TFAsymmFunc = getTFAsymmFitFunction(userFunc);
+	  FitPropertyBrowser::clear();
+	  FitPropertyBrowser::addFunction(TFAsymmFunc->asString());
   }
 }
+  /**
+      *Set TF asymmetry mode on or off.
+	  * If turned off, the fit property browser looks like Mantid 3.8.
+	  * If turned on, the fit menu has an extra button and
+	  * normalization is shown in the data table
+	  * @param enabled ::[input] Whether to turn this mode on or off
+	  */
+	  void MuonFitPropertyBrowser::unsetTFAsymmFunc() {
+	 
+	  const int nWorkspaces = static_cast<int>(m_workspacesToFit.size());
+	 
+	  if (nWorkspaces == 1) {
+		  auto out=extractUserFunction(getFittingFunction()->asString());
+		  FitPropertyBrowser::clear();
+		  FitPropertyBrowser::addFunction(out);
+
+	  }	  if (nWorkspaces > 1) {
+		  
+		  const int n = m_functionBrowser->getNumberOfDatasets();
+		  const auto normFunc = getFittingFunction();
+
+		  // get function
+		  auto multi = normFunc->asString();
+		  size_t index = multi.find("$domains=All");
+		  multi = multi.substr(index);
+		  index = multi.find("(composite=MultiDomainFunction");
+		  multi = multi.substr(multi.front(), index);
+ 		  auto out=extractUserFunction(multi);
+
+		  //add user function back into browser...
+		  auto newMulti = boost::make_shared<MultiDomainFunction>();
+		  int j = 0;
+	      newMulti->setDomainIndex(j, j);
+		  auto userFunc = FunctionFactory::Instance().createInitialized(out);
+		  newMulti->addFunction(userFunc);
+		  auto names= newMulti->getParameterNames();
+
+
+		  //get current values for later
+		  std::vector<double> values;
+		  for (int i = 0; i < n; ++i) {
+			  for (int k = 0; k < names.size(); k++) {
+				  auto name = names[k];
+				  int correctedIndex = stoi(name.substr(name.find("f") + 1, name.find("."))) + 1;
+				  auto paramName = "f" + std::to_string(correctedIndex) + name.substr(name.find("."));
+				  QString userValues = QString::fromStdString("f0.f0.f1." + paramName);
+				  auto value = m_functionBrowser->getLocalParameterValue(userValues, i);
+				  values.push_back(value);
+			  }
+		  }
+          //put new func in browser
+		  m_functionBrowser->clear();
+		  m_functionBrowser->setFunction(boost::dynamic_pointer_cast<IFunction>(newMulti));
+		  //update browser with values
+		  for (int i = 0; i < n; ++i) {
+			  				
+			  for (int k = 0; k < names.size(); k++) {
+				  auto name = names[k];
+				  
+				 m_functionBrowser->setLocalParameterValue(QString::fromStdString(name), i, values[k+i*names.size()]);
+			  }
+
+		  }
+	  }
+
+  }
+	  std::string MuonFitPropertyBrowser::extractUserFunction(std::string normFunc) {
+
+		  auto out = normFunc;
+		  //removes everything up to start of user function
+		  for (int j = 0; j < 4; j++) {
+			  size_t index=out.find(";");
+			  out = out.substr(index + 1);
+		  }
+		  size_t end = out.rfind("));name=FlatBackground");
+		  out = out.substr(0, end) ;
+		  //auto choped = tmp.substr(std::distance(tmp.front(),start));
+		  return out;
+	  }
 /**
  * The pre-fit checks have been successfully completed. Continue by emitting a
  * signal to update the function and request the fit.
