@@ -672,7 +672,7 @@ void MuonFitPropertyBrowser::doTFAsymmFit() {
 		  //TFAsymmFunc = tieFitFunction(userFunc, TFAsymmFunc, normVec);
 		  m_functionBrowser->setFunction(TFAsymmFunc);
 		  setFunc(normVec,userFunc);
-		  alg->setProperty("Function", TFAsymmFunc);
+		  alg->setProperty("Function", getFittingFunction());
 	  }
 	  else {
 		  IFunction_sptr userFunc =getFittingFunction(); //getFunction(0);
@@ -683,9 +683,9 @@ void MuonFitPropertyBrowser::doTFAsymmFit() {
 		  FitPropertyBrowser::clear();
 		  FitPropertyBrowser::addFunction(TFAsymmFunc->asString());
 
-		  alg->setProperty("Function", TFAsymmFunc);
+		  alg->setProperty("Function", getFittingFunction());
 	  }
-/*
+
     if (rawData()) {
       alg->setPropertyValue("InputWorkspace", wsName + "_Raw");
     } else {
@@ -722,9 +722,11 @@ void MuonFitPropertyBrowser::doTFAsymmFit() {
     // get norms
     std::vector<double> newNorms;
     IFunction_sptr outputFunction = alg->getProperty("Function");
+	std::string domain = "";
+	if (nWorkspaces > 1) { domain = ".f0.f0"; }
     for (int j = 0; j < nWorkspaces; j++) {
       std::string paramName = "f" + std::to_string(j);
-      paramName += ".f0.f0.A0";
+      paramName += domain+".f0.f0.A0";
       newNorms.push_back(outputFunction->getParameter(paramName));
       std::string tmpWSName = m_workspacesToFit[j];
       if (rawData()) { // store norms without the raw
@@ -738,7 +740,7 @@ void MuonFitPropertyBrowser::doTFAsymmFit() {
       // rescale WS:
       rescaleWS(norms, tmpWSNameNoRaw, -1.0);
     }
-*/
+
     updateMultipleNormalization(norms);
   } catch (const std::exception &e) {
     QString msg = "TF Asymmetry Fit failed.\n\n" + QString(e.what()) + "\n";
@@ -808,24 +810,13 @@ Mantid::API::IFunction_sptr MuonFitPropertyBrowser::getTFAsymmFitFunction(
         FunctionFactory::Instance().createFunction("ProductFunction"));
     product->addFunction(norm);
     product->addFunction(inBrace);
-    multi->addFunction(product);
- // }
-  // add ties
-  for (size_t j = 0; j < original->getParameterNames().size(); j++) {
-    auto originalTie = original->getTie(j);
-    if (originalTie) {
-      auto name = original->getParameterNames()[j];
-      auto stringTie = originalTie->asString();
-      // change name to reflect new postion
-      auto insertPosition = stringTie.find_first_of(".");
-      stringTie.insert(insertPosition + 1, "f1.f1.");
-      // need to change the other side of =
-      insertPosition = stringTie.find_first_of("=");
-      insertPosition = stringTie.find_first_of(".", insertPosition);
-      stringTie.insert(insertPosition + 1, "f1.f1.");
-      multi->addTies(stringTie);
-    }
-  }
+	auto composite = boost::make_shared<CompositeFunction>();
+		
+	composite->addFunction(product);
+	constant = FunctionFactory::Instance().createInitialized(
+		"name = FlatBackground, A0 = 0.0, ties = (A0 = 0.0)");
+	composite->addFunction(constant);
+	multi->addFunction(composite);
   return boost::dynamic_pointer_cast<IFunction>(multi);
 }
 
@@ -875,15 +866,20 @@ Mantid::API::IFunction_sptr MuonFitPropertyBrowser::singleFitFunction(
 			FunctionFactory::Instance().createFunction("ProductFunction"));
 		product->addFunction(norm);
 		product->addFunction(inBrace);
-		multi->addFunction(product);
-	
+		auto composite = boost::make_shared<CompositeFunction>();
+		constant = FunctionFactory::Instance().createInitialized(
+			"name = FlatBackground, A0 = 0.0, ties = (A0 = 0.0)");
+		composite->addFunction(product);
+		composite->addFunction(constant);
+		multi->addFunction(composite);
+
 	return boost::dynamic_pointer_cast<IFunction>(multi);
 }
 
 void  MuonFitPropertyBrowser::setFunc(const std::vector<double> norms, Mantid::API::IFunction_sptr original) {
 	const int n = m_functionBrowser->getNumberOfDatasets();
-	QString constant = QString::fromStdString("f0.f1.f0.A0");
-	QString Norm = QString::fromStdString("f0.f0.f0.A0");
+	QString constant = QString::fromStdString("f0.f0.f1.f0.A0");
+	QString Norm = QString::fromStdString("f0.f0.f0.f0.A0");
 	//auto tmp = parName.toStdString();
 	auto num=original->	nParams()/n;
 	for (int i = 0; i < n; ++i) {
@@ -899,7 +895,7 @@ void  MuonFitPropertyBrowser::setFunc(const std::vector<double> norms, Mantid::A
 			auto name = names[k];
 			int correctedIndex = stoi(name.substr(name.find("f") + 1, name.find(".")))+1;
 			auto paramName = "f" + std::to_string(correctedIndex) + name.substr(name.find("."));
-			QString userValues = QString::fromStdString("f0.f1."+paramName);
+			QString userValues = QString::fromStdString("f0.f0.f1."+paramName);
 			double value = original->getParameter(k + i*num);
 			m_functionBrowser->setLocalParameterValue(userValues, i, value);
 		}
