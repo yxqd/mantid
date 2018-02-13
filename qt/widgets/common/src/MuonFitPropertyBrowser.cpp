@@ -394,8 +394,9 @@ void MuonFitPropertyBrowser::enumChanged(QtProperty *prop) {
     }
     updatePeriodDisplay();
   } else if (prop == m_workspace) {
+	  //update norm
+	  setNormalization(); 
     // make sure the output is updated
-    FitPropertyBrowser::enumChanged(prop);
     int j = m_enumManager->value(m_workspace);
     std::string option = m_workspaceNames[j].toStdString();
     setOutputName(option);
@@ -414,7 +415,8 @@ void MuonFitPropertyBrowser::enumChanged(QtProperty *prop) {
            iter != m_periodBoxes.constEnd(); ++iter) {
         m_boolManager->setValue(iter.value(), selectedPeriod == iter.key());
       }
-    }
+    }    FitPropertyBrowser::enumChanged(prop);
+
   } else {
     FitPropertyBrowser::enumChanged(prop);
   }
@@ -659,13 +661,12 @@ void MuonFitPropertyBrowser::doTFAsymmFit() {
 	  if (m_compositeFunction->name() == "MultiBG") {
 		  alg->setPropertyValue("Function", "");
 	  }
-	  else if (m_compositeFunction->nFunctions() > 1) {
+	  else if (nWorkspaces > 1) {
 		  IFunction_sptr userFunc = getFittingFunction();
 
-		  // auto TFAsymmFunc = singleFitFunction(userFunc, normVec);
 		  auto TFAsymmFunc = singleFitFunction(userFunc, normVec);
 		  //FitPropertyBrowser::addFunction(TFAsymmFunc->asString());
-		  m_functionBrowser->clear();
+		 // m_functionBrowser->clear();
 		  FitPropertyBrowser::clear();
 		  //need to somehow intialise the ties and values correctly.... 
 		  //TFAsymmFunc = tieFitFunction(userFunc, TFAsymmFunc, normVec);
@@ -674,14 +675,13 @@ void MuonFitPropertyBrowser::doTFAsymmFit() {
 		  alg->setProperty("Function", TFAsymmFunc);
 	  }
 	  else {
-		  IFunction_sptr userFunc = m_compositeFunction->getFunction(0);
+		  IFunction_sptr userFunc =getFittingFunction(); //getFunction(0);
 
-		  auto TFAsymmFunc = singleFitFunction(userFunc, normVec);
+		  auto TFAsymmFunc = getTFAsymmFitFunction(userFunc);
 		  //TFAsymmFunc = tieFitFunction(userFunc, TFAsymmFunc, normVec);
 
 		  FitPropertyBrowser::clear();
-		  m_functionBrowser->setFunction(TFAsymmFunc);
-		  setFunc(normVec,userFunc);
+		  FitPropertyBrowser::addFunction(TFAsymmFunc->asString());
 
 		  alg->setProperty("Function", TFAsymmFunc);
 	  }
@@ -779,34 +779,37 @@ void MuonFitPropertyBrowser::updateMultipleNormalization(
 * @returns :: The fitting function for the TFAsymmetry fit
 */
 Mantid::API::IFunction_sptr MuonFitPropertyBrowser::getTFAsymmFitFunction(
-    Mantid::API::IFunction_sptr original, const std::vector<double> norms) {
+    Mantid::API::IFunction_sptr original) {
 
-  auto multi = boost::make_shared<MultiDomainFunction>();
-  auto tmp = boost::dynamic_pointer_cast<MultiDomainFunction>(original);
-  size_t numDomains = original->getNumberDomains();
-  for (size_t j = 0; j < numDomains; j++) {
+  auto multi = boost::make_shared<CompositeFunction>();
+ // auto tmp = boost::dynamic_pointer_cast<MultiDomainFunction>(original);
+ // size_t numDomains = original->getNumberDomains();
+ // for (size_t j = 0; j < numDomains; j++) {
     IFunction_sptr userFunc;
     auto constant = FunctionFactory::Instance().createInitialized(
         "name = FlatBackground, A0 = 1.0, ties = (A0 = 1.0)");
-    if (numDomains == 1) {
+   // if (numDomains == 1) {
       userFunc = original;
-    } else {
-      userFunc = tmp->getFunction(j);
-      multi->setDomainIndex(j, j);
-    }
+   // } else {
+   //   userFunc = tmp->getFunction(j);
+   //   multi->setDomainIndex(j, j);
+   // }
     auto inBrace = boost::make_shared<CompositeFunction>();
     inBrace->addFunction(constant);
     inBrace->addFunction(userFunc);
-    auto norm = FunctionFactory::Instance().createInitialized(
-        "composite=CompositeFunction,NumDeriv=true;name = FlatBackground, A0 "
-        "=" +
-        std::to_string(norms[j]));
+	auto normValue = m_normalizationValue.toStdList().front().toStdString();
+	
+
+	auto norm = FunctionFactory::Instance().createInitialized(
+		"composite=CompositeFunction,NumDeriv=true;name = FlatBackground, A0 "
+		"=" + normValue);
+        //std::to_string(norms[0]));
     auto product = boost::dynamic_pointer_cast<CompositeFunction>(
         FunctionFactory::Instance().createFunction("ProductFunction"));
     product->addFunction(norm);
     product->addFunction(inBrace);
     multi->addFunction(product);
-  }
+ // }
   // add ties
   for (size_t j = 0; j < original->getParameterNames().size(); j++) {
     auto originalTie = original->getTie(j);
@@ -943,6 +946,10 @@ void MuonFitPropertyBrowser::rescaleWS(const std::map<std::string, double> norm,
     return;
   }
   double value = it->second;
+  // if shift is -1 use _NEqualOne ws as input and output to ...
+  // also output to _NEqualsOne with value = 1 
+ // make sure fit uses _NEqualsOne WS
+  // need to add gubbins to ... output
   rescaleWS(value, wsName, shift);
   if (rawData()) {
     rescaleWS(value, wsName + "_Raw", shift);

@@ -171,8 +171,7 @@ private:
   void rescaleWS(const double norm, const std::string wsName,
                  const double shift);
   Mantid::API::IFunction_sptr
-  getTFAsymmFitFunction(Mantid::API::IFunction_sptr original,
-		  const std::vector<double> norms);  
+  getTFAsymmFitFunction(Mantid::API::IFunction_sptr original);  
   Mantid::API::IFunction_sptr
   singleFitFunction(Mantid::API::IFunction_sptr original,
 			  const std::vector<double> norms);
