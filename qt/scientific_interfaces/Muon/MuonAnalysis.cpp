@@ -458,20 +458,32 @@ void MuonAnalysis::plotItem(ItemType itemType, int tableRow,
 
   try {
     // Create workspace and a raw (unbinned) version of it
+
     auto ws = createAnalysisWorkspace(itemType, tableRow, plotType);
+	const std::string wsName =
+		getNewAnalysisWSName(itemType, tableRow, plotType);
+	if (itemType == Group && plotType == Asymmetry) {
+		ads.rename("bob", wsName + "_Unnorm");
+	}
+
     auto wsRaw = createAnalysisWorkspace(itemType, tableRow, plotType, true);
 
     // Find names for new workspaces
-    const std::string wsName =
-        getNewAnalysisWSName(itemType, tableRow, plotType);
+  
     const std::string wsRawName = wsName + "_Raw";
-
+	std::vector<std::string> wsNames = { wsName, wsRawName };
     // Make sure they end up in the ADS
-    ads.addOrReplace(wsName, ws);
-    ads.addOrReplace(wsRawName, wsRaw);
+    ads.addOrReplace(wsName, ws);	
 
+    ads.addOrReplace(wsRawName, wsRaw);
+	if (itemType == Group && plotType == Asymmetry) {
+		ads.rename("bob", wsRawName + "_Unnorm");
+		wsNames.push_back(wsRawName + "_Unnorm");
+		wsNames.push_back(wsName + "_Unnorm");
+	}
     // Make sure they are grouped
-    std::vector<std::string> wsNames = {wsName, wsRawName};
+
+
     MuonAnalysisHelper::groupWorkspaces(m_currentLabel, wsNames);
 
     QString wsNameQ = QString::fromStdString(wsName);

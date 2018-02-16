@@ -167,9 +167,11 @@ private:
   /// override populating fit menu
   void populateFitMenuButton(QSignalMapper *fitMapper, QMenu *fitMenu) override;
   void rescaleWS(const std::map<std::string, double> norm,
-                 const std::string wsName, const double shift);
+                 const std::string wsName, const std::string extension);
   void rescaleWS(const double norm, const std::string wsName,
-                 const double shift);
+	  const std::string extension);  
+  void rescaleFitWS(const double norm, const std::string wsName,
+		  const std::string originalWSName);
   Mantid::API::IFunction_sptr
   getTFAsymmFitFunction(Mantid::API::IFunction_sptr original);  
   Mantid::API::IFunction_sptr
@@ -200,7 +202,7 @@ std::string extractUserFunction(std::string normFunc);
   void setChosenPeriods(const QStringList &chosenPeriods);
   void clearPeriodCheckboxes();
   void addPeriodCheckbox(const QString &name);
-
+  void rmExtraExp(std::string wsName, std::string originalWSName);
   /// Splitter for additional widgets and splitter between this and browser
   QSplitter *m_widgetSplitter, *m_mainSplitter;
   /// Names of workspaces to fit

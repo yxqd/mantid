@@ -366,6 +366,8 @@ Workspace_sptr MuonAnalysisDataLoader::createAnalysisWorkspace(
   alg->setChild(true);
   alg->setPropertyValue("OutputWorkspace", "__NotUsed");
   alg->execute();
+  auto mmm = alg->getProperty("OutputWorkspace");
+
   return alg->getProperty("OutputWorkspace");
 }
 

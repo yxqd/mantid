@@ -233,6 +233,14 @@ void MuonAnalysisFitDataPresenter::createWorkspacesToFit(
       const auto ws = createWorkspace(name, groupLabel);
       if (ws) {
         AnalysisDataService::Instance().add(name, ws);
+		// if the TFAsymm unnorm group exists the store it correctly
+		if (AnalysisDataService::Instance().doesExist("BOB")) {
+			AnalysisDataService::Instance().rename("BOB", name + "_Unnorm");
+			if (!groupLabel.empty()) {
+				MuonAnalysisHelper::groupWorkspaces(groupLabel, { name + "_Unnorm" });
+			}
+		
+		}
         if (!groupLabel.empty()) {
           MuonAnalysisHelper::groupWorkspaces(groupLabel, {name});
         }

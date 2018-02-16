@@ -3,7 +3,7 @@
 #include "MantidAPI/ITableWorkspace.h"
 #include "MantidAPI/TableRow.h"
 #include "MantidKernel/VectorHelper.h"
-
+#include "MantidAPI/AnalysisDataService.h"
 using Mantid::API::MatrixWorkspace_sptr;
 using Mantid::API::Workspace_sptr;
 using Mantid::API::IAlgorithm_sptr;
@@ -133,8 +133,21 @@ MuonGroupAsymmetryCalculator::estimateAsymmetry(const Workspace_sptr &inputWS,
     asym->setProperty("StartX", m_startX);
     asym->setProperty("EndX", m_endX);
     asym->setProperty("NormalizationIn", getStoredNorm());
-    asym->execute();
+	////////////////////////////////////////////////////////////////////////////////////
+	asym->setProperty("OutputUnNormData", true);
+	asym->setProperty("OutputUnNormWorkspace", "BOB");
+
+    
+		asym->execute();
     outWS = asym->getProperty("OutputWorkspace");
+	///////////////////////////////////////////////////////////////////////////////////////
+	API::MatrixWorkspace_sptr bob=asym->getProperty("OutputUnNormWorkspace");
+	API::AnalysisDataServiceImpl &ads = API::AnalysisDataService::Instance();
+
+	MatrixWorkspace_sptr singleWS = extractSpectrum(bob, index);
+
+	ads.addOrReplace("BOB", singleWS);
+
     auto tmp = asym->getPropertyValue("NormalizationConstant");
     // move to helper later as a function
     normEst = Kernel::VectorHelper::splitStringIntoVector<double>(tmp);
