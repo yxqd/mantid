@@ -22,7 +22,7 @@ class MaxEntView(QtGui.QWidget):
         self.table = QtGui.QTableWidget(self)
         self.table.resize(800, 800)
 
-        self.table.setRowCount(8)
+        self.table.setRowCount(9)
         self.table.setColumnCount(2)
         self.table.setColumnWidth(0,300)
         self.table.setColumnWidth(1,300)
@@ -32,33 +32,38 @@ class MaxEntView(QtGui.QWidget):
         table_utils.setTableHeaders(self.table)
 
         # populate table
-        table_utils.setRowName(self.table,0,"Complex Data")
-        self.complex_data_box= table_utils.addCheckBoxToTable(self.table,False,0)
-        self.complex_data_box.setFlags(QtCore.Qt.ItemIsEnabled)
-        # needs an even number of ws to work
-        # so lets hide it for now
-        self.table.setRowHidden(0,True)
+        options = ['test']
 
-        table_utils.setRowName(self.table,1,"Complex Image")
-        self.complex_image_box= table_utils.addCheckBoxToTable(self.table,True,1)
-        table_utils.setRowName(self.table,2,"Positive Image")
-        self.positive_image_box= table_utils.addCheckBoxToTable(self.table,False,2)
-        table_utils.setRowName(self.table,3,"Resolution")
-        self.resolution_box= table_utils.addSpinBoxToTable(self.table,1,3)
+        table_utils.setRowName(self.table,0,"Workspace")
+        self.ws = table_utils.addComboToTable(self.table,0,options)
+ 
+        table_utils.setRowName(self.table,1,"First good time")
+        self.first_good= table_utils.addDoubleToTable(self.table,0.1,1)
+ 
+        table_utils.setRowName(self.table,2,"Last good time")
+        self.last_good= table_utils.addDoubleToTable(self.table,15.0,2)
 
-        table_utils.setRowName(self.table,4,"Maximum entropy constant (A)")
-        self.AConst= table_utils.addDoubleToTable(self.table,0.4,4)
+        table_utils.setRowName(self.table, 3,"Fit dead times")
+        self.dead_box= table_utils.addCheckBoxToTable(self.table,True,3)
 
-        table_utils.setRowName(self.table, 5,"Auto shift")
-        self.shift_box= table_utils.addCheckBoxToTable(self.table,False,5)
+        table_utils.setRowName(self.table,4,"Construct Phase Table")
+        self.phaseTable_box = table_utils.addCheckBoxToTable(self.table,True,4)
 
-        table_utils.setRowName(self.table, 6,"Raw")
-        self.raw_box= table_utils.addCheckBoxToTable(self.table,False,6)
+        table_utils.setRowName(self.table, 5,"Fix phases")
+        self.fix_phase_box= table_utils.addCheckBoxToTable(self.table,False,5)
+ 
+        table_utils.setRowName(self.table, 6,"Output phase table")
+        self.output_phase_box= table_utils.addCheckBoxToTable(self.table,False,6)
 
-        # this will be removed once maxEnt does a simultaneous fit
-        options=['test']
-        table_utils.setRowName(self.table,7,"Workspace")
-        self.ws= table_utils.addComboToTable(self.table,7,options)
+        table_utils.setRowName(self.table, 7,"Output deadtimes")
+        self.output_dead_box= table_utils.addCheckBoxToTable(self.table,False,7)
+
+        table_utils.setRowName(self.table, 8,"Output reconstructed data")
+        self.output_data_box= table_utils.addCheckBoxToTable(self.table,False,8)
+
+ 
+
+
 
         self.table.resizeRowsToContents()
 
@@ -79,23 +84,25 @@ class MaxEntView(QtGui.QWidget):
         self.tableA.setHorizontalHeaderLabels(("Advanced Property;Value").split(";"))
         table_utils.setTableHeaders(self.tableA)
 
-        table_utils.setRowName(self.tableA,0,"Chi target")
-        self.chiTarget= table_utils.addDoubleToTable(self.tableA,1.0,0)
+        table_utils.setRowName(self.tableA,0,"Maximum entropy constant (A)")
+        self.AConst= table_utils.addDoubleToTable(self.tableA,0.1,0)
+ 
+        table_utils.setRowName(self.tableA,1,"Lagrange multiplier for chi^2")
+        self.factor= table_utils.addDoubleToTable(self.tableA,1.04,1)
 
-        table_utils.setRowName(self.tableA,1,"Chi (precision)")
-        self.chiEps= table_utils.addDoubleToTable(self.tableA,0.001,1)
+        table_utils.setRowName(self.tableA,2,"Inner Iterations")
+        self.inner_loop= table_utils.addSpinBoxToTable(self.tableA,10,2)
 
-        table_utils.setRowName(self.tableA,2,"Distance Penalty")
-        self.dist= table_utils.addDoubleToTable(self.tableA,0.1,2)
+        table_utils.setRowName(self.tableA,3,"Outer Iterations")
+        self.outerr_loop= table_utils.addSpinBoxToTable(self.tableA,10,3)
 
-        table_utils.setRowName(self.tableA,3,"Maximum Angle")
-        self.angle= table_utils.addDoubleToTable(self.tableA,0.05,3)
+        table_utils.setRowName(self.tableA, 4,"Double pulse data")
+        self.double_pules_box= table_utils.addCheckBoxToTable(self.tableA,False,4)
 
-        table_utils.setRowName(self.tableA,4,"Max Iterations")
-        self.max_iterations= table_utils.addSpinBoxToTable(self.tableA,20000,4)
+        table_utils.setRowName(self.tableA,5,"Number of data points")
+        self.N_points = table_utils.addComboToTable(self.tableA,5,options)
 
-        table_utils.setRowName(self.tableA,5,"Alpha Chop Iterations")
-        self.chop= table_utils.addSpinBoxToTable(self.tableA,500,5)
+
 
         #layout
         # this is if complex data is unhidden
