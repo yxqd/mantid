@@ -1341,6 +1341,8 @@ std::string MuonFitPropertyBrowser::outputName() const {
  */
 void MuonFitPropertyBrowser::setMultiFittingMode(bool enabled) {
   // First, clear whatever model is currently set
+	m_functionBrowser->clear();
+	FitPropertyBrowser::clear();
 	m_boolManager->setValue(m_TFAsymmMode, false);
 	this->clear();  
   // set default selection (all groups)
@@ -1424,7 +1426,7 @@ void MuonFitPropertyBrowser::setTFAsymmMode(bool enabled) {
 	  }
   }
   IFunction_sptr userFunc = getFittingFunction();
-  if (m_btnGroup->isVisible()) {
+  if (m_btnGroup->isVisible() ) {
 	  
 
 	  auto TFAsymmFunc = singleFitFunction(userFunc, normVec);
