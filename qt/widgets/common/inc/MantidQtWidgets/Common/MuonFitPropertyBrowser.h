@@ -163,9 +163,9 @@ private slots:
 
 private:
   /// new menu option
-  QAction *m_fitActionTFAsymm;
+  //QAction *m_fitActionTFAsymm;
   /// override populating fit menu
-  void populateFitMenuButton(QSignalMapper *fitMapper, QMenu *fitMenu) override;
+  //void populateFitMenuButton(QSignalMapper *fitMapper, QMenu *fitMenu) override;
   void rescaleWS(const std::map<std::string, double> norm,
                  const std::string wsName, const std::string extension);
   void rescaleWS(const double norm, const std::string wsName,

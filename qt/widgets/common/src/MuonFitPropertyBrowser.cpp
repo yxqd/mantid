@@ -312,7 +312,7 @@ pulate the fit button.
 * @param fitMapper the QMap to the fit mapper
 * @param fitMenu the QMenu for the fit button
 */
-void MuonFitPropertyBrowser::populateFitMenuButton(QSignalMapper *fitMapper,
+/*void MuonFitPropertyBrowser::populateFitMenuButton(QSignalMapper *fitMapper,
                                                    QMenu *fitMenu) {
 
  m_fitActionTFAsymm = new QAction("TF Asymmetry Fit", this);
@@ -322,17 +322,14 @@ void MuonFitPropertyBrowser::populateFitMenuButton(QSignalMapper *fitMapper,
   connect(m_fitActionTFAsymm, SIGNAL(triggered()), fitMapper, SLOT(map()));
   fitMenu->addSeparator();
   fitMenu->addAction(m_fitActionTFAsymm);
-}
+}*/
 /// Enable/disable the Fit button;
 void MuonFitPropertyBrowser::setFitEnabled(bool yes) {
   m_fitActionFit->setEnabled(yes);
   m_fitActionSeqFit->setEnabled(yes);
+
   // only allow TFAsymm fit if not keeping norm
-  if (!m_boolManager->value(m_keepNorm) && yes) {
-    m_fitActionTFAsymm->setEnabled(yes);
-  } else {
-    m_fitActionTFAsymm->setEnabled(false);
-  }
+ 
 }
 /**
 * Set the input workspace name
@@ -530,10 +527,14 @@ void MuonFitPropertyBrowser::boolChanged(QtProperty *prop) {
   }
   if (prop == m_TFAsymmMode) {
     const bool val = m_boolManager->value(prop);
-    setTFAsymmMode(val);
+	if (!m_boolManager->value(m_keepNorm)&& FitPropertyBrowser::count()>0) {
+         setTFAsymmMode(val);
+	}
   }
   if (prop == m_keepNorm) {
     const bool val = m_boolManager->value(prop);
+	m_TFAsymmMode->setEnabled(!val);
+
     if (val) { // record data for later
       double norm = readNormalization()[0];
       ITableWorkspace_sptr table = WorkspaceFactory::Instance().createTable();
@@ -542,17 +543,18 @@ void MuonFitPropertyBrowser::boolChanged(QtProperty *prop) {
       table->addColumn("int", "spectra");
       TableRow row = table->appendRow();
       row << norm << 0;
+	  m_boolManager->setValue(m_TFAsymmMode,false);
       // remove TFAsymm fit
-      m_fitActionTFAsymm->setEnabled(false);
+      //m_fitActionTFAsymm->setEnabled(false);
 
     } else { // remove data so it is not used later
       AnalysisDataService::Instance().remove("__keepNorm__");
 
       // if fit is enabled so should TFAsymm
-      if (m_fitActionSeqFit->isEnabled()) {
-        m_fitActionTFAsymm->setEnabled(true);
-      }
-    }
+      //if (m_fitActionSeqFit->isEnabled()) {
+      //  m_fitActionTFAsymm->setEnabled(true);
+      //}
+	} 
   } else {
     // search map for group/pair change
     bool done = false;
@@ -1369,20 +1371,20 @@ void MuonFitPropertyBrowser::setMultiFittingMode(bool enabled) {
 * @param enabled :: [input] Whether to turn this mode on or off
 */
 void MuonFitPropertyBrowser::setTFAsymmMode(bool enabled) {
-	modifyFitMenu(m_fitActionTFAsymm, enabled);
+	//modifyFitMenu(m_fitActionTFAsymm, enabled);
 
 	// Show or hide the TFAsymmetry fit
 	if (enabled) {
-		m_settingsGroup->property()->addSubProperty(m_normalization);
+		//m_settingsGroup->property()->addSubProperty(m_normalization);
 		m_multiFitSettingsGroup->property()->addSubProperty(m_normalization);
-		m_settingsGroup->property()->addSubProperty(m_keepNorm);
+		//m_settingsGroup->property()->addSubProperty(m_keepNorm);
 		setNormalization();
 		setTFAsymmFunc();
 	}
 	else {
-		m_settingsGroup->property()->removeSubProperty(m_normalization);
+		//m_settingsGroup->property()->removeSubProperty(m_normalization);
 		m_multiFitSettingsGroup->property()->removeSubProperty(m_normalization);
-		m_settingsGroup->property()->removeSubProperty(m_keepNorm);
+		//m_settingsGroup->property()->removeSubProperty(m_keepNorm);
 		unsetTFAsymmFunc();
 	}
 	// update fit function...
@@ -1396,9 +1398,9 @@ void MuonFitPropertyBrowser::setTFAsymmMode(bool enabled) {
   */
   void MuonFitPropertyBrowser::setTFAsymmFunc() {
 	  const int nWorkspaces = static_cast<int>(m_workspacesToFit.size());
-	  if (nWorkspaces == 0) { return; }
 
-  std::vector<double> normVec;
+
+		  std::vector<double> normVec;
   auto norms = readMultipleNormalization();
 
   if (nWorkspaces > 1) {
@@ -1422,7 +1424,7 @@ void MuonFitPropertyBrowser::setTFAsymmMode(bool enabled) {
 	  }
   }
   IFunction_sptr userFunc = getFittingFunction();
-  if (nWorkspaces > 1) {
+  if (m_btnGroup->isVisible()) {
 	  
 
 	  auto TFAsymmFunc = singleFitFunction(userFunc, normVec);
@@ -1431,7 +1433,7 @@ void MuonFitPropertyBrowser::setTFAsymmMode(bool enabled) {
 	  setFunc(normVec, userFunc);
 	  
   }
-  else {
+  else if(FitPropertyBrowser::count()>0){
 	  auto TFAsymmFunc = getTFAsymmFitFunction(userFunc);
 	  FitPropertyBrowser::clear();
 	  FitPropertyBrowser::addFunction(TFAsymmFunc->asString());
@@ -1447,7 +1449,11 @@ void MuonFitPropertyBrowser::setTFAsymmMode(bool enabled) {
 	  void MuonFitPropertyBrowser::unsetTFAsymmFunc() {
 	 
 	  const int nWorkspaces = static_cast<int>(m_workspacesToFit.size());
-	 
+
+	  if (nWorkspaces == 0) { return; }
+	  if (FitPropertyBrowser::count() == 0 && !m_btnGroup->isVisible()) { return; }
+	  if (!m_functionBrowser->hasFunction() && m_btnGroup->isVisible()) { return; }
+
 	  if (!m_btnGroup->isVisible() && nWorkspaces>0) {
 		  auto out=extractUserFunction(getFittingFunction()->asString());
 		  FitPropertyBrowser::clear();
