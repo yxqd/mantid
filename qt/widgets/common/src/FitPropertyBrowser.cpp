@@ -1609,6 +1609,7 @@ void FitPropertyBrowser::finishHandle(const Mantid::API::IAlgorithm *alg) {
   // Emit a signal to show that the fitting has completed. (workspaceName that
   // the fit has been done against is sent as a parameter)
   QString name(QString::fromStdString(alg->getProperty("InputWorkspace")));
+  auto adsf = name.toStdString();
   if (name.contains('_')) // Must be fitting to raw data, need to group under
     // name without "_Raw".
     emit fittingDone(name.left(name.indexOf('_')));

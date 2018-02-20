@@ -65,6 +65,7 @@ const QString CUSTOM_LABEL{"Custom"};
 const QString ALL_GROUPS_LABEL{"All Groups"};
 const QString ALL_PAIRS_LABEL{"All Pairs"};
 const QString ALL_PERIODS_LABEL{"All Periods"};
+const std::string unNorm = ";unNorm";
 constexpr double MICROSECONDS_PER_SECOND{ 1000000.0 };
 constexpr double MUON_LIFETIME_MICROSECONDS{
 	Mantid::PhysicalConstants::MuonLifetime * MICROSECONDS_PER_SECOND };
@@ -293,6 +294,10 @@ void MuonFitPropertyBrowser::init() {
 // Set up the execution of the muon fit menu
 void MuonFitPropertyBrowser::executeFitMenu(const QString &item) {
   if (item == "Fit" && m_boolManager->value(m_TFAsymmMode)) {
+	  if (m_workspacesToFit.size() == 1 && m_btnGroup->isVisible()) {
+		  g_log.error("TFAsymmetry fit does not work with a single workspace and in multiple fitting. Switch to single fitting or use more workspaces.");
+		  return;
+	}
     doTFAsymmFit();
   } else {
     FitPropertyBrowser::executeFitMenu(item);
@@ -397,6 +402,7 @@ void MuonFitPropertyBrowser::enumChanged(QtProperty *prop) {
   } else if (prop == m_workspace) {
 	  //update norm
 	  setNormalization(); 
+	  FitPropertyBrowser::enumChanged(prop);
     // make sure the output is updated
     int j = m_enumManager->value(m_workspace);
     std::string option = m_workspaceNames[j].toStdString();
@@ -656,9 +662,9 @@ void MuonFitPropertyBrowser::doTFAsymmFit() {
 	  }
 
     if (rawData()) {
-      alg->setPropertyValue("InputWorkspace", wsName + "_Raw_Unnorm");
+      alg->setPropertyValue("InputWorkspace", wsName + "_Raw"+ unNorm);
     } else {
-      alg->setPropertyValue("InputWorkspace", wsName+"_Unnorm");
+      alg->setPropertyValue("InputWorkspace", wsName+ unNorm);
     }
     alg->setProperty("WorkspaceIndex", workspaceIndex());
     alg->setProperty("StartX", startX());
@@ -669,14 +675,14 @@ void MuonFitPropertyBrowser::doTFAsymmFit() {
     // If we are doing a simultaneous fit, set this up here
     const int nWorkspaces = static_cast<int>(m_workspacesToFit.size());
     if (nWorkspaces > 1) {
-      alg->setPropertyValue("InputWorkspace", m_workspacesToFit[0]+"_Unnorm");
+      alg->setPropertyValue("InputWorkspace", m_workspacesToFit[0]+ unNorm);
       // Remove existing results with the same name
       if (AnalysisDataService::Instance().doesExist(outputName())) {
         AnalysisDataService::Instance().deepRemoveGroup(outputName());
       }
       for (int i = 1; i < nWorkspaces; i++) {
         std::string suffix = boost::lexical_cast<std::string>(i);
-        alg->setPropertyValue("InputWorkspace_" + suffix, m_workspacesToFit[i] + "_Unnorm");
+        alg->setPropertyValue("InputWorkspace_" + suffix, m_workspacesToFit[i] + unNorm);
         alg->setProperty("WorkspaceIndex_" + suffix, workspaceIndex());
         alg->setProperty("StartX_" + suffix, startX());
         alg->setProperty("EndX_" + suffix, endX());
@@ -708,7 +714,7 @@ void MuonFitPropertyBrowser::doTFAsymmFit() {
 		// transform data back to Asymm
 		// rescale WS:
 		auto tmp = outputName();
-		rescaleWS(norms, tmpWSNameNoRaw, "_Unnorm");
+		rescaleWS(norms, tmpWSNameNoRaw, unNorm);
 	}
 
     updateMultipleNormalization(norms);
@@ -1426,7 +1432,7 @@ void MuonFitPropertyBrowser::setTFAsymmMode(bool enabled) {
 	  }
   }
   IFunction_sptr userFunc = getFittingFunction();
-  if (m_btnGroup->isVisible() ) {
+  if (m_btnGroup->isVisible() && nWorkspaces>1) {
 	  
 
 	  auto TFAsymmFunc = singleFitFunction(userFunc, normVec);
@@ -1434,6 +1440,12 @@ void MuonFitPropertyBrowser::setTFAsymmMode(bool enabled) {
 	  m_functionBrowser->setFunction(TFAsymmFunc);
 	  setFunc(normVec, userFunc);
 	  
+  } else if (m_btnGroup->isVisible()) {
+	  auto TFAsymmFunc = boost::make_shared<MultiDomainFunction>();
+	  TFAsymmFunc->addFunction(getTFAsymmFitFunction(userFunc));
+	  FitPropertyBrowser::clear();
+	  m_functionBrowser->setFunction(TFAsymmFunc);
+	  //setFunc(normVec, userFunc);
   }
   else if(FitPropertyBrowser::count()>0){
 	  auto TFAsymmFunc = getTFAsymmFitFunction(userFunc);

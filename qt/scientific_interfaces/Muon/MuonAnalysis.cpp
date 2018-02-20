@@ -463,7 +463,7 @@ void MuonAnalysis::plotItem(ItemType itemType, int tableRow,
 	const std::string wsName =
 		getNewAnalysisWSName(itemType, tableRow, plotType);
 	if (itemType == Group && plotType == Asymmetry) {
-		ads.rename("bob", wsName + "_Unnorm");
+		ads.rename("bob", wsName + ";unNorm");
 	}
 
     auto wsRaw = createAnalysisWorkspace(itemType, tableRow, plotType, true);
@@ -477,9 +477,9 @@ void MuonAnalysis::plotItem(ItemType itemType, int tableRow,
 
     ads.addOrReplace(wsRawName, wsRaw);
 	if (itemType == Group && plotType == Asymmetry) {
-		ads.rename("bob", wsRawName + "_Unnorm");
-		wsNames.push_back(wsRawName + "_Unnorm");
-		wsNames.push_back(wsName + "_Unnorm");
+		ads.rename("bob", wsRawName + ";unNorm");
+		wsNames.push_back(wsRawName + ";unNorm");
+		wsNames.push_back(wsName + ";unNorm");
 	}
     // Make sure they are grouped
 

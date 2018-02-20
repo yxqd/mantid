@@ -315,6 +315,7 @@ QString MuonFitDataSelector::getInstrumentName() const {
  * @returns :: run number string if valid, else empty string
  */
 QString MuonFitDataSelector::getRuns() const {
+	auto tm = m_ui.runs->getText().toStdString();
   if (m_ui.runs->isValid()) {
     return m_ui.runs->getText();
   } else {
