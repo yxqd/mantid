@@ -53,6 +53,7 @@ Depends: git,
   python-h5py,
   python-yaml,
   python-mock,
+  python-pycifrw,
   ipython-qtconsole (>=1.2.0),
   texlive,
   texlive-latex-extra,
@@ -74,7 +75,8 @@ Depends: git,
   ipython3-qtconsole,
   python3-h5py,
   python3-yaml,
-  python3-mock
+  python3-mock,
+  python3-pycifrw
 Description: Installs all packages required for a Mantid developer
  A metapackage which requires all the dependencies and tools that are
  required for Mantid development. It works for Ubuntu 16.04.

@@ -64,6 +64,7 @@ Requires: python-sphinx
 Requires: python2-sphinx-bootstrap-theme
 Requires: PyYAML
 Requires: python2-mock
+Requires: python-pycifrw
 Requires: qscintilla-devel
 Requires: qt-devel >= 4.6
 %if 0%{?el6}
@@ -124,6 +125,7 @@ Requires: python3-matplotlib
 %{?fedora:Requires: python3-qtconsole}
 Requires: python3-PyYAML
 Requires: python3-mock
+Requires: python3-pycifrw
 Requires: boost-python3-devel
 %endif
 
