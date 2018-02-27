@@ -379,11 +379,7 @@ class LoadCIF(PythonAlgorithm):
                              doc='Load UB-matrix from CIF file if available.')
 
     def PyExec(self):
-        try:
-            self._loadFromCif()
-        except ImportError:
-            raise RuntimeError('This algorithm requires an additional Python package: PyCifRW'
-                               ' (https://pypi.python.org/pypi/PyCifRW/4.1)')
+        self._loadFromCif()
 
     def _loadFromCif(self):
         from CifFile import ReadCif

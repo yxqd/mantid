@@ -335,6 +335,4 @@ class UBMatrixBuilderTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # Only test if algorithm is registered (PyCifRW dependency).
-    if AlgorithmFactory.exists("LoadCIF"):
-        unittest.main()
+    unittest.main()

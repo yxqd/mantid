@@ -52,12 +52,6 @@ the *_diffrn_orient_matrix_UB_xy* fields have to be set.
 .. [1] The equivalent isotropic displacement factor, R. X. Fischer & E. Tillmanns, Acta Crystallogr. C, vol. 44, p. 775,
    DOI: `10.1107/S0108270187012745 <http://dx.doi.org/10.1107/S0108270187012745>`_
 
-Required
---------
-
-This algorithm requires python package ``PyCifRW``, available at the `python package index <https://pypi.python.org/pypi/PyCifRW/4.1>`_
-or through the operating system's package manager. If the package is not present, this algorithm will not be available.
-
 Usage
 -----
 
