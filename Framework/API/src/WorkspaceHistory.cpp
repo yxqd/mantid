@@ -22,8 +22,10 @@ namespace {
 Kernel::Logger g_log("WorkspaceHistory");
 }
 
+Kernel::EnvironmentHistory WorkspaceHistory::m_environment;
+
 /// Default Constructor
-WorkspaceHistory::WorkspaceHistory() : m_environment() {}
+WorkspaceHistory::WorkspaceHistory() = default;
 
 /// Destructor
 WorkspaceHistory::~WorkspaceHistory() = default;
@@ -33,9 +35,7 @@ WorkspaceHistory::~WorkspaceHistory() = default;
   @param A :: WorkspaceHistory Item to copy
  */
 WorkspaceHistory::WorkspaceHistory(const WorkspaceHistory &A)
-    : m_environment(A.m_environment) {
-  m_algorithms = A.m_algorithms;
-}
+    : m_algorithms(A.m_algorithms) {}
 
 /// Returns a const reference to the algorithmHistory
 const Mantid::API::AlgorithmHistories &
@@ -45,7 +45,7 @@ WorkspaceHistory::getAlgorithmHistories() const {
 /// Returns a const reference to the EnvironmentHistory
 const Kernel::EnvironmentHistory &
 WorkspaceHistory::getEnvironmentHistory() const {
-  return m_environment;
+  return WorkspaceHistory::m_environment;
 }
 
 /// Append the algorithm history from another WorkspaceHistory into this one

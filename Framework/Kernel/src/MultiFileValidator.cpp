@@ -56,7 +56,7 @@ std::string MultiFileValidator::checkValidity(
 
   std::string accumulatedErrors;
 
-  for (auto row : values) {
+  for (const auto &row : values) {
     for (const auto &valueIt : row) {
       // For each filename value, check its validity, and and accumulate any
       // errors.

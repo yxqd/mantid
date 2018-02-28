@@ -749,12 +749,12 @@ void ApplicationWindow::initGlobalConstants() {
   appLanguage = QLocale::system().name().section('_', 0, 0);
   show_windows_policy = ApplicationWindow::ActiveFolder;
 
-  workspaceColor = QColor("darkGray");
-  panelsColor = QColor("#ffffff");
-  panelsTextColor = QColor("#000000");
-  tableBkgdColor = QColor("#ffffff");
-  tableTextColor = QColor("#000000");
-  tableHeaderColor = QColor("#000000");
+  workspaceColor = QColor(169, 169, 169);
+  panelsColor = QColor(255, 255, 255);
+  panelsTextColor = QColor(0, 0, 0);
+  tableBkgdColor = QColor(255, 255, 255);
+  tableTextColor = QColor(0, 0, 0);
+  tableHeaderColor = QColor(0, 0, 0);
 
   plot3DColors = {"blue", "#000000", "#000000", "#000000",
                   "red",  "#000000", "#000000", "#ffffff"};
@@ -6043,13 +6043,15 @@ bool ApplicationWindow::saveProject(bool compress) {
 int ApplicationWindow::execSaveProjectDialog() {
   std::vector<IProjectSerialisable *> windows;
 
-  for (auto window : getSerialisableWindows()) {
+  const auto serialisableWindows = this->getSerialisableWindows();
+  for (const auto &window : serialisableWindows) {
     auto win = dynamic_cast<IProjectSerialisable *>(window);
     if (win)
       windows.push_back(win);
   }
 
-  for (auto window : getAllWindows()) {
+  const auto allWindows = this->getAllWindows();
+  for (auto window : allWindows) {
     auto win = dynamic_cast<IProjectSerialisable *>(window);
     if (win)
       windows.push_back(win);
@@ -9094,7 +9096,6 @@ void ApplicationWindow::removeWindowFromLists(MdiSubWindow *w) {
   if (!w)
     return;
 
-  QString caption = w->objectName();
   if (w->inherits("Table")) {
     Table *m = dynamic_cast<Table *>(w);
     if (!m)
@@ -9539,7 +9540,8 @@ void ApplicationWindow::interfaceMenuAboutToShow() {
   QMap<QString, QMenu *> categoryMenus;
   auto sortedCategories = m_allCategories.toList();
   qSort(sortedCategories);
-  foreach (const QString category, sortedCategories) {
+  const auto &constSortedCategories = sortedCategories;
+  for (const QString &category : constSortedCategories) {
     if (hiddenCategories.contains(category))
       continue;
     QMenu *categoryMenu = new QMenu(interfaceMenu);
@@ -9572,7 +9574,8 @@ void ApplicationWindow::interfaceMenuAboutToShow() {
     }
   }
 
-  foreach (auto categoryMenu, categoryMenus.values()) {
+  const auto values = categoryMenus.values();
+  for (const auto &categoryMenu : values) {
     connect(categoryMenu, SIGNAL(triggered(QAction *)), this,
             SLOT(performCustomAction(QAction *)));
   }
@@ -15707,7 +15710,6 @@ void ApplicationWindow::loadCustomActions() {
   for (int i = 0; i < lst.count(); i++) {
     QString fileName = path + lst[i];
     QFile file(fileName);
-    QFileInfo fi(file);
     if (!file.open(QFile::ReadOnly | QFile::Text))
       continue;
 

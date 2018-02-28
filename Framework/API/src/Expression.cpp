@@ -128,7 +128,7 @@ void Expression::add_operators(const std::vector<std::string> &ops) {
     }
   }
 
-  for (auto str : ops) {
+  for (const auto &str : ops) {
     for (char c : str) {
       if (c == ' ')
         continue;

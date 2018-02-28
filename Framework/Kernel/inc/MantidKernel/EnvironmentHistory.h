@@ -47,10 +47,11 @@ public:
   std::string osVersion() const;
   /// print contents of object
   void printSelf(std::ostream &, const int indent = 0) const;
+  EnvironmentHistory &operator=(const EnvironmentHistory &) = delete;
+  EnvironmentHistory() = default;
+  EnvironmentHistory(const EnvironmentHistory &) = delete;
 
 private:
-  /// Private, unimplemented copy assignment operator
-  EnvironmentHistory &operator=(const EnvironmentHistory &);
 };
 
 MANTID_KERNEL_DLL std::ostream &operator<<(std::ostream &,

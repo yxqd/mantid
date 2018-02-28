@@ -1,5 +1,3 @@
-#include <algorithm>
-
 #include "MantidGeometry/MDGeometry/MDGeometryXMLParser.h"
 #include "MantidGeometry/MDGeometry/MDGeometryXMLDefinitions.h"
 #include "MantidGeometry/MDGeometry/IMDDimensionFactory.h"
@@ -10,28 +8,27 @@
 #include <Poco/DOM/Element.h>
 #include <Poco/DOM/NodeList.h>
 
+#include <algorithm>
+#include <functional>
+
 namespace Mantid {
 namespace Geometry {
 /// Helper unary comparison type for finding IMDDimensions by a specified id.
-struct findID
-    : public std::unary_function<Mantid::Geometry::IMDDimension_sptr, bool> {
+class findID {
+private:
   const std::string m_id;
-  explicit findID(const std::string &id) : m_id(id) {}
 
-  bool operator()(const Mantid::Geometry::IMDDimension_sptr obj) const {
+public:
+  explicit findID(const std::string &id) : m_id(id) {}
+  bool operator()(const Mantid::Geometry::IMDDimension_sptr &obj) const {
     return m_id == obj->getDimensionId();
   }
-  findID &operator=(const findID &);
 };
 
 /// Helper unary comparison type for finding non-integrated dimensions.
-struct findIntegrated
-    : public std::unary_function<Mantid::Geometry::IMDDimension_sptr, bool> {
-  bool operator()(const Mantid::Geometry::IMDDimension_sptr obj) const {
-    return obj->getIsIntegrated();
-  }
-  findIntegrated &operator=(const findIntegrated &);
-};
+bool findIntegrated(const Mantid::Geometry::IMDDimension_sptr &obj) {
+  return obj->getIsIntegrated();
+}
 
 /**
 Validate the current object. Take action if not set up properly.
@@ -234,7 +231,7 @@ Mantid::Geometry::VecIMDDimension_sptr
 MDGeometryXMLParser::getNonIntegratedDimensions() const {
   validate();
   Mantid::Geometry::VecIMDDimension_sptr temp = m_vecAllDims;
-  temp.erase(std::remove_if(temp.begin(), temp.end(), findIntegrated()),
+  temp.erase(std::remove_if(temp.begin(), temp.end(), findIntegrated),
              temp.end());
   return temp;
 }
@@ -247,9 +244,9 @@ Mantid::Geometry::VecIMDDimension_sptr
 MDGeometryXMLParser::getIntegratedDimensions() const {
   validate();
   Mantid::Geometry::VecIMDDimension_sptr temp = m_vecAllDims;
-  temp.erase(
-      std::remove_if(temp.begin(), temp.end(), std::not1(findIntegrated())),
-      temp.end());
+  temp.erase(std::remove_if(temp.begin(), temp.end(),
+                            std::not1(std::cref(findIntegrated))),
+             temp.end());
   return temp;
 }
 

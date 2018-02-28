@@ -101,7 +101,7 @@ private:
   /// Find the history entries at this level in the file.
   std::set<int> findHistoryEntries(::NeXus::File *file);
   /// The environment of the workspace
-  const Kernel::EnvironmentHistory m_environment;
+  static Kernel::EnvironmentHistory m_environment;
   /// The algorithms which have been called on the workspace
   Mantid::API::AlgorithmHistories m_algorithms;
 };

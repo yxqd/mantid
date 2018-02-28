@@ -501,7 +501,7 @@ void MantidUI::deleteWorkspaces(const QStringList &wsNames) {
       alg->setLogging(false);
       std::vector<std::string> vecWsNames;
       vecWsNames.reserve(wsNames.size());
-      foreach (auto wsName, wsNames) {
+      for (const auto &wsName : wsNames) {
         vecWsNames.push_back(wsName.toStdString());
       }
       alg->setProperty("WorkspaceList", vecWsNames);
@@ -2439,7 +2439,7 @@ void MantidUI::importString(const QString &logName, const QString &data,
 */
 void MantidUI::importStrSeriesLog(const QString &logName, const QString &data,
                                   const QString &wsName) {
-  QStringList loglines = data.split("\n", QString::SkipEmptyParts);
+  const QStringList loglines = data.split("\n", QString::SkipEmptyParts);
 
   int rowcount(loglines.count());
   Table *t =
@@ -2461,17 +2461,15 @@ void MantidUI::importStrSeriesLog(const QString &logName, const QString &data,
   t->setReadOnlyColumn(0, true);
   t->setReadOnlyColumn(1, true);
 
-  QStringList::const_iterator sEnd = loglines.end();
-  int row(0);
-  for (QStringList::const_iterator sItr = loglines.begin(); sItr != sEnd;
-       ++sItr, ++row) {
-    QStringList ts = (*sItr).split(QRegExp("\\s+"));
+  int row{0};
+  for (const auto &line : loglines) {
+    QStringList ts = line.split(QRegExp("\\s+"));
     t->setText(row, 0, ts[1]);
-    QStringList ds(ts);
-    ds.removeFirst(); // remove date
-    ds.removeFirst(); // and time
-    t->setText(row, 1, ds.join(" "));
+    ts.removeFirst(); // remove date
+    ts.removeFirst(); // and time
+    t->setText(row, 1, ts.join(" "));
     t->setTextAlignment(row, 1, Qt::AlignLeft | Qt::AlignVCenter);
+    ++row;
   }
 
   // Show table
@@ -2936,11 +2934,9 @@ MultiLayer *MantidUI::createGraphFromTable(Table *t, int type) {
   if (!t)
     return nullptr;
   QStringList lst = t->colNames();
-  QStringList::const_iterator itr;
-  for (itr = lst.begin(); itr != lst.end(); ++itr) {
+  for (auto &str : lst) {
     // remove the X names from the column list and pass the X removed list
     // to multilayerPlot
-    QString str = (*itr);
     if (str.contains("XS", Qt::CaseInsensitive)) {
       int index = lst.indexOf(str);
       lst.removeAt(index);

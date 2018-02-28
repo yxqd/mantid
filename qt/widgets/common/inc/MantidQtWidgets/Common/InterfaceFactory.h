@@ -112,7 +112,7 @@ public:
     const QStringList categories =
         TYPE::categoryInfo().split(";", QString::SkipEmptyParts);
     QSet<QString> result;
-    foreach (const QString category, categories) {
+    for (const QString &category : categories) {
       result.insert(category.trimmed());
     }
     m_categoryLookup[QString::fromStdString(realName)] = result;
