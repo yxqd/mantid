@@ -134,4 +134,18 @@ if ( CPPCHECK_EXECUTABLE )
                       )
     set_target_properties(cppcheck PROPERTIES EXCLUDE_FROM_ALL TRUE)
   endif()
+
+###########################################################################
+# Configure cpp-check if the tool is found
+###########################################################################
+
+if ( CMAKE_VERSION VERSION_GREATER "3.5" )
+  set(ENABLE_CPPCHECK OFF CACHE BOOL "Add clang-tidy automatically to builds")
+  if (ENABLE_CPPCHECK)
+    set(CMAKE_CXX_CPPCHECK "${CPPCHECK_EXECUTABLE};-q;${_cppcheck_header_excludes};_cppcheck_header_excludes --suppress=*:${_tmp}" CACHE STRING "" FORCE)
+  else()
+    set(CMAKE_CXX_CPPCHECK "" CACHE STRING "" FORCE) # delete it
+  endif()
+endif()
+
 endif ( CPPCHECK_EXECUTABLE )
