@@ -360,7 +360,7 @@ void MuonAnalysis::initLayout() {
 void MuonAnalysis::setChosenGroupAndPeriods(const QString &wsName) {
   const auto wsParams =
       MuonAnalysisHelper::parseWorkspaceName(wsName.toStdString());
-
+  m_uiForm.fitBrowser->setNumPeriods(m_numPeriods, m_summedPeriods);
   const QString &periodToSet = QString::fromStdString(wsParams.periods);
   const auto &periods = m_dataSelector->getPeriodSelections();
 
@@ -512,7 +512,17 @@ std::string MuonAnalysis::getNewAnalysisWSName(ItemType itemType, int tableRow,
   params.itemName = table->item(tableRow, 0)->text().toStdString();
   params.plotType = plotType;
   params.periods = getPeriodLabels();
+  bool isItSummed= false;
+  if (params.periods.find("+") != std::string::npos) {
+	  isItSummed = true;
 
+  }if( params.periods.find("-") != std::string::npos) {
+	  isItSummed = true;
+  }
+ 
+  if (!m_summedPeriods.contains(QString::fromStdString(params.periods)) && params.periods!="" && isItSummed) {
+	  m_summedPeriods 
+  }
   // Version - always "#1" if overwrite is on, otherwise increment
   params.version = 1;
   std::string workspaceName = generateWorkspaceName(params);
@@ -1105,6 +1115,7 @@ void MuonAnalysis::updatePairTable() {
  */
 void MuonAnalysis::inputFileChanged_MWRunFiles() {
   // Handle changed input, then turn buttons back on.
+	m_summedPeriods.clear();
   handleInputFileChanges();
   allowLoading(true);
 }
@@ -1696,7 +1707,6 @@ std::string MuonAnalysis::getPeriodLabels() const {
       retVal << "-" << subtracted;
     }
   }
-
   return retVal.str();
 }
 
@@ -1961,7 +1971,8 @@ void MuonAnalysis::selectMultiPeak(const QString &wsName,
     std::transform(groups.pairNames.begin(), groups.pairNames.end(),
                    std::back_inserter(groupsAndPairs), &QString::fromStdString);
     setGroupsAndPairs();
-    m_uiForm.fitBrowser->setNumPeriods(m_numPeriods);
+
+	m_uiForm.fitBrowser->setNumPeriods(m_numPeriods,m_summedPeriods);
 
     // Set the selected run, group/pair and period
     m_fitDataPresenter->setAssignedFirstRun(wsName, filePath);
@@ -2304,13 +2315,15 @@ void MuonAnalysis::allowLoading(bool enabled) {
 *   Check to see if the appending option is true when the previous button has
 * been pressed and acts accordingly
 */
-void MuonAnalysis::checkAppendingPreviousRun() { checkAppendingRun(-1); }
+void MuonAnalysis::checkAppendingPreviousRun() { checkAppendingRun(-1);	m_summedPeriods.clear();
+}
 
 /**
 *   Check to see if the appending option is true when the next button has been
 * pressed and acts accordingly
 */
-void MuonAnalysis::checkAppendingNextRun() { checkAppendingRun(1); }
+void MuonAnalysis::checkAppendingNextRun() { checkAppendingRun(1);	m_summedPeriods.clear();
+}
 
 /**
  * Check to see if the appending option is true when the next/previous button
@@ -2625,6 +2638,7 @@ void MuonAnalysis::changeTab(int newTabIndex) {
       m_uiForm.fitBrowser->setSingleFitLabel(m_currentDataName.toStdString());
     } else {
       m_uiForm.fitBrowser->setAllGroupsOrPairs(isItGroup);
+	  m_uiForm.fitBrowser->setNumPeriods(m_numPeriods, m_summedPeriods);
       m_uiForm.fitBrowser->setAllPeriods();
     }
     if (parsePlotType(m_uiForm.frontPlotFuncs) == PlotType::Asymmetry &&
