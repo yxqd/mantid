@@ -54,6 +54,7 @@
 #include <QPushButton>
 
 #include <QMenu>
+#include <QTableWidget>
 #include <QSignalMapper>
 
 #include <QCheckBox>
@@ -1376,12 +1377,28 @@ void MuonFitPropertyBrowser::genGroupWindow() {
   for (auto iter = m_groupBoxes.constBegin(); iter != m_groupBoxes.constEnd();
        ++iter) {
     groupSettings->addSubProperty(m_groupBoxes.value(iter.key()));
-    m_boolManager->setValue(iter.value(), m_boolManager->value(iter.value()));
+   // m_boolManager->setValue(iter.value(), m_boolManager->value(iter.value()));
   }
   QtCheckBoxFactory *checkBoxFactory = new QtCheckBoxFactory(m_groupWindow);
   groupBrowser->setFactoryForManager(m_boolManager, checkBoxFactory);
   groupBrowser->addProperty(groupSettings);
   layout->addWidget(groupBrowser);
+
+  QTableWidget* table = new QTableWidget(m_groupBoxes.keys().size(),2,this);
+  layout->addWidget(table);
+  int row = 0;
+  std::vector<QTableWidgetItem*> box; 
+  for (auto iter = m_groupBoxes.constBegin(); iter != m_groupBoxes.constEnd();
+	  ++iter) {
+	  QTableWidgetItem* text = new QTableWidgetItem();
+	  text->setText(iter.key());
+	  table->setItem(row, 0, text);
+	  box.push_back(new QTableWidgetItem());
+	  box[row]->setCheckState(Qt::Checked);
+	  table->setItem(row, 1, box[row]);
+	  row++;
+  }
+
   m_groupWindow->setLayout(layout);
   m_groupWindow->show();
 }
