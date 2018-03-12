@@ -173,7 +173,7 @@
         </item>
         <item>
          <property name="text">
-          <string>Cubic</string>
+          <string>CSpline</string>
          </property>
         </item>
        </widget>
