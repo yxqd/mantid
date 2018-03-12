@@ -114,13 +114,6 @@
       <bool>false</bool>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
-      <item row="0" column="2">
-       <widget class="QLabel" name="lbNumberEvents">
-        <property name="text">
-         <string>Events:</string>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="1">
        <widget class="QSpinBox" name="spNumberWavelengths">
         <property name="minimum">
@@ -155,6 +148,34 @@
         <property name="value">
          <number>5000</number>
         </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QLabel" name="lbNumberEvents">
+        <property name="text">
+         <string>Events:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="lbInterpolation">
+        <property name="text">
+         <string>Interpolation:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QComboBox" name="cbInterpolation">
+        <item>
+         <property name="text">
+          <string>Linear</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Cubic</string>
+         </property>
+        </item>
        </widget>
       </item>
      </layout>
