@@ -143,6 +143,8 @@ void AbsorptionCorrections::run() {
   monteCarloAbsCor->setProperty("NumberOfWavelengthPoints", wave);
   long events = static_cast<long>(m_uiForm.spNumberEvents->value());
   monteCarloAbsCor->setProperty("EventsPerPoint", events);
+  monteCarloAbsCor->setProperty(
+      "Interpolation", m_uiForm.cbInterpolation->currentText().toStdString());
 
   // Can details
   bool useCan = m_uiForm.ckUseCan->isChecked();
