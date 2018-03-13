@@ -157,14 +157,7 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="lbInterpolation">
-        <property name="text">
-         <string>Interpolation:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
+      <item row="1" column="4">
        <widget class="QComboBox" name="cbInterpolation">
         <item>
          <property name="text">
@@ -176,6 +169,30 @@
           <string>CSpline</string>
          </property>
         </item>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLabel" name="lbInterpolation">
+        <property name="text">
+         <string>Interpolation:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="lcMaxScatterPointAttempts">
+        <property name="text">
+         <string>Maximum Scatter Point Attempts:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QSpinBox" name="spMaxScatterPointAttempts">
+        <property name="maximum">
+         <number>1000000</number>
+        </property>
+        <property name="value">
+         <number>5000</number>
+        </property>
        </widget>
       </item>
      </layout>
