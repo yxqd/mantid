@@ -145,8 +145,9 @@ void AbsorptionCorrections::run() {
   monteCarloAbsCor->setProperty("EventsPerPoint", events);
   monteCarloAbsCor->setProperty(
       "Interpolation", m_uiForm.cbInterpolation->currentText().toStdString());
-  monteCarloAbsCor->setProperty("MaxScatterPointAttempts",
-                                m_uiForm.spMaxScatterPointAttempts->value());
+  auto maxAttempts =
+      static_cast<long>(m_uiForm.spMaxScatterPointAttempts->value());
+  monteCarloAbsCor->setProperty("MaxScatterPointAttempts", maxAttempts);
 
   // Can details
   bool useCan = m_uiForm.ckUseCan->isChecked();
