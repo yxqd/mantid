@@ -209,7 +209,8 @@ class SimpleShapeMonteCarloAbsorption(DataProcessorAlgorithm):
             log_names.append('sample_' + key.lower())
             log_values.append(value)
 
-        AddSampleLogMultiple(Workspace=output_ws, LogNames=log_names, LogValues=log_values, EnableLogging=False)
+        AddSampleLogMultiple(Workspace=output_ws, LogNames=log_names, LogValues=log_values,
+                             StoreInADS=False, EnableLogging=False)
 
         self.setProperty('OutputWorkspace', output_ws)
 
