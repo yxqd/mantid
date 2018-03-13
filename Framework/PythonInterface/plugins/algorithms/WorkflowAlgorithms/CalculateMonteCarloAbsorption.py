@@ -110,7 +110,7 @@ class CalculateMonteCarloAbsorption(DataProcessorAlgorithm):
         self.setPropertyGroup('NumberOfWavelengthPoints', 'Monte Carlo Options')
         self.setPropertyGroup('EventsPerPoint', 'Monte Carlo Options')
         self.setPropertyGroup('Interpolation', 'Monte Carlo Options')
-        self.setPropertyGroup('MaxScatterPointEvents', 'Monte Carlo Options')
+        self.setPropertyGroup('MaxScatterPointAttempts', 'Monte Carlo Options')
 
         # Container options
         self.declareProperty(WorkspaceProperty('ContainerWorkspace', '', direction=Direction.Input,
