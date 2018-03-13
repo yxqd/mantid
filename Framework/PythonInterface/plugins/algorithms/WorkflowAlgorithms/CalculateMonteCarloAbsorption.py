@@ -389,7 +389,7 @@ class CalculateMonteCarloAbsorption(DataProcessorAlgorithm):
                                 'NumberOfWavelengthPoints': self.getProperty('NumberOfWavelengthPoints').value,
                                 'EventsPerPoint': self.getProperty('EventsPerPoint').value,
                                 'Interpolation': self.getProperty('Interpolation').value,
-                                'MaxScatterPointAttempts': self.getProperty('MaxScatterPointAttempts').value}
+                                'MaxScatterPtAttempts': self.getProperty('MaxScatterPointAttempts').value}
 
         self._shape = self.getProperty('Shape').value
         self._height = self.getProperty('Height').value
