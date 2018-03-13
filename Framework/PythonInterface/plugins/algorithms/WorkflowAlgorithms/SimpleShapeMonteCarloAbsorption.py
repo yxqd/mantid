@@ -262,7 +262,7 @@ class SimpleShapeMonteCarloAbsorption(DataProcessorAlgorithm):
         self._number_wavelengths = self.getProperty('NumberOfWavelengthPoints').value
         self._events = self.getProperty('EventsPerPoint').value
         self._interpolation = self.getProperty('Interpolation').value
-        self._max_scatter_point_attempts = self.getProperty('MaxScatterPointAttempts').value
+        self._max_scatter_point_attempts = self.getProperty('MaxScatterPtAttempts').value
 
         # beam options
         self._beam_height = self.getProperty('BeamHeight').value
