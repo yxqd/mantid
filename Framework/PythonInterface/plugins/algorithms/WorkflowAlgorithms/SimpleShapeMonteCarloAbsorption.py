@@ -82,7 +82,7 @@ class SimpleShapeMonteCarloAbsorption(DataProcessorAlgorithm):
                              validator=StringListValidator(['Linear', 'CSpline']),
                              doc='Type of interpolation')
 
-        self.declareProperty(name='MaxScatterPointAttempts', defaultValue=5000,
+        self.declareProperty(name='MaxScatterPtAttempts', defaultValue=5000,
                              validator=IntBoundedValidator(0),
                              doc="Maximum number of tries made to generate a scattering point "
                                  "within the sample (+ optional container etc). Objects with "
@@ -182,20 +182,21 @@ class SimpleShapeMonteCarloAbsorption(DataProcessorAlgorithm):
 
         # set sample
         if self._material_defined:
-            SetSample(InputWorkspace=self._input_ws, Geometry=sample_geometry, EnableLogging=False)
+            SetSample(InputWorkspace=self._input_ws, Geometry=sample_geometry,
+                      EnableLogging=False, StoreInADS=False)
         else:
             # set the sample material
             try:
                 SetSample(InputWorkspace=self._input_ws, Geometry=sample_geometry,
-                          Material=self._sample_material, EnableLogging=False)
+                          Material=self._sample_material, EnableLogging=False, StoreInADS=False)
             except RuntimeError as exc:
-                raise RuntimeError("Supplied chemical formula was invalid: \n" + str(exc))
+                raise RuntimeError("Supplied chemical formula was invalid:\n{}".format(exc))
 
         prog.report('Calculating sample corrections')
 
         output_ws = MonteCarloAbsorption(InputWorkspace=self._input_ws, EventsPerPoint=self._events,
                                          NumberOfWavelengthPoints=self._number_wavelengths,
-                                         MaxScatterPointAttempts=self._max_scatter_point_attempts,
+                                         MaxScatterPtAttempts=self._max_scatter_point_attempts,
                                          Interpolation=self._interpolation, StoreInADS=False)
 
         prog.report('Recording Sample Logs')

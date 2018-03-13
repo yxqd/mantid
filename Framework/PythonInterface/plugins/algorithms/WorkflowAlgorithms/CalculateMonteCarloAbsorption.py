@@ -97,7 +97,7 @@ class CalculateMonteCarloAbsorption(DataProcessorAlgorithm):
                              validator=StringListValidator(
                                  ['Linear', 'CSpline']),
                              doc='Type of interpolation')
-        self.declareProperty(name='MaxScatterPointAttempts', defaultValue=5000,
+        self.declareProperty(name='MaxScatterPtAttempts', defaultValue=5000,
                              validator=IntBoundedValidator(0),
                              doc="Maximum number of tries made to generate a scattering point "
                                  "within the sample (+ optional container etc). Objects with "
@@ -110,7 +110,7 @@ class CalculateMonteCarloAbsorption(DataProcessorAlgorithm):
         self.setPropertyGroup('NumberOfWavelengthPoints', 'Monte Carlo Options')
         self.setPropertyGroup('EventsPerPoint', 'Monte Carlo Options')
         self.setPropertyGroup('Interpolation', 'Monte Carlo Options')
-        self.setPropertyGroup('MaxScatterPointAttempts', 'Monte Carlo Options')
+        self.setPropertyGroup('MaxScatterPtAttempts', 'Monte Carlo Options')
 
         # Container options
         self.declareProperty(WorkspaceProperty('ContainerWorkspace', '', direction=Direction.Input,
