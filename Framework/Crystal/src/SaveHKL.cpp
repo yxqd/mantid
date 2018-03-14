@@ -258,8 +258,9 @@ void SaveHKL::exec() {
     NeutronAtom neutron(static_cast<uint16_t>(EMPTY_DBL()),
                         static_cast<uint16_t>(0), 0.0, 0.0, m_smu, 0.0, m_smu,
                         m_amu);
-    Object shape = peaksW->sample().getShape(); // copy
-    shape.setMaterial(Material("SetInSaveHKL", neutron, 1.0));
+    auto shape = boost::shared_ptr<IObject>(
+        peaksW->sample().getShape().cloneWithMaterial(
+            Material("SetInSaveHKL", neutron, 1.0)));
     peaksW->mutableSample().setShape(shape);
   }
   if (m_smu != EMPTY_DBL() && m_amu != EMPTY_DBL())
@@ -604,9 +605,11 @@ void SaveHKL::exec() {
   out.flush();
   out.close();
   // delete banned peaks
+  std::vector<int> badPeaks;
   for (auto it = banned.crbegin(); it != banned.crend(); ++it) {
-    peaksW->removePeak(static_cast<int>(*it));
+    badPeaks.push_back(static_cast<int>(*it));
   }
+  peaksW->removePeaks(std::move(badPeaks));
   setProperty("OutputWorkspace", peaksW);
 }
 /**

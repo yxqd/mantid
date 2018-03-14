@@ -1,9 +1,8 @@
 #include "MantidAlgorithms/RemoveLowResTOF.h"
 #include "MantidAPI/HistogramValidator.h"
 #include "MantidAPI/InstrumentValidator.h"
-#include "MantidAPI/SpectrumInfo.h"
 #include "MantidAPI/RawCountValidator.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidAPI/SpectrumInfo.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidGeometry/IComponent.h"
 #include "MantidGeometry/Instrument.h"
@@ -23,8 +22,6 @@ using namespace Kernel;
 using namespace API;
 using namespace Geometry;
 using DataObjects::EventWorkspace;
-using Kernel::Exception::InstrumentDefinitionError;
-using Kernel::Exception::NotFoundError;
 using std::size_t;
 using std::string;
 
@@ -33,11 +30,7 @@ DECLARE_ALGORITHM(RemoveLowResTOF)
 /// Default constructor
 RemoveLowResTOF::RemoveLowResTOF()
     : m_inputWS(), m_inputEvWS(), m_DIFCref(0.), m_K(0.), m_Tmin(0.),
-      m_wavelengthMin(0.), m_numberOfSpectra(0), m_progress(nullptr),
-      m_outputLowResTOF(false) {}
-
-/// Destructor
-RemoveLowResTOF::~RemoveLowResTOF() { delete m_progress; }
+      m_wavelengthMin(0.), m_numberOfSpectra(0), m_outputLowResTOF(false) {}
 
 /// Algorithm's name for identification overriding a virtual method
 const string RemoveLowResTOF::name() const { return "RemoveLowResTOF"; }
@@ -128,7 +121,7 @@ void RemoveLowResTOF::exec() {
   }
 
   // set up the progress bar
-  m_progress = new Progress(this, 0.0, 1.0, m_numberOfSpectra);
+  m_progress = make_unique<Progress>(this, 0.0, 1.0, m_numberOfSpectra);
 
   this->getTminData(false);
 
@@ -148,8 +141,6 @@ void RemoveLowResTOF::exec() {
     }
     m_progress->report();
   }
-
-  this->runMaskDetectors();
 }
 
 /** Remove low resolution TOF from an EventWorkspace
@@ -171,10 +162,10 @@ void RemoveLowResTOF::execEvent(const SpectrumInfo &spectrumInfo) {
 
   std::size_t numEventsOrig = outW->getNumberEvents();
   // set up the progress bar
-  m_progress = new Progress(this, 0.0, 1.0, m_numberOfSpectra * 2);
+  m_progress = make_unique<Progress>(this, 0.0, 1.0, m_numberOfSpectra * 2);
 
   // algorithm assumes the data is sorted so it can jump out early
-  outW->sortAll(Mantid::DataObjects::TOF_SORT, m_progress);
+  outW->sortAll(Mantid::DataObjects::TOF_SORT, m_progress.get());
 
   this->getTminData(true);
   size_t numClearedEventLists = 0;
@@ -240,7 +231,6 @@ void RemoveLowResTOF::execEvent(const SpectrumInfo &spectrumInfo) {
   g_log.debug() << "TOF range is now " << outW->getTofMin() << " to "
                 << outW->getTofMax() << " microseconds\n";
   outW->clearMRU();
-  this->runMaskDetectors();
 }
 
 double RemoveLowResTOF::calcTofMin(const std::size_t workspaceIndex,
@@ -303,17 +293,6 @@ void RemoveLowResTOF::getTminData(const bool isEvent) {
   g_log.information() << "Tmin = " << m_Tmin << " microseconds\n";
   if (m_Tmin < 0.)
     throw std::runtime_error("Cannot have minimum time less than zero");
-}
-
-void RemoveLowResTOF::runMaskDetectors() {
-  IAlgorithm_sptr alg = createChildAlgorithm("MaskDetectors");
-  alg->setProperty<MatrixWorkspace_sptr>("Workspace",
-                                         this->getProperty("OutputWorkspace"));
-  alg->setProperty<MatrixWorkspace_sptr>("MaskedWorkspace",
-                                         this->getProperty("InputWorkspace"));
-  if (!alg->execute())
-    throw std::runtime_error(
-        "MaskDetectors Child Algorithm has not executed successfully");
 }
 
 } // namespace Algorithm

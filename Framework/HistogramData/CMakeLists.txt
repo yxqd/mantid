@@ -8,10 +8,12 @@ set ( SRC_FILES
 	src/FrequencyStandardDeviations.cpp
 	src/FrequencyVariances.cpp
 	src/Histogram.cpp
+	src/HistogramBuilder.cpp
 	src/HistogramMath.cpp
 	src/Interpolate.cpp
 	src/Points.cpp
 	src/Rebin.cpp
+	src/Slice.cpp
 )
 
 set ( INC_FILES
@@ -27,8 +29,11 @@ set ( INC_FILES
 	inc/MantidHistogramData/FrequencyStandardDeviations.h
 	inc/MantidHistogramData/FrequencyVariances.h
 	inc/MantidHistogramData/Histogram.h
+	inc/MantidHistogramData/HistogramBuilder.h
 	inc/MantidHistogramData/HistogramDx.h
 	inc/MantidHistogramData/HistogramE.h
+        inc/MantidHistogramData/HistogramItem.h
+        inc/MantidHistogramData/HistogramIterator.h
 	inc/MantidHistogramData/HistogramMath.h
 	inc/MantidHistogramData/HistogramX.h
 	inc/MantidHistogramData/HistogramY.h
@@ -43,6 +48,7 @@ set ( INC_FILES
 	inc/MantidHistogramData/Points.h
 	inc/MantidHistogramData/Rebin.h
 	inc/MantidHistogramData/Scalable.h
+	inc/MantidHistogramData/Slice.h
 	inc/MantidHistogramData/StandardDeviationVectorOf.h
 	inc/MantidHistogramData/Validation.h
 	inc/MantidHistogramData/VarianceVectorOf.h
@@ -62,8 +68,10 @@ set ( TEST_FILES
 	FrequenciesTest.h
 	FrequencyStandardDeviationsTest.h
 	FrequencyVariancesTest.h
+	HistogramBuilderTest.h
 	HistogramDxTest.h
 	HistogramETest.h
+        HistogramIteratorTest.h
 	HistogramMathTest.h
 	HistogramTest.h
 	HistogramXTest.h
@@ -79,6 +87,7 @@ set ( TEST_FILES
 	PointsTest.h
 	RebinTest.h
 	ScalableTest.h
+	SliceTest.h
 	StandardDeviationVectorOfTest.h
 	VarianceVectorOfTest.h
 	VectorOfTest.h
@@ -104,12 +113,15 @@ set_target_properties ( HistogramData PROPERTIES OUTPUT_NAME MantidHistogramData
   COMPILE_DEFINITIONS IN_MANTID_HISTOGRAMDATA )
 
 if (OSX_VERSION VERSION_GREATER 10.8)
-  set_target_properties ( HistogramData PROPERTIES INSTALL_RPATH "@loader_path/../MacOS")
+  set_target_properties(HistogramData PROPERTIES INSTALL_RPATH "@loader_path/../MacOS")
+elseif ( ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" )
+  set_target_properties(HistogramData PROPERTIES INSTALL_RPATH "\$ORIGIN/../${LIB_DIR}")
 endif ()
 
 # Add to the 'Framework' group in VS
 set_property ( TARGET HistogramData PROPERTY FOLDER "MantidFramework" )
 
+target_include_directories ( HistogramData PUBLIC ${Boost_INCLUDE_DIRS})
 target_link_libraries ( HistogramData LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME} 
                         ${GSL_LIBRARIES} ${MANTIDLIBS} )
 

@@ -39,16 +39,20 @@ namespace Geometry {
 
    File change history is stored at: <https://github.com/mantidproject/mantid>
 */
-class Object;
+class CSGObject;
+class MeshObject;
+
 class MANTID_GEOMETRY_DLL CacheGeometryGenerator {
 private:
-  Object *Obj;        ///< Input Object
-  int mNoOfVertices;  ///< number of vertices
-  int mNoOfTriangles; ///< number of triangles
-  double *mPoints;    ///<double array or points
-  int *mFaces;        ///< Integer array of faces
+  CSGObject *csgObj;   ///< Input CSGObject
+  MeshObject *meshObj; ///< Input MeshObject
+  int mNoOfVertices;   ///< number of vertices
+  int mNoOfTriangles;  ///< number of triangles
+  double *mPoints;     ///<double array or points
+  int *mFaces;         ///< Integer array of faces
 public:
-  CacheGeometryGenerator(Object *obj);
+  CacheGeometryGenerator(CSGObject *obj);
+  CacheGeometryGenerator(MeshObject *obj);
   ~CacheGeometryGenerator();
   /// Generate the trangles
   void Generate();

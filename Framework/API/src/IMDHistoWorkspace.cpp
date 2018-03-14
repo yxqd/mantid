@@ -1,7 +1,11 @@
 #include "MantidAPI/IMDHistoWorkspace.h"
-#include "MantidKernel/System.h"
+#include "MantidAPI/ExperimentInfo.h"
+#include "MantidAPI/Sample.h"
 #include "MantidKernel/Exception.h"
 #include "MantidKernel/IPropertyManager.h"
+#include "MantidKernel/System.h"
+
+#include <sstream>
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;

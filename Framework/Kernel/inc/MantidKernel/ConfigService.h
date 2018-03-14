@@ -7,20 +7,22 @@
 #include "MantidKernel/DllConfig.h"
 #include "MantidKernel/SingletonHolder.h"
 #include "MantidKernel/ProxyInfo.h"
-#include <vector>
 #include <map>
 #include <set>
+#include <string>
+#include <vector>
 
 #include <Poco/Notification.h>
 #include <Poco/NotificationCenter.h>
-#include <Poco/AutoPtr.h>
 
 //----------------------------------------------------------------------
 // Forward declarations
 //----------------------------------------------------------------------
 /// @cond Exclude from doxygen documentation
 namespace Poco {
+class AbstractObserver;
 class Channel;
+template <class C> class AutoPtr;
 namespace Util {
 class PropertyFileConfiguration;
 class SystemConfiguration;
@@ -37,7 +39,6 @@ namespace Kernel {
 //----------------------------------------------------------------------
 // More forward declarations
 //----------------------------------------------------------------------
-class Logger;
 class FacilityInfo;
 class InstrumentInfo;
 
@@ -239,7 +240,7 @@ public:
   void setConsoleLogLevel(int logLevel);
   /// Sets the log level priority for the selected Filter log channel
   void setFilterChannelLogLevel(const std::string &filterChannelName,
-                                int logLevel);
+                                int logLevel, bool quiet = false);
 
   /// Look for an instrument
   const InstrumentInfo &
@@ -253,12 +254,6 @@ public:
 
   // Starts up the logging
   void configureLogging();
-
-  /// Return true if ParaView plugins are available
-  bool pvPluginsAvailable() const;
-
-  /// Return the path to the pv plugins
-  const std::string getPVPluginsPath() const;
 
   /// Gets the proxy for the system
   Kernel::ProxyInfo &getProxy(const std::string &url);

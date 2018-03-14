@@ -9,6 +9,7 @@
 #include "MantidAPI/AnalysisDataService.h"
 
 #include <Poco/NObserver.h>
+#include <iterator>
 #include <mutex>
 
 namespace Mantid {
@@ -52,7 +53,8 @@ class Algorithm;
 class MANTID_API_DLL WorkspaceGroup : public Workspace {
 public:
   /// Default constructor.
-  WorkspaceGroup();
+  WorkspaceGroup(
+      const Parallel::StorageMode storageMode = Parallel::StorageMode::Cloned);
   /// Destructor
   ~WorkspaceGroup() override;
   /// Return a string ID of the class
@@ -88,6 +90,19 @@ public:
   /// Prints the group to the screen using the logger at debug
   void print() const;
 
+  /// Returns a non-const iterator pointing at the first element in the
+  /// workspace group
+  std::vector<Workspace_sptr>::iterator begin();
+  /// Returns a non-const iterator pointing at the last element in the workspace
+  /// group
+  std::vector<Workspace_sptr>::iterator end();
+  /// Returns a const iterator pointing at the first element in the workspace
+  /// group
+  std::vector<Workspace_sptr>::const_iterator begin() const;
+  /// Returns a const iterator pointing at the last element in the workspace
+  /// group
+  std::vector<Workspace_sptr>::const_iterator end() const;
+
   /// @name Wrapped ADS calls
   //@{
 
@@ -114,7 +129,6 @@ public:
   /// returns a copy as the internal vector can mutate while the vector is being
   /// iterated over.
   std::vector<std::string> getNames() const;
-
   //@}
 
   WorkspaceGroup(const WorkspaceGroup &ref) = delete;
@@ -122,6 +136,9 @@ public:
 
 private:
   WorkspaceGroup *doClone() const override {
+    throw std::runtime_error("Cloning of WorkspaceGroup is not implemented.");
+  }
+  WorkspaceGroup *doCloneEmpty() const override {
     throw std::runtime_error("Cloning of WorkspaceGroup is not implemented.");
   }
   /// ADS removes a member of this group using this method. It doesn't send

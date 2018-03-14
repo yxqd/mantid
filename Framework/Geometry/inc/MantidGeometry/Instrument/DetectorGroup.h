@@ -181,7 +181,8 @@ public:
 
   const ParameterMap &parameterMap() const override;
   size_t index() const override;
-  virtual void registerContents(class ComponentVisitor &visitor) const override;
+  virtual size_t
+  registerContents(class ComponentVisitor &visitor) const override;
 
 protected:
   /// The ID of this effective detector
@@ -245,8 +246,8 @@ protected:
   void initDraw() const override {}
 
   /// Returns the shape of the Object
-  const boost::shared_ptr<const Object> shape() const override {
-    return boost::shared_ptr<const Object>();
+  const boost::shared_ptr<const IObject> shape() const override {
+    return boost::shared_ptr<const IObject>();
   }
   /// Returns the material of the Object
   const Kernel::Material material() const override;

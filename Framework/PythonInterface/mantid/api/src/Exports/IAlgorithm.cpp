@@ -16,6 +16,7 @@
 #include "MantidPythonInterface/kernel/Environment/GlobalInterpreterLock.h"
 
 #include <Poco/Thread.h>
+#include <Poco/ActiveResult.h>
 
 #include <boost/python/arg_from_python.hpp>
 #include <boost/python/bases.hpp>
@@ -93,7 +94,7 @@ struct MandatoryFirst {
   /// in the list
   bool operator()(const Property *p1, const Property *p2) const {
     // this is false, unless p1 is not valid and p2 is valid
-    return (p1->isValid() != "") && (p2->isValid() == "");
+    return (!p1->isValid().empty()) && (p2->isValid().empty());
   }
 };
 
@@ -169,6 +170,25 @@ object getOutputProperties(IAlgorithm &self) {
   ToPyString toPyStr;
   for (const auto &p : properties) {
     if (p->direction() == Direction::Output) {
+      names.append(handle<>(toPyStr(p->name())));
+    }
+  }
+  return names;
+}
+
+/**
+ * Returns a list of inout property names in the order they were declared
+ * @param self :: A pointer to the python object wrapping and Algorithm.
+ * @return A Python list of strings
+ */
+object getInOutProperties(IAlgorithm &self) {
+  const PropertyVector &properties(self.getProperties()); // No copy
+
+  Environment::GlobalInterpreterLock gil;
+  list names;
+  ToPyString toPyStr;
+  for (const auto &p : properties) {
+    if (p->direction() == Direction::InOut) {
       names.append(handle<>(toPyStr(p->name())));
     }
   }
@@ -277,6 +297,15 @@ bool executeProxy(object &self) {
 }
 
 /**
+ * Execute the algorithm asynchronously
+ * @param self :: A reference to the calling object
+ */
+void executeAsync(object &self) {
+  auto &calg = extract<IAlgorithm &>(self)();
+  calg.executeAsync();
+}
+
+/**
  * @param self A reference to the calling object
  * @return An AlgorithmID wrapped in a AlgorithmIDProxy container or None if
  * there is no ID
@@ -374,6 +403,8 @@ void export_ialgorithm() {
            "optional ones.")
       .def("outputProperties", &getOutputProperties, arg("self"),
            "Returns a list of the output properties on the algorithm")
+      .def("inoutProperties", &getInOutProperties, arg("self"),
+           "Returns a list of the inout properties on the algorithm")
       .def("isInitialized", &IAlgorithm::isInitialized, arg("self"),
            "Returns True if the algorithm is initialized, False otherwise")
       .def("isExecuted", &IAlgorithm::isExecuted, arg("self"),
@@ -421,6 +452,8 @@ void export_ialgorithm() {
            "Cross-check all inputs and return any errors as a dictionary")
       .def("execute", &executeProxy, arg("self"),
            "Runs the algorithm and returns whether it has been successful")
+      .def("executeAsync", &executeAsync, arg("self"),
+           "Starts the algorithm in a separate thread and returns immediately")
       // 'Private' static methods
       .def("_algorithmInThread", &_algorithmInThread, arg("thread_id"))
       .staticmethod("_algorithmInThread")

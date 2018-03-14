@@ -9,6 +9,8 @@ set ( MODULE_TEMPLATE src/kernel.cpp.in )
 #    definitions occur and some depend on their base classes being exported first --
 set ( EXPORT_FILES
   src/Exports/ConfigService.cpp
+  src/Exports/ConfigObserver.cpp
+  src/Exports/ConfigPropertyObserver.cpp
   src/Exports/DataItem.cpp
   src/Exports/IPropertyManager.cpp
   src/Exports/Property.cpp
@@ -36,6 +38,7 @@ set ( EXPORT_FILES
   src/Exports/ListValidator.cpp
   src/Exports/ArrayLengthValidator.cpp
   src/Exports/ArrayBoundedValidator.cpp
+  src/Exports/ArrayOrderedPairsValidator.cpp
   src/Exports/MandatoryValidator.cpp
   src/Exports/CompositeValidator.cpp
   src/Exports/LogFilter.cpp
@@ -55,6 +58,7 @@ set ( EXPORT_FILES
   src/Exports/OptionalBool.cpp
   src/Exports/UsageService.cpp
   src/Exports/Atom.cpp
+  src/Exports/StringContainsValidator.cpp
 )
 
 set ( MODULE_DEFINITION ${CMAKE_CURRENT_BINARY_DIR}/kernel.cpp )
@@ -66,15 +70,18 @@ create_module ( ${MODULE_TEMPLATE} ${MODULE_DEFINITION} ${EXPORT_FILES} )
 set ( SRC_FILES
   src/NdArray.cpp
   src/Converters/CloneToNumpy.cpp
+  src/Converters/DateAndTime.cpp
   src/Converters/NDArrayToVector.cpp
   src/Converters/NDArrayTypeIndex.cpp
   src/Converters/NumpyFunctions.cpp
   src/Converters/PyArrayType.cpp
   src/Converters/PyObjectToMatrix.cpp
+  src/Converters/PyObjectToString.cpp
   src/Converters/PyObjectToV3D.cpp
   src/Converters/PyObjectToVMD.cpp
   src/Converters/WrapWithNumpy.cpp
   src/Registry/MappingTypeHandler.cpp
+  src/Registry/PropertyManagerFactory.cpp
   src/Registry/PropertyWithValueFactory.cpp
   src/Registry/SequenceTypeHandler.cpp
   src/Registry/TypeRegistry.cpp
@@ -87,6 +94,7 @@ set ( INC_FILES
   ${HEADER_DIR}/kernel/NdArray.h
   ${HEADER_DIR}/kernel/Converters/CArrayToNDArray.h
   ${HEADER_DIR}/kernel/Converters/CloneToNumpy.h
+  ${HEADER_DIR}/kernel/Converters/DateAndTime.h
   ${HEADER_DIR}/kernel/Converters/MapToPyDictionary.h
   ${HEADER_DIR}/kernel/Converters/MatrixToNDArray.h
   ${HEADER_DIR}/kernel/Converters/NumpyFunctions.h
@@ -96,6 +104,7 @@ set ( INC_FILES
   ${HEADER_DIR}/kernel/Converters/VectorToNDArray.h
   ${HEADER_DIR}/kernel/Converters/PyArrayType.h
   ${HEADER_DIR}/kernel/Converters/PyObjectToMatrix.h
+  ${HEADER_DIR}/kernel/Converters/PyObjectToString.h
   ${HEADER_DIR}/kernel/Converters/PyObjectToV3D.h
   ${HEADER_DIR}/kernel/Converters/PyObjectToVMD.h
   ${HEADER_DIR}/kernel/Converters/PySequenceToVector.h
@@ -109,6 +118,7 @@ set ( INC_FILES
   ${HEADER_DIR}/kernel/Policies/VectorToNumpy.h
   ${HEADER_DIR}/kernel/Registry/MappingTypeHandler.h
   ${HEADER_DIR}/kernel/Registry/PropertyValueHandler.h
+  ${HEADER_DIR}/kernel/Registry/PropertyManagerFactory.h
   ${HEADER_DIR}/kernel/Registry/PropertyWithValueFactory.h
   ${HEADER_DIR}/kernel/Registry/SequenceTypeHandler.h
   ${HEADER_DIR}/kernel/Registry/TypedPropertyValueHandler.h
@@ -152,11 +162,20 @@ if ( WIN32 ) #.lib -> .dll
   string ( REPLACE "/lib/" "/bin/" NEXUSLIB ${NEXUSLIB} )
   string ( REPLACE ".lib" ".dll" NEXUSLIB ${NEXUSLIB} )
 endif()
+set ( MPISETUP_PY mpisetup )
+if ( MPI_EXPERIMENTAL )
+  set ( IMPORT_MPI_IN_PYTHON True )
+else()
+  set ( IMPORT_MPI_IN_PYTHON False )
+endif()
 
 # Build version
 configure_file ( ${CMAKE_CURRENT_SOURCE_DIR}/${PACKAGESETUP_PY}.py.in ${CMAKE_CURRENT_BINARY_DIR}/${PACKAGESETUP_PY}.py )
+configure_file ( ${CMAKE_CURRENT_SOURCE_DIR}/${MPISETUP_PY}.py.in ${CMAKE_CURRENT_BINARY_DIR}/${MPISETUP_PY}.py )
 # Copy py to build directory, taking care of multi-config (MSVC) builds
 copy_files_to_dir ( ${PACKAGESETUP_PY}.py ${CMAKE_CURRENT_BINARY_DIR} ${OUTPUT_DIR}
+                    PYTHON_INSTALL_FILES )
+copy_files_to_dir ( ${MPISETUP_PY}.py ${CMAKE_CURRENT_BINARY_DIR} ${OUTPUT_DIR}
                     PYTHON_INSTALL_FILES )
 
 # Package version
@@ -166,6 +185,7 @@ if ( WIN32 OR APPLE )
   set ( NEXUSLIB ../../${NEXUSLIB_FILE} )
 endif()
 configure_file ( ${CMAKE_CURRENT_SOURCE_DIR}/${PACKAGESETUP_PY}.py.in ${CMAKE_CURRENT_BINARY_DIR}/${PACKAGESETUP_PY}.install.py )
+configure_file ( ${CMAKE_CURRENT_SOURCE_DIR}/${MPISETUP_PY}.py.in ${CMAKE_CURRENT_BINARY_DIR}/${MPISETUP_PY}.install.py )
 
 #############################################################################################
 # Create the target for this directory
@@ -175,12 +195,14 @@ add_library ( PythonKernelModule ${EXPORT_FILES} ${MODULE_DEFINITION} ${SRC_FILE
 set_python_properties( PythonKernelModule _kernel )
 set_target_output_directory ( PythonKernelModule ${OUTPUT_DIR} .pyd )
 # Add the required dependencies
-target_link_libraries ( PythonKernelModule LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME} Kernel ${Boost_LIBRARIES}
-                        ${PYTHON_LIBRARIES} ${PYTHON_DEPS} ${POCO_LIBRARIES} ${TBB_LIBRARIES} 
+target_link_libraries ( PythonKernelModule LINK_PRIVATE ${TCMALLOC_LIBRARIES_LINKTIME} Types Kernel ${Boost_LIBRARIES}
+                        ${PYTHON_LIBRARIES} ${PYTHON_DEPS} ${POCO_LIBRARIES} ${TBB_LIBRARIES}
 			${TBB_MALLOC_LIBRARIES} )
 
 if (OSX_VERSION VERSION_GREATER 10.8)
-  set_target_properties ( PythonKernelModule PROPERTIES INSTALL_RPATH "@loader_path/../../../MacOS")
+  set_target_properties(PythonKernelModule PROPERTIES INSTALL_RPATH "@loader_path/../../../MacOS")
+elseif ( ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" )
+  set_target_properties(PythonKernelModule PROPERTIES INSTALL_RPATH "\$ORIGIN/../../../${LIB_DIR}")
 endif ()
 
 ###########################################################################
@@ -194,3 +216,5 @@ install ( FILES ${PY_FILES} DESTINATION ${BIN_DIR}/mantid/kernel )
 # packagesetup.py that will overwrite the ones from the built target
 install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/${PACKAGESETUP_PY}.install.py DESTINATION
           ${BIN_DIR}/mantid/kernel RENAME ${PACKAGESETUP_PY}.py )
+install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/${MPISETUP_PY}.install.py DESTINATION
+          ${BIN_DIR}/mantid/kernel RENAME ${MPISETUP_PY}.py )

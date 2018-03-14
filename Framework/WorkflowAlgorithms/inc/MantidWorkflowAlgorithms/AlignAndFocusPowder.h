@@ -1,9 +1,6 @@
 #ifndef MANTID_ALGORITHM_AlignAndFocusPowder_H_
 #define MANTID_ALGORITHM_AlignAndFocusPowder_H_
 
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAPI/DataProcessorAlgorithm.h"
 #include "MantidAPI/MatrixWorkspace_fwd.h"
 #include "MantidDataObjects/EventWorkspace.h"
@@ -60,18 +57,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 File change history is stored at: <https://github.com/mantidproject/mantid>
 Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
-class DLLExport AlignAndFocusPowder : public API::DataProcessorAlgorithm {
+class DLLExport AlignAndFocusPowder
+    : public API::DistributedDataProcessorAlgorithm {
 public:
-  /// Constructor
-  AlignAndFocusPowder();
-  /// Destructor
-  ~AlignAndFocusPowder() override;
   /// Algorithm's name for identification overriding a virtual method
-  const std::string name() const override;
+  const std::string name() const override { return "AlignAndFocusPowder"; }
+
   /// Algorithm's version for identification overriding a virtual method
-  int version() const override;
+  int version() const override { return 1; }
+
   /// Algorithm's category for identification overriding a virtual method
-  const std::string category() const override;
+  const std::string category() const override {
+    return "Workflow\\Diffraction";
+  }
+
   /// Summary of algorithms purpose
   const std::string summary() const override {
     return "Algorithm to focus powder diffraction data into a number of "
@@ -146,7 +145,7 @@ private:
   /// Offset to low resolution TOF spectra
   size_t m_lowResSpecOffset{0};
 
-  API::Progress *m_progress{nullptr}; ///< Progress reporting
+  std::unique_ptr<API::Progress> m_progress = nullptr; ///< Progress reporting
 };
 
 } // namespace WorkflowAlgorithm

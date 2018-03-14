@@ -4,13 +4,11 @@
 #include <cxxtest/TestSuite.h>
 
 #include "MantidParallel/Communicator.h"
-#ifdef MPI_EXPERIMENTAL
-#include "MantidParallel/ParallelRunner.h"
-#endif
+#include "MantidTestHelpers/ParallelRunner.h"
 
 using namespace Mantid::Parallel;
+using namespace ParallelTestHelpers;
 
-#ifdef MPI_EXPERIMENTAL
 namespace {
 void send_recv(const Communicator &comm) {
   if (comm.size() < 2)
@@ -24,6 +22,27 @@ void send_recv(const Communicator &comm) {
     double result;
     TS_ASSERT_THROWS_NOTHING(comm.recv(0, 123, result));
     TS_ASSERT_EQUALS(result, data);
+  }
+}
+
+void send_recv_status(const Communicator &comm) {
+  if (comm.size() < 2)
+    return;
+
+  std::vector<double> data{1.1, 2.2};
+
+  if (comm.rank() == 0)
+    (comm.send(1, 123, data.data(), 2));
+  (comm.send(1, 123, data.data(), 1));
+  if (comm.rank() == 1) {
+    std::vector<double> result1(2);
+    const auto status1 = comm.recv(0, 123, result1.data(), 2);
+    TS_ASSERT_EQUALS(*status1.count<double>(), 2);
+    TS_ASSERT_EQUALS(result1, data);
+    std::vector<double> result2(2);
+    const auto status2 = comm.recv(0, 123, result2.data(), 2);
+    TS_ASSERT_EQUALS(*status2.count<double>(), 1);
+    TS_ASSERT_EQUALS(result2, (std::vector<double>{1.1, 0.0}));
   }
 }
 
@@ -70,7 +89,6 @@ void isend_irecv(const Communicator &comm) {
   TS_ASSERT_EQUALS(result, expected);
 }
 }
-#endif
 
 class CommunicatorTest : public CxxTest::TestSuite {
 public:
@@ -91,29 +109,15 @@ public:
 #endif
   }
 
-  void test_send_recv() {
-#ifdef MPI_EXPERIMENTAL
-    runParallel(send_recv);
-#endif
-  }
+  void test_send_recv() { runParallel(send_recv); }
 
-  void test_isend_recv() {
-#ifdef MPI_EXPERIMENTAL
-    runParallel(isend_recv);
-#endif
-  }
+  void test_send_recv_status() { runParallel(send_recv_status); }
 
-  void test_send_irecv() {
-#ifdef MPI_EXPERIMENTAL
-    runParallel(send_irecv);
-#endif
-  }
+  void test_isend_recv() { runParallel(isend_recv); }
 
-  void test_isend_irecv() {
-#ifdef MPI_EXPERIMENTAL
-    runParallel(isend_irecv);
-#endif
-  }
+  void test_send_irecv() { runParallel(send_irecv); }
+
+  void test_isend_irecv() { runParallel(isend_irecv); }
 };
 
 #endif /* MANTID_PARALLEL_COMMUNICATORTEST_H_ */

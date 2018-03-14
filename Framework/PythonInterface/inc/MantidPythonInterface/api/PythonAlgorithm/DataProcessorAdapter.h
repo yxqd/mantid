@@ -41,13 +41,22 @@ namespace PythonInterface {
  * It also provides access to the protected methods on DataProcessorAlgorithm
  * from the type exported to Python
  */
+template <class Base>
 class DataProcessorAdapter
-    : public AlgorithmAdapter<API::DataProcessorAlgorithm> {
-  typedef AlgorithmAdapter<API::DataProcessorAlgorithm> SuperClass;
-
+    : public AlgorithmAdapter<API::GenericDataProcessorAlgorithm<Base>> {
 public:
   /// A constructor that looks like a Python __init__ method
   DataProcessorAdapter(PyObject *self);
+
+  /// Disable default constructor - The PyObject must be supplied to construct
+  /// the object
+  DataProcessorAdapter() = delete;
+
+  /// Disable copy operator
+  DataProcessorAdapter(const DataProcessorAdapter &) = delete;
+
+  /// Disable assignment operator
+  DataProcessorAdapter &operator=(const DataProcessorAdapter &) = delete;
 
   // -------------------- Pass through methods ----------------------------
   // Boost.python needs public access to the base class methods in order to
@@ -132,11 +141,6 @@ public:
 
   int getNThreadsProxy() { return this->getNThreads(); }
   // ------------------------------------------------------------------------
-
-private:
-  /// The PyObject must be supplied to construct the object
-  DISABLE_DEFAULT_CONSTRUCT(DataProcessorAdapter)
-  DISABLE_COPY_AND_ASSIGN(DataProcessorAdapter)
 };
 }
 }

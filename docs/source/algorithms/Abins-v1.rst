@@ -37,7 +37,9 @@ A description about the implemented working equations can be found :ref:`here <D
 
 Abins is in constant development and suggestions
 how to make it better are very welcome. For any suggestions of enhancements please contact
-Krzysztof Dymkowski (krzysztof.dymkowski@stfc.ac.uk).
+Dr. Sanghamitra Mukhopadhyay (sanghamitra.mukhopadhyay@stfc.ac.uk).
+
+If Abins is used as part of your data analysis routines, please cite the relevant reference [1]_.
 
 
 Usage
@@ -45,59 +47,61 @@ Usage
 
 .. include:: ../usagedata-note.txt
 
-**Example - loading CASTEP phonon data :**
+**Example - loading CASTEP phonon data:**
 
 .. testcode:: AbinsCastepSimple
 
-    benzene_wrk = Abins(DFTProgram="CASTEP", PhononFile="benzene.phonon", QuantumOrderEventsNumber="1")
+    benzene_wrk = Abins(AbInitioProgram="CASTEP", VibrationalOrPhononFile="benzene.phonon",
+                        QuantumOrderEventsNumber="1")
 
 
     for name in benzene_wrk.getNames():
-        print name
+        print(name)
 
 Output:
 
 .. testoutput:: AbinsCastepSimple
 
-    benzene_wrk_H_total
-    benzene_wrk_H
     benzene_wrk_C_total
     benzene_wrk_C
+    benzene_wrk_H_total
+    benzene_wrk_H
 
-**Example - loading CRYSTAL phonon data :**
+**Example - loading CRYSTAL phonon data:**
 
 .. testcode:: AbinsCrystalSimple
 
-    wrk=Abins(DFTProgram="CRYSTAL", PhononFile="b3lyp.out", QuantumOrderEventsNumber="1")
+    wrk=Abins(AbInitioProgram="CRYSTAL", VibrationalOrPhononFile="b3lyp.out", QuantumOrderEventsNumber="1")
 
     for name in wrk.getNames():
-        print name
+        print(name)
 
 Output:
 
 .. testoutput:: AbinsCrystalSimple
 
-    wrk_Na_total
-    wrk_Na
     wrk_C_total
     wrk_C
     wrk_H_total
     wrk_H
-    wrk_O_total
-    wrk_O
     wrk_N_total
     wrk_N
+    wrk_Na_total
+    wrk_Na
+    wrk_O_total
+    wrk_O
 
-**Example - calling Abins with more arguments:**
+**Example - calling AbINS with more arguments:**
 
 .. testcode:: AbinsexplicitParameters
 
-    wrk_verbose=Abins(DFTprogram="CASTEP", PhononFile="benzene.phonon", ExperimentalFile="benzene_experimental.dat",
-                    Temperature=10, SampleForm="Powder", Instrument="TOSCA", Atoms="H", SumContributions=True,
-                    QuantumOrderEventsNumber="1", ScaleByCrossSection="Incoherent")
+    wrk_verbose=Abins(AbInitioProgram="CASTEP", VibrationalOrPhononFile="benzene.phonon",
+                      ExperimentalFile="benzene_experimental.dat",
+                      TemperatureInKelvin=10, BinWidthInWavenumber=1.0, SampleForm="Powder", Instrument="TOSCA",
+                      Atoms="H", SumContributions=True, QuantumOrderEventsNumber="1", ScaleByCrossSection="Incoherent")
 
     for name in wrk_verbose.getNames():
-        print name
+        print(name)
 
 Output:
 
@@ -113,3 +117,9 @@ Output:
 .. sourcelink::
   :cpp: None
   :h: None
+
+
+References
+----------
+
+.. [1] K. Dymkowski, S. F. Parker, F. Fernandez-Alonso and S. Mukhopadhyay,  “AbINS: The modern software for INS interpretation” , Physica B, doi:10.1016/j.physb.2018.02.034 (2018).

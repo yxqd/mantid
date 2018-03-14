@@ -1,4 +1,5 @@
-#include "MantidGeometry/Objects/Object.h"
+#include "MantidGeometry/Objects/CSGObject.h"
+#include "MantidGeometry/Objects/MeshObject.h"
 #include "MantidGeometry/Instrument/ObjComponent.h"
 #include "MantidGeometry/Rendering/GeometryHandler.h"
 #include "MantidGeometry/Rendering/CacheGeometryHandler.h"
@@ -17,13 +18,26 @@ CacheGeometryHandler::CacheGeometryHandler(IObjComponent *comp)
   Renderer = new CacheGeometryRenderer();
 }
 
-CacheGeometryHandler::CacheGeometryHandler(boost::shared_ptr<Object> obj)
+CacheGeometryHandler::CacheGeometryHandler(boost::shared_ptr<CSGObject> obj)
     : GeometryHandler(obj) {
   Triangulator = new CacheGeometryGenerator(obj.get());
   Renderer = new CacheGeometryRenderer();
 }
 
-CacheGeometryHandler::CacheGeometryHandler(Object *obj) : GeometryHandler(obj) {
+CacheGeometryHandler::CacheGeometryHandler(CSGObject *obj)
+    : GeometryHandler(obj) {
+  Triangulator = new CacheGeometryGenerator(obj);
+  Renderer = new CacheGeometryRenderer();
+}
+
+CacheGeometryHandler::CacheGeometryHandler(boost::shared_ptr<MeshObject> obj)
+    : GeometryHandler(obj) {
+  Triangulator = new CacheGeometryGenerator(obj.get());
+  Renderer = new CacheGeometryRenderer();
+}
+
+CacheGeometryHandler::CacheGeometryHandler(MeshObject *obj)
+    : GeometryHandler(obj) {
   Triangulator = new CacheGeometryGenerator(obj);
   Renderer = new CacheGeometryRenderer();
 }
@@ -32,7 +46,11 @@ boost::shared_ptr<GeometryHandler> CacheGeometryHandler::clone() const {
   auto clone = boost::make_shared<CacheGeometryHandler>(*this);
   clone->Renderer = new CacheGeometryRenderer(*(this->Renderer));
   if (this->Triangulator)
-    clone->Triangulator = new CacheGeometryGenerator(this->Obj);
+    if (meshObj != nullptr) {
+      clone->Triangulator = new CacheGeometryGenerator(this->meshObj);
+    } else {
+      clone->Triangulator = new CacheGeometryGenerator(this->csgObj);
+    }
   else
     clone->Triangulator = nullptr;
   return clone;
@@ -50,25 +68,25 @@ GeometryHandler *CacheGeometryHandler::createInstance(IObjComponent *comp) {
 }
 
 GeometryHandler *
-CacheGeometryHandler::createInstance(boost::shared_ptr<Object> obj) {
+CacheGeometryHandler::createInstance(boost::shared_ptr<CSGObject> obj) {
   return new CacheGeometryHandler(obj);
 }
 
-GeometryHandler *CacheGeometryHandler::createInstance(Object *obj) {
+GeometryHandler *CacheGeometryHandler::createInstance(CSGObject *obj) {
   return new CacheGeometryHandler(obj);
 }
 
 void CacheGeometryHandler::Triangulate() {
   // Check whether Object is triangulated otherwise triangulate
   PARALLEL_CRITICAL(Triangulate)
-  if (Obj != nullptr && !boolTriangulated) {
+  if ((csgObj != nullptr || meshObj != nullptr) && !boolTriangulated) {
     Triangulator->Generate();
     boolTriangulated = true;
   }
 }
 
 void CacheGeometryHandler::Render() {
-  if (Obj != nullptr) {
+  if (csgObj != nullptr || meshObj != nullptr) {
     if (!boolTriangulated)
       Triangulate();
     Renderer->Render(
@@ -80,8 +98,8 @@ void CacheGeometryHandler::Render() {
 }
 
 void CacheGeometryHandler::Initialize() {
-  if (Obj != nullptr) {
-    Obj->updateGeometryHandler();
+  if (csgObj != nullptr || meshObj != nullptr) {
+    updateGeometryHandler();
     if (!boolTriangulated)
       Triangulate();
     Renderer->Initialize(
@@ -93,8 +111,8 @@ void CacheGeometryHandler::Initialize() {
 }
 
 int CacheGeometryHandler::NumberOfTriangles() {
-  if (Obj != nullptr) {
-    Obj->updateGeometryHandler();
+  if (csgObj != nullptr || meshObj != nullptr) {
+    updateGeometryHandler();
     if (!boolTriangulated)
       Triangulate();
     return Triangulator->getNumberOfTriangles();
@@ -104,8 +122,8 @@ int CacheGeometryHandler::NumberOfTriangles() {
 }
 
 int CacheGeometryHandler::NumberOfPoints() {
-  if (Obj != nullptr) {
-    Obj->updateGeometryHandler();
+  if (csgObj != nullptr || meshObj != nullptr) {
+    updateGeometryHandler();
     if (!boolTriangulated)
       Triangulate();
     return Triangulator->getNumberOfPoints();
@@ -115,8 +133,8 @@ int CacheGeometryHandler::NumberOfPoints() {
 }
 
 double *CacheGeometryHandler::getTriangleVertices() {
-  if (Obj != nullptr) {
-    Obj->updateGeometryHandler();
+  if (csgObj != nullptr || meshObj != nullptr) {
+    updateGeometryHandler();
     if (!boolTriangulated)
       Triangulate();
     return Triangulator->getTriangleVertices();
@@ -126,13 +144,21 @@ double *CacheGeometryHandler::getTriangleVertices() {
 }
 
 int *CacheGeometryHandler::getTriangleFaces() {
-  if (Obj != nullptr) {
-    Obj->updateGeometryHandler();
+  if (csgObj != nullptr || meshObj != nullptr) {
+    updateGeometryHandler();
     if (!boolTriangulated)
       Triangulate();
     return Triangulator->getTriangleFaces();
   } else {
     return nullptr;
+  }
+}
+
+void CacheGeometryHandler::updateGeometryHandler() {
+  if (meshObj != nullptr) {
+    meshObj->updateGeometryHandler();
+  } else {
+    csgObj->updateGeometryHandler();
   }
 }
 

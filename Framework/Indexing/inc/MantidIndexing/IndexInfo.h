@@ -3,6 +3,7 @@
 
 #include "MantidIndexing/DllConfig.h"
 #include "MantidIndexing/SpectrumNumber.h"
+#include "MantidParallel/StorageMode.h"
 #include "MantidKernel/cow_ptr.h"
 
 #include <functional>
@@ -11,6 +12,9 @@
 
 namespace Mantid {
 class SpectrumDefinition;
+namespace Parallel {
+class Communicator;
+}
 namespace Indexing {
 class GlobalSpectrumIndex;
 class SpectrumIndexSet;
@@ -68,26 +72,31 @@ class SpectrumNumberTranslator;
 */
 class MANTID_INDEXING_DLL IndexInfo {
 public:
-  // StorageMode and Communicator are temporary helpers provided here for
-  // testing that will be removed (or rather replaced) once we have proper MPI
-  // support.
-  enum class StorageMode { Cloned, Distributed, MasterOnly };
-  struct Communicator {
-    int size;
-    int rank;
-  };
+  explicit IndexInfo(
+      const size_t globalSize,
+      const Parallel::StorageMode storageMode = Parallel::StorageMode::Cloned);
+  IndexInfo(const size_t globalSize, const Parallel::StorageMode storageMode,
+            const Parallel::Communicator &communicator);
+  explicit IndexInfo(
+      std::vector<SpectrumNumber> spectrumNumbers,
+      const Parallel::StorageMode storageMode = Parallel::StorageMode::Cloned);
+  IndexInfo(std::vector<SpectrumNumber> spectrumNumbers,
+            const Parallel::StorageMode storageMode,
+            const Parallel::Communicator &communicator);
+  template <class IndexType>
+  IndexInfo(std::vector<IndexType> indices, const IndexInfo &parent);
 
-  explicit IndexInfo(const size_t globalSize,
-                     const StorageMode storageMode = StorageMode::Cloned,
-                     const Communicator &communicator = Communicator{1, 0});
-  explicit IndexInfo(std::vector<SpectrumNumber> spectrumNumbers,
-                     const StorageMode storageMode = StorageMode::Cloned,
-                     const Communicator &communicator = Communicator{1, 0});
+  IndexInfo(const IndexInfo &other);
+  IndexInfo(IndexInfo &&other);
+  ~IndexInfo();
+  IndexInfo &operator=(const IndexInfo &other);
+  IndexInfo &operator=(IndexInfo &&other);
 
   size_t size() const;
   size_t globalSize() const;
 
   SpectrumNumber spectrumNumber(const size_t index) const;
+  const std::vector<SpectrumNumber> &spectrumNumbers() const;
 
   void setSpectrumNumbers(std::vector<SpectrumNumber> &&spectrumNumbers);
   void setSpectrumNumbers(const SpectrumNumber min, const SpectrumNumber max);
@@ -108,14 +117,20 @@ public:
   SpectrumIndexSet
   makeIndexSet(const std::vector<GlobalSpectrumIndex> &globalIndices) const;
 
+  std::vector<GlobalSpectrumIndex> globalSpectrumIndicesFromDetectorIndices(
+      const std::vector<size_t> &detectorIndices) const;
+
   bool isOnThisPartition(GlobalSpectrumIndex globalIndex) const;
+
+  Parallel::StorageMode storageMode() const;
+  const Parallel::Communicator &communicator() const;
 
 private:
   void makeSpectrumNumberTranslator(
       std::vector<SpectrumNumber> &&spectrumNumbers) const;
 
-  StorageMode m_storageMode;
-  Communicator m_communicator;
+  Parallel::StorageMode m_storageMode;
+  std::unique_ptr<Parallel::Communicator> m_communicator;
 
   Kernel::cow_ptr<std::vector<SpectrumDefinition>> m_spectrumDefinitions{
       nullptr};

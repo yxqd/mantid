@@ -47,14 +47,16 @@ set ( SRC_FILES
 	src/Instrument/CompAssembly.cpp
 	src/Instrument/Component.cpp
 	src/Instrument/ComponentHelper.cpp
+	src/Instrument/ComponentInfo.cpp
 	src/Instrument/Container.cpp
 	src/Instrument/Detector.cpp
 	src/Instrument/DetectorGroup.cpp
+	src/Instrument/DetectorInfo.cpp
 	src/Instrument/FitParameter.cpp
 	src/Instrument/Goniometer.cpp
 	src/Instrument/IDFObject.cpp
-        src/Instrument/InfoComponentVisitor.cpp
-        src/Instrument/InstrumentDefinitionParser.cpp
+	src/Instrument/InstrumentDefinitionParser.cpp
+	src/Instrument/InstrumentVisitor.cpp
 	src/Instrument/ObjCompAssembly.cpp
 	src/Instrument/ObjComponent.cpp
 	src/Instrument/ParComponentFactory.cpp
@@ -100,8 +102,9 @@ set ( SRC_FILES
 	src/Math/Triple.cpp
 	src/Math/mathSupport.cpp
 	src/Objects/BoundingBox.cpp
+	src/Objects/CSGObject.cpp
 	src/Objects/InstrumentRayTracer.cpp
-	src/Objects/Object.cpp
+	src/Objects/MeshObject.cpp
 	src/Objects/RuleItems.cpp
 	src/Objects/Rules.cpp
 	src/Objects/ShapeFactory.cpp
@@ -201,15 +204,17 @@ set ( INC_FILES
 	inc/MantidGeometry/Instrument/CompAssembly.h
 	inc/MantidGeometry/Instrument/Component.h
 	inc/MantidGeometry/Instrument/ComponentHelper.h
+	inc/MantidGeometry/Instrument/ComponentInfo.h
 	inc/MantidGeometry/Instrument/ComponentVisitor.h
 	inc/MantidGeometry/Instrument/Container.h
 	inc/MantidGeometry/Instrument/Detector.h
 	inc/MantidGeometry/Instrument/DetectorGroup.h
+	inc/MantidGeometry/Instrument/DetectorInfo.h
 	inc/MantidGeometry/Instrument/FitParameter.h
 	inc/MantidGeometry/Instrument/Goniometer.h
 	inc/MantidGeometry/Instrument/IDFObject.h
-        inc/MantidGeometry/Instrument/InfoComponentVisitor.h
-        inc/MantidGeometry/Instrument/InstrumentDefinitionParser.h
+	inc/MantidGeometry/Instrument/InstrumentDefinitionParser.h
+	inc/MantidGeometry/Instrument/InstrumentVisitor.h
 	inc/MantidGeometry/Instrument/ObjCompAssembly.h
 	inc/MantidGeometry/Instrument/ObjComponent.h
 	inc/MantidGeometry/Instrument/ParComponentFactory.h
@@ -262,8 +267,10 @@ set ( INC_FILES
 	inc/MantidGeometry/Math/Triple.h
 	inc/MantidGeometry/Math/mathSupport.h
 	inc/MantidGeometry/Objects/BoundingBox.h
+	inc/MantidGeometry/Objects/CSGObject.h
+	inc/MantidGeometry/Objects/IObject.h
 	inc/MantidGeometry/Objects/InstrumentRayTracer.h
-	inc/MantidGeometry/Objects/Object.h
+    inc/MantidGeometry/Objects/MeshObject.h
 	inc/MantidGeometry/Objects/Rules.h
 	inc/MantidGeometry/Objects/ShapeFactory.h
 	inc/MantidGeometry/Objects/Track.h
@@ -304,9 +311,10 @@ set ( TEST_FILES
 	BraggScattererFactoryTest.h
 	BraggScattererInCrystalStructureTest.h
 	BraggScattererTest.h
+	CSGObjectTest.h
 	CenteringGroupTest.h
 	CompAssemblyTest.h
-	ComponentHelperTest.h
+	ComponentInfoTest.h
 	ComponentParserTest.h
 	ComponentTest.h
 	CompositeBraggScattererTest.h
@@ -335,10 +343,10 @@ set ( TEST_FILES
 	IMDDimensionFactoryTest.h
 	IMDDimensionTest.h
 	IndexingUtilsTest.h
-	InfoComponentVisitorTest.h
 	InstrumentDefinitionParserTest.h
 	InstrumentRayTracerTest.h
 	InstrumentTest.h
+	InstrumentVisitorTest.h
 	IsotropicAtomBraggScattererTest.h
 	LineIntersectVisitTest.h
 	LineTest.h
@@ -354,11 +362,11 @@ set ( TEST_FILES
 	MathSupportTest.h
 	MatrixVectorPairParserTest.h
 	MatrixVectorPairTest.h
+	MeshObjectTest.h
 	NiggliCellTest.h
 	NullImplicitFunctionTest.h
 	ObjCompAssemblyTest.h
 	ObjComponentTest.h
-	ObjectTest.h
 	OrientedLatticeTest.h
 	ParCompAssemblyTest.h
 	ParComponentFactoryTest.h
@@ -461,7 +469,9 @@ set_target_properties ( Geometry PROPERTIES OUTPUT_NAME MantidGeometry
                                             COMPILE_DEFINITIONS IN_MANTID_GEOMETRY )
 
 if (OSX_VERSION VERSION_GREATER 10.8)
-  set_target_properties ( Geometry PROPERTIES INSTALL_RPATH "@loader_path/../MacOS")
+  set_target_properties(Geometry PROPERTIES INSTALL_RPATH "@loader_path/../MacOS")
+elseif ( ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" )
+  set_target_properties(Geometry PROPERTIES INSTALL_RPATH "\$ORIGIN/../${LIB_DIR}")
 endif ()
 
 if (ENABLE_OPENCASCADE)

@@ -1,12 +1,13 @@
 #include "MantidDataHandling/LoadLLB.h"
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/FileProperty.h"
-#include "MantidAPI/Progress.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/Progress.h"
 #include "MantidAPI/RegisterFileLoader.h"
 #include "MantidAPI/SpectrumInfo.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidGeometry/Instrument.h"
+#include "MantidKernel/OptionalBool.h"
 #include "MantidKernel/UnitFactory.h"
 
 #include <algorithm>
@@ -103,7 +104,7 @@ void LoadLLB::setInstrumentName(NeXus::NXEntry &entry) {
   m_instrumentName =
       m_loader.getStringFromNexusPath(entry, m_instrumentPath + "/name");
 
-  if (m_instrumentName == "") {
+  if (m_instrumentName.empty()) {
     throw std::runtime_error(
         "Cannot read the instrument name from the Nexus file!");
   }

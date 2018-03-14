@@ -1,4 +1,4 @@
-#include "MantidGeometry/Objects/Object.h"
+#include "MantidGeometry/Objects/CSGObject.h"
 #include "MantidGeometry/IObjComponent.h"
 #include "MantidGeometry/Rendering/GeometryHandler.h"
 #include "MantidGeometry/Rendering/OCGeometryHandler.h"
@@ -15,13 +15,13 @@ OCGeometryHandler::OCGeometryHandler(IObjComponent *comp)
   Renderer = new OCGeometryRenderer();
 }
 
-OCGeometryHandler::OCGeometryHandler(boost::shared_ptr<Object> obj)
+OCGeometryHandler::OCGeometryHandler(boost::shared_ptr<CSGObject> obj)
     : GeometryHandler(obj) {
   Triangulator = new OCGeometryGenerator(obj.get());
   Renderer = new OCGeometryRenderer();
 }
 
-OCGeometryHandler::OCGeometryHandler(Object *obj) : GeometryHandler(obj) {
+OCGeometryHandler::OCGeometryHandler(CSGObject *obj) : GeometryHandler(obj) {
   Triangulator = new OCGeometryGenerator(obj);
   Renderer = new OCGeometryRenderer();
 }
@@ -30,7 +30,7 @@ boost::shared_ptr<GeometryHandler> OCGeometryHandler::clone() const {
   auto clone = boost::make_shared<OCGeometryHandler>(*this);
   clone->Renderer = new OCGeometryRenderer(*(this->Renderer));
   if (this->Triangulator)
-    clone->Triangulator = new OCGeometryGenerator(this->Obj);
+    clone->Triangulator = new OCGeometryGenerator(this->csgObj);
   return clone;
 }
 
@@ -46,24 +46,24 @@ GeometryHandler *OCGeometryHandler::createInstance(IObjComponent *comp) {
 }
 
 GeometryHandler *
-OCGeometryHandler::createInstance(boost::shared_ptr<Object> obj) {
+OCGeometryHandler::createInstance(boost::shared_ptr<CSGObject> obj) {
   return new OCGeometryHandler(obj);
 }
 
-GeometryHandler *OCGeometryHandler::createInstance(Object *obj) {
+GeometryHandler *OCGeometryHandler::createInstance(CSGObject *obj) {
   return new OCGeometryHandler(obj);
 }
 
 void OCGeometryHandler::Triangulate() {
   // Check whether Object is triangulated otherwise triangulate
-  if (Obj != nullptr && !boolTriangulated) {
+  if (csgObj != nullptr && !boolTriangulated) {
     Triangulator->Generate();
     boolTriangulated = true;
   }
 }
 
 void OCGeometryHandler::Render() {
-  if (Obj != nullptr) {
+  if (csgObj != nullptr) {
     if (!boolTriangulated)
       Triangulate();
     Renderer->Render(Triangulator->getObjectSurface());
@@ -73,7 +73,7 @@ void OCGeometryHandler::Render() {
 }
 
 void OCGeometryHandler::Initialize() {
-  if (Obj != nullptr) {
+  if (csgObj != nullptr) {
     if (!boolTriangulated)
       Triangulate();
     Renderer->Initialize(Triangulator->getObjectSurface());
@@ -83,7 +83,7 @@ void OCGeometryHandler::Initialize() {
 }
 
 int OCGeometryHandler::NumberOfTriangles() {
-  if (Obj != nullptr) {
+  if (csgObj != nullptr) {
     if (!boolTriangulated)
       Triangulate();
     return Triangulator->getNumberOfTriangles();
@@ -93,7 +93,7 @@ int OCGeometryHandler::NumberOfTriangles() {
 }
 
 int OCGeometryHandler::NumberOfPoints() {
-  if (Obj != nullptr) {
+  if (csgObj != nullptr) {
     if (!boolTriangulated)
       Triangulate();
     return Triangulator->getNumberOfPoints();
@@ -103,7 +103,7 @@ int OCGeometryHandler::NumberOfPoints() {
 }
 
 double *OCGeometryHandler::getTriangleVertices() {
-  if (Obj != nullptr) {
+  if (csgObj != nullptr) {
     if (!boolTriangulated)
       Triangulate();
     return Triangulator->getTriangleVertices();
@@ -113,7 +113,7 @@ double *OCGeometryHandler::getTriangleVertices() {
 }
 
 int *OCGeometryHandler::getTriangleFaces() {
-  if (Obj != nullptr) {
+  if (csgObj != nullptr) {
     if (!boolTriangulated)
       Triangulate();
     return Triangulator->getTriangleFaces();

@@ -28,13 +28,13 @@ void ParamFunction::setParameter(size_t i, const double &value,
     std::stringstream errmsg;
     errmsg << "Trying to set a NaN value (" << value << ") to parameter "
            << this->parameterName(i);
-    g_log.warning(errmsg.str());
+    throw std::invalid_argument(errmsg.str());
   } else if (std::isinf(value)) {
     // Infinity value
     std::stringstream errmsg;
     errmsg << "Trying to set an infinity value (" << value << ") to parameter "
            << this->parameterName(i);
-    g_log.warning(errmsg.str());
+    throw std::invalid_argument(errmsg.str());
   }
 
   checkParameterIndex(i);
@@ -135,6 +135,16 @@ double ParamFunction::getParameter(const std::string &name) const {
   }
 
   return parvalue;
+}
+
+/**
+ * Check if function has a parameter with a particular name.
+ * @param name :: A name of a parameter.
+ * @return True if the parameter exists.
+*/
+bool ParamFunction::hasParameter(const std::string &name) const {
+  return std::find(m_parameterNames.cbegin(), m_parameterNames.cend(), name) !=
+         m_parameterNames.end();
 }
 
 /**

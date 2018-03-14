@@ -1,7 +1,5 @@
 #include "MantidKernel/NexusDescriptor.h"
 
-#include <boost/algorithm/string.hpp>
-
 #include <nexus/NeXusFile.hpp>
 #include <nexus/NeXusException.hpp>
 
@@ -9,6 +7,7 @@
 #include <Poco/Path.h>
 
 #include <cstring>
+#include <string>
 
 namespace Mantid {
 namespace Kernel {
@@ -126,9 +125,10 @@ NexusDescriptor::NexusDescriptor(const std::string &filename)
   }
   try {
     initialize(filename);
-  } catch (::NeXus::Exception &) {
-    throw std::invalid_argument("NexusDescriptor::initialize - File '" +
-                                filename + "' does not look like a HDF file.");
+  } catch (::NeXus::Exception &e) {
+    throw std::invalid_argument(
+        "NexusDescriptor::initialize - File '" + filename +
+        "' does not look like a HDF file.\n Error was: " + e.what());
   }
 }
 

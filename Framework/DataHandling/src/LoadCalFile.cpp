@@ -1,17 +1,18 @@
+#include "MantidDataHandling/LoadCalFile.h"
 #include "MantidAPI/Algorithm.h"
 #include "MantidAPI/FileProperty.h"
-#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/ITableWorkspace.h"
-#include "MantidAPI/SpectrumInfo.h"
+#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/Run.h"
-#include "MantidDataHandling/LoadCalFile.h"
+#include "MantidAPI/SpectrumInfo.h"
 #include "MantidDataObjects/GroupingWorkspace.h"
 #include "MantidDataObjects/MaskWorkspace.h"
 #include "MantidDataObjects/OffsetsWorkspace.h"
 #include "MantidDataObjects/Workspace2D.h"
+#include "MantidKernel/OptionalBool.h"
 #include "MantidKernel/System.h"
-#include <fstream>
 #include <Poco/Path.h>
+#include <fstream>
 
 using Mantid::Geometry::Instrument_const_sptr;
 using namespace Mantid::Kernel;
@@ -356,6 +357,16 @@ bool LoadCalFile::idIsMonitor(Instrument_const_sptr inst, int detID) {
   auto monitorList = inst->getMonitors();
   auto it = std::find(monitorList.begin(), monitorList.end(), detID);
   return (it != monitorList.end());
+}
+
+Parallel::ExecutionMode LoadCalFile::getParallelExecutionMode(
+    const std::map<std::string, Parallel::StorageMode> &storageModes) const {
+  // There is an optional input workspace which may have
+  // StorageMode::Distributed but it is merely used for passing an instrument.
+  // Output should always have StorageMode::Cloned, so we run with
+  // ExecutionMode::Identical.
+  static_cast<void>(storageModes);
+  return Parallel::ExecutionMode::Identical;
 }
 
 } // namespace Mantid

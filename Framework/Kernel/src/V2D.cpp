@@ -1,8 +1,9 @@
+#include "MantidKernel/Exception.h"
 #include "MantidKernel/V2D.h"
 #include "MantidKernel/V3D.h"
-#include "MantidKernel/Exception.h"
-#include <complex>
+
 #include <limits>
+#include <ostream>
 
 namespace Mantid {
 namespace Kernel {
@@ -77,6 +78,12 @@ V2D &V2D::operator*=(const double factor) {
   m_y *= factor;
   return *this;
 }
+
+/**
+* Negate and return
+* @returns A new negated V2D object
+*/
+V2D V2D::operator-() const noexcept { return V2D{-m_x, -m_y}; }
 
 /**
  * Equality operator including a tolerance

@@ -4,10 +4,10 @@
 #include "MantidAPI/DllConfig.h"
 
 #include "MantidAPI/SpectraDetectorTypes.h"
-#include "MantidGeometry/IDetector.h"
 #include "MantidGeometry/Instrument_fwd.h"
 
 #include "MantidKernel/DeltaEMode.h"
+#include "MantidKernel/V3D.h"
 #include "MantidKernel/cow_ptr.h"
 
 #include <list>
@@ -24,15 +24,15 @@ class DetectorInfo;
 class SpectrumInfo;
 }
 namespace Geometry {
-class InfoComponentVisitor;
+class ComponentInfo;
+class DetectorInfo;
+class IDetector;
 class ParameterMap;
 class XMLInstrumentParameter;
 }
 
 namespace API {
 class ChopperModel;
-class ComponentInfo;
-class DetectorInfo;
 class ModeratorModel;
 class Run;
 class Sample;
@@ -104,6 +104,8 @@ public:
   const Run &run() const;
   /// Writable version of the run object
   Run &mutableRun();
+  void setSharedRun(Kernel::cow_ptr<Run> run);
+
   /// Access a log for this experiment.
   Kernel::Property *getLog(const std::string &log) const;
   /// Access a single value from a log for this experiment.
@@ -116,8 +118,9 @@ public:
   /// Easy access to the efixed value for this run & detector ID
   double getEFixed(const detid_t detID) const;
   /// Easy access to the efixed value for this run & optional detector
-  double getEFixed(const Geometry::IDetector_const_sptr detector =
-                       Geometry::IDetector_const_sptr()) const;
+  double getEFixed(const boost::shared_ptr<const Geometry::IDetector> detector =
+                       boost::shared_ptr<const Geometry::IDetector>{
+                           nullptr}) const;
   /// Set the efixed value for a given detector ID
   void setEFixed(const detid_t detID, const double value);
 
@@ -159,13 +162,14 @@ public:
   static std::string getInstrumentFilename(const std::string &instrumentName,
                                            const std::string &date = "");
 
-  const DetectorInfo &detectorInfo() const;
-  DetectorInfo &mutableDetectorInfo();
+  const Geometry::DetectorInfo &detectorInfo() const;
+  Geometry::DetectorInfo &mutableDetectorInfo();
 
   const SpectrumInfo &spectrumInfo() const;
   SpectrumInfo &mutableSpectrumInfo();
 
-  const ComponentInfo &componentInfo() const;
+  const Geometry::ComponentInfo &componentInfo() const;
+  Geometry::ComponentInfo &mutableComponentInfo();
 
   void invalidateSpectrumDefinition(const size_t index);
   void updateSpectrumDefinitionIfNecessary(const size_t index) const;
@@ -173,6 +177,7 @@ public:
   virtual size_t groupOfDetectorID(const detid_t detID) const;
 
 protected:
+  size_t numberOfDetectorGroups() const;
   /// Called as the first operation of most public methods.
   virtual void populateIfNotLoaded() const;
 
@@ -184,19 +189,12 @@ protected:
   boost::shared_ptr<ModeratorModel> m_moderatorModel;
   /// Description of the choppers for this experiment.
   std::list<boost::shared_ptr<ChopperModel>> m_choppers;
-  /// The information on the sample environment
-  boost::shared_ptr<Sample> m_sample;
-  /// The run information
-  boost::shared_ptr<Run> m_run;
   /// Parameters modifying the base instrument
   boost::shared_ptr<Geometry::ParameterMap> m_parmap;
   /// The base (unparametrized) instrument
   Geometry::Instrument_const_sptr sptr_instrument;
 
 private:
-  void makeAPIComponentInfo(const Geometry::InfoComponentVisitor &visitor);
-
-  boost::shared_ptr<Geometry::Instrument> makeParameterizedInstrument() const;
   /// Fill with given instrument parameter
   void populateWithParameter(Geometry::ParameterMap &paramMap,
                              Geometry::ParameterMap &paramMapForPosAndRot,
@@ -218,29 +216,24 @@ private:
 
   // Loads the xml from an instrument file with some basic error handling
   std::string loadInstrumentXML(const std::string &filename);
+
+  /// The information on the sample environment
+  Kernel::cow_ptr<Sample> m_sample;
+  /// The run information
+  Kernel::cow_ptr<Run> m_run;
+
   /// Detector grouping information
   mutable std::unordered_map<detid_t, size_t> m_det2group;
   void cacheDefaultDetectorGrouping() const; // Not thread-safe
   void invalidateAllSpectrumDefinitions();
-  std::unique_ptr<Geometry::InfoComponentVisitor>
-  makeOrRetrieveVisitor(const Geometry::Instrument &instrument) const;
   mutable std::once_flag m_defaultDetectorGroupingCached;
 
-  /// Mutex to protect against cow_ptr copying
-  mutable std::recursive_mutex m_mutex;
-
-  boost::shared_ptr<Beamline::DetectorInfo> m_detectorInfo;
-  std::unique_ptr<DetectorInfo> m_detectorInfoWrapper;
-
-  boost::shared_ptr<Beamline::ComponentInfo> m_componentInfo;
-  std::unique_ptr<API::ComponentInfo> m_componentInfoWrapper;
   mutable std::unique_ptr<Beamline::SpectrumInfo> m_spectrumInfo;
   mutable std::unique_ptr<SpectrumInfo> m_spectrumInfoWrapper;
   mutable std::mutex m_spectrumInfoMutex;
   // This vector stores boolean flags but uses char to do so since
   // std::vector<bool> is not thread-safe.
   mutable std::vector<char> m_spectrumDefinitionNeedsUpdate;
-  std::unique_ptr<Geometry::InfoComponentVisitor> m_infoVisitor;
 };
 
 /// Shared pointer to ExperimentInfo

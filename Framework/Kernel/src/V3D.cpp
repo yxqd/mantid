@@ -3,11 +3,13 @@
 #include <complex>
 #include <vector>
 
+#include "MantidKernel/Matrix.h"
 #include "MantidKernel/V3D.h"
 #include "MantidKernel/Tolerance.h"
 #include "MantidKernel/Exception.h"
 #include "MantidKernel/Quat.h"
 #include <boost/math/common_factor.hpp>
+#include <nexus/NeXusFile.hpp>
 
 namespace Mantid {
 namespace Kernel {
@@ -236,6 +238,12 @@ V3D &V3D::operator/=(const double D) {
   }
   return *this;
 }
+
+/**
+  Negation
+ * @return a vector with same magnitude but in opposite direction
+ */
+V3D V3D::operator-() const noexcept { return V3D(-x, -y, -z); }
 
 /**
   Equals operator with tolerance factor

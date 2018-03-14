@@ -12,6 +12,7 @@
 #include "MantidDataObjects/TableWorkspace.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidKernel/Diffraction.h"
+#include "MantidKernel/OptionalBool.h"
 
 #include <cmath>
 #include <H5Cpp.h>
@@ -20,7 +21,6 @@ namespace Mantid {
 namespace DataHandling {
 
 using Mantid::API::FileProperty;
-using Mantid::API::MatrixWorkspace;
 using Mantid::API::MatrixWorkspace_sptr;
 using Mantid::API::Progress;
 using Mantid::API::ITableWorkspace;
@@ -346,10 +346,11 @@ void LoadDiffCal::runLoadCalFile() {
   bool makeCalWS = getProperty("MakeCalWorkspace");
   bool makeMaskWS = getProperty("MakeMaskWorkspace");
   bool makeGroupWS = getProperty("MakeGroupingWorkspace");
+  API::MatrixWorkspace_sptr inputWs = getProperty("InputWorkspace");
 
   auto alg = createChildAlgorithm("LoadCalFile", 0., 1.);
   alg->setPropertyValue("CalFilename", m_filename);
-  alg->setPropertyValue("InputWorkspace", getPropertyValue("InputWorkspace"));
+  alg->setProperty("InputWorkspace", inputWs);
   alg->setPropertyValue("InstrumentName", getPropertyValue("InstrumentName"));
   alg->setPropertyValue("InstrumentFilename",
                         getPropertyValue("InstrumentFilename"));
@@ -455,6 +456,16 @@ void LoadDiffCal::exec() {
   makeGroupingWorkspace(detids, groups);
   makeMaskWorkspace(detids, use);
   makeCalWorkspace(detids, difc, difa, tzero, dasids, offset, use);
+}
+
+Parallel::ExecutionMode LoadDiffCal::getParallelExecutionMode(
+    const std::map<std::string, Parallel::StorageMode> &storageModes) const {
+  // There is an optional input workspace which may have
+  // StorageMode::Distributed but it is merely used for passing an instrument.
+  // Output should always have StorageMode::Cloned, so we run with
+  // ExecutionMode::Identical.
+  static_cast<void>(storageModes);
+  return Parallel::ExecutionMode::Identical;
 }
 
 } // namespace DataHandling

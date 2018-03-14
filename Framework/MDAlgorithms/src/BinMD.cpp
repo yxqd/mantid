@@ -1,24 +1,21 @@
+#include "MantidMDAlgorithms/BinMD.h"
 #include "MantidAPI/ImplicitFunctionFactory.h"
-#include "MantidGeometry/MDGeometry/MDBoxImplicitFunction.h"
-#include "MantidGeometry/MDGeometry/MDHistoDimension.h"
-#include "MantidKernel/CPUTimer.h"
-#include "MantidKernel/Strings.h"
-#include "MantidKernel/System.h"
-#include "MantidKernel/Utils.h"
+#include "MantidDataObjects/CoordTransformAffine.h"
 #include "MantidDataObjects/CoordTransformAffineParser.h"
 #include "MantidDataObjects/CoordTransformAligned.h"
-#include "MantidDataObjects/MDBoxBase.h"
 #include "MantidDataObjects/MDBox.h"
+#include "MantidDataObjects/MDBoxBase.h"
 #include "MantidDataObjects/MDEventFactory.h"
 #include "MantidDataObjects/MDEventWorkspace.h"
 #include "MantidDataObjects/MDHistoWorkspace.h"
-#include "MantidMDAlgorithms/BinMD.h"
-#include <boost/algorithm/string.hpp>
+#include "MantidGeometry/MDGeometry/MDBoxImplicitFunction.h"
+#include "MantidGeometry/MDGeometry/MDHistoDimension.h"
+#include "MantidKernel/CPUTimer.h"
 #include "MantidKernel/EnabledWhenProperty.h"
-#include "MantidDataObjects/CoordTransformAffine.h"
-
-using Mantid::Kernel::CPUTimer;
-using Mantid::Kernel::EnabledWhenProperty;
+#include "MantidKernel/Strings.h"
+#include "MantidKernel/System.h"
+#include "MantidKernel/Utils.h"
+#include <boost/algorithm/string.hpp>
 
 namespace Mantid {
 namespace MDAlgorithms {
@@ -35,9 +32,8 @@ using namespace Mantid::DataObjects;
 /** Constructor
  */
 BinMD::BinMD()
-    : outWS(), prog(nullptr), implicitFunction(nullptr),
-      indexMultiplier(nullptr), signals(nullptr), errors(nullptr),
-      numEvents(nullptr) {}
+    : outWS(), implicitFunction(nullptr), indexMultiplier(nullptr),
+      signals(nullptr), errors(nullptr), numEvents(nullptr) {}
 
 //----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
@@ -382,7 +378,7 @@ void BinMD::exec() {
             ImplicitFunctionXML);
 
   // This gets deleted by the thread pool; don't delete it in here.
-  prog = new Progress(this, 0.0, 1.0, 1);
+  prog = make_unique<Progress>(this, 0.0, 1.0, 1);
 
   // Create the dense histogram. This allocates the memory
   boost::shared_ptr<IMDHistoWorkspace> tmp =

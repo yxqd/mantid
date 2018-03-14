@@ -5,7 +5,6 @@ from six.moves import range
 import mantid.simpleapi as s_api
 from mantid import config, logger
 
-
 import os.path
 import math
 import datetime
@@ -110,7 +109,10 @@ def getWSprefix(wsname):
 
 
 def getEfixed(workspace):
-    inst = s_api.mtd[workspace].getInstrument()
+    if isinstance(workspace, str):
+        inst = s_api.mtd[workspace].getInstrument()
+    else:
+        inst = workspace.getInstrument()
 
     if inst.hasParameter('Efixed'):
         return inst.getNumberParameter('EFixed')[0]
@@ -522,3 +524,24 @@ def firstNonZero(data):
     for i in range(len(data)):
         if data[i] != 0:
             return i
+
+
+def formatRuns(runs, instrument_name):
+    """
+    :return: A list of runs prefixed with the given instrument name
+    """
+    run_list = []
+    for run in runs:
+        if '-' in run:
+            a, b = run.split('-')
+            run_list.extend(range(int(a), int(b) + 1))
+        else:
+            try:
+                run_list.append(int(run))
+            except:
+                # run already has instrument eg 'osi1000'
+                run_list.append(run)
+    for idx, run in enumerate(run_list):
+        if type(run) == int:
+            run_list[idx] = instrument_name + str(run)
+    return run_list

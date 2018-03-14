@@ -14,8 +14,8 @@
 #include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/MantidVersion.h"
 
-#include <nexus/NeXusException.hpp>
 #include <nexus/NeXusFile.hpp>
+#include <nexus/NeXusException.hpp>
 
 namespace Mantid {
 namespace DataHandling {
@@ -25,7 +25,6 @@ DECLARE_ALGORITHM(SaveNXTomo)
 using namespace Kernel;
 using namespace API;
 using namespace DataObjects;
-using Geometry::RectangularDetector;
 
 const std::string SaveNXTomo::NXTOMO_VER = "2.0";
 

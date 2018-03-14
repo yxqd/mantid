@@ -3,6 +3,7 @@
 #include "MantidAPI/Workspace.h"
 #include "MantidAPI/WorkspaceProperty.h"
 #include "MantidKernel/Exception.h"
+#include "MantidKernel/Strings.h"
 #include "MantidKernel/PropertyHistory.h"
 
 namespace Mantid {
@@ -30,7 +31,7 @@ WorkspaceProperty<TYPE>::WorkspaceProperty(const std::string &name,
       m_optional(PropertyMode::Mandatory), m_locking(LockMode::Lock) {}
 
 /** Constructor.
-*  Sets the property and workspace names but initialises the workspace pointer
+*  Sets the property and workspace names but initializes the workspace pointer
 * to null.
 *  @param name :: The name to assign to the property
 *  @param wsName :: The name of the workspace
@@ -53,7 +54,7 @@ WorkspaceProperty<TYPE>::WorkspaceProperty(const std::string &name,
       m_locking(LockMode::Lock) {}
 
 /** Constructor.
-*  Sets the property and workspace names but initialises the workspace pointer
+*  Sets the property and workspace names but initializes the workspace pointer
 * to null.
 *  @param name :: The name to assign to the property
 *  @param wsName :: The name of the workspace
@@ -138,6 +139,14 @@ template <typename TYPE> std::string WorkspaceProperty<TYPE>::value() const {
   return m_workspaceName;
 }
 
+/** Returns true if the workspace is in the ADS or there is none.
+ * @return true if the string returned by value() is valid
+ */
+template <typename TYPE>
+bool WorkspaceProperty<TYPE>::isValueSerializable() const {
+  return !m_workspaceName.empty() || !this->m_value;
+}
+
 /** Get the value the property was initialised with -its default value
 *  @return The default value
 */
@@ -157,16 +166,7 @@ std::string WorkspaceProperty<TYPE>::setValue(const std::string &value) {
   if (Kernel::PropertyWithValue<boost::shared_ptr<TYPE>>::autoTrim()) {
     boost::trim(m_workspaceName);
   }
-  // Try and get the workspace from the ADS, but don't worry if we can't
-  try {
-    Kernel::PropertyWithValue<boost::shared_ptr<TYPE>>::m_value =
-        AnalysisDataService::Instance().retrieveWS<TYPE>(m_workspaceName);
-  } catch (Kernel::Exception::NotFoundError &) {
-    // Set to null property if not found
-    this->clear();
-    // the workspace name is not reset here, however.
-  }
-
+  retrieveWorkspaceFromADS();
   return isValid();
 }
 
@@ -180,9 +180,8 @@ std::string WorkspaceProperty<TYPE>::setDataItem(
     const boost::shared_ptr<Kernel::DataItem> value) {
   boost::shared_ptr<TYPE> typed = boost::dynamic_pointer_cast<TYPE>(value);
   if (typed) {
-    std::string wsName = typed->getName();
-    if (this->direction() == Kernel::Direction::Input && !wsName.empty()) {
-      m_workspaceName = wsName;
+    if (this->direction() == Kernel::Direction::Input) {
+      m_workspaceName = typed->getName();
     }
     Kernel::PropertyWithValue<boost::shared_ptr<TYPE>>::m_value = typed;
   } else {
@@ -217,15 +216,28 @@ template <typename TYPE> std::string WorkspaceProperty<TYPE>::isValid() const {
     if (!Kernel::PropertyWithValue<boost::shared_ptr<TYPE>>::m_value) {
       Mantid::API::Workspace_sptr wksp;
       // if the workspace name is empty then there is no point asking the ADS
-      if (m_workspaceName.empty())
-        return isOptionalWs();
+      if (m_workspaceName.empty()) {
+        // If workspace is null on a non-master rank this usually indicates that
+        // this is a MasterOnly workspace and algorithm execution. In cases
+        // where the workspace is null for other reasons we can rely on the
+        // master rank failing.
+        if (!m_isMasterRank)
+          return {};
+        else
+          return isOptionalWs();
+      }
 
       try {
         wksp = AnalysisDataService::Instance().retrieve(m_workspaceName);
       } catch (Kernel::Exception::NotFoundError &) {
         // Check to see if the workspace is not logged with the ADS because it
         // is optional.
-        return isOptionalWs();
+        // Similar to above, if the workspace is not in the ADS this indicates
+        // MasterOnly workspace and execution.
+        if (!m_isMasterRank)
+          return {};
+        else
+          return isOptionalWs();
       }
 
       // At this point we have a valid pointer to a Workspace so we need to
@@ -244,12 +256,14 @@ template <typename TYPE> std::string WorkspaceProperty<TYPE>::isValid() const {
   return Kernel::PropertyWithValue<boost::shared_ptr<TYPE>>::isValid();
 }
 
-/** Indicates if the object is still pointing to the same workspace, using the
-* workspace name
+/** Indicates if the object is still pointing to the same workspace
 *  @return true if the value is the same as the initial value or false
 * otherwise
 */
 template <typename TYPE> bool WorkspaceProperty<TYPE>::isDefault() const {
+  if (m_initialWSName.empty()) {
+    return m_workspaceName.empty() && !this->m_value;
+  }
   return m_initialWSName == m_workspaceName;
 }
 
@@ -327,12 +341,14 @@ template <typename TYPE> bool WorkspaceProperty<TYPE>::store() {
   if (this->direction()) // Output or InOut
   {
     // Check that workspace exists
-    if (!this->operator()())
+    if (this->operator()()) {
+      // Note use of addOrReplace rather than add
+      API::AnalysisDataService::Instance().addOrReplace(m_workspaceName,
+                                                        this->operator()());
+    } else if (m_isMasterRank) {
       throw std::runtime_error(
           "WorkspaceProperty doesn't point to a workspace");
-    // Note use of addOrReplace rather than add
-    API::AnalysisDataService::Instance().addOrReplace(m_workspaceName,
-                                                      this->operator()());
+    }
     result = true;
   }
   // always clear the internal pointer after storing
@@ -344,6 +360,12 @@ template <typename TYPE> bool WorkspaceProperty<TYPE>::store() {
 template <typename TYPE>
 Workspace_sptr WorkspaceProperty<TYPE>::getWorkspace() const {
   return this->operator()();
+}
+
+/// Sets a flag indicating whether this is the master rank in MPI builds.
+template <typename TYPE>
+void WorkspaceProperty<TYPE>::setIsMasterRank(bool isMasterRank) {
+  m_isMasterRank = isMasterRank;
 }
 
 /** Checks whether the entered workspace group is valid.

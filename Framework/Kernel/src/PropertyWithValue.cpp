@@ -1,17 +1,20 @@
 #include "MantidKernel/PropertyWithValue.h"
-#include "MantidKernel/PropertyManager.h"
 #include "MantidKernel/Matrix.h"
 
 // PropertyWithValue implementation
 #include "MantidKernel/PropertyWithValue.tcc"
 
+#include <NeXusFile.hpp>
+
 namespace Mantid {
 namespace Kernel {
+// Forward declare
+class PropertyManager;
 
 #define PROPERTYWITHVALUE_SAVEPROPERTY(type)                                   \
   template <>                                                                  \
   void PropertyWithValue<type>::saveProperty(::NeXus::File *file) {            \
-    file->makeGroup(this->name(), "NXlog", 1);                                 \
+    file->makeGroup(this->name(), "NXlog", true);                              \
     file->writeData("value", m_value);                                         \
     file->closeGroup();                                                        \
   }

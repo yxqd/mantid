@@ -93,8 +93,8 @@ public:
   Kernel::V3D getPos() const override;
 
   //! Set the outline of the assembly
-  boost::shared_ptr<Object> createOutline();
-  void setOutline(boost::shared_ptr<const Object> obj);
+  boost::shared_ptr<IObject> createOutline();
+  void setOutline(boost::shared_ptr<const IObject> obj);
 
   /** Test the intersection of the ray with the children of the component
    * assembly  */
@@ -102,7 +102,7 @@ public:
       Track & /*testRay*/,
       std::deque<IComponent_const_sptr> & /*searchQueue*/) const override;
 
-  void registerContents(
+  size_t registerContents(
       class Mantid::Geometry::ComponentVisitor &visitor) const override;
 
 private:

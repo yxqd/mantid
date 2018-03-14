@@ -44,10 +44,14 @@ namespace LiveData {
 */
 class DLLExport KafkaEventStreamDecoder {
 public:
+  using CallbackFn = std::function<void()>;
+
+public:
   KafkaEventStreamDecoder(std::shared_ptr<IKafkaBroker> broker,
                           const std::string &eventTopic,
                           const std::string &runInfoTopic,
-                          const std::string &spDetTopic);
+                          const std::string &spDetTopic,
+                          const std::string &sampleEnvTopic);
   ~KafkaEventStreamDecoder();
   KafkaEventStreamDecoder(const KafkaEventStreamDecoder &) = delete;
   KafkaEventStreamDecoder &operator=(const KafkaEventStreamDecoder &) = delete;
@@ -67,12 +71,27 @@ public:
   bool hasReachedEndOfRun() noexcept;
   ///@}
 
+  ///@name Callbacks
+  ///@{
+  void registerIterationEndCb(CallbackFn cb) {
+    m_cbIterationEnd = std::move(cb);
+  }
+  void registerErrorCb(CallbackFn cb) { m_cbError = std::move(cb); }
+  ///@}
+
   ///@name Modifying
   ///@{
   API::Workspace_sptr extractData();
   ///@}
 
 private:
+  struct RunStartStruct {
+    std::string instrumentName;
+    int runNumber;
+    uint64_t startTime;
+    size_t nPeriods;
+    int64_t runStartMsgOffset;
+  };
   void captureImpl() noexcept;
   void captureImplExcept();
 
@@ -85,6 +104,11 @@ private:
   createBufferWorkspace(const DataObjects::EventWorkspace_sptr &parent);
   void loadInstrument(const std::string &name,
                       DataObjects::EventWorkspace_sptr workspace);
+  int64_t getRunInfoMessage(std::string &rawMsgBuffer);
+  RunStartStruct getRunStartMessage(std::string &rawMsgBuffer);
+
+  void eventDataFromMessage(const std::string &buffer);
+  void sampleDataFromMessage(const std::string &buffer);
 
   API::Workspace_sptr extractDataImpl();
 
@@ -94,6 +118,7 @@ private:
   const std::string m_eventTopic;
   const std::string m_runInfoTopic;
   const std::string m_spDetTopic;
+  const std::string m_sampleEnvTopic;
   /// Flag indicating if user interruption has been requested
   std::atomic<bool> m_interrupt;
   /// Subscriber for the event stream
@@ -103,7 +128,7 @@ private:
   /// Mapping of spectrum number to workspace index.
   spec2index_map m_specToIdx;
   /// Start time of the run
-  Kernel::DateAndTime m_runStart;
+  Types::Core::DateAndTime m_runStart;
   /// Subscriber for the run info stream
   std::unique_ptr<IKafkaStreamSubscriber> m_runStream;
   /// Subscriber for the run info stream
@@ -135,6 +160,22 @@ private:
   /// EndRun
   bool m_runStatusSeen;
   std::atomic<bool> m_extractedEndRunData;
+
+  void waitForDataExtraction();
+  void waitForRunEndObservation();
+
+  std::unordered_map<std::string, std::vector<int64_t>> getStopOffsets(
+      std::unordered_map<std::string, std::vector<int64_t>> &stopOffsets,
+      std::unordered_map<std::string, std::vector<bool>> &reachedEnd,
+      uint64_t stopTime) const;
+
+  void checkIfAllStopOffsetsReached(
+      const std::unordered_map<std::string, std::vector<bool>> &reachedEnd,
+      bool &checkOffsets);
+
+  // Callbacks
+  CallbackFn m_cbIterationEnd;
+  CallbackFn m_cbError;
 };
 
 } // namespace LiveData

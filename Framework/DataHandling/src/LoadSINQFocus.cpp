@@ -7,6 +7,7 @@
 #include "MantidAPI/RegisterFileLoader.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidGeometry/Instrument.h"
+#include "MantidKernel/OptionalBool.h"
 #include "MantidKernel/UnitFactory.h"
 
 #include <limits>
@@ -111,7 +112,7 @@ void LoadSINQFocus::setInstrumentName(NeXus::NXEntry &entry) {
 
   m_instrumentPath = m_loader.findInstrumentNexusPath(entry);
 
-  if (m_instrumentPath == "") {
+  if (m_instrumentPath.empty()) {
     throw std::runtime_error(
         "Cannot set the instrument name from the Nexus file!");
   }

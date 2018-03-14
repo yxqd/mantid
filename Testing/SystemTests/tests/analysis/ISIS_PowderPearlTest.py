@@ -2,95 +2,243 @@ from __future__ import (absolute_import, division, print_function)
 
 import os
 import stresstesting
+import shutil
 
+import mantid.simpleapi as mantid
 from mantid import config
 
-from isis_powder.pearl import Pearl
+from isis_powder import Pearl
 
 DIRS = config['datasearch.directories'].split(';')
 
+# Setup various path details
 
-class VanadiumCalibrationTest(stresstesting.MantidStressTest):
-    calibration_results = None
+inst_name = "PEARL"
+# Relative to system data folder
+working_folder_name = "ISIS_Powder"
+
+# Relative to working folder
+input_folder_name = "input"
+output_folder_name = "output"
+
+# Relative to input folder
+calibration_folder_name = os.path.join("calibration", inst_name.lower())
+calibration_map_rel_path = os.path.join("yaml_files", "pearl_system_test_mapping.yaml")
+spline_rel_path = os.path.join("17_1", "VanSplined_98472_tt70_pearl_offset_16_4.cal.nxs")
+
+# Generate paths for the tests
+# This implies DIRS[0] is the system test data folder
+working_dir = os.path.join(DIRS[0], working_folder_name)
+
+input_dir = os.path.join(working_dir, input_folder_name)
+output_dir = os.path.join(working_dir, output_folder_name)
+
+calibration_map_path = os.path.join(input_dir, calibration_map_rel_path)
+calibration_dir = os.path.join(input_dir, calibration_folder_name)
+spline_path = os.path.join(calibration_dir, spline_rel_path)
+
+
+class _CreateVanadiumTest(stresstesting.MantidStressTest):
+
     existing_config = config['datasearch.directories']
-
-    # TODO
-    # Test disabled whilst in development as we were having to update the reference file on a daily basis
-    def skipTests(self):
-        return True
+    focus_mode = None
 
     def requiredFiles(self):
         return _gen_required_files()
 
     def runTest(self):
-        self.calibration_results = _run_vanadium_calibration()
+        setup_mantid_paths()
+        run_vanadium_calibration(focus_mode=self.focus_mode)
+
+    def skipTests(self):
+        # Don't actually run this test, as it is a dummy for the focus-mode-specific tests
+        return True
 
     def validate(self):
-        return _calibration_validation(self, self.calibration_results)
+        self.tolerance = 0.05  # Required for difference in spline data between operating systems
+        return "PEARL98472_tt70-Results-D-Grp", "ISIS_Powder_PRL98472_tt70_{}.nxs".format(self.focus_mode), \
+               "Van_spline_data_tt70", "ISIS_Powder-PEARL00098472_splined.nxs"
 
     def cleanup(self):
-        # TODO clean up reference files properly
-        config['datasearch.directories'] = self.existing_config
-        # _clean_up()
+        try:
+            _try_delete(output_dir)
+            _try_delete(spline_path)
+        finally:
+            mantid.mtd.clear()
+            config['datasearch.directories'] = self.existing_config
 
 
-def _calibration_validation(cls, results):
-    _validation_setup(cls)
-    results_group_name = results.name()
-    reference_file_name = "ISIS_PowderPEARL95634-95647_Van_Cal.nxs"
-    return results_group_name, reference_file_name
+class CreateVanadiumAllTest(_CreateVanadiumTest):
+    focus_mode = "all"
+
+    def skipTests(self):
+        return False
 
 
-def _validation_setup(cls):
-    cls.disableChecking.append('Instrument')
-    cls.disableChecking.append('Sample')
-    cls.disableChecking.append('SpectraMap')
+class CreateVanadiumTransTest(_CreateVanadiumTest):
+    focus_mode = "trans"
+
+    def skipTests(self):
+        return False
+
+
+class CreateVanadiumGroupsTest(_CreateVanadiumTest):
+    focus_mode = "groups"
+
+    def skipTests(self):
+        return False
+
+
+class CreateVanadiumModsTest(_CreateVanadiumTest):
+    focus_mode = "mods"
+
+    def skipTests(self):
+        return False
+
+
+class FocusTest(stresstesting.MantidStressTest):
+
+    focus_results = None
+    existing_config = config['datasearch.directories']
+
+    def requiredFiles(self):
+        return _gen_required_files()
+
+    def runTest(self):
+        # Gen vanadium calibration first
+        setup_mantid_paths()
+        self.focus_results = run_focus()
+
+    def validate(self):
+        self.tolerance = 1e-10  # Required for difference in spline data between operating systems
+        return "PEARL98507_tt70-Results-D-Grp", "ISIS_Powder-PEARL00098507_tt70Atten.nxs"
+
+    def cleanup(self):
+        try:
+            _try_delete(spline_path)
+            _try_delete(output_dir)
+        finally:
+            config['datasearch.directories'] = self.existing_config
+            mantid.mtd.clear()
+
+
+class FocusWithAbsorbCorrectionsTest(stresstesting.MantidStressTest):
+
+    focus_results = None
+    existing_config = config["datasearch.directories"]
+
+    def requiredFiles(self):
+        return _gen_required_files()
+
+    def runTest(self):
+        setup_mantid_paths()
+        self.focus_results = run_focus_with_absorb_corrections()
+
+    def validate(self):
+        return "PEARL98507_tt70-Results-D-Grp", "ISIS_Powder-PEARL00098507_tt70_absorb.nxs"
+
+    def cleanup(self):
+        try:
+            _try_delete(spline_path)
+            _try_delete(output_dir)
+        finally:
+            config['datasearch.directories'] = self.existing_config
+            mantid.mtd.clear()
+
+
+class CreateCalTest(stresstesting.MantidStressTest):
+
+    calibration_results = None
+    existing_config = config["datasearch.directories"]
+
+    def requiredFiles(self):
+        return _gen_required_files()
+
+    def runTest(self):
+        setup_mantid_paths()
+        self.calibration_results = run_create_cal()
+
+    def validate(self):
+        self.tolerance = 1e-5
+        return "PRL98494_tt88_grouped", "ISIS_Powder-PEARL98494_grouped.nxs"
+
+    def cleanup(self):
+        try:
+            _try_delete(spline_path)
+            _try_delete(output_dir)
+        finally:
+            config['datasearch.directories'] = self.existing_config
+            mantid.mtd.clear()
 
 
 def _gen_required_files():
-    input_file_dir = _get_input_dir()
-    van_files_names = ["PEARL000" + str(num) for num in range(95634, 95647)]
-    empty_file_names = ["PEARL000" + str(num) for num in range(95648, 95654)]
+    required_run_numbers = ["98472", "98485",  # create_van
+                            "98507", "98472_splined",  # Focus (Si)
+                            "98494"]  # create_cal (Ce)
 
-    required_files = []
-    for van_name, empty_name in zip(van_files_names, empty_file_names):
-        required_files.append(os.path.join(input_file_dir, van_name))
-        required_files.append(os.path.join(input_file_dir, empty_name))
-
-    return required_files
+    # Generate file names of form "INSTxxxxx.nxs" - PEARL requires 000 padding
+    input_files = [os.path.join(input_dir, (inst_name + "000" + number + ".nxs")) for number in required_run_numbers]
+    input_files.append(calibration_map_path)
+    return input_files
 
 
-def _get_calibration_dir():
-    return os.path.join(DIRS[0], "PEARL", "Calibration")
+def run_create_cal():
+    ceria_run = 98494
+    inst_obj = setup_inst_object(tt_mode="tt88", focus_mode="all")
+    return inst_obj.create_cal(run_number=ceria_run)
 
 
-def _get_input_dir():
-    return os.path.join(DIRS[0], "PEARL", "InputData")
+def run_vanadium_calibration(focus_mode):
+    vanadium_run = 98507  # Choose arbitrary run in the cycle 17_1
+
+    inst_obj = setup_inst_object(tt_mode="tt70", focus_mode=focus_mode)
+
+    # Run create vanadium twice to ensure we get two different output splines / files
+    inst_obj.create_vanadium(run_in_cycle=vanadium_run, do_absorb_corrections=True)
 
 
-def _get_output_dir():
-    return os.path.join(DIRS[0], "PEARL", "SystemTest_Output")
-
-
-def _run_vanadium_calibration():
-    vanadium_runs = "95634_95647"
-
-    pearl_obj = _setup_pearl_instrument(tt_mode=None)
-    results = pearl_obj.create_calibration_vanadium(run_in_range=vanadium_runs, do_absorb_corrections=True,
-                                                    long_mode=False)
-    return results
-
-
-def _setup_pearl_instrument(tt_mode):
-    user_name = "Test"
-    calibration_mapping_file_name = "pearl_calibration.yaml"
+def run_focus():
+    run_number = 98507
     attenuation_file_name = "PRL112_DC25_10MM_FF.OUT"
-    attenuation_file_path = os.path.join(_get_calibration_dir(), attenuation_file_name)
-    calibration_map_file_path = os.path.join(_get_calibration_dir(), calibration_mapping_file_name)
-    # Setup raw data directory in Mantid
-    config['datasearch.directories'] += ";" + _get_input_dir()
 
-    pearl_obj = Pearl(user_name=user_name, tt_mode=tt_mode, attenuation_file_name=attenuation_file_path,
-                      calibration_directory=_get_calibration_dir(), output_directory=_get_output_dir(),
-                      calibration_config_path=calibration_map_file_path)
-    return pearl_obj
+    # Copy the required splined file into place first (instead of relying on generated one)
+    splined_file_name = "PEARL00098472_splined.nxs"
+
+    attenuation_path = os.path.join(calibration_dir, attenuation_file_name)
+    original_splined_path = os.path.join(input_dir, splined_file_name)
+    shutil.copy(original_splined_path, spline_path)
+
+    inst_object = setup_inst_object(tt_mode="tt70", focus_mode="Trans")
+    return inst_object.focus(run_number=run_number, vanadium_normalisation=True, do_absorb_corrections=False,
+                             perform_attenuation=True, attenuation_file_path=attenuation_path)
+
+
+def run_focus_with_absorb_corrections():
+    run_number = 98507
+    inst_object = setup_inst_object(tt_mode="tt70", focus_mode="Trans")
+    return inst_object.focus(run_number=run_number, vanadium_normalisation=False, perform_attenuation=False,
+                             do_absorb_corrections=True)
+
+
+def setup_mantid_paths():
+    config['datasearch.directories'] += ";" + input_dir
+
+
+def setup_inst_object(tt_mode, focus_mode):
+    user_name = "Test"
+
+    inst_obj = Pearl(user_name=user_name, calibration_mapping_file=calibration_map_path, long_mode=False,
+                     calibration_directory=calibration_dir, output_directory=output_dir, tt_mode=tt_mode,
+                     focus_mode=focus_mode)
+    return inst_obj
+
+
+def _try_delete(path):
+    try:
+        # Use this instead of os.remove as we could be passed a non-empty dir
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
+    except OSError:
+        print ("Could not delete output file at: ", path)
