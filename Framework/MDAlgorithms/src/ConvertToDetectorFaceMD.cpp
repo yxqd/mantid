@@ -4,6 +4,7 @@
 #include "MantidKernel/ArrayLengthValidator.h"
 #include "MantidKernel/Strings.h"
 #include "MantidKernel/System.h"
+#include "MantidKernel/Unit.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/MDEventFactory.h"
 #include "MantidGeometry/Instrument/RectangularDetector.h"
@@ -15,6 +16,7 @@ using namespace Mantid::API;
 using namespace Mantid::DataObjects;
 using namespace Mantid::DataObjects;
 using namespace Mantid::Geometry;
+using Mantid::Types::Event::TofEvent;
 
 namespace Mantid {
 namespace MDAlgorithms {

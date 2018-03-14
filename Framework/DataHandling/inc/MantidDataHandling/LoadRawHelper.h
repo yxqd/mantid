@@ -1,18 +1,14 @@
 #ifndef MANTID_DATAHANDLING_LOADRAWHELPER_H_
 #define MANTID_DATAHANDLING_LOADRAWHELPER_H_
 
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAPI/IFileLoader.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidDataHandling/ISISRunLogs.h"
 #include "MantidAPI/Run.h"
+#include "MantidAPI/WorkspaceGroup_fwd.h"
+#include <boost/scoped_ptr.hpp>
 #include <climits>
 
-//----------------------------------------------------------------------
-// Forward declaration
-//----------------------------------------------------------------------
 class ISISRAW;
 class ISISRAW2;
 
@@ -120,10 +116,10 @@ public:
                                    API::Algorithm *const pAlg);
 
   /// Extract the start time from a raw file
-  static Kernel::DateAndTime extractStartTime(ISISRAW *isisRaw);
+  static Types::Core::DateAndTime extractStartTime(ISISRAW *isisRaw);
 
   /// Extract the end time from a raw file
-  static Kernel::DateAndTime extractEndTime(ISISRAW *isisRaw);
+  static Types::Core::DateAndTime extractEndTime(ISISRAW *isisRaw);
 
 protected:
   /// Overwrites Algorithm method.

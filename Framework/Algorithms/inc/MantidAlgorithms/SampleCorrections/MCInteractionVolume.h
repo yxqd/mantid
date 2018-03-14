@@ -2,21 +2,23 @@
 #define MANTID_ALGORITHMS_MCINTERACTIONVOLUME_H_
 
 #include "MantidAlgorithms/DllConfig.h"
+#include "MantidGeometry/Objects/BoundingBox.h"
 
 namespace Mantid {
 namespace API {
 class Sample;
 }
 namespace Geometry {
-class BoundingBox;
-class Object;
+class IObject;
 class SampleEnvironment;
 }
+
 namespace Kernel {
 class PseudoRandomNumberGenerator;
 class V3D;
 }
 namespace Algorithms {
+class IBeamProfile;
 
 /**
   Defines a volume where interactions of Tracks and Objects can take place.
@@ -46,21 +48,25 @@ namespace Algorithms {
 */
 class MANTID_ALGORITHMS_DLL MCInteractionVolume {
 public:
-  MCInteractionVolume(const API::Sample &sample);
+  MCInteractionVolume(const API::Sample &sample,
+                      const Geometry::BoundingBox &activeRegion,
+                      const size_t maxScatterAttempts = 5000);
   // No creation from temporaries as we store a reference to the object in
   // the sample
-  MCInteractionVolume(const API::Sample &&sample) = delete;
+  MCInteractionVolume(const API::Sample &&sample,
+                      const Geometry::BoundingBox &&activeRegion) = delete;
 
   const Geometry::BoundingBox &getBoundingBox() const;
   double calculateAbsorption(Kernel::PseudoRandomNumberGenerator &rng,
                              const Kernel::V3D &startPos,
-                             const Kernel::V3D &direc,
                              const Kernel::V3D &endPos, double lambdaBefore,
                              double lambdaAfter) const;
 
 private:
-  const Geometry::Object &m_sample;
+  const boost::shared_ptr<Geometry::IObject> m_sample;
   const Geometry::SampleEnvironment *m_env;
+  const Geometry::BoundingBox m_activeRegion;
+  const size_t m_maxScatterAttempts;
 };
 
 } // namespace Algorithms

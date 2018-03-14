@@ -23,6 +23,29 @@ simply calls :ref:`algm-LoadLiveData` at a fixed interval.
 Instructions for setting up a "fake" data stream are found `here
 <http://www.mantidproject.org/MBC_Live_Data_Simple_Examples>`__.
 
+Listener Properties
+###################
+
+Specific LiveListeners may provide their own properties, in addition to
+properties provided by StartLiveData. For convenience and accessibility, these
+properties are made available through StartLiveData as well.
+
+In the StartLiveData algorithm dialog, a group box called "Listener Properties"
+will appear at the bottom of the sidebar on the left, if the currently selected
+listener provides additional properties.
+
+In the Python API, these listener properties may also be set as keyword
+arguments when calling StartLiveData. For example, in this code snippet:
+
+.. code-block:: python
+
+    StartLiveData(Instrument='ISIS_Histogram', OutputWorkspace='wsOut', UpdateEvery=1,
+                  AccumulationMethod='Replace', PeriodList=[1,3], SpectraList=[2,4,6])
+
+PeriodList and SpectraList are properties of the ISISHistoDataListener. They
+are available as arguments in this call because Instrument is set to
+'ISIS_Histogram', which uses that listener.
+
 Live Plots
 ##########
 
@@ -125,8 +148,8 @@ Usage
 
     try:
         captureLive()
-    except Exception, exc:
-        print "Error occurred starting live data"
+    except Exception:
+        print("Error occurred starting live data")
     finally:
         thread.join() # this must get hit
 
@@ -135,7 +158,7 @@ Usage
 
     #get the ouput workspace
     wsOut = mtd["wsOut"]
-    print "The workspace contains %i events" % wsOut.getNumberEvents()
+    print("The workspace contains %i events" % wsOut.getNumberEvents())
 
 Output:
 
@@ -189,8 +212,8 @@ Output:
 
     try:
         captureLive()
-    except Exception, exc:
-        print "Error occurred starting live data"
+    except Exception:
+        print("Error occurred starting live data")
     finally:
         thread.join() # this must get hit
 
@@ -199,8 +222,8 @@ Output:
 
     #get the ouput workspace
     wsOut = mtd["wsOut"]
-    print "The workspace contains %i periods" % wsOut.getNumberOfEntries()
-    print "Each period   contains %i spectra" % wsOut.getItem(0).getNumberHistograms()
+    print("The workspace contains %i periods" % wsOut.getNumberOfEntries())
+    print("Each period   contains %i spectra" % wsOut.getItem(0).getNumberHistograms())
     time.sleep(1)
 
 Output:

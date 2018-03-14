@@ -2,6 +2,7 @@
 #include "MantidKernel/System.h"
 #include "MantidAPI/WorkspaceProperty.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/Run.h"
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
@@ -38,7 +39,7 @@ void Merge2WorkspaceLogs::exec() {
   double logvalue2 = this->getProperty("LogValue2");
 
   // 2. Check
-  if (logname1.size() == 0 || logname2.size() == 0 || mlogname.size() == 0) {
+  if (logname1.empty() || logname2.empty() || mlogname.empty()) {
     g_log.error() << "One or more than one log name is not given!\n";
     throw std::invalid_argument("One or more than one log name is not give");
   }
@@ -68,8 +69,8 @@ void Merge2WorkspaceLogs::mergeLogs(std::string ilogname1,
   Kernel::TimeSeriesProperty<double> *p1 = getTimeSeriesLog(ilogname1);
   Kernel::TimeSeriesProperty<double> *p2 = getTimeSeriesLog(ilogname2);
 
-  std::vector<Kernel::DateAndTime> times1 = p1->timesAsVector();
-  std::vector<Kernel::DateAndTime> times2 = p2->timesAsVector();
+  std::vector<Types::Core::DateAndTime> times1 = p1->timesAsVector();
+  std::vector<Types::Core::DateAndTime> times2 = p2->timesAsVector();
 
   auto rp = new Kernel::TimeSeriesProperty<double>(ologname);
 
@@ -78,7 +79,7 @@ void Merge2WorkspaceLogs::mergeLogs(std::string ilogname1,
   size_t index2 = 0;
   bool icont = true;
 
-  Kernel::DateAndTime tmptime;
+  Types::Core::DateAndTime tmptime;
   double tmpvalue;
   bool launch1 = true;
   ;

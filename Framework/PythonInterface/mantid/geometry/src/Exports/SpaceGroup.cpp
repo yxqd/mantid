@@ -7,11 +7,12 @@
 #include <boost/python/enum.hpp>
 #include <boost/python/scope.hpp>
 #include <boost/python/list.hpp>
+#include <boost/python/self.hpp>
+#include <boost/python/operators.hpp>
 #include <boost/python/register_ptr_to_python.hpp>
 
 using Mantid::Geometry::Group;
 using Mantid::Geometry::SpaceGroup;
-using Mantid::Geometry::SymmetryOperation;
 using namespace boost::python;
 
 GET_POINTER_SPECIALIZATION(SpaceGroup)
@@ -48,6 +49,14 @@ Mantid::Geometry::Group_sptr getSiteSymmetryGroup(SpaceGroup &self,
 
   return group;
 }
+
+std::string __repr__implementation(const SpaceGroup &self) {
+  std::stringstream ss;
+  ss << "SpaceGroupFactory.createSpaceGroup(\"";
+  ss << self.hmSymbol();
+  ss << "\")";
+  return ss.str();
+}
 }
 
 void export_SpaceGroup() {
@@ -71,5 +80,7 @@ void export_SpaceGroup() {
            "Returns the point group of the space group.")
       .def("getSiteSymmetryGroup", &getSiteSymmetryGroup,
            (arg("self"), arg("position")),
-           "Returns the site symmetry group for supplied point coordinates.");
+           "Returns the site symmetry group for supplied point coordinates.")
+      .def(str(self))
+      .def("__repr__", &__repr__implementation);
 }

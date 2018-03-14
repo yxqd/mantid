@@ -33,7 +33,6 @@ Description          : QtiPlot's main window
 #define APPLICATION_H
 
 #include <QBuffer>
-#include <QDesktopServices>
 #include <QFile>
 #include <QLocale>
 #include <QMainWindow>
@@ -43,8 +42,9 @@ Description          : QtiPlot's main window
 #include <QSettings>
 #include <QSplitter>
 
-#include "MantidQtAPI/HelpWindow.h"
-#include "MantidQtAPI/IProjectSerialisable.h"
+#include "MantidQtWidgets/Common/HelpWindow.h"
+#include "MantidQtWidgets/Common/IProjectSerialisable.h"
+#include "ProjectSaveView.h"
 #include "Script.h"
 #include "Scripted.h"
 #include "ScriptingEnv.h"
@@ -102,11 +102,9 @@ class TiledWindow;
 #endif
 
 namespace MantidQt {
-namespace API {
-class Message;
-}
 namespace MantidWidgets {
 class FitPropertyBrowser;
+class Message;
 class MessageDisplay;
 }
 }
@@ -242,7 +240,7 @@ public slots:
   * @param fn :: is read as a data file with the default column separator (as
   *set by the user)
   * and inserted as a table into a new, empty project.
-  * This table is then plotted with the Graph::LineSymbols style.
+  * This table is then plotted with the GraphOptions::LineSymbols style.
   */
   ApplicationWindow *plotFile(const QString &fn);
 
@@ -270,6 +268,12 @@ public slots:
   void saveProjectAs(const QString &fileName = QString(),
                      bool compress = false);
   bool saveProject(bool compress = false);
+  /// Run the project saver dialog
+  int execSaveProjectDialog();
+  /// Show the project saver dialog
+  void prepareSaveProject();
+  /// Update application window post save
+  void postSaveProject();
 
   //! Set the project status to modifed
   void modifiedProject();
@@ -314,12 +318,12 @@ public slots:
   void deleteLayer();
 
   //! Creates a new spectrogram graph
-  MultiLayer *plotSpectrogram(Matrix *m, Graph::CurveType type);
-  MultiLayer *plotGrayScale(Matrix *m = 0);
-  MultiLayer *plotContour(Matrix *m = 0);
-  MultiLayer *plotColorMap(Matrix *m = 0);
-  MultiLayer *plotImage(Matrix *m = 0);
-  MultiLayer *plotNoContourColorMap(Matrix *m = 0);
+  MultiLayer *plotSpectrogram(Matrix *m, GraphOptions::CurveType type);
+  MultiLayer *plotGrayScale(Matrix *m = nullptr);
+  MultiLayer *plotContour(Matrix *m = nullptr);
+  MultiLayer *plotColorMap(Matrix *m = nullptr);
+  MultiLayer *plotImage(Matrix *m = nullptr);
+  MultiLayer *plotNoContourColorMap(Matrix *m = nullptr);
 
   //! Rearrange the layersin order to fit to the size of the plot window
   void autoArrangeLayers();
@@ -380,7 +384,7 @@ public slots:
   void plot3DPolygons();
   void plot3DWireSurface();
 
-  Graph3D *plot3DMatrix(Matrix *m = 0, int style = 5);
+  Graph3D *plot3DMatrix(Matrix *m = nullptr, int style = 5);
 
   void plot3DRibbon();
   void plot3DScatter();
@@ -394,7 +398,7 @@ public slots:
                               int points = 100, const QString &var = "x",
                               int type = 0);
 
-  FunctionDialog *functionDialog(Graph *g = NULL);
+  FunctionDialog *functionDialog(Graph *g = nullptr);
   FunctionDialog *showFunctionDialog();
   FunctionDialog *showFunctionDialog(Graph *g, int curve);
   void addFunctionCurve();
@@ -532,7 +536,7 @@ public slots:
   void plotBoxDiagram();
 
   /// Create a stem plot from a table and return a string representation of it
-  QString stemPlot(Table *t = 0, const QString &colName = QString(),
+  QString stemPlot(Table *t = nullptr, const QString &colName = QString(),
                    int power = 0, int startRow = 0, int endRow = -1);
   Note *newStemPlot();
 
@@ -543,7 +547,7 @@ public slots:
   // error if not
   bool validFor2DPlot(Table *table);
   //! Generate a new 2D graph
-  MultiLayer *generate2DGraph(Graph::CurveType type);
+  MultiLayer *generate2DGraph(GraphOptions::CurveType type);
   //@}
 
   //! \name Image Analysis
@@ -576,7 +580,7 @@ public slots:
 
   //! \name MDI Windows
   //@{
-  MdiSubWindow *clone(MdiSubWindow *w = 0);
+  MdiSubWindow *clone(MdiSubWindow *w = nullptr);
   void rename();
   void renameWindow();
 
@@ -586,10 +590,10 @@ public slots:
   //!  Checks weather the new window name is valid and modifies the name.
   bool setWindowName(MdiSubWindow *w, const QString &text);
 
-  void maximizeWindow(QTreeWidgetItem *lbi = 0);
+  void maximizeWindow(QTreeWidgetItem *lbi = nullptr);
   void activateWindow(QTreeWidgetItem *lbi);
   void maximizeWindow(MdiSubWindow *w);
-  void minimizeWindow(MdiSubWindow *w = 0);
+  void minimizeWindow(MdiSubWindow *w = nullptr);
   //! Changes the geometry of the active MDI window
   void setWindowGeometry(int x, int y, int w, int h);
 
@@ -597,6 +601,7 @@ public slots:
 
   bool hidden(QWidget *window);
   void closeActiveWindow();
+  void closeSimilarWindows();
   void closeWindow(MdiSubWindow *window);
 
   //!  Does all the cleaning work before actually deleting a window!
@@ -950,7 +955,7 @@ public slots:
   Folder *currentFolder() const { return d_current_folder; }
   //! Adds a new folder to the project
   void addFolder();
-  Folder *addFolder(QString name, Folder *parent = NULL);
+  Folder *addFolder(QString name, Folder *parent = nullptr);
   //! Deletes the current folder
   void deleteFolder();
 
@@ -1021,9 +1026,9 @@ public slots:
   void appendProject();
   //! Open the specified project file and add it as a subfolder to the
   // parentFolder or to the current folder if no parent folder is specified.
-  Folder *appendProject(const QString &file_name, Folder *parentFolder = 0);
+  Folder *appendProject(const QString &file_name,
+                        Folder *parentFolder = nullptr);
   void saveAsProject();
-  void saveFolderAsProject(Folder *f);
 
   //!  adds a folder list item to the list view "lv"
   void addFolderListViewItem(Folder *f);
@@ -1059,7 +1064,7 @@ public slots:
   void savetoNexusFile();
 
   // Slot for writing to log window
-  void writeToLogWindow(const MantidQt::API::Message &message);
+  void writeToLogWindow(const MantidQt::MantidWidgets::Message &message);
 
   /// Activate a subwindow (docked or floating) other than current active one
   void activateNewWindow();
@@ -1118,12 +1123,13 @@ public slots:
 signals:
   void modified();
   void shutting_down();
+  void configModified();
 
 protected:
   bool event(QEvent *e) override;
 
 private:
-  QMenu *createPopupMenu() override { return NULL; }
+  QMenu *createPopupMenu() override { return nullptr; }
 
   /// this method saves the data on project save
   void savedatainNexusFormat(const std::string &wsName,
@@ -1133,7 +1139,10 @@ private:
   bool shouldExecuteAndQuit(const QString &arg);
   bool isSilentStartup(const QString &arg);
   void handleConfigDir();
-
+  /// Save the working directory to QSettings
+  void cacheWorkingDirectory() const;
+  void patchPaletteForLinux(QPalette &palette) const;
+  bool isUnityDesktop() const;
 private slots:
   //! \name Initialization
   //@{
@@ -1191,7 +1200,7 @@ private slots:
 
   void hideSelectedColumns();
   void showAllColumns();
-  void closedLastCopiedLayer() { lastCopiedLayer = NULL; };
+  void closedLastCopiedLayer() { lastCopiedLayer = nullptr; };
   void cleanTextEditor();
   void tileMdiWindows();
   void shakeViewport();
@@ -1451,6 +1460,8 @@ private:
   QDockWidget *explorerWindow;
   MantidQt::MantidWidgets::MessageDisplay *resultsLog;
   QMdiArea *d_workspace;
+
+  MantidQt::MantidWidgets::ProjectSaveView *m_projectSaveView;
 
   QToolBar *standardTools, *plotTools, *displayBar;
   QToolBar *formatToolBar;

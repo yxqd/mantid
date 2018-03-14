@@ -97,7 +97,10 @@ build/
 *.tmp
 *.vspscc
 .builds
-
+*.egg-info/
+qt/python/mantidqt/utils/qt/plugins.py
+qt/python/mantidqt/resources.py
+qt/applications/workbench/workbench/app/resources.py
 
 # Visual C++ cache files
 ipch/
@@ -160,6 +163,9 @@ Desktop.ini
 # PyCharm IDE
 .idea/
 
+# VSCode cache
+.vscode/
+
 # Mac OS X Finder
 .DS_Store
 
@@ -178,4 +184,3 @@ Third_Party/
 win64/
 dbg/
 rel/
-

@@ -1,12 +1,9 @@
-
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAlgorithms/CalculateTransmission.h"
 #include "MantidAPI/CommonBinsValidator.h"
 #include "MantidAPI/FunctionFactory.h"
 #include "MantidAPI/HistogramValidator.h"
 #include "MantidAPI/IFunction.h"
+#include "MantidAPI/SpectrumInfo.h"
 #include "MantidAPI/WorkspaceOpOverloads.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidGeometry/Instrument.h"
@@ -21,7 +18,6 @@
 #include <cmath>
 
 #include <boost/algorithm/string/join.hpp>
-#include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 
 namespace Mantid {
@@ -45,9 +41,9 @@ const detid_t LOQ_TRANSMISSION_MONITOR_UDET = 3;
  *
  * @returns workspace index corresponding to the given detector ID
  */
-size_t getIndexFromDetectorID(MatrixWorkspace_sptr ws, detid_t detid) {
+size_t getIndexFromDetectorID(const MatrixWorkspace &ws, detid_t detid) {
   const std::vector<detid_t> input = {detid};
-  std::vector<size_t> result = ws->getIndicesFromDetectorIDs(input);
+  std::vector<size_t> result = ws.getIndicesFromDetectorIDs(input);
   if (result.empty())
     throw std::invalid_argument(
         "Could not find the spectra corresponding to detector ID " +
@@ -125,6 +121,7 @@ void CalculateTransmission::init() {
 }
 
 void CalculateTransmission::exec() {
+  m_done = 0.;
   MatrixWorkspace_sptr sampleWS = getProperty("SampleRunWorkspace");
   MatrixWorkspace_sptr directWS = getProperty("DirectRunWorkspace");
 
@@ -137,7 +134,7 @@ void CalculateTransmission::exec() {
   if (!usingSameInstrument)
     throw std::invalid_argument(
         "The input workspaces do not come from the same instrument.");
-  if (!WorkspaceHelpers::matchingBins(sampleWS, directWS))
+  if (!WorkspaceHelpers::matchingBins(*sampleWS, *directWS))
     throw std::invalid_argument(
         "The input workspaces do not have matching bins.");
 
@@ -161,7 +158,7 @@ void CalculateTransmission::exec() {
   std::vector<size_t> transmissionIndices;
   if (usingMonitor) {
     const size_t transmissionMonitorIndex =
-        getIndexFromDetectorID(sampleWS, transMonitorID);
+        getIndexFromDetectorID(*sampleWS, transMonitorID);
     transmissionIndices.push_back(transmissionMonitorIndex);
     logIfNotMonitor(sampleWS, directWS, transmissionMonitorIndex);
   } else if (usingROI) {
@@ -182,15 +179,17 @@ void CalculateTransmission::exec() {
   const bool normaliseToMonitor = !isEmpty(beamMonitorID);
   size_t beamMonitorIndex = 0;
   if (normaliseToMonitor) {
-    beamMonitorIndex = getIndexFromDetectorID(sampleWS, beamMonitorID);
+    beamMonitorIndex = getIndexFromDetectorID(*sampleWS, beamMonitorID);
     logIfNotMonitor(sampleWS, directWS, beamMonitorIndex);
 
-    BOOST_FOREACH (size_t transmissionIndex, transmissionIndices)
-      if (transmissionIndex == beamMonitorIndex)
-        throw std::invalid_argument("The IncidentBeamMonitor UDET (" +
-                                    std::to_string(transmissionIndex) +
-                                    ") matches a UDET given in " +
-                                    transPropName + ".");
+    const auto transmissionIndex =
+        std::find(transmissionIndices.begin(), transmissionIndices.end(),
+                  beamMonitorIndex);
+    if (transmissionIndex != transmissionIndices.end())
+      throw std::invalid_argument("The IncidentBeamMonitor UDET (" +
+                                  std::to_string(*transmissionIndex) +
+                                  ") matches a UDET given in " + transPropName +
+                                  ".");
   }
 
   MatrixWorkspace_sptr sampleInc;
@@ -296,7 +295,7 @@ CalculateTransmission::extractSpectra(API::MatrixWorkspace_sptr ws,
 */
 API::MatrixWorkspace_sptr
 CalculateTransmission::fit(API::MatrixWorkspace_sptr raw,
-                           std::vector<double> rebinParams,
+                           const std::vector<double> &rebinParams,
                            const std::string fitMethod) {
   MatrixWorkspace_sptr output =
       this->extractSpectra(raw, std::vector<size_t>(1, 0));
@@ -401,7 +400,7 @@ CalculateTransmission::fitData(API::MatrixWorkspace_sptr WS, double &grad,
                                double &offset) {
   g_log.information("Fitting the experimental transmission curve");
   double start = m_done;
-  IAlgorithm_sptr childAlg = createChildAlgorithm("Fit", start, m_done = 0.9);
+  IAlgorithm_sptr childAlg = createChildAlgorithm("Fit", start, m_done + 0.9);
   auto linearBack =
       API::FunctionFactory::Instance().createFunction("LinearBackground");
   childAlg->setProperty("Function", linearBack);
@@ -466,7 +465,7 @@ CalculateTransmission::fitPolynomial(API::MatrixWorkspace_sptr WS, int order,
 *  @throw runtime_error if the rebin algorithm fails during execution
 */
 API::MatrixWorkspace_sptr
-CalculateTransmission::rebin(std::vector<double> &binParams,
+CalculateTransmission::rebin(const std::vector<double> &binParams,
                              API::MatrixWorkspace_sptr ws) {
   double start = m_done;
   IAlgorithm_sptr childAlg =
@@ -492,9 +491,9 @@ void CalculateTransmission::logIfNotMonitor(API::MatrixWorkspace_sptr sampleWS,
                                             size_t index) {
   const std::string message = "The detector at index " + std::to_string(index) +
                               " is not a monitor in the ";
-  if (!sampleWS->getDetector(index)->isMonitor())
+  if (!sampleWS->spectrumInfo().isMonitor(index))
     g_log.information(message + "sample workspace.");
-  if (!directWS->getDetector(index)->isMonitor())
+  if (!directWS->spectrumInfo().isMonitor(index))
     g_log.information(message + "direct workspace.");
 }
 

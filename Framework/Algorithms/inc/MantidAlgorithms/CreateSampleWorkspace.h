@@ -6,6 +6,7 @@
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidAPI/MatrixWorkspace_fwd.h"
 #include "MantidGeometry/Instrument.h"
+#include "MantidGeometry/Objects/CSGObject.h"
 #include "MantidKernel/PseudoRandomNumberGenerator.h"
 
 namespace Mantid {
@@ -55,23 +56,26 @@ private:
   DataObjects::EventWorkspace_sptr
   createEventWorkspace(int numPixels, int numBins, int numMonitors,
                        int numEvents, double x0, double binDelta,
-                       int start_at_pixelID, Geometry::Instrument_sptr inst,
+                       Geometry::Instrument_sptr inst,
                        const std::string &functionString, bool isRandom);
   API::MatrixWorkspace_sptr
   createHistogramWorkspace(int numPixels, int numBins, int numMonitors,
-                           double x0, double binDelta, int start_at_pixelID,
+                           double x0, double binDelta,
                            Geometry::Instrument_sptr inst,
                            const std::string &functionString, bool isRandom);
+  API::MatrixWorkspace_sptr createScanningWorkspace(
+      int numBins, double x0, double binDelta, Geometry::Instrument_sptr inst,
+      const std::string &functionString, bool isRandom, int numScanPoints);
   Geometry::Instrument_sptr createTestInstrumentRectangular(
       API::Progress &progress, int numBanks, int numMonitors, int pixels,
       double pixelSpacing, const double bankDistanceFromSample,
       const double sourceSampleDistance);
-  Geometry::Object_sptr createCappedCylinder(double radius, double height,
-                                             const Kernel::V3D &baseCentre,
-                                             const Kernel::V3D &axis,
-                                             const std::string &id);
-  Geometry::Object_sptr createSphere(double radius, const Kernel::V3D &centre,
-                                     const std::string &id);
+  Geometry::IObject_sptr createCappedCylinder(double radius, double height,
+                                              const Kernel::V3D &baseCentre,
+                                              const Kernel::V3D &axis,
+                                              const std::string &id);
+  Geometry::IObject_sptr createSphere(double radius, const Kernel::V3D &centre,
+                                      const std::string &id);
   std::vector<double> evalFunction(const std::string &functionString,
                                    const std::vector<double> &xVal,
                                    double noiseScale);

@@ -118,8 +118,8 @@ public:
     TS_ASSERT_EQUALS(tie.asString(&mfun), "f1.sig=f2.sig^2+f0.a+1");
 
     TS_ASSERT_DELTA(tie.eval(), 5.8, 0.00001);
-    TS_ASSERT_EQUALS(tie.getFunction(), g1.get());
-    TS_ASSERT_EQUALS(tie.getIndex(), 2);
+    TS_ASSERT_EQUALS(tie.getLocalFunction(), g1.get());
+    TS_ASSERT_EQUALS(tie.getLocalIndex(), 2);
 
     TS_ASSERT_THROWS(mustThrow1(&mfun), std::invalid_argument);
     TS_ASSERT_THROWS(mustThrow2(&mfun), std::invalid_argument);
@@ -144,8 +144,8 @@ public:
     TS_ASSERT_EQUALS(tie.asString(&mfun), "f0.b=f3.sig^2+f1.a+1");
 
     TS_ASSERT_DELTA(tie.eval(), 2, 0.00001);
-    TS_ASSERT_EQUALS(tie.getFunction(), bk1.get());
-    TS_ASSERT_EQUALS(tie.getIndex(), 1);
+    TS_ASSERT_EQUALS(tie.getLocalFunction(), bk1.get());
+    TS_ASSERT_EQUALS(tie.getLocalIndex(), 1);
 
     mfun.removeFunction(2);
     TS_ASSERT_EQUALS(tie.asString(&mfun), "f0.b=f2.sig^2+f1.a+1");
@@ -179,25 +179,25 @@ public:
     TS_ASSERT_EQUALS(tie1.asString(mf2.get()), "f0.sig=sin(f0.sig)+f1.cen/2");
 
     ParameterTie tie2(&mfun, "f1.f0.sig", "123.4");
-    TS_ASSERT_EQUALS(tie2.asString(mf1.get()), "");
+    TS_ASSERT_THROWS(tie2.asString(mf1.get()), std::logic_error);
     TS_ASSERT_EQUALS(tie2.asString(&mfun), "f1.f0.sig=123.4");
     TS_ASSERT_EQUALS(tie2.asString(mf2.get()), "f0.sig=123.4");
     TS_ASSERT_EQUALS(tie2.asString(g1.get()), "sig=123.4");
 
     ParameterTie tie3(g1.get(), "sig", "123.4");
-    TS_ASSERT_EQUALS(tie3.asString(mf1.get()), "");
+    TS_ASSERT_THROWS(tie3.asString(mf1.get()), std::logic_error);
     TS_ASSERT_EQUALS(tie3.asString(&mfun), "f1.f0.sig=123.4");
     TS_ASSERT_EQUALS(tie3.asString(mf2.get()), "f0.sig=123.4");
     TS_ASSERT_EQUALS(tie3.asString(g1.get()), "sig=123.4");
 
     ParameterTie tie4(mf2.get(), "f0.sig", "123.4");
-    TS_ASSERT_EQUALS(tie4.asString(mf1.get()), "");
+    TS_ASSERT_THROWS(tie4.asString(mf1.get()), std::logic_error);
     TS_ASSERT_EQUALS(tie4.asString(&mfun), "f1.f0.sig=123.4");
     TS_ASSERT_EQUALS(tie4.asString(mf2.get()), "f0.sig=123.4");
     TS_ASSERT_EQUALS(tie4.asString(g1.get()), "sig=123.4");
 
     ParameterTie tie5(nth.get(), "a", "cos(B1e2Ta_)-sin(alpha12)");
-    TS_ASSERT_EQUALS(tie5.asString(mf1.get()), "");
+    TS_ASSERT_THROWS(tie5.asString(mf1.get()), std::logic_error);
     TS_ASSERT_EQUALS(tie5.asString(&mfun),
                      "f1.f2.a=cos(f1.f2.B1e2Ta_)-sin(f1.f2.alpha12)");
     TS_ASSERT_EQUALS(tie5.asString(mf2.get()),
@@ -213,13 +213,47 @@ public:
 
     ParameterTie tie(&bk, "b", "2*a-1");
 
-    TS_ASSERT_EQUALS(tie.getIndex(), 1);
+    TS_ASSERT_EQUALS(tie.getLocalIndex(), 1);
     TS_ASSERT_DELTA(tie.eval(), 0.6, 0.00001);
     TS_ASSERT_THROWS(mustThrow4(&bk), std::invalid_argument);
     TS_ASSERT_THROWS(mustThrow5(&bk), std::invalid_argument);
     TS_ASSERT_THROWS(tie.set("q+p"), std::invalid_argument);
 
     TS_ASSERT_THROWS(tie.set(""), std::runtime_error);
+  }
+
+  void test_untie_fixed() {
+    ParameterTieTest_Linear bk;
+    bk.fix(0);
+    TS_ASSERT(bk.isFixed(0));
+    bk.removeTie("a");
+    TS_ASSERT(!bk.isFixed(0));
+    bk.fix(0);
+    bk.fix(1);
+    bk.clearTies();
+    TS_ASSERT(!bk.isFixed(0));
+    TS_ASSERT(!bk.isFixed(1));
+  }
+
+  void test_untie_fixed_composite() {
+    CompositeFunction_sptr mf = CompositeFunction_sptr(new CompositeFunction);
+    IFunction_sptr bk1 = IFunction_sptr(new ParameterTieTest_Linear());
+    IFunction_sptr bk2 = IFunction_sptr(new ParameterTieTest_Linear());
+    mf->addFunction(bk1);
+    mf->addFunction(bk2);
+    mf->fix(0);
+    mf->fix(3);
+    TS_ASSERT(mf->isFixed(0));
+    TS_ASSERT(mf->isFixed(3));
+    mf->removeTie("f0.a");
+    mf->removeTie("f1.b");
+    TS_ASSERT(!mf->isFixed(0));
+    TS_ASSERT(!mf->isFixed(3));
+    mf->fix(0);
+    mf->fix(3);
+    mf->clearTies();
+    TS_ASSERT(!mf->isFixed(0));
+    TS_ASSERT(!mf->isFixed(3));
   }
 
 private:

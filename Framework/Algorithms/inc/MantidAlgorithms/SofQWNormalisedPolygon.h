@@ -93,9 +93,10 @@ private:
 
   /// Create the output workspace
   DataObjects::RebinnedOutput_sptr
-  setUpOutputWorkspace(API::MatrixWorkspace_const_sptr inputWorkspace,
-                       const std::vector<double> &binParams,
-                       std::vector<double> &newAxis);
+  setUpOutputWorkspace(const API::MatrixWorkspace &inputWorkspace,
+                       const std::vector<double> &qbinParams,
+                       std::vector<double> &qAxis,
+                       const std::vector<double> &ebinParams);
 
   SofQCommon m_EmodeProperties;
   /// Output Q axis

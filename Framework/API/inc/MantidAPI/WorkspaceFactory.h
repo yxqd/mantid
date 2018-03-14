@@ -14,21 +14,16 @@
                                0));                                            \
   }
 
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAPI/DllConfig.h"
 #include "MantidKernel/DynamicFactory.h"
 #include "MantidKernel/SingletonHolder.h"
+#include "MantidKernel/make_unique.h"
 #include "MantidAPI/MatrixWorkspace_fwd.h"
 #include "MantidAPI/Workspace_fwd.h"
 #include <boost/make_shared.hpp>
 
 namespace Mantid {
 namespace API {
-//----------------------------------------------------------------------
-// Forward declarations
-//----------------------------------------------------------------------
 class ITableWorkspace;
 class IPeaksWorkspace;
 class Workspace;
@@ -77,9 +72,10 @@ public:
                               const size_t &NVectors, const size_t &XLength,
                               const size_t &YLength) const;
 
-  void initializeFromParent(const MatrixWorkspace_const_sptr parent,
-                            const MatrixWorkspace_sptr child,
+  void initializeFromParent(const MatrixWorkspace &parent,
+                            MatrixWorkspace &child,
                             const bool differentSize) const;
+
   /// Create a ITableWorkspace
   boost::shared_ptr<ITableWorkspace>
   createTable(const std::string &className = "TableWorkspace") const;

@@ -25,8 +25,11 @@
 //-----------------------------------------------------------------------------
 // Includes
 //-----------------------------------------------------------------------------
-#include "MantidPythonInterface/api/PythonAlgorithm/AlgorithmAdapter.h"
+#include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/DataProcessorAlgorithm.h"
+#include "MantidPythonInterface/api/PythonAlgorithm/AlgorithmAdapter.h"
+#include "MantidPythonInterface/kernel/Converters/PySequenceToVector.h"
+#include "MantidPythonInterface/kernel/IsNone.h"
 
 namespace Mantid {
 namespace PythonInterface {
@@ -38,13 +41,22 @@ namespace PythonInterface {
  * It also provides access to the protected methods on DataProcessorAlgorithm
  * from the type exported to Python
  */
+template <class Base>
 class DataProcessorAdapter
-    : public AlgorithmAdapter<API::DataProcessorAlgorithm> {
-  typedef AlgorithmAdapter<API::DataProcessorAlgorithm> SuperClass;
-
+    : public AlgorithmAdapter<API::GenericDataProcessorAlgorithm<Base>> {
 public:
   /// A constructor that looks like a Python __init__ method
   DataProcessorAdapter(PyObject *self);
+
+  /// Disable default constructor - The PyObject must be supplied to construct
+  /// the object
+  DataProcessorAdapter() = delete;
+
+  /// Disable copy operator
+  DataProcessorAdapter(const DataProcessorAdapter &) = delete;
+
+  /// Disable assignment operator
+  DataProcessorAdapter &operator=(const DataProcessorAdapter &) = delete;
 
   // -------------------- Pass through methods ----------------------------
   // Boost.python needs public access to the base class methods in order to
@@ -67,6 +79,37 @@ public:
   }
 
   void loadChunkProxy(const size_t rowIndex) { this->loadChunk(rowIndex); }
+
+  void copyPropertiesProxy(const std::string &algName,
+                           const boost::python::object &propNames,
+                           const int version = -1) {
+    if (algName.empty()) {
+      throw std::invalid_argument("Failed to specify algorithm name");
+    }
+
+    std::vector<std::string> names;
+    if (!Mantid::PythonInterface::isNone(propNames)) {
+      boost::python::extract<std::string> extractor(propNames);
+      if (extractor.check()) {
+        names = std::vector<std::string>(1, extractor());
+      } else {
+        names = PythonInterface::Converters::PySequenceToVector<std::string>(
+            propNames)();
+      }
+
+      auto algorithm =
+          API::AlgorithmManager::Instance().createUnmanaged(algName, version);
+      algorithm->initialize();
+
+      for (const auto &name : names) {
+        this->copyProperty(algorithm, name);
+      }
+    } else {
+      std::string msg("Failed to specify properties to copy from \"");
+      msg.append(algName).append("\"");
+      throw std::invalid_argument(msg);
+    }
+  }
 
   API::Workspace_sptr loadProxy(const std::string &inputData,
                                 const bool loadQuiet = false) {
@@ -98,11 +141,6 @@ public:
 
   int getNThreadsProxy() { return this->getNThreads(); }
   // ------------------------------------------------------------------------
-
-private:
-  /// The PyObject must be supplied to construct the object
-  DISABLE_DEFAULT_CONSTRUCT(DataProcessorAdapter)
-  DISABLE_COPY_AND_ASSIGN(DataProcessorAdapter)
 };
 }
 }

@@ -1,10 +1,7 @@
 #ifndef DATAHANDING_SAVEFOCUSEDXYE_H_
 #define DATAHANDING_SAVEFOCUSEDXYE_H_
 
-//---------------------------------------------------
-// Includes
-//---------------------------------------------------
-#include "MantidAPI/Algorithm.h"
+#include "MantidAPI/SerialAlgorithm.h"
 
 namespace Mantid {
 namespace DataHandling {
@@ -58,11 +55,9 @@ namespace DataHandling {
      File change history is stored at: <https://github.com/mantidproject/mantid>
      Code Documentation is available at: <http://doxygen.mantidproject.org>
   */
-class DLLExport SaveFocusedXYE : public API::Algorithm {
+class DLLExport SaveFocusedXYE : public API::SerialAlgorithm {
 public:
   enum HeaderType { XYE, MAUD, TOPAS };
-  /// Constructor
-  SaveFocusedXYE();
   /// Algorithm's name
   const std::string name() const override { return "SaveFocusedXYE"; }
   /// Summary of algorithms purpose
@@ -96,27 +91,27 @@ private:
   /// Write spectra header
   void writeSpectraHeader(std::ostream &os, size_t index1, size_t index2,
                           double flightPath, double tth,
-                          const std::string &caption);
+                          const std::string &caption,
+                          const std::string &spectraAxisCaption,
+                          const std::string &spectraAxisLabel,
+                          double observable);
   /// Write spectra XYE header
-  void writeXYESpectraHeader(std::ostream &os, size_t index1, size_t index2,
-                             double flightPath, double tth,
-                             const std::string &caption);
+  void writeXYESpectraHeader(std::ostream &os, size_t index1,
+                             const std::string &caption,
+                             const std::string &spectrumAxisCaption,
+                             const std::string &spectraAxisLabel,
+                             double observable);
   /// Write spectra MAUD header
   void writeMAUDSpectraHeader(std::ostream &os, size_t index1, size_t index2,
                               double flightPath, double tth,
                               const std::string &caption);
-  /// Determine the focused position for the supplied spectrum.
-  void getFocusedPos(API::MatrixWorkspace_const_sptr wksp,
-                     const size_t spectrum, double &l1, double &l2,
-                     double &tth);
-
   /// sets non workspace properties for the algorithm
   void setOtherProperties(IAlgorithm *alg, const std::string &propertyName,
                           const std::string &propertyValue,
                           int perioidNum) override;
 
   /// Header type
-  HeaderType m_headerType;
+  HeaderType m_headerType{XYE};
   /// Comment character
   std::string m_comment;
 };

@@ -1,26 +1,26 @@
 #include "PeakPickerTool.h"
-#include "MantidMatrixCurve.h"
-#include "MantidUI.h"
-#include "MantidQtMantidWidgets/FitPropertyBrowser.h"
-#include "MantidQtMantidWidgets/MuonFitPropertyBrowser.h"
 #include "../FunctionCurve.h"
-#include "MantidQtMantidWidgets/PropertyHandler.h"
+#include "MantidMatrixCurve.h"
+#include "MantidQtWidgets/Common/FitPropertyBrowser.h"
+#include "MantidQtWidgets/Common/MuonFitPropertyBrowser.h"
+#include "MantidQtWidgets/Common/PropertyHandler.h"
+#include "MantidUI.h"
 
 #include "MantidAPI/CompositeFunction.h"
-#include "MantidAPI/IPeakFunction.h"
 #include "MantidAPI/FunctionFactory.h"
+#include "MantidAPI/IPeakFunction.h"
 #include "MantidKernel/Exception.h"
 #include "MantidKernel/Logger.h"
 
 #include "qwt_painter.h"
-#include <QPainter>
-#include <QList>
-#include <QToolBar>
 #include <QAction>
-#include <QMenu>
-#include <QMouseEvent>
 #include <QInputDialog>
+#include <QList>
+#include <QMenu>
 #include <QMessageBox>
+#include <QMouseEvent>
+#include <QPainter>
+#include <QToolBar>
 
 namespace {
 /// static logger
@@ -484,7 +484,7 @@ PeakPickerTool::clickedOnCentreMarker(double x, double dx) const {
       return peak;
     }
   }
-  return 0;
+  return nullptr;
 }
 
 // Lower fit boundary
@@ -520,7 +520,11 @@ void PeakPickerTool::functionRemoved() { d_graph->plotWidget()->replot(); }
 void PeakPickerTool::algorithmFinished(const QString &out) {
   // Remove old curves first, unless this is muon data
   // (muon scientists want to keep old fits until cleared manually)
-  if (!isMuonData()) {
+  if (isMuonData()) {
+    if (out.endsWith("_Workspaces")) {
+      return; // Simultaneous fit, don't plot results
+    }
+  } else {
     removeFitCurves();
   }
 
@@ -528,7 +532,7 @@ void PeakPickerTool::algorithmFinished(const QString &out) {
   // and change to line.
   auto *curve =
       new MantidMatrixCurve("", out, graph(), 1, MantidMatrixCurve::Spectrum,
-                            false, m_shouldBeNormalised, Graph::Line);
+                            false, m_shouldBeNormalised, GraphOptions::Line);
   m_curveNames.append(curve->title().text());
   if (m_fitPropertyBrowser->plotDiff()) {
     curve =
@@ -557,6 +561,13 @@ void PeakPickerTool::algorithmFinished(const QString &out) {
   }
 
   graph()->replot();
+
+  // New curve(s) inserted: Y scale may have changed.
+  // If we need to keep left/right Y in sync, do so now.
+  if (graph()->hasSynchronizedScaleDivisions()) {
+    graph()->updateSecondaryAxis(QwtPlot::Axis::yRight);
+    graph()->replot();
+  }
 }
 
 /**
@@ -624,7 +635,7 @@ void PeakPickerTool::parameterChanged(const Mantid::API::IFunction *f) {
 
 void PeakPickerTool::replot(MantidQt::MantidWidgets::PropertyHandler *h) const {
   if (h->hasPlot()) {
-    FunctionCurve *fc = 0;
+    FunctionCurve *fc = nullptr;
     int indexForFC = -1;
     for (int i = 0; i < d_graph->curves(); i++) {
       fc = dynamic_cast<FunctionCurve *>(d_graph->curve(i));
@@ -643,7 +654,8 @@ void PeakPickerTool::replot(MantidQt::MantidWidgets::PropertyHandler *h) const {
       // fc->loadData();
       auto ws = boost::dynamic_pointer_cast<const Mantid::API::MatrixWorkspace>(
           m_fitPropertyBrowser->getWorkspace());
-      fc->loadMantidData(ws, m_fitPropertyBrowser->workspaceIndex());
+      fc->loadMantidData(ws, m_fitPropertyBrowser->workspaceIndex(),
+                         m_fitPropertyBrowser->getPeakRadius());
     }
   }
 }
@@ -653,49 +665,55 @@ void PeakPickerTool::replot(MantidQt::MantidWidgets::PropertyHandler *h) const {
  * @param menu :: A reference to the context menu
  */
 void PeakPickerTool::prepareContextMenu(QMenu &menu) {
-  QAction *action = new QAction("Add peak...", this);
-  connect(action, SIGNAL(triggered()), this, SLOT(addPeak()));
-  menu.addAction(action);
+  QAction *action;
+  // several of the context menu options do not work for muon multi fit data,
+  // so don't show them
+  if (!isMuonMultiFitData()) {
+    action = new QAction("Add peak...", this);
+    connect(action, SIGNAL(triggered()), this, SLOT(addPeak()));
+    menu.addAction(action);
 
-  action = new QAction("Add background...", this);
-  connect(action, SIGNAL(triggered()), this, SLOT(addBackground()));
-  menu.addAction(action);
+    action = new QAction("Add background...", this);
+    connect(action, SIGNAL(triggered()), this, SLOT(addBackground()));
+    menu.addAction(action);
 
-  action = new QAction("Add other function...", this);
-  connect(action, SIGNAL(triggered()), this, SLOT(addOther()));
-  menu.addAction(action);
+    action = new QAction("Add other function...", this);
+    connect(action, SIGNAL(triggered()), this, SLOT(addOther()));
+    menu.addAction(action);
 
-  menu.addSeparator();
+    menu.addSeparator();
 
-  if (m_fitPropertyBrowser->count() > 0) {
-    if (m_fitPropertyBrowser->getHandler()->hasPlot()) {
-      action = new QAction("Remove guess", this);
-      connect(action, SIGNAL(triggered()), this, SLOT(removeGuess()));
-      menu.addAction(action);
-    } else {
-      action = new QAction("Plot guess", this);
-      connect(action, SIGNAL(triggered()), this, SLOT(plotGuess()));
-      menu.addAction(action);
-    }
-
-    MantidQt::MantidWidgets::PropertyHandler *h =
-        m_fitPropertyBrowser->currentHandler();
-    if (h && h->pfun()) {
-      if (h->hasPlot()) {
-        action = new QAction("Remove guess for this peak", this);
-        connect(action, SIGNAL(triggered()), this, SLOT(removeCurrentGuess()));
+    if (m_fitPropertyBrowser->count() > 0) {
+      if (m_fitPropertyBrowser->getHandler()->hasPlot()) {
+        action = new QAction("Remove guess", this);
+        connect(action, SIGNAL(triggered()), this, SLOT(removeGuess()));
         menu.addAction(action);
       } else {
-        action = new QAction("Plot guess for this peak", this);
-        connect(action, SIGNAL(triggered()), this, SLOT(plotCurrentGuess()));
+        action = new QAction("Plot guess", this);
+        connect(action, SIGNAL(triggered()), this, SLOT(plotGuess()));
         menu.addAction(action);
       }
 
-      menu.addSeparator();
+      MantidQt::MantidWidgets::PropertyHandler *h =
+          m_fitPropertyBrowser->currentHandler();
+      if (h && h->pfun()) {
+        if (h->hasPlot()) {
+          action = new QAction("Remove guess for this peak", this);
+          connect(action, SIGNAL(triggered()), this,
+                  SLOT(removeCurrentGuess()));
+          menu.addAction(action);
+        } else {
+          action = new QAction("Plot guess for this peak", this);
+          connect(action, SIGNAL(triggered()), this, SLOT(plotCurrentGuess()));
+          menu.addAction(action);
+        }
 
-      action = new QAction("Remove peak", this);
-      connect(action, SIGNAL(triggered()), this, SLOT(deletePeak()));
-      menu.addAction(action);
+        menu.addSeparator();
+
+        action = new QAction("Remove peak", this);
+        connect(action, SIGNAL(triggered()), this, SLOT(deletePeak()));
+        menu.addAction(action);
+      }
     }
   }
 
@@ -709,11 +727,13 @@ void PeakPickerTool::prepareContextMenu(QMenu &menu) {
 
   menu.addSeparator();
 
-  action = new QAction("Get Parameters", this);
-  connect(action, SIGNAL(triggered()), this, SLOT(getParameters()));
-  menu.addAction(action);
+  if (!isMuonMultiFitData()) {
+    action = new QAction("Get Parameters", this);
+    connect(action, SIGNAL(triggered()), this, SLOT(getParameters()));
+    menu.addAction(action);
 
-  menu.addSeparator();
+    menu.addSeparator();
+  }
 
   if (m_fitPropertyBrowser->isFitEnabled()) {
     action = new QAction("Fit", this);
@@ -875,7 +895,8 @@ void PeakPickerTool::plotFitFunction(
                    m_fitPropertyBrowser->endX());
       auto ws = boost::dynamic_pointer_cast<const Mantid::API::MatrixWorkspace>(
           m_fitPropertyBrowser->getWorkspace());
-      fc->loadMantidData(ws, m_fitPropertyBrowser->workspaceIndex());
+      fc->loadMantidData(ws, m_fitPropertyBrowser->workspaceIndex(),
+                         m_fitPropertyBrowser->getPeakRadius());
       // Graph now owns m_curve. Use m_curve->removeMe() to remove (and delete)
       // from Graph
       d_graph->insertCurve(fc);
@@ -900,7 +921,7 @@ void PeakPickerTool::removeGuess() {
 
 void PeakPickerTool::removePlot(MantidQt::MantidWidgets::PropertyHandler *h) {
   // check to see if function is already plotted?
-  FunctionCurve *fc = 0;
+  FunctionCurve *fc = nullptr;
   int indexForFC = -1;
   for (int i = 0; i < d_graph->curves(); i++) {
     fc = dynamic_cast<FunctionCurve *>(d_graph->curve(i));
@@ -1020,7 +1041,7 @@ bool PeakPickerTool::initializeFromCurve(PlotCurve *curve) {
  */
 void PeakPickerTool::addExistingFitsAndGuess(const QStringList &curvesList) {
   bool hasGuess = false;
-  for (const auto curveName : curvesList) {
+  for (const auto &curveName : curvesList) {
     if (curveName.contains(QRegExp("Workspace-[Calc|Diff]"))) { // fit
       m_curveNames.append(curveName);
     } else if (curveName == "CompositeFunction") { // guess
@@ -1042,8 +1063,26 @@ void PeakPickerTool::addExistingFitsAndGuess(const QStringList &curvesList) {
  * @returns :: True for muon data, false otherwise
  */
 bool PeakPickerTool::isMuonData() const {
+  return (getMuonPointer() != nullptr);
+}
+/**
+* Tests if the peak picker tool is connected to a MuonFitPropertyBrowser and set
+* to multiple fitting
+* @returns :: True for muon multiple fit data, false otherwise
+*/
+bool PeakPickerTool::isMuonMultiFitData() const {
+  const auto muonBrowser = getMuonPointer();
+  if (muonBrowser != nullptr) {
+    return muonBrowser->isMultiFittingMode();
+  }
+  return false;
+}
+
+/// Returns a pointer to the MuonFitPropertyBrowser or NULL
+const MantidQt::MantidWidgets::MuonFitPropertyBrowser *
+PeakPickerTool::getMuonPointer() const {
   const auto muonBrowser =
       dynamic_cast<MantidQt::MantidWidgets::MuonFitPropertyBrowser *>(
           m_fitPropertyBrowser);
-  return (muonBrowser != nullptr);
+  return muonBrowser;
 }

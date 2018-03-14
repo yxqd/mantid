@@ -13,7 +13,6 @@ if (CMAKE_BINARY_DIR MATCHES "^${CMAKE_SOURCE_DIR}/.+")
   string (REGEX REPLACE "^${CMAKE_SOURCE_DIR}/([^\\/]+)(.*)\$" "/\\1/" _ignore_dir "${CMAKE_BINARY_DIR}")
   set (CPACK_SOURCE_IGNORE_FILES "${CPACK_SOURCE_IGNORE_FILES};${_ignore_dir}")
 endif ()
-message("CPACK_SOURCE_IGNORE_FILES = ${CPACK_SOURCE_IGNORE_FILES}")
 
 include (DetermineLinuxDistro)
 
@@ -25,9 +24,10 @@ if ( "${UNIX_DIST}" MATCHES "Ubuntu" )
     execute_process( COMMAND ${DPKG_CMD} --print-architecture
       OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE
       OUTPUT_STRIP_TRAILING_WHITESPACE )
-    # according to debian <foo>_<VersionNumber>-<DebianRevisionNumber>_<DebianArchitecture>.deb
-    set( CPACK_PACKAGE_FILE_NAME
-      "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_DEBIAN_PACKAGE_RELEASE}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}")
+    # following Ubuntu convention <foo>_<VersionNumber>-<DebianRevisionNumber>ubuntu1~<UbuntuCodeName>1_<DebianArchitecture>.deb
+    set ( UBUNTU_PACKAGE_RELEASE "ubuntu1~${UNIX_CODENAME}1" )
+    set ( CPACK_PACKAGE_FILE_NAME
+          "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_DEBIAN_PACKAGE_RELEASE}${UBUNTU_PACKAGE_RELEASE}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}")
   endif ( DPKG_CMD )
 endif ( "${UNIX_DIST}" MATCHES "Ubuntu" )
 
@@ -57,7 +57,7 @@ if ( "${UNIX_DIST}" MATCHES "RedHatEnterprise" OR "${UNIX_DIST}" MATCHES "Fedora
 
     # If CPACK_SET_DESTDIR is ON then the Prefix doesn't get put in the spec file
     if( CPACK_SET_DESTDIR )
-      message ( "Adding \"Prefix:\" line to spec file manually when CPACK_SET_DESTDIR is set")
+      message ( STATUS "Adding \"Prefix:\" line to spec file manually when CPACK_SET_DESTDIR is set")
       set( CPACK_RPM_SPEC_MORE_DEFINE "Prefix: ${CPACK_PACKAGING_INSTALL_PREFIX}" )
     endif()
 

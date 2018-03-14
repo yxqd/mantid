@@ -1,43 +1,28 @@
+#include "MantidLiveData/TOPAZLiveEventDataListener.h"
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/LiveListenerFactory.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/EventWorkspace.h"
 #include "MantidGeometry/Instrument.h"
-#include "MantidLiveData/TOPAZLiveEventDataListener.h"
-#include "MantidLiveData/Exception.h"
-//#include "MantidDataObjects/Events.h"
-//#include "MantidKernel/DateAndTime.h"
-//#include "MantidKernel/Strings.h"
+#include "MantidKernel/OptionalBool.h"
 #include "MantidKernel/TimeSeriesProperty.h"
 #include "MantidKernel/UnitFactory.h"
-//#include "MantidKernel/WriteLock.h"
-#include "MantidDataObjects/EventWorkspace.h"
+#include "MantidLiveData/Exception.h"
 
 #include <Poco/Net/NetException.h>
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/Net/DatagramSocket.h>
 #include <Poco/Net/SocketAddress.h>
-//#include <Poco/Net/SocketStream.h>
-//#include <Poco/Timestamp.h>
 
-// Includes for parsing the XML device descriptions
-//#include "Poco/DOM/DOMParser.h"
-//#include "Poco/DOM/Document.h"
-//#include "Poco/DOM/AutoPtr.h"
-//#include "Poco/DOM/NodeList.h"
-//#include "Poco/DOM/NamedNodeMap.h"
-
-//#include <Poco/Thread.h>
-//#include <Poco/Runnable.h>
-
-//#include <time.h>
-//#include <sstream> // for ostringstream
 #include <string>
 #include <fstream>
 #include <exception>
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
+using Mantid::Types::Core::DateAndTime;
 
 #if 0
 // Port numbers
@@ -137,7 +122,7 @@ typedef struct neutron_event_struct NEUTRON_EVENT, *NEUTRON_EVENT_PTR;
  ****************************************************************************/
 
 // Helper function to get a DateAndTime value from a pulse_id_struct
-Mantid::Kernel::DateAndTime timeFromPulse(const pulse_id_struct *p) {
+Mantid::Types::Core::DateAndTime timeFromPulse(const pulse_id_struct *p) {
   uint32_t seconds = p->pulseIDhigh;
   uint32_t nanoseconds = p->pulseIDlow;
 
@@ -157,7 +142,7 @@ Kernel::Logger g_log("SNSLiveEventDataListener");
 
 /// Constructor
 TOPAZLiveEventDataListener::TOPAZLiveEventDataListener()
-    : ILiveListener(), m_workspaceInitialized(false), m_eventBuffer(),
+    : LiveListener(), m_workspaceInitialized(false), m_eventBuffer(),
       m_monitorLogs(), m_wsName(), m_indexMap(), m_monitorIndexMap(),
       m_tcpSocket(), m_dataSocket(), m_dataAddr(), m_isConnected(false),
       m_udpBuf(nullptr), m_udpBufSize(32768), m_runNumber(0), m_mutex(),
@@ -202,6 +187,8 @@ TOPAZLiveEventDataListener::~TOPAZLiveEventDataListener() {
 /// Connect to the TOPAZ event_catcher util (which will supply us with
 /// events).
 /// @param address The address to attempt to connect to
+/// @param args A ConnectionArgs object used to supply additional arguments
+/// required for the connection
 /// @return Returns true if the connection succeeds.  False otherwise.
 bool TOPAZLiveEventDataListener::connect(
     const Poco::Net::SocketAddress &address)
@@ -278,7 +265,7 @@ bool TOPAZLiveEventDataListener::isConnected() { return m_isConnected; }
 /// it and stores the resulting events in a temporary workspace.
 /// @param startTime Ignored.  This class doesn't have the capability to
 /// replay historical data.
-void TOPAZLiveEventDataListener::start(Kernel::DateAndTime startTime) {
+void TOPAZLiveEventDataListener::start(Types::Core::DateAndTime startTime) {
   (void)startTime; // Keep the compiler from complaining about unsed variable
 
   // Initialize the workspace
@@ -313,6 +300,7 @@ void TOPAZLiveEventDataListener::run() {
     // loop until the foreground thread tells us to stop
     while (!m_stopThread) {
       // it's possible that a stop request came in while we were sleeping...
+      // cppcheck-suppress oppositeInnerCondition
       if (m_stopThread) {
         break;
       }
@@ -386,7 +374,7 @@ void TOPAZLiveEventDataListener::run() {
         }
 
         // Timestamp for the events
-        Mantid::Kernel::DateAndTime eventTime = timeFromPulse(&pid[i]);
+        Mantid::Types::Core::DateAndTime eventTime = timeFromPulse(&pid[i]);
 
         std::lock_guard<std::mutex> scopedLock(m_mutex);
         // Save the pulse charge in the logs
@@ -493,7 +481,11 @@ void TOPAZLiveEventDataListener::initWorkspace() {
 
   auto tmp = createWorkspace<DataObjects::EventWorkspace>(
       m_eventBuffer->getInstrument()->getDetectorIDs(true).size(), 2, 1);
-  WorkspaceFactory::Instance().initializeFromParent(m_eventBuffer, tmp, true);
+  WorkspaceFactory::Instance().initializeFromParent(*m_eventBuffer, *tmp, true);
+  if (m_eventBuffer->getNumberHistograms() != tmp->getNumberHistograms()) {
+    // need to generate the spectra to detector map
+    tmp->rebuildSpectraMapping();
+  }
   m_eventBuffer = std::move(tmp);
 
   // Set the units
@@ -515,8 +507,8 @@ void TOPAZLiveEventDataListener::initMonitorWorkspace() {
   auto monitors = m_eventBuffer->getInstrument()->getMonitors();
   auto monitorsBuffer = WorkspaceFactory::Instance().create(
       "EventWorkspace", monitors.size(), 1, 1);
-  WorkspaceFactory::Instance().initializeFromParent(m_eventBuffer,
-                                                    monitorsBuffer, true);
+  WorkspaceFactory::Instance().initializeFromParent(*m_eventBuffer,
+                                                    *monitorsBuffer, true);
   // Set the id numbers
   for (size_t i = 0; i < monitors.size(); ++i) {
     monitorsBuffer->getSpectrum(i).setDetectorID(monitors[i]);
@@ -529,7 +521,8 @@ void TOPAZLiveEventDataListener::initMonitorWorkspace() {
 
 /// Adds an event to the workspace
 void TOPAZLiveEventDataListener::appendEvent(
-    uint32_t pixelId, double tof, const Mantid::Kernel::DateAndTime pulseTime)
+    uint32_t pixelId, double tof,
+    const Mantid::Types::Core::DateAndTime pulseTime)
 // NOTE: This function does NOT lock the mutex!  Make sure you do that
 // before calling this function!
 {
@@ -538,7 +531,7 @@ void TOPAZLiveEventDataListener::appendEvent(
   auto it = m_indexMap.find(pixelId);
   if (it != m_indexMap.end()) {
     std::size_t workspaceIndex = it->second;
-    Mantid::DataObjects::TofEvent event(tof, pulseTime);
+    Mantid::Types::Event::TofEvent event(tof, pulseTime);
     m_eventBuffer->getSpectrum(workspaceIndex).addEventQuickly(event);
   } else {
     // TODO: do we want to disable this warning?  Most of the time, we
@@ -577,7 +570,7 @@ boost::shared_ptr<Workspace> TOPAZLiveEventDataListener::extractData() {
           "EventWorkspace", m_eventBuffer->getNumberHistograms(), 2, 1));
 
   // Copy geometry over.
-  API::WorkspaceFactory::Instance().initializeFromParent(m_eventBuffer, temp,
+  API::WorkspaceFactory::Instance().initializeFromParent(*m_eventBuffer, *temp,
                                                          false);
 
   // Clear out the old logs, except for the most recent entry
@@ -596,8 +589,8 @@ boost::shared_ptr<Workspace> TOPAZLiveEventDataListener::extractData() {
   auto monitorBuffer = m_eventBuffer->monitorWorkspace();
   auto newMonitorBuffer = WorkspaceFactory::Instance().create(
       "EventWorkspace", monitorBuffer->getNumberHistograms(), 1, 1);
-  WorkspaceFactory::Instance().initializeFromParent(monitorBuffer,
-                                                    newMonitorBuffer, false);
+  WorkspaceFactory::Instance().initializeFromParent(*monitorBuffer,
+                                                    *newMonitorBuffer, false);
   temp->setMonitorWorkspace(newMonitorBuffer);
 
   // Lock the mutex and swap the workspaces

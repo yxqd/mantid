@@ -1,11 +1,9 @@
 #ifndef MANTID_ALGORITHMS_CONVERTUNITS_H_
 #define MANTID_ALGORITHMS_CONVERTUNITS_H_
 
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
-#include "MantidAPI/Algorithm.h"
+#include "MantidAPI/DistributedAlgorithm.h"
 #include "MantidDataObjects/EventWorkspace.h"
+#include "MantidKernel/Unit.h"
 
 namespace Mantid {
 namespace Algorithms {
@@ -24,8 +22,8 @@ namespace Algorithms {
    </LI>
     </UL>
 
-    Optional properties required for certain units (DeltaE &
-   DeltaE_inWavenumber):
+    Optional properties required for certain units (DeltaE,
+   DeltaE_inWavenumber, DeltaE_inFrequency):
     <UL>
     <LI> Emode  - The energy mode (0=elastic, 1=direct geometry, 2=indirect
    geometry) </LI>
@@ -66,10 +64,8 @@ namespace Algorithms {
     File change history is stored at: <https://github.com/mantidproject/mantid>
     Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
-class DLLExport ConvertUnits : public API::Algorithm {
+class DLLExport ConvertUnits : public API::DistributedAlgorithm {
 public:
-  /// Default constructor
-  ConvertUnits();
   /// Algorithm's name for identification overriding a virtual method
   const std::string name() const override { return "ConvertUnits"; }
   /// Summary of algorithms purpose
@@ -98,12 +94,12 @@ protected:
     return "InputWorkspace";
   }
 
-private:
   // Overridden Algorithm methods
   void init() override;
   void exec() override;
 
   void setupMemberVariables(const API::MatrixWorkspace_const_sptr inputWS);
+  virtual void storeEModeOnWorkspace(API::MatrixWorkspace_sptr outputWS);
   API::MatrixWorkspace_sptr
   setupOutputWorkspace(const API::MatrixWorkspace_const_sptr inputWS);
 
@@ -119,16 +115,15 @@ private:
                  const double &power);
 
   /// Internal function to gather detector specific L2, theta and efixed values
-  bool getDetectorValues(
-      const Kernel::Unit &outputUnit, const Geometry::IComponent &source,
-      const Geometry::IComponent &sample, double l1, int emode,
-      const API::MatrixWorkspace &ws,
-      boost::function<double(const Geometry::IDetector &)> thetaFunction,
-      int64_t wsIndex, double &efixed, double &l2, double &twoTheta);
+  bool getDetectorValues(const API::SpectrumInfo &spectrumInfo,
+                         const Kernel::Unit &outputUnit, int emode,
+                         const API::MatrixWorkspace &ws, const bool signedTheta,
+                         int64_t wsIndex, double &efixed, double &l2,
+                         double &twoTheta);
 
   /// Convert the workspace units using TOF as an intermediate step in the
   /// conversion
-  API::MatrixWorkspace_sptr
+  virtual API::MatrixWorkspace_sptr
   convertViaTOF(Kernel::Unit_const_sptr fromUnit,
                 API::MatrixWorkspace_const_sptr inputWS);
 
@@ -140,12 +135,12 @@ private:
 
   void putBackBinWidth(const API::MatrixWorkspace_sptr outputWS);
 
-  std::size_t
-      m_numberOfSpectra; ///< The number of spectra in the input workspace
-  bool m_distribution;   ///< Whether input is a distribution. Only applies to
-  /// histogram workspaces.
-  bool m_inputEvents; ///< Flag indicating whether input workspace is an
-  /// EventWorkspace
+  std::size_t m_numberOfSpectra{
+      0};                     ///< The number of spectra in the input workspace
+  bool m_distribution{false}; ///< Whether input is a distribution. Only applies
+  /// to histogram workspaces.
+  bool m_inputEvents{
+      false}; ///< Flag indicating whether input workspace is an EventWorkspace
   Kernel::Unit_const_sptr m_inputUnit; ///< The unit of the input workspace
   Kernel::Unit_sptr m_outputUnit;      ///< The unit we're going to
 };

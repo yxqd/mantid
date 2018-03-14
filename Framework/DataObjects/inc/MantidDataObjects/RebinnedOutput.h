@@ -40,10 +40,15 @@ namespace DataObjects {
 */
 class DLLExport RebinnedOutput : public Workspace2D {
 public:
-  RebinnedOutput() = default;
+  RebinnedOutput() : m_finalized(false) {}
+  RebinnedOutput(bool finalized) : m_finalized(finalized) {}
   /// Returns a clone of the workspace
   std::unique_ptr<RebinnedOutput> clone() const {
     return std::unique_ptr<RebinnedOutput>(doClone());
+  }
+  /// Returns a default-initialized clone of the workspace
+  std::unique_ptr<RebinnedOutput> cloneEmpty() const {
+    return std::unique_ptr<RebinnedOutput>(doCloneEmpty());
   }
   RebinnedOutput &operator=(const RebinnedOutput &) = delete;
 
@@ -57,7 +62,11 @@ public:
   virtual const MantidVec &dataF(const std::size_t index) const;
 
   /// Create final representation
-  void finalize(bool hasSqrdErrs = true);
+  void finalize(bool hasSqrdErrs = true, bool force = false);
+  void unfinalize(bool hasSqrdErrs = false, bool force = false);
+
+  /// Returns if finalize has been called
+  bool isFinalized() const { return m_finalized; }
 
   /// Returns a read-only (i.e. const) reference to the specified F array
   const MantidVec &readF(std::size_t const index) const;
@@ -72,12 +81,19 @@ protected:
   /// Called by initialize() in MatrixWorkspace
   void init(const std::size_t &NVectors, const std::size_t &XLength,
             const std::size_t &YLength) override;
+  void init(const HistogramData::Histogram &histogram) override;
 
   /// A vector that holds the 1D vectors for the fractional area.
   std::vector<MantidVec> fracArea;
 
+  /// Flag to indicate if finalize has been called, and if errors/variance used
+  bool m_finalized;
+
 private:
   RebinnedOutput *doClone() const override { return new RebinnedOutput(*this); }
+  RebinnedOutput *doCloneEmpty() const override {
+    return new RebinnedOutput(m_finalized);
+  }
 };
 
 /// shared pointer to the RebinnedOutput class

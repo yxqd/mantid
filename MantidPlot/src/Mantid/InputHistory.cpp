@@ -4,12 +4,10 @@
 #include <QSettings>
 #include <QStringList>
 #include <vector>
+#include <iostream>
 
 using namespace Mantid::API;
 using namespace Mantid::Kernel;
-
-extern bool Algorithm_descriptor_name_less(const Algorithm_descriptor &d1,
-                                           const Algorithm_descriptor &d2);
 
 /// Constructor
 InputHistoryImpl::InputHistoryImpl() {
@@ -131,7 +129,7 @@ QString InputHistoryImpl::getDirectoryFromFilePath(const QString &filePath) {
 }
 
 QString InputHistoryImpl::getNameOnlyFromFilePath(const QString &filePath) {
-  QString s = filePath;
+  const QString &s = filePath;
   int i = s.lastIndexOf('\\');
   if (i < 0)
     i = s.lastIndexOf('/');

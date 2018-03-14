@@ -44,7 +44,7 @@ using Mantid::DataObjects::EventWorkspace;
 using Mantid::Geometry::InstrumentDefinitionParser;
 using Mantid::Geometry::MDHistoDimension_sptr;
 using Mantid::Geometry::MDHistoDimension;
-using Mantid::Kernel::DateAndTime;
+using Mantid::Types::Core::DateAndTime;
 namespace Strings = Mantid::Kernel::Strings;
 
 /** Set of helper methods for testing MDEventWorkspace things
@@ -81,8 +81,8 @@ createDiffractionEventWorkspace(int numEvents, int numPixels, int numBins) {
 
   for (int pix = 0; pix < numPixels; pix++) {
     for (int i = 0; i < numEvents; i++) {
-      retVal->getSpectrum(pix) += Mantid::DataObjects::TofEvent(
-          (i + 0.5) * binDelta, run_start + double(i));
+      retVal->getSpectrum(pix) +=
+          Types::Event::TofEvent((i + 0.5) * binDelta, run_start + double(i));
     }
     retVal->getSpectrum(pix).addDetectorID(pix);
   }
@@ -100,8 +100,8 @@ createDiffractionEventWorkspace(int numEvents, int numPixels, int numBins) {
   retVal->getAxis(0)->setUnit("TOF");
 
   // Give it a crystal and goniometer
-  WorkspaceCreationHelper::SetGoniometer(retVal, 0., 0., 0.);
-  WorkspaceCreationHelper::SetOrientedLattice(retVal, 1., 1., 1.);
+  WorkspaceCreationHelper::setGoniometer(retVal, 0., 0., 0.);
+  WorkspaceCreationHelper::setOrientedLattice(retVal, 1., 1., 1.);
 
   // Some sanity checks
   if (retVal->getInstrument()->getName() != "MINITOPAZ")
@@ -216,8 +216,8 @@ std::vector<MDLeanEvent<1>> makeMDEvents1(size_t num) {
  */
 Mantid::DataObjects::MDHistoWorkspace_sptr
 makeFakeMDHistoWorkspace(double signal, size_t numDims, size_t numBins,
-                         coord_t max, double errorSquared, std::string name,
-                         double numEvents) {
+                         coord_t max, double errorSquared,
+                         const std::string &name, double numEvents) {
   // Create MDFrame of General Frame type
   Mantid::Geometry::GeneralFrame frame(
       Mantid::Geometry::GeneralFrame::GeneralFrameDistance, "m");

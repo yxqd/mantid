@@ -16,26 +16,13 @@ using namespace Mantid::API;
 
 class NLLSTest : public CxxTest::TestSuite {
 public:
-  void test_More_Sorensen_ExpDecay() {
-    auto ws = make_exp_decay_workspace();
-    Fit fit;
-    fit.initialize();
-    fit.setPropertyValue("Function", "name=ExpDecay");
-    fit.setProperty("InputWorkspace", ws);
-    fit.setProperty("Minimizer", "More-Sorensen");
-    fit.execute();
-    IFunction_sptr fun = fit.getProperty("Function");
-    TS_ASSERT_DELTA(fun->getParameter(0), 60.195, 0.001);
-    TS_ASSERT_DELTA(fun->getParameter(1), 2.16815, 0.00001);
-  }
-
   void test_Galahad_ExpDecay() {
     auto ws = make_exp_decay_workspace();
     Fit fit;
     fit.initialize();
     fit.setPropertyValue("Function", "name=ExpDecay");
     fit.setProperty("InputWorkspace", ws);
-    fit.setProperty("Minimizer", "DTRS");
+    fit.setProperty("Minimizer", "Trust Region");
     fit.execute();
     IFunction_sptr fun = fit.getProperty("Function");
     TS_ASSERT_DELTA(fun->getParameter(0), 60.195, 0.001);
@@ -58,7 +45,7 @@ public:
     fit.setPropertyValue(
         "Function", "name=UserFunction,Formula=b1*(1-exp(-b2*x)),b1=1,b2=1");
     fit.setProperty("InputWorkspace", ws);
-    fit.setProperty("Minimizer", "DTRS");
+    fit.setProperty("Minimizer", "Trust Region");
     fit.setRethrows(true);
     TS_ASSERT_THROWS_NOTHING(fit.execute());
   }

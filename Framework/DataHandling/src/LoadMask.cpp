@@ -1,23 +1,23 @@
 #include "MantidDataHandling/LoadMask.h"
-#include "MantidKernel/System.h"
-#include "MantidAPI/FileProperty.h"
 #include "MantidAPI/FileFinder.h"
-#include "MantidKernel/MandatoryValidator.h"
-#include "MantidKernel/ListValidator.h"
-#include "MantidKernel/Exception.h"
-#include "MantidKernel/EnabledWhenProperty.h"
-#include "MantidDataObjects/Workspace2D.h"
+#include "MantidAPI/FileProperty.h"
 #include "MantidDataObjects/MaskWorkspace.h"
-#include "MantidKernel/Strings.h"
-#include "MantidGeometry/Instrument.h"
+#include "MantidDataObjects/Workspace2D.h"
 #include "MantidGeometry/ICompAssembly.h"
 #include "MantidGeometry/IDTypes.h"
+#include "MantidGeometry/Instrument.h"
+#include "MantidKernel/EnabledWhenProperty.h"
+#include "MantidKernel/Exception.h"
+#include "MantidKernel/ListValidator.h"
+#include "MantidKernel/MandatoryValidator.h"
+#include "MantidKernel/OptionalBool.h"
+#include "MantidKernel/Strings.h"
+#include "MantidKernel/System.h"
 
 #include <fstream>
 #include <sstream>
 #include <map>
 
-#include <Poco/DOM/Document.h>
 #include <Poco/DOM/DOMParser.h>
 #include <Poco/DOM/Element.h>
 #include <Poco/DOM/NodeFilter.h>
@@ -28,8 +28,6 @@
 #include <boost/algorithm/string.hpp>
 
 using Poco::XML::DOMParser;
-using Poco::XML::Document;
-using Poco::XML::Element;
 using Poco::XML::Node;
 using Poco::XML::NodeList;
 using Poco::XML::NodeIterator;
@@ -96,7 +94,7 @@ void parseRangeText(const std::string &inputstr, std::vector<T> &singles,
     // a) Find '-':
     boost::trim(rawstring);
     bool containDash(true);
-    if (rawstring.find_first_of("-") == std::string::npos) {
+    if (rawstring.find_first_of('-') == std::string::npos) {
       containDash = false;
     }
 
@@ -156,7 +154,7 @@ void parseISISStringToVector(const std::string &ins,
     vector<string> temps;
     boost::split(temps, splitstrings[index], boost::is_any_of("-"),
                  boost::token_compress_on);
-    if (splitstrings[index].compare("-") == 0 || temps.size() == 1) {
+    if (splitstrings[index] == "-" || temps.size() == 1) {
       // Nothing to split
       index++;
     } else if (temps.size() == 2) {
@@ -164,7 +162,7 @@ void parseISISStringToVector(const std::string &ins,
       temps.insert(temps.begin() + 1, "-");
       splitstrings.erase(splitstrings.begin() + index);
       for (size_t ic = 0; ic < 3; ic++) {
-        if (temps[ic].size() > 0) {
+        if (!temps[ic].empty()) {
           splitstrings.insert(splitstrings.begin() + index, temps[ic]);
           index++;
         }
@@ -189,8 +187,7 @@ void parseISISStringToVector(const std::string &ins,
         boost::lexical_cast<Mantid::specnum_t>(splitstrings[index]));
 
     // ii)  push the ending vector
-    if (index == splitstrings.size() - 1 ||
-        splitstrings[index + 1].compare("-") != 0) {
+    if (index == splitstrings.size() - 1 || splitstrings[index + 1] != "-") {
       // the next one is not '-'
       ranges.push_back(
           boost::lexical_cast<Mantid::specnum_t>(splitstrings[index]));
@@ -268,29 +265,6 @@ namespace DataHandling {
 
 DECLARE_ALGORITHM(LoadMask)
 
-//----------------------------------------------------------------------------------------------
-/** Constructor
- */
-LoadMask::LoadMask()
-    : m_maskWS(), m_instrumentPropValue(""), m_sourceMapWS(), m_pDoc(nullptr),
-      m_pRootElem(nullptr), m_defaultToUse(true), m_IDF_provided(false) {}
-
-//----------------------------------------------------------------------------------------------
-/** Destructor
- */
-LoadMask::~LoadMask() {
-  // note Poco::XML::Document and Poco::XML::Element declare their constructors
-  // as protected
-  if (m_pDoc)
-    m_pDoc->release();
-  // note that m_pRootElem does not need a release(), and that can
-  // actually cause a double free corruption, as
-  // Poco::DOM::Document::documentElement() does not require a
-  // release(). So just to be explicit that they're gone:
-  m_pDoc = nullptr;
-  m_pRootElem = nullptr;
-}
-
 /// Initialise the properties
 void LoadMask::init() {
 
@@ -322,6 +296,8 @@ void LoadMask::init() {
 /** Main execution body of this algorithm
   */
 void LoadMask::exec() {
+  reset();
+
   // 1. Load Instrument and create output Mask workspace
   const std::string instrumentname = getProperty("Instrument");
   m_sourceMapWS = getProperty("RefWorkspace");
@@ -334,7 +310,7 @@ void LoadMask::exec() {
   if (m_sourceMapWS) { // check if the instruments are compatible
     auto t_inst_name = m_maskWS->getInstrument()->getName();
     auto r_inst_name = m_sourceMapWS->getInstrument()->getName();
-    if (t_inst_name.compare(r_inst_name) != 0) {
+    if (t_inst_name != r_inst_name) {
       throw std::invalid_argument("If reference workspace is provided, it has "
                                   "to have instrument with the same name as "
                                   "specified by 'Instrument' property");
@@ -416,10 +392,7 @@ void LoadMask::processMaskOnDetectors(
     it = indexmap.find(detid);
     if (it != indexmap.end()) {
       size_t index = it->second;
-      if (tomask)
-        m_maskWS->dataY(index)[0] = 1;
-      else
-        m_maskWS->dataY(index)[0] = 0;
+      m_maskWS->mutableY(index)[0] = (tomask) ? 1 : 0;
     } else {
       g_log.warning() << "Pixel w/ ID = " << detid << " Cannot Be Located\n";
     }
@@ -580,10 +553,7 @@ void LoadMask::processMaskOnWorkspaceIndex(bool mask,
                       << m_maskWS->getNumberHistograms() << '\n';
       } else {
         // Finally set the masking;
-        if (mask)
-          m_maskWS->dataY(wsindex)[0] = 1.0;
-        else
-          m_maskWS->dataY(wsindex)[0] = 0.0;
+        m_maskWS->mutableY(wsindex)[0] = (mask) ? 1.0 : 0.0;
       } // IF-ELSE: ws index out of range
     }   // IF-ELSE: spectrum No has an entry
 
@@ -667,12 +637,12 @@ void LoadMask::parseXML() {
   while (pNode) {
     const Poco::XML::XMLString value = pNode->innerText();
 
-    if (pNode->nodeName().compare("group") == 0) {
+    if (pNode->nodeName() == "group") {
       // Node "group"
       ingroup = true;
       tomask = true;
 
-    } else if (pNode->nodeName().compare("component") == 0) {
+    } else if (pNode->nodeName() == "component") {
       // Node "component"
       if (ingroup) {
         parseComponent(value, tomask, m_maskCompIdSingle, m_uMaskCompIdSingle);
@@ -680,7 +650,7 @@ void LoadMask::parseXML() {
         g_log.error() << "XML File hierarchical (component) error!\n";
       }
 
-    } else if (pNode->nodeName().compare("ids") == 0) {
+    } else if (pNode->nodeName() == "ids") {
       // Node "ids"
       if (ingroup) {
         parseRangeText(value, singleSp, pairSp);
@@ -689,7 +659,7 @@ void LoadMask::parseXML() {
                       << "  Inner Text = " << pNode->innerText() << '\n';
       }
 
-    } else if (pNode->nodeName().compare("detids") == 0) {
+    } else if (pNode->nodeName() == "detids") {
       // Node "detids"
       if (ingroup) {
         if (tomask) {
@@ -701,7 +671,7 @@ void LoadMask::parseXML() {
         g_log.error() << "XML File (detids) hierarchical error!\n";
       }
 
-    } else if (pNode->nodeName().compare("detector-masking") == 0) {
+    } else if (pNode->nodeName() == "detector-masking") {
       // Node "detector-masking".  Check default value
       m_defaultToUse = true;
     } // END-IF-ELSE: pNode->nodeName()
@@ -816,22 +786,25 @@ std::map<std::string, std::string> LoadMask::validateInputs() {
     boost::trim(InstrName);
     boost::algorithm::to_lower(InstrName);
     size_t len = InstrName.size();
+    /// input property contains name of instrument definition file rather than
+    /// instrument name itself
+    bool IDF_provided{false};
     // Check if the name ends up with .xml which means that idf file name
     // is provided rather then an instrument name.
     if (len > 4) {
       if (InstrName.compare(len - 4, len, ".xml") == 0) {
-        m_IDF_provided = true;
+        IDF_provided = true;
       } else {
-        m_IDF_provided = false;
+        IDF_provided = false;
       }
     } else {
-      m_IDF_provided = false;
+      IDF_provided = false;
     }
     try {
       auto inst = inputWS->getInstrument();
       std::string Name = inst->getName();
       boost::algorithm::to_lower(Name);
-      if (Name != InstrName && !m_IDF_provided) {
+      if (Name != InstrName && !IDF_provided) {
         result["RefWorkspace"] =
             "If both reference workspace and instrument name are defined, "
             "workspace has to have the instrument with the same name\n"
@@ -845,6 +818,15 @@ std::map<std::string, std::string> LoadMask::validateInputs() {
   }
 
   return result;
+}
+
+void LoadMask::reset() {
+  // LoadMask instance may be reused, need to clear buffers.
+  m_maskDetID.clear();
+  m_unMaskDetID.clear();
+  m_maskSpecID.clear();
+  m_maskCompIdSingle.clear();
+  m_uMaskCompIdSingle.clear();
 }
 
 } // namespace Mantid

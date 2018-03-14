@@ -5,11 +5,13 @@
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/AlgorithmHistory.h"
 #include "MantidAPI/NotebookBuilder.h"
+#include "MantidAPI/Workspace.h"
 
 #include <fstream>
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
+using Mantid::Types::Core::DateAndTime;
 
 namespace {
 Mantid::Kernel::Logger g_log("GenerateIPythonNotebook");
@@ -21,9 +23,6 @@ namespace Algorithms {
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(GenerateIPythonNotebook)
 
-//----------------------------------------------------------------------------------------------
-
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
 */
 void GenerateIPythonNotebook::init() {
@@ -61,7 +60,6 @@ void GenerateIPythonNotebook::init() {
       "When to specify which algorithm version was used by Mantid.");
 }
 
-//----------------------------------------------------------------------------------------------
 /** Execute the algorithm.
 */
 void GenerateIPythonNotebook::exec() {
@@ -83,8 +81,8 @@ void GenerateIPythonNotebook::exec() {
   }
 
   // Need at least a start time to do time filter
-  if (startTime != "") {
-    if (endTime == "") {
+  if (!startTime.empty()) {
+    if (endTime.empty()) {
       // If no end time was given then filter up to now
       view->filterBetweenExecDate(DateAndTime(startTime));
     } else {

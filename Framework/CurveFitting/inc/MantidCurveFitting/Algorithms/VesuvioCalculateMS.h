@@ -14,7 +14,7 @@ class ISpectrum;
 }
 
 namespace Geometry {
-class Object;
+class IObject;
 }
 
 namespace CurveFitting {
@@ -138,7 +138,7 @@ private:
   Kernel::V3D m_beamDir;                  // Directional vector for beam
   double m_srcR2;                         // beam penumbra radius (m)
   double m_halfSampleHeight, m_halfSampleWidth, m_halfSampleThick; // (m)
-  Geometry::Object const *m_sampleShape;  // sample shape
+  Geometry::IObject const *m_sampleShape; // sample shape
   SampleComptonProperties *m_sampleProps; // description of sample properties
   double m_detHeight, m_detWidth, m_detThick; // (m)
   double m_tmin, m_tmax, m_delt;              // min, max & dt TOF value
@@ -148,7 +148,7 @@ private:
   size_t m_nruns;     // number of runs per spectrum
   size_t m_nevents;   // number of single events per run
 
-  API::Progress *m_progress;
+  std::unique_ptr<API::Progress> m_progress;
   API::MatrixWorkspace_sptr m_inputWS;
 };
 

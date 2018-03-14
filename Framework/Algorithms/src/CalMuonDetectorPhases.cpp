@@ -7,21 +7,22 @@
 #include "MantidAPI/IFunction.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/MultiDomainFunction.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/TableRow.h"
+#include "MantidIndexing/IndexInfo.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/PhysicalConstants.h"
 #include "MantidAPI/WorkspaceFactory.h"
+#include "MantidAPI/WorkspaceGroup.h"
 
 namespace Mantid {
 namespace Algorithms {
 
 using namespace Kernel;
-using API::Progress;
 
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(CalMuonDetectorPhases)
 
-//----------------------------------------------------------------------------------------------
 /** Initializes the algorithm's properties.
  */
 void CalMuonDetectorPhases::init() {
@@ -61,7 +62,6 @@ void CalMuonDetectorPhases::init() {
       "will read from file.");
 }
 
-//----------------------------------------------------------------------------------------------
 /** Validates the inputs.
  */
 std::map<std::string, std::string> CalMuonDetectorPhases::validateInputs() {
@@ -155,6 +155,8 @@ void CalMuonDetectorPhases::fitWorkspace(const API::MatrixWorkspace_sptr &ws,
   resTab->addColumn("double", "Asymmetry");
   resTab->addColumn("double", "Phase");
 
+  const auto &indexInfo = ws->indexInfo();
+
   // Loop through fitting all spectra individually
   const static std::string success = "success";
   for (int wsIndex = 0; wsIndex < nhist; wsIndex++) {
@@ -182,8 +184,7 @@ void CalMuonDetectorPhases::fitWorkspace(const API::MatrixWorkspace_sptr &ws,
     // Now we have our fitting results stored in tab
     // but we need to extract the relevant information, i.e.
     // the detector phases (parameter 'p') and asymmetries ('A')
-    const auto &spectrum = ws->getSpectrum(static_cast<size_t>(wsIndex));
-    extractDetectorInfo(tab, resTab, spectrum.getSpectrumNo());
+    extractDetectorInfo(tab, resTab, indexInfo.spectrumNumber(wsIndex));
   }
 }
 
@@ -196,27 +197,27 @@ void CalMuonDetectorPhases::fitWorkspace(const API::MatrixWorkspace_sptr &ws,
 void CalMuonDetectorPhases::extractDetectorInfo(
     const API::ITableWorkspace_sptr &paramTab,
     const API::ITableWorkspace_sptr &resultsTab,
-    const specnum_t spectrumNumber) {
+    const Indexing::SpectrumNumber spectrumNumber) {
 
   double asym = paramTab->Double(0, 1);
   double phase = paramTab->Double(2, 1);
   // If asym<0, take the absolute value and add \pi to phase
-  // f(x) = A * sin( w * x + p) = -A * sin( w * x + p + PI)
+  // f(x) = A * cos( w * x - p) = -A * cos( w * x - p - PI)
   if (asym < 0) {
     asym = -asym;
-    phase = phase + M_PI;
+    phase = phase - M_PI;
   }
   // Now convert phases to interval [0, 2PI)
-  int factor = static_cast<int>(floor(phase / 2 / M_PI));
+  int factor = static_cast<int>(floor(phase / (2. * M_PI)));
   if (factor) {
-    phase = phase - factor * 2 * M_PI;
+    phase = phase - factor * 2. * M_PI;
   }
   // Copy parameters to new row in results table
   API::TableRow row = resultsTab->appendRow();
   row << static_cast<int>(spectrumNumber) << asym << phase;
 }
 
-/** Creates the fitting function f(x) = A * sin( w*x + p) + B as string
+/** Creates the fitting function f(x) = A * cos( w*x - p) + B as string
 * Two modes:
 * 1) Fixed frequency, no background - for main sequential fit
 * 2) Varying frequency, flat background - for finding frequency from asymmetry
@@ -228,15 +229,15 @@ void CalMuonDetectorPhases::extractDetectorInfo(
 std::string CalMuonDetectorPhases::createFittingFunction(double freq,
                                                          bool fixFreq) {
   // The fitting function is:
-  // f(x) = A * sin ( w * x + p ) [+ B]
+  // f(x) = A * sin ( w * x - p ) [+ B]
   std::ostringstream ss;
   ss << "name=UserFunction,";
   if (fixFreq) {
     // no background
-    ss << "Formula=A*sin(w*x+p),";
+    ss << "Formula=A*cos(w*x-p),";
   } else {
     // flat background
-    ss << "Formula=A*sin(w*x+p)+B,";
+    ss << "Formula=A*cos(w*x-p)+B,";
     ss << "B=0.5,";
   }
   ss << "A=0.5,";

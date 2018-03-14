@@ -1,23 +1,21 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include <stdexcept>
 
-#include "MantidAlgorithms/SofQW.h"
 #include "MantidAPI/BinEdgeAxis.h"
 #include "MantidAPI/CommonBinsValidator.h"
 #include "MantidAPI/HistogramValidator.h"
 #include "MantidAPI/InstrumentValidator.h"
-#include "MantidAPI/SpectrumDetectorMapping.h"
 #include "MantidAPI/SpectraAxisValidator.h"
+#include "MantidAPI/SpectrumDetectorMapping.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
+#include "MantidAlgorithms/SofQW.h"
 #include "MantidDataObjects/Histogram1D.h"
 #include "MantidGeometry/Instrument/DetectorGroup.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/ListValidator.h"
+#include "MantidKernel/PhysicalConstants.h"
 #include "MantidKernel/RebinParamsValidator.h"
 #include "MantidKernel/UnitFactory.h"
 #include "MantidKernel/VectorHelper.h"
@@ -111,6 +109,11 @@ void SofQW::createCommonInputProperties(API::Algorithm &alg) {
                       "If true, all NaN values in the output workspace are "
                       "replaced using the ReplaceSpecialValues algorithm.",
                       Direction::Input);
+  alg.declareProperty(
+      make_unique<ArrayProperty<double>>(
+          "EAxisBinning", boost::make_shared<RebinParamsValidator>(true)),
+      "The bin parameters to use for the E axis (optional, in the format "
+      "used by the :ref:`algm-Rebin` algorithm).");
 }
 
 void SofQW::exec() {
@@ -133,35 +136,42 @@ void SofQW::exec() {
   // Progress reports & cancellation
   MatrixWorkspace_const_sptr inputWorkspace = getProperty("InputWorkspace");
   const size_t nHistos = inputWorkspace->getNumberHistograms();
-  auto m_progress = new Progress(this, 0.0, 1.0, nHistos);
+  auto m_progress = make_unique<Progress>(this, 0.0, 1.0, nHistos);
   m_progress->report("Creating output workspace");
 }
 
 /** Creates the output workspace, setting the axes according to the input
  * binning parameters
  *  @param[in]  inputWorkspace The input workspace
- *  @param[in]  binParams The bin parameters from the user
- *  @param[out] newAxis        The 'vertical' axis defined by the given
- * parameters
+ *  @param[in]  qbinParams The q-bin parameters from the user
+ *  @param[out] qAxis The 'vertical' (q) axis defined by the given parameters
+ *  @param[out] ebinParams The 'horizontal' (energy) axis parameters (optional)
  *  @return A pointer to the newly-created workspace
  */
-API::MatrixWorkspace_sptr
-SofQW::setUpOutputWorkspace(API::MatrixWorkspace_const_sptr inputWorkspace,
-                            const std::vector<double> &binParams,
-                            std::vector<double> &newAxis) {
+API::MatrixWorkspace_sptr SofQW::setUpOutputWorkspace(
+    const API::MatrixWorkspace_const_sptr &inputWorkspace,
+    const std::vector<double> &qbinParams, std::vector<double> &qAxis,
+    const std::vector<double> &ebinParams) {
   // Create vector to hold the new X axis values
-  HistogramData::BinEdges xAxis(inputWorkspace->refX(0));
-  const int xLength = static_cast<int>(xAxis.size());
+  HistogramData::BinEdges xAxis(0);
+  int xLength;
+  if (ebinParams.empty()) {
+    xAxis = inputWorkspace->refX(0);
+    xLength = static_cast<int>(xAxis.size());
+  } else {
+    xLength = static_cast<int>(VectorHelper::createAxisFromRebinParams(
+        ebinParams, xAxis.mutableRawData()));
+  }
   // Create a vector to temporarily hold the vertical ('y') axis and populate
   // that
   const int yLength = static_cast<int>(
-      VectorHelper::createAxisFromRebinParams(binParams, newAxis));
+      VectorHelper::createAxisFromRebinParams(qbinParams, qAxis));
 
   // Create the output workspace
   MatrixWorkspace_sptr outputWorkspace = WorkspaceFactory::Instance().create(
       inputWorkspace, yLength - 1, xLength, xLength - 1);
   // Create a numeric axis to replace the default vertical one
-  Axis *const verticalAxis = new BinEdgeAxis(newAxis);
+  Axis *const verticalAxis = new BinEdgeAxis(qAxis);
   outputWorkspace->replaceAxis(1, verticalAxis);
 
   // Now set the axis values

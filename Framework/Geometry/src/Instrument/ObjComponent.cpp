@@ -1,9 +1,9 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidGeometry/Instrument/ObjComponent.h"
-#include "MantidGeometry/Objects/Object.h"
+#include "MantidGeometry/Instrument/ComponentVisitor.h"
+#include "MantidGeometry/Instrument/ComponentInfo.h"
+#include "MantidGeometry/Objects/IObject.h"
 #include "MantidGeometry/Objects/BoundingBox.h"
+#include "MantidGeometry/Objects/Track.h"
 #include "MantidKernel/Exception.h"
 #include "MantidKernel/Material.h"
 #include "MantidGeometry/Rendering/GeometryHandler.h"
@@ -34,13 +34,14 @@ ObjComponent::ObjComponent(const std::string &name, IComponent *parent)
 * component
 *  @param parent :: The Parent geometry object of this component
 */
-ObjComponent::ObjComponent(const std::string &name, Object_const_sptr shape,
+ObjComponent::ObjComponent(const std::string &name,
+                           boost::shared_ptr<const IObject> shape,
                            IComponent *parent)
     : IObjComponent(), Component(name, parent), m_shape(shape) {}
 
 /** Return the shape of the component
  */
-const Object_const_sptr ObjComponent::shape() const {
+const IObject_const_sptr ObjComponent::shape() const {
   if (m_map) {
     auto base = dynamic_cast<const ObjComponent *>(m_base);
     if (!base) {
@@ -52,7 +53,7 @@ const Object_const_sptr ObjComponent::shape() const {
 }
 
 /// Set a new shape on the component
-void ObjComponent::setShape(Object_const_sptr newShape) {
+void ObjComponent::setShape(boost::shared_ptr<const IObject> newShape) {
   if (m_map)
     throw std::runtime_error("ObjComponent::setShape - Cannot change the shape "
                              "of a parameterized object");
@@ -74,7 +75,7 @@ bool ObjComponent::isValid(const V3D &point) const {
   if (!shape())
     return (this->getPos() == point);
 
-  // Otherwise pass through the shifted point to the Object::isValid method
+  // Otherwise pass through the shifted point to the IObject::isValid method
   V3D scaleFactor = this->getScaleFactor();
   return shape()->isValid(factorOutComponentPosition(point) / scaleFactor) != 0;
 }
@@ -84,18 +85,19 @@ bool ObjComponent::isOnSide(const V3D &point) const {
   // If the form of this component is not defined, just treat as a point
   if (!shape())
     return (this->getPos() == point);
-  // Otherwise pass through the shifted point to the Object::isOnSide method
+  // Otherwise pass through the shifted point to the IObject::isOnSide method
   V3D scaleFactor = this->getScaleFactor();
   return shape()->isOnSide(factorOutComponentPosition(point) / scaleFactor) !=
          0;
 }
 
 /** Checks whether the track given will pass through this Component.
-*  @param track :: The Track object to test (N.B. Will be modified if hits are
+*  @param track :: The Track Iobject to test (N.B. Will be modified if hits are
 * found)
 *  @returns The number of track segments added (i.e. 1 if the track enters and
-* exits the object once each)
-*  @throw NullPointerException if the underlying geometrical Object has not been
+* exits the Iobject once each)
+*  @throw NullPointerException if the underlying geometrical IObject has not
+* been
 * set
 */
 int ObjComponent::interceptSurface(Track &track) const {
@@ -139,6 +141,11 @@ int ObjComponent::interceptSurface(Track &track) const {
 * set
 */
 double ObjComponent::solidAngle(const V3D &observer) const {
+  if (m_map) {
+    if (hasComponentInfo()) {
+      return m_map->componentInfo().solidAngle(index(), observer);
+    }
+  }
   // If the form of this component is not defined, throw NullPointerException
   if (!shape())
     throw Kernel::Exception::NullPointerException("ObjComponent::solidAngle",
@@ -170,9 +177,14 @@ double ObjComponent::solidAngle(const V3D &observer) const {
   * the absoluteBB
   */
 void ObjComponent::getBoundingBox(BoundingBox &absoluteBB) const {
-
+  if (m_map) {
+    if (hasComponentInfo()) {
+      absoluteBB = m_map->componentInfo().boundingBox(index(), &absoluteBB);
+      return;
+    }
+  }
   // Start with the box in the shape's coordinates
-  const Object_const_sptr s = shape();
+  const IObject_const_sptr s = shape();
   if (!s) {
     absoluteBB.nullify();
     return;
@@ -323,6 +335,15 @@ void ObjComponent::initDraw() const {
   if (shape() != nullptr)
     shape()->initDraw();
   Handle()->Initialize();
+}
+
+/**
+ * Register the contents of this ObjComponent
+ */
+size_t
+ObjComponent::registerContents(class ComponentVisitor &componentVisitor) const {
+
+  return componentVisitor.registerGenericObjComponent(*this);
 }
 
 } // namespace Geometry

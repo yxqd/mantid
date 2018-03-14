@@ -1,4 +1,5 @@
 #include "MantidDataHandling/CheckMantidVersion.h"
+#include "MantidKernel/ConfigService.h"
 #include "MantidKernel/GitHubApiHelper.h"
 #include "MantidKernel/MantidVersion.h"
 #include "MantidKernel/Strings.h"
@@ -17,12 +18,9 @@ namespace Mantid {
 namespace DataHandling {
 
 using namespace Mantid::Kernel;
-using Mantid::API::WorkspaceProperty;
 
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(CheckMantidVersion)
-
-//----------------------------------------------------------------------------------------------
 
 /// Algorithms name for identification. @see Algorithm::name
 const std::string CheckMantidVersion::name() const {
@@ -43,7 +41,6 @@ const std::string CheckMantidVersion::summary() const {
          "the Github API";
 }
 
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void CheckMantidVersion::init() {
@@ -54,7 +51,6 @@ void CheckMantidVersion::init() {
                   Direction::Output);
 }
 
-//----------------------------------------------------------------------------------------------
 /** Execute the algorithm.
  */
 void CheckMantidVersion::exec() {

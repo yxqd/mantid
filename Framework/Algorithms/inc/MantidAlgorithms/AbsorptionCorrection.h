@@ -1,13 +1,11 @@
 #ifndef MANTID_ALGORITHMS_ABSORPTIONCORRECTION_H_
 #define MANTID_ALGORITHMS_ABSORPTIONCORRECTION_H_
 
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAPI/Algorithm.h"
 #include "MantidAPI/MatrixWorkspace_fwd.h"
 #include "MantidGeometry/IDTypes.h"
-#include "MantidGeometry/IDetector.h"
+#include "MantidGeometry/Objects/IObject.h"
+#include "MantidKernel/V3D.h"
 
 namespace Mantid {
 
@@ -15,7 +13,8 @@ namespace API {
 class Sample;
 }
 namespace Geometry {
-class Object;
+class IDetector;
+class IObject;
 }
 
 namespace Algorithms {
@@ -115,11 +114,11 @@ protected:
    */
   virtual void initialiseCachedDistances() = 0;
 
-  API::MatrixWorkspace_sptr m_inputWS;    ///< A pointer to the input workspace
-  const Geometry::Object *m_sampleObject; ///< Local cache of sample object.
-  Kernel::V3D m_beamDirection;            ///< The direction of the beam.
-  std::vector<double> m_L1s,              ///< Cached L1 distances
-      m_elementVolumes;                   ///< Cached element volumes
+  API::MatrixWorkspace_sptr m_inputWS;     ///< A pointer to the input workspace
+  const Geometry::IObject *m_sampleObject; ///< Local cache of sample object.
+  Kernel::V3D m_beamDirection;             ///< The direction of the beam.
+  std::vector<double> m_L1s,               ///< Cached L1 distances
+      m_elementVolumes;                    ///< Cached element volumes
   std::vector<Kernel::V3D> m_elementPositions; ///< Cached element positions
   size_t m_numVolumeElements; ///< The number of volume elements
   double m_sampleVolume;      ///< The total volume of the sample
@@ -132,7 +131,7 @@ private:
 
   void retrieveBaseProperties();
   void constructSample(API::Sample &sample);
-  void calculateDistances(const Geometry::IDetector_const_sptr &detector,
+  void calculateDistances(const Geometry::IDetector &detector,
                           std::vector<double> &L2s) const;
   inline double doIntegration(const double &lambda,
                               const std::vector<double> &L2s) const;

@@ -1,10 +1,8 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidDataHandling/LoadCanSAS1D2.h"
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/RegisterFileLoader.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceGroup.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/Workspace2D.h"
@@ -17,14 +15,10 @@
 #include <Poco/DOM/NodeList.h>
 
 #include <boost/lexical_cast.hpp>
-//-----------------------------------------------------------------------
 
-using Poco::XML::DOMParser;
-using Poco::XML::Document;
 using Poco::XML::Element;
 using Poco::XML::NodeList;
 using Poco::XML::Node;
-using Poco::XML::Text;
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
@@ -177,9 +171,9 @@ LoadCanSAS1D2::loadEntry(Poco::XML::Node *const workspaceData,
     dataWS->setYUnit("");
 
     // load workspace data
-    MantidVec &X = dataWS->dataX(0);
-    MantidVec &Y = dataWS->dataY(0);
-    MantidVec &E = dataWS->dataE(0);
+    auto &X = dataWS->mutableX(0);
+    auto &Y = dataWS->mutableY(0);
+    auto &E = dataWS->mutableE(0);
     int vecindex = 0;
     // iterate through each Tdata element  and get the values of "Lambda",
     //"T" and "Tdev" text nodes and fill X,Y,E vectors

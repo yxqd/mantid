@@ -44,7 +44,7 @@ namespace Registry {
  * This class provides a templated class object that is able to take a
  * python object and perform operations with a given C type.
  */
-template <typename ValueType>
+template <typename ValueType, typename Enable = void>
 struct DLLExport TypedPropertyValueHandler : public PropertyValueHandler {
   /// Type required by TypeRegistry framework
   typedef ValueType HeldType;
@@ -96,7 +96,9 @@ struct DLLExport TypedPropertyValueHandler : public PropertyValueHandler {
 // workspaces
 //
 template <typename T>
-struct DLLExport TypedPropertyValueHandler<boost::shared_ptr<T>>
+struct DLLExport TypedPropertyValueHandler<
+    boost::shared_ptr<T>,
+    typename std::enable_if<std::is_base_of<API::Workspace, T>::value>::type>
     : public PropertyValueHandler {
   /// Type required by TypeRegistry framework
   typedef boost::shared_ptr<T> HeldType;
@@ -114,8 +116,11 @@ struct DLLExport TypedPropertyValueHandler<boost::shared_ptr<T>>
    */
   void set(Kernel::IPropertyManager *alg, const std::string &name,
            const boost::python::object &value) const override {
-    alg->setProperty<HeldType>(
-        name, boost::dynamic_pointer_cast<T>(ExtractWorkspace(value)()));
+    if (value == boost::python::object())
+      alg->setProperty<HeldType>(name, boost::shared_ptr<T>(nullptr));
+    else
+      alg->setProperty<HeldType>(
+          name, boost::dynamic_pointer_cast<T>(ExtractWorkspace(value)()));
   }
 
   /**

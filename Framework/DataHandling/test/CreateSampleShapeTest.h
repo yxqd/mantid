@@ -10,7 +10,7 @@
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/AnalysisDataService.h"
 #include "MantidAPI/Sample.h"
-#include "MantidGeometry/Objects/Object.h"
+#include "MantidGeometry/Objects/CSGObject.h"
 #include "MantidKernel/Material.h"
 #include "MantidTestHelpers/ComponentCreationHelper.h"
 #include "MantidTestHelpers/WorkspaceCreationHelper.h"
@@ -57,12 +57,12 @@ public:
     using Mantid::Kernel::V3D;
     using Mantid::PhysicalConstants::getNeutronAtom;
 
-    auto inputWS = WorkspaceCreationHelper::Create2DWorkspaceBinned(1, 1);
+    auto inputWS = WorkspaceCreationHelper::create2DWorkspaceBinned(1, 1);
     auto sampleShape = ComponentCreationHelper::createSphere(0.5);
-    sampleShape->setID("mysample");
     Material alum("Al", getNeutronAtom(13), 2.6989);
+    sampleShape->setID("mysample");
     sampleShape->setMaterial(alum);
-    inputWS->mutableSample().setShape(*sampleShape);
+    inputWS->mutableSample().setShape(sampleShape);
 
     CreateSampleShape alg;
     alg.initialize();
@@ -83,7 +83,7 @@ public:
     // Need a test workspace
     Mantid::API::AnalysisDataService::Instance().add(
         "TestWorkspace",
-        WorkspaceCreationHelper::Create2DWorkspace123(22, 10, 1));
+        WorkspaceCreationHelper::create2DWorkspace123(22, 10, 1));
 
     CreateSampleShape alg;
     TS_ASSERT_THROWS_NOTHING(alg.initialize());
@@ -100,7 +100,7 @@ public:
             Mantid::API::AnalysisDataService::Instance().retrieve(
                 "TestWorkspace"));
 
-    const Mantid::Geometry::Object &sample = ws->sample().getShape();
+    auto &sample = ws->sample().getShape();
     Mantid::Kernel::V3D point(x, y, z);
 
     if (inside) {

@@ -31,6 +31,16 @@ Histogram1D &Histogram1D::operator=(const ISpectrum &rhs) {
   return *this;
 }
 
+/// Copy data from a Histogram1D or EventList, via ISpectrum reference.
+void Histogram1D::copyDataFrom(const ISpectrum &source) {
+  source.copyDataInto(*this);
+}
+
+/// Used by copyDataFrom for dynamic dispatch for its `source`.
+void Histogram1D::copyDataInto(Histogram1D &sink) const {
+  sink.m_histogram = m_histogram;
+}
+
 void Histogram1D::clearData() {
   MantidVec &yValues = this->dataY();
   std::fill(yValues.begin(), yValues.end(), 0.0);
@@ -64,6 +74,23 @@ MantidVec &Histogram1D::dataDx() { return m_histogram.dataDx(); }
 const MantidVec &Histogram1D::dataDx() const { return m_histogram.dataDx(); }
 /// Deprecated, use dx() instead.
 const MantidVec &Histogram1D::readDx() const { return m_histogram.readDx(); }
+
+/**
+ * Makes sure a histogram has valid Y and E data.
+ * @param histogram A histogram to check.
+ * @throw std::invalid_argument if Y or E data is NULL.
+ */
+void Histogram1D::checkAndSanitizeHistogram(
+    HistogramData::Histogram &histogram) {
+  if (!histogram.sharedY()) {
+    throw std::invalid_argument(
+        "Histogram1D: invalid input: Y data set to nullptr");
+  }
+  if (!histogram.sharedE()) {
+    throw std::invalid_argument(
+        "Histogram1D: invalid input: E data set to nullptr");
+  }
+}
 
 } // namespace DataObjects
 } // namespace Mantid

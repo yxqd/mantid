@@ -7,7 +7,6 @@
 #include "MantidAlgorithms/MaskBins.h"
 #include "MantidAlgorithms/Rebin.h"
 #include "MantidAPI/SpectraAxis.h"
-#include "MantidDataHandling/LoadEventPreNexus.h"
 #include "MantidDataHandling/LoadNexus.h"
 #include "MantidDataHandling/LoadRaw3.h"
 #include "MantidDataObjects/EventWorkspace.h"
@@ -24,6 +23,7 @@ using namespace Mantid::Kernel;
 using namespace Mantid::Algorithms;
 using namespace Mantid::DataObjects;
 using Mantid::HistogramData::BinEdges;
+using Mantid::Types::Event::TofEvent;
 
 class DiffractionFocussing2Test : public CxxTest::TestSuite {
 public:
@@ -263,6 +263,7 @@ public:
     IAlgorithm_sptr alg =
         AlgorithmFactory::Instance().create("LoadEmptyInstrument", 1);
     alg->initialize();
+    alg->setRethrows(true);
     alg->setPropertyValue("Filename", "SNAP_Definition.xml");
     alg->setPropertyValue("OutputWorkspace", "SNAP_empty");
     alg->setPropertyValue("MakeEventWorkspace", "1");

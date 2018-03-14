@@ -283,7 +283,7 @@ PoldiFitPeaks1D2::fitPeaks(const PoldiPeakCollection_sptr &peaks) {
   Workspace2D_sptr dataWorkspace = getProperty("InputWorkspace");
   m_fitplots->removeAll();
 
-  for (auto currentRange : reducedRanges) {
+  for (const auto &currentRange : reducedRanges) {
     int nMin = getBestChebyshevPolynomialDegree(dataWorkspace, currentRange);
 
     if (nMin > -1) {
@@ -338,7 +338,7 @@ int PoldiFitPeaks1D2::getBestChebyshevPolynomialDegree(
 
       ++n;
     }
-  } catch (std::runtime_error) {
+  } catch (const std::runtime_error &) {
     nMin = -1;
   }
 

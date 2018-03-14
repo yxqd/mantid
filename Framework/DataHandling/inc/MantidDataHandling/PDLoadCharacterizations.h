@@ -4,7 +4,7 @@
 #include <iosfwd>
 
 #include "MantidKernel/System.h"
-#include "MantidAPI/Algorithm.h"
+#include "MantidAPI/ParallelAlgorithm.h"
 #include "MantidAPI/ITableWorkspace_fwd.h"
 
 namespace Mantid {
@@ -34,7 +34,7 @@ namespace DataHandling {
   File change history is stored at: <https://github.com/mantidproject/mantid>
   Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
-class DLLExport PDLoadCharacterizations : public API::Algorithm {
+class DLLExport PDLoadCharacterizations : public API::ParallelAlgorithm {
 public:
   const std::string name() const override;
   int version() const override;
@@ -47,8 +47,13 @@ public:
 private:
   void init() override;
   void exec() override;
+  std::vector<std::string> getFilenames();
   void readFocusInfo(std::ifstream &file);
   void readCharInfo(std::ifstream &file, API::ITableWorkspace_sptr &wksp);
+  void readVersion0(const std::string &filename,
+                    API::ITableWorkspace_sptr &wksp);
+  void readVersion1(const std::string &filename,
+                    API::ITableWorkspace_sptr &wksp);
   void readExpIni(const std::string &filename, API::ITableWorkspace_sptr &wksp);
 };
 

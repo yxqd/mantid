@@ -5,14 +5,17 @@
 #include "MantidAPI/ExperimentInfo.h"
 #include "MantidAPI/IMDEventWorkspace_fwd.h"
 #include "MantidAPI/Progress.h"
-#include "MantidDataObjects/PeaksWorkspace.h"
-#include "MantidKernel/System.h"
 #include "MantidDataObjects/MDEventWorkspace.h"
 #include "MantidDataObjects/MDHistoWorkspace.h"
+#include "MantidDataObjects/PeaksWorkspace.h"
 #include "MantidKernel/Matrix.h"
+#include "MantidKernel/System.h"
 #include "MantidKernel/V3D.h"
 
 namespace Mantid {
+namespace Geometry {
+class InstrumentRayTracer;
+}
 namespace MDAlgorithms {
 
 /** FindPeaksMD : TODO: DESCRIPTION
@@ -38,6 +41,8 @@ public:
     return "Optimization\\PeakFinding;MDAlgorithms\\Peaks";
   }
 
+  std::map<std::string, std::string> validateInputs() override;
+
 private:
   /// Initialise the properties
   void init() override;
@@ -49,11 +54,13 @@ private:
                           const Mantid::API::IMDWorkspace_sptr &ws);
 
   /// Adds a peak based on Q, bin count & a set of detector IDs
-  void addPeak(const Mantid::Kernel::V3D &Q, const double binCount);
+  void addPeak(const Mantid::Kernel::V3D &Q, const double binCount,
+               const Geometry::InstrumentRayTracer &tracer);
 
   /// Adds a peak based on Q, bin count
-  boost::shared_ptr<DataObjects::Peak> createPeak(const Mantid::Kernel::V3D &Q,
-                                                  const double binCount);
+  boost::shared_ptr<DataObjects::Peak>
+  createPeak(const Mantid::Kernel::V3D &Q, const double binCount,
+             const Geometry::InstrumentRayTracer &tracer);
 
   /// Run find peaks on an MDEventWorkspace
   template <typename MDE, size_t nd>
@@ -73,6 +80,9 @@ private:
   /// Max # of peaks
   int64_t m_maxPeaks;
 
+  /// Number of edge pixels with no peaks
+  int m_edge;
+
   /// Flag to include the detectors within the peak
   bool m_addDetectors;
 
@@ -81,7 +91,7 @@ private:
   signal_t m_densityScaleFactor;
 
   /// Progress reporter.
-  Mantid::API::Progress *prog;
+  std::unique_ptr<Mantid::API::Progress> prog = nullptr;
 
   /** Enum describing which type of dimensions in the MDEventWorkspace */
   enum eDimensionType { HKL, QLAB, QSAMPLE };
@@ -94,9 +104,18 @@ private:
   eDimensionType dimType;
   /// Goniometer matrix
   Mantid::Kernel::Matrix<double> m_goniometer;
+
+  /// Use number of events normalization for event workspaces.
+  bool m_useNumberOfEventsNormalization = false;
+  /// Signal density factor
+  double m_signalThresholdFactor = 1.5;
+  /// VolumeNormalization
+  static const std::string volumeNormalization;
+  /// NumberOfEventNormalization
+  static const std::string numberOfEventsNormalization;
 };
 
+} // namespace MDAlgorithms
 } // namespace Mantid
-} // namespace DataObjects
 
 #endif /* MANTID_MDALGORITHMS_FINDPEAKSMD_H_ */

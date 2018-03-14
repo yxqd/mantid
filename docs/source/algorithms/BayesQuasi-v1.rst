@@ -19,7 +19,7 @@ so that the amplitudes represent their integrated areas.
 
 For a Lorentzian, the Fourier transform does the conversion:
 :math:`1/(x^{2}+\delta^{2}) \Leftrightarrow exp[-2\pi(\delta k)]`.
-If x is identified with energy E and :math:`2\pi k with t/\hbar` where t is time then:
+If x is identified with energy E and :math:`2\pi k` with :math:`t/\hbar` where t is time then:
 :math:`1/[E^{2}+(\hbar / \tau)^{2}] \Leftrightarrow exp[-t/\tau]` and :math:`\sigma` is identified with :math:`\hbar / \tau.`
 The program estimates the quasielastic components of each of the groups of spectra and requires the resolution
 file and optionally the normalisation file created by ResNorm.
@@ -48,7 +48,7 @@ Usage
         fit_ws, result_ws, prob_ws = BayesQuasi(Program='QL', SampleWorkspace=sampleWs, ResolutionWorkspace=resWs,
                                             MinRange=-0.547607, MaxRange=0.543216, SampleBins=1, ResolutionBins=1,
                                             Elastic=False, Background='Sloping', FixedWidth=False, UseResNorm=False,
-                                            WidthFile='', Loop=True, Save=False, Plot='None')
+                                            WidthFile='', Loop=True)
 
 .. categories::
 

@@ -6,7 +6,11 @@
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidAPI/TableRow.h"
 
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
+
 #include <cstdio>
+#include <iomanip>
 
 using namespace Mantid;
 using namespace Mantid::API;
@@ -230,8 +234,8 @@ ChopperConfiguration::parseStringDbl(const string &instring) const {
 
   vector<double> vecdouble;
   for (auto &str : strs) {
-    if (str.size() > 0) {
-      double item = atof(str.c_str());
+    if (!str.empty()) {
+      double item = std::stod(str.c_str());
       vecdouble.push_back(item);
       // cout << "[C] |" << strs[i] << "|" << item << "\n";
     }
@@ -253,8 +257,8 @@ ChopperConfiguration::parseStringUnsignedInt(const string &instring) const {
 
   vector<unsigned int> vecinteger;
   for (auto &str : strs) {
-    if (str.size() > 0) {
-      int item = atoi(str.c_str());
+    if (!str.empty()) {
+      int item = std::stoi(str);
       if (item < 0) {
         throw runtime_error(
             "Found negative number in a string for unsigned integers.");
@@ -422,7 +426,7 @@ void SaveGSASInstrumentFile::processProperties() {
   m_2theta = getProperty("TwoTheta");
   m_L2 = getProperty("L2");
   string freqtempstr = getProperty("ChopperFrequency");
-  m_frequency = atoi(freqtempstr.c_str());
+  m_frequency = std::stoi(freqtempstr);
 
   /* Set default value for L1
   if (m_L1 == EMPTY_DBL())
@@ -475,11 +479,11 @@ void SaveGSASInstrumentFile::initConstants(
   m_configuration = setupInstrumentConstants(profmap);
 
   /*
-  if (m_instrument.compare("PG3") == 0)
+  if (m_instrument == "PG3")
   {
     m_configuration = setupPG3Constants(chopperfrequency);
   }
-  else if (m_instrument.compare("NOM") == 0)
+  else if (m_instrument == "NOM")
   {
     m_configuration = setupNOMConstants(chopperfrequency);
   }
@@ -505,7 +509,7 @@ void SaveGSASInstrumentFile::parseProfileTableWorkspace(
 
   // Check
   vector<string> colnames = ws->getColumnNames();
-  if (colnames[0].compare("Name"))
+  if (colnames[0] != "Name")
     throw runtime_error("The first column must be Name");
 
   // Parse
@@ -513,7 +517,7 @@ void SaveGSASInstrumentFile::parseProfileTableWorkspace(
     TableRow tmprow = ws->getRow(irow);
     string parname;
     tmprow >> parname;
-    if (parname.compare("BANK")) {
+    if (parname != "BANK") {
       for (size_t icol = 0; icol < numbanks; ++icol) {
         double tmpdbl;
         tmprow >> tmpdbl;
@@ -1089,6 +1093,7 @@ void SaveGSASInstrumentFile::loadFullprofResolutionFile(
   }
 
   loadfpirf->setProperty("Filename", irffilename);
+  loadfpirf->setProperty("OutputTableWorkspace", "outputTableWorkspace");
 
   loadfpirf->execute();
   if (!loadfpirf->isExecuted())

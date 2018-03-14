@@ -1,8 +1,6 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAlgorithms/DiffractionEventCalibrateDetectors.h"
 #include "MantidAlgorithms/GSLFunctions.h"
+#include "MantidAPI/AnalysisDataService.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/IFunction.h"
 #include "MantidAPI/InstrumentValidator.h"
@@ -13,6 +11,7 @@
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/GroupingWorkspace.h"
 #include "MantidDataObjects/Workspace2D.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidGeometry/Instrument/RectangularDetector.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/CPUTimer.h"
@@ -36,6 +35,7 @@ using namespace Kernel;
 using namespace API;
 using namespace Geometry;
 using namespace DataObjects;
+using Types::Core::DateAndTime;
 
 /**
  * The gsl_costFunction is optimized by GSL simplex
@@ -145,12 +145,10 @@ double DiffractionEventCalibrateDetectors::intensity(
   EventWorkspace_sptr inputW = boost::dynamic_pointer_cast<EventWorkspace>(
       AnalysisDataService::Instance().retrieve(inname));
 
-  bool debug = true;
   CPUTimer tim;
 
   movedetector(x, y, z, rotx, roty, rotz, detname, inputW);
-  if (debug)
-    std::cout << tim << " to movedetector()\n";
+  g_log.debug() << tim << " to movedetector()\n";
 
   IAlgorithm_sptr alg3 = createChildAlgorithm("ConvertUnits");
   alg3->setProperty<EventWorkspace_sptr>("InputWorkspace", inputW);
@@ -159,8 +157,7 @@ double DiffractionEventCalibrateDetectors::intensity(
   alg3->executeAsChildAlg();
   MatrixWorkspace_sptr outputW = alg3->getProperty("OutputWorkspace");
 
-  if (debug)
-    std::cout << tim << " to ConvertUnits\n";
+  g_log.debug() << tim << " to ConvertUnits\n";
 
   IAlgorithm_sptr alg4 = createChildAlgorithm("DiffractionFocussing");
   alg4->setProperty<MatrixWorkspace_sptr>("InputWorkspace", outputW);
@@ -171,8 +168,7 @@ double DiffractionEventCalibrateDetectors::intensity(
   outputW = alg4->getProperty("OutputWorkspace");
 
   // Remove file
-  if (debug)
-    std::cout << tim << " to DiffractionFocussing\n";
+  g_log.debug() << tim << " to DiffractionFocussing\n";
 
   IAlgorithm_sptr alg5 = createChildAlgorithm("Rebin");
   alg5->setProperty<MatrixWorkspace_sptr>("InputWorkspace", outputW);
@@ -181,8 +177,7 @@ double DiffractionEventCalibrateDetectors::intensity(
   alg5->executeAsChildAlg();
   outputW = alg5->getProperty("OutputWorkspace");
 
-  if (debug)
-    std::cout << tim << " to Rebin\n";
+  g_log.debug() << tim << " to Rebin\n";
 
   // Find point of peak centre
   const MantidVec &yValues = outputW->readY(0);
@@ -212,8 +207,7 @@ double DiffractionEventCalibrateDetectors::intensity(
   fit_alg->setProperty("Output", "fit");
   fit_alg->executeAsChildAlg();
 
-  if (debug)
-    std::cout << tim << " to Fit\n";
+  g_log.debug() << tim << " to Fit\n";
 
   std::vector<double> params; // = fit_alg->getProperty("Parameters");
   Mantid::API::IFunction_sptr fun_res = fit_alg->getProperty("Function");
@@ -225,8 +219,7 @@ double DiffractionEventCalibrateDetectors::intensity(
 
   movedetector(-x, -y, -z, -rotx, -roty, -rotz, detname, inputW);
 
-  if (debug)
-    std::cout << tim << " to movedetector()\n";
+  g_log.debug() << tim << " to movedetector()\n";
 
   // Optimize C/peakheight + |peakLoc-peakOpt|  where C is scaled by number of
   // events
@@ -291,13 +284,16 @@ void DiffractionEventCalibrateDetectors::exec() {
   const std::string rb_params = getProperty("Params");
 
   // Get some stuff from the input workspace
-  Instrument_const_sptr inst = inputW->getInstrument();
+  // We make a copy of the instrument since we will be moving detectors in
+  // `inputW` but want to access original positions (etc.) via `detList` below.
+  const auto &dummyW = create<EventWorkspace>(*inputW, 1, inputW->binEdges(0));
+  Instrument_const_sptr inst = dummyW->getInstrument();
 
   // Build a list of Rectangular Detectors
   std::vector<boost::shared_ptr<RectangularDetector>> detList;
   // --------- Loading only one bank ----------------------------------
   std::string onebank = getProperty("BankName");
-  bool doOneBank = (onebank != "");
+  bool doOneBank = (!onebank.empty());
   for (int i = 0; i < inst->nelements(); i++) {
     boost::shared_ptr<RectangularDetector> det;
     boost::shared_ptr<ICompAssembly> assem;
@@ -305,7 +301,7 @@ void DiffractionEventCalibrateDetectors::exec() {
 
     det = boost::dynamic_pointer_cast<RectangularDetector>((*inst)[i]);
     if (det) {
-      if (det->getName().compare(onebank) == 0)
+      if (det->getName() == onebank)
         detList.push_back(det);
       if (!doOneBank)
         detList.push_back(det);
@@ -318,7 +314,7 @@ void DiffractionEventCalibrateDetectors::exec() {
         for (int j = 0; j < assem->nelements(); j++) {
           det = boost::dynamic_pointer_cast<RectangularDetector>((*assem)[j]);
           if (det) {
-            if (det->getName().compare(onebank) == 0)
+            if (det->getName() == onebank)
               detList.push_back(det);
             if (!doOneBank)
               detList.push_back(det);
@@ -334,7 +330,7 @@ void DiffractionEventCalibrateDetectors::exec() {
                 det = boost::dynamic_pointer_cast<RectangularDetector>(
                     (*assem2)[k]);
                 if (det) {
-                  if (det->getName().compare(onebank) == 0)
+                  if (det->getName() == onebank)
                     detList.push_back(det);
                   if (!doOneBank)
                     detList.push_back(det);
@@ -410,7 +406,6 @@ void DiffractionEventCalibrateDetectors::exec() {
     std::cout << tim << " to CreateGroupingWorkspace\n";
 
     const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex;
-    gsl_multimin_fminimizer *s = nullptr;
     gsl_vector *ss, *x;
     gsl_multimin_function minex_func;
 
@@ -438,7 +433,7 @@ void DiffractionEventCalibrateDetectors::exec() {
     minex_func.f = &Mantid::Algorithms::gsl_costFunction;
     minex_func.params = &par;
 
-    s = gsl_multimin_fminimizer_alloc(T, nopt);
+    gsl_multimin_fminimizer *s = gsl_multimin_fminimizer_alloc(T, nopt);
     gsl_multimin_fminimizer_set(s, &minex_func, x, ss);
 
     do {

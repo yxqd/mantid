@@ -22,15 +22,14 @@
     File change history is stored at: <https://github.com/mantidproject/mantid>
     Code Documentation is available at: <http://doxygen.mantidproject.org>
  */
-#include "MantidKernel/System.h"
-#include "MantidPythonInterface/kernel/Converters/VectorToNDArray.h"
-#include "MantidPythonInterface/kernel/Converters/PyArrayType.h"
 #include "MantidKernel/Matrix.h"
+#include "MantidKernel/System.h"
+#include "MantidPythonInterface/kernel/Converters/CloneToNumpy.h"
+#include "MantidPythonInterface/kernel/Converters/MatrixToNDArray.h"
+#include "MantidPythonInterface/kernel/Converters/PyArrayType.h"
 
-#include <boost/type_traits/integral_constant.hpp>
-#include <boost/type_traits/is_reference.hpp>
-#include <boost/type_traits/remove_reference.hpp>
-#include <boost/type_traits/remove_const.hpp>
+#include <type_traits>
+
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/and.hpp>
 
@@ -40,12 +39,26 @@ namespace Policies {
 
 namespace // anonymous
     {
+//-----------------------------------------------------------------------
+// MPL helper structs
+//-----------------------------------------------------------------------
+/// MPL struct to figure out if a type is a std::vector
+/// The general one inherits from boost::false_type
+template <typename T> struct is_matrix : boost::false_type {};
+
+/// Specialization for std::vector types to inherit from
+/// boost::true_type
+template <typename T> struct is_matrix<Kernel::Matrix<T>> : boost::true_type {};
+
+//-----------------------------------------------------------------------
+// MatrixRefToNumpyImpl - Policy for reference returns
+//-----------------------------------------------------------------------
 /**
  * Helper struct that implements the conversion
  * policy.
  */
 template <typename MatrixType, typename ConversionPolicy>
-struct ConvertMatrixToNDArray {
+struct MatrixRefToNumpyImpl {
   inline PyObject *operator()(const MatrixType &cmatrix) const {
     return Converters::MatrixToNDArray<typename MatrixType::value_type,
                                        ConversionPolicy>()(cmatrix);
@@ -55,23 +68,11 @@ struct ConvertMatrixToNDArray {
     return Converters::getNDArrayType();
   }
 };
-}
-
-//-----------------------------------------------------------------------
-// return_value_policy
-//-----------------------------------------------------------------------
-namespace {
-/// MPL struct to figure out if a type is a std::vector
-/// The general one inherits from boost::false_type
-template <typename T> struct is_matrix : boost::false_type {};
-
-/// Specialization for std::vector types to inherit from
-/// boost::true_type
-template <typename T> struct is_matrix<Kernel::Matrix<T>> : boost::true_type {};
 
 template <typename T>
-struct MatrixToNumpy_Requires_Reference_To_Matrix_Return_Type {};
+struct MatrixRefToNumpy_Requires_Reference_To_Matrix_Return_Type {};
 }
+
 /**
  * Implements a return value policy that
  * returns a numpy array from a Matrix
@@ -82,19 +83,61 @@ struct MatrixToNumpy_Requires_Reference_To_Matrix_Return_Type {};
  * (2) WrapReadWrite - Creates a read-write array around the original data (no
  *copy is performed)
  */
-template <typename ConversionPolicy> struct MatrixToNumpy {
+template <typename ConversionPolicy> struct MatrixRefToNumpy {
   // The boost::python framework calls return_value_policy::apply<T>::type
   template <class T> struct apply {
     // Typedef that removes and const or reference qualifiers from the return
     // type
-    typedef typename boost::remove_const<
-        typename boost::remove_reference<T>::type>::type non_const_type;
+    typedef typename std::remove_const<
+        typename std::remove_reference<T>::type>::type non_const_type;
     // MPL compile-time check that T is a reference to a Kernel::Matrix
     typedef typename boost::mpl::if_c<
-        boost::mpl::and_<boost::is_reference<T>,
+        boost::mpl::and_<std::is_reference<T>,
                          is_matrix<non_const_type>>::value,
-        ConvertMatrixToNDArray<non_const_type, ConversionPolicy>,
-        MatrixToNumpy_Requires_Reference_To_Matrix_Return_Type<T>>::type type;
+        MatrixRefToNumpyImpl<non_const_type, ConversionPolicy>,
+        MatrixRefToNumpy_Requires_Reference_To_Matrix_Return_Type<T>>::type
+        type;
+  };
+};
+
+//-----------------------------------------------------------------------
+// MatrixToNumpy return_value_policy
+//-----------------------------------------------------------------------
+namespace {
+/**
+ * Helper struct that implements the conversion policy. This can only clone
+ * as wrapping would wrap a temporary
+ */
+template <typename MatrixType> struct MatrixToNumpyImpl {
+  inline PyObject *operator()(const MatrixType &cvector) const {
+    return Converters::MatrixToNDArray<typename MatrixType::value_type,
+                                       Converters::Clone>()(cvector);
+  }
+
+  inline PyTypeObject const *get_pytype() const {
+    return Converters::getNDArrayType();
+  }
+};
+
+template <typename T> struct MatrixToNumpy_Requires_Matrix_Return_By_Value {};
+} // namespace
+
+/**
+ * Implements a return value policy that
+ * returns a numpy array from a function returning a std::vector by value
+ *
+ * It is only possible to clone these types since a wrapper would wrap temporary
+ */
+struct MatrixToNumpy {
+  // The boost::python framework calls return_value_policy::apply<T>::type
+  template <class T> struct apply {
+    // Typedef that removes any const from the type
+    typedef typename std::remove_const<T>::type non_const_type;
+    // MPL compile-time check that T is a std::vector
+    typedef typename boost::mpl::if_c<
+        is_matrix<non_const_type>::value,
+        MatrixRefToNumpyImpl<non_const_type, Converters::Clone>,
+        MatrixToNumpy_Requires_Matrix_Return_By_Value<T>>::type type;
   };
 };
 }

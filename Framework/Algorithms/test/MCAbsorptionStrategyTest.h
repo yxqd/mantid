@@ -3,9 +3,11 @@
 
 #include <cxxtest/TestSuite.h>
 
-#include "MantidAlgorithms/SampleCorrections/IBeamProfile.h"
 #include "MantidAlgorithms/SampleCorrections/MCAbsorptionStrategy.h"
+#include "MantidAlgorithms/SampleCorrections/RectangularBeamProfile.h"
 #include "MantidGeometry/Objects/BoundingBox.h"
+#include "MantidGeometry/Instrument/ReferenceFrame.h"
+#include "MantidKernel/MersenneTwister.h"
 #include "MantidKernel/WarningSuppressions.h"
 #include "MonteCarloTesting.h"
 
@@ -20,11 +22,6 @@ public:
   }
   static void destroySuite(MCAbsorptionStrategyTest *suite) { delete suite; }
 
-  MCAbsorptionStrategyTest()
-      : m_nevents(10), m_testBeamProfile(),
-        m_testSample(MonteCarloTesting::createTestSample(
-            MonteCarloTesting::TestSampleType::SolidSphere)) {}
-
   //----------------------------------------------------------------------------
   // Success cases
   //----------------------------------------------------------------------------
@@ -33,20 +30,23 @@ public:
     using namespace MonteCarloTesting;
     using namespace ::testing;
 
+    auto testSampleSphere = MonteCarloTesting::createTestSample(
+        MonteCarloTesting::TestSampleType::SolidSphere);
+    MockBeamProfile testBeamProfile;
+    EXPECT_CALL(testBeamProfile, defineActiveRegion(_))
+        .WillOnce(Return(testSampleSphere.getShape().getBoundingBox()));
+    const size_t nevents(10), maxTries(100);
+    MCAbsorptionStrategy mcabsorb(testBeamProfile, testSampleSphere, nevents,
+                                  maxTries);
+    // 3 random numbers per event expected
     MockRNG rng;
-    auto mcabsorb = createTestObject();
-    // Expectations
-    Sequence rand;
-    const double step = static_cast<double>(1) / static_cast<double>(m_nevents);
-    const double start = step;
-    for (size_t i = 0; i < m_nevents; ++i) {
-      double next = start + static_cast<double>(i) * step;
-      EXPECT_CALL(rng, nextValue()).InSequence(rand).WillOnce(Return(next));
-    }
+    EXPECT_CALL(rng, nextValue())
+        .Times(Exactly(30))
+        .WillRepeatedly(Return(0.5));
     const Mantid::Algorithms::IBeamProfile::Ray testRay = {V3D(-2, 0, 0),
                                                            V3D(1, 0, 0)};
-    EXPECT_CALL(m_testBeamProfile, generatePoint(_, _))
-        .Times(Exactly(static_cast<int>(m_nevents)))
+    EXPECT_CALL(testBeamProfile, generatePoint(_, _))
+        .Times(Exactly(static_cast<int>(nevents)))
         .WillRepeatedly(Return(testRay));
     const V3D endPos(0.7, 0.7, 1.4);
     const double lambdaBefore(2.5), lambdaAfter(3.5);
@@ -54,13 +54,35 @@ public:
     double factor(0.0), error(0.0);
     std::tie(factor, error) =
         mcabsorb.calculate(rng, endPos, lambdaBefore, lambdaAfter);
-    TS_ASSERT_DELTA(8.05621154e-03, factor, 1e-08);
-    TS_ASSERT_DELTA(1.0 / std::sqrt(m_nevents), error, 1e-08);
+    TS_ASSERT_DELTA(0.0043828472, factor, 1e-08);
+    TS_ASSERT_DELTA(1.0 / std::sqrt(nevents), error, 1e-08);
   }
 
   //----------------------------------------------------------------------------
   // Failure cases
   //----------------------------------------------------------------------------
+
+  void test_thin_object_fails_to_generate_point_in_sample() {
+    using Mantid::Algorithms::RectangularBeamProfile;
+    using namespace Mantid::Geometry;
+    using namespace Mantid::Kernel;
+    using namespace MonteCarloTesting;
+    using namespace ::testing;
+
+    auto testThinAnnulus = MonteCarloTesting::createTestSample(
+        MonteCarloTesting::TestSampleType::ThinAnnulus);
+    RectangularBeamProfile testBeamProfile(
+        ReferenceFrame(Y, Z, Right, "source"), V3D(), 1, 1);
+    const size_t nevents(10), maxTries(1);
+    MCAbsorptionStrategy mcabs(testBeamProfile, testThinAnnulus, nevents,
+                               maxTries);
+    MersenneTwister rng;
+    rng.setSeed(1);
+    const double lambdaBefore(2.5), lambdaAfter(3.5);
+    const V3D endPos(0.7, 0.7, 1.4);
+    TS_ASSERT_THROWS(mcabs.calculate(rng, endPos, lambdaBefore, lambdaAfter),
+                     std::runtime_error)
+  }
 
 private:
   class MockBeamProfile final : public Mantid::Algorithms::IBeamProfile {
@@ -72,16 +94,10 @@ private:
     MOCK_CONST_METHOD2(generatePoint,
                        Ray(Mantid::Kernel::PseudoRandomNumberGenerator &,
                            const Mantid::Geometry::BoundingBox &));
+    MOCK_CONST_METHOD1(defineActiveRegion, Mantid::Geometry::BoundingBox(
+                                               const Mantid::API::Sample &));
     GCC_DIAG_ON_SUGGEST_OVERRIDE
   };
-
-  MCAbsorptionStrategy createTestObject() {
-    return MCAbsorptionStrategy(m_testBeamProfile, m_testSample, m_nevents);
-  }
-
-  const size_t m_nevents;
-  MockBeamProfile m_testBeamProfile;
-  Mantid::API::Sample m_testSample;
 };
 
 #endif /* MANTID_ALGORITHMS_MCABSORPTIONSTRATEGYTEST_H_ */

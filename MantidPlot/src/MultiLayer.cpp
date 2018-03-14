@@ -27,21 +27,21 @@
  *   Boston, MA  02110-1301  USA                                           *
  *                                                                         *
  ***************************************************************************/
-#include <QVector>
-#include <QWidgetList>
-#include <QPrinter>
-#include <QPrintDialog>
 #include <QApplication>
-#include <QMessageBox>
 #include <QBitmap>
+#include <QCheckBox>
+#include <QClipboard>
+#include <QGroupBox>
 #include <QImageWriter>
+#include <QMessageBox>
 #include <QPainter>
 #include <QPicture>
-#include <QClipboard>
-#include <QCheckBox>
-#include <QGroupBox>
-#include <QSpinBox>
+#include <QPrintDialog>
+#include <QPrinter>
 #include <QSize>
+#include <QSpinBox>
+#include <QVector>
+#include <QWidgetList>
 
 #include <cmath>
 #include <limits>
@@ -57,28 +57,32 @@
 #include <qwt_scale_widget.h>
 #include <qwt_text_label.h>
 
+#include "ApplicationWindow.h"
+#include "LegendWidget.h"
 #include "MultiLayer.h"
 #include "Plot.h"
-#include "LegendWidget.h"
 #include "SelectionMoveResizer.h"
-#include "ApplicationWindow.h"
+#include "Spectrogram.h"
 #include <ColorButton.h>
 
-#include "Mantid/MantidDock.h"
-#include "Mantid/MantidMatrixCurve.h"
 #include "Mantid/MantidMDCurve.h"
+#include "Mantid/MantidMatrixCurve.h"
+#include "MantidKernel/Strings.h"
+#include <MantidQtWidgets/Common/MantidTreeWidget.h>
 
-#include <gsl/gsl_vector.h>
 #include "Mantid/MantidMDCurveDialog.h"
-#include "Mantid/MantidWSIndexDialog.h"
-#include "MantidQtSliceViewer/LinePlotOptions.h"
+#include "MantidQtWidgets/SliceViewer/LinePlotOptions.h"
+#include <MantidQtWidgets/Common/MantidTreeWidget.h>
+#include <MantidQtWidgets/Common/MantidWSIndexDialog.h>
+#include <gsl/gsl_vector.h>
 
-#include "MantidQtAPI/TSVSerialiser.h"
+#include "MantidQtWidgets/Common/TSVSerialiser.h"
 
 // Register the window into the WindowFactory
 DECLARE_WINDOW(MultiLayer)
 
 using namespace Mantid;
+using namespace MantidQt::MantidWidgets;
 
 namespace {
 /// static logger
@@ -110,7 +114,7 @@ void LayerButton::mouseDoubleClickEvent(QMouseEvent *) {
 
 MultiLayer::MultiLayer(QWidget *parent, int layers, int rows, int cols,
                        const QString &label, const char *name, Qt::WFlags f)
-    : MdiSubWindow(parent, label, name, f), active_graph(NULL), d_cols(cols),
+    : MdiSubWindow(parent, label, name, f), active_graph(nullptr), d_cols(cols),
       d_rows(rows), graph_width(500), graph_height(400), colsSpace(5),
       rowsSpace(5), left_margin(5), right_margin(5), top_margin(5),
       bottom_margin(5), l_canvas_width(400), l_canvas_height(300),
@@ -166,7 +170,7 @@ QSize MultiLayer::minimumSizeHint() const { return QSize(200, 200); }
 Graph *MultiLayer::layer(int num) {
   int index = num - 1;
   if (index < 0 || index >= graphsList.count())
-    return 0;
+    return nullptr;
 
   return static_cast<Graph *>(graphsList.at(index));
 }
@@ -371,7 +375,7 @@ void MultiLayer::removeLayer() {
     index--;
 
   if (graphsList.count() == 0) {
-    active_graph = 0;
+    active_graph = nullptr;
     return;
   }
 
@@ -672,7 +676,7 @@ QPixmap MultiLayer::canvasPixmap() {
 
 void MultiLayer::exportToFile(const QString &fileName) {
   if (fileName.isEmpty()) {
-    QMessageBox::critical(0, tr("MantidPlot - Error"),
+    QMessageBox::critical(nullptr, tr("MantidPlot - Error"),
                           tr("Please provide a valid file name!"));
     return;
   }
@@ -721,7 +725,7 @@ void MultiLayer::exportImage(const QString &fileName, int quality,
     p.end();
     pic.setMask(mask);
   }
-  pic.save(fileName, 0, quality);
+  pic.save(fileName, nullptr, quality);
 }
 
 void MultiLayer::exportPDF(const QString &fname) { exportVector(fname); }
@@ -1094,7 +1098,7 @@ void MultiLayer::wheelEvent(QWheelEvent *e) {
   bool resize = false;
   QPoint aux;
   QSize intSize;
-  Graph *resize_graph = 0;
+  Graph *resize_graph = nullptr;
   // Get the position of the mouse
   int xMouse = e->x();
   int yMouse = e->y();
@@ -1203,7 +1207,7 @@ void MultiLayer::setLayersNumber(int n) {
       }
     }
     if (graphsList.size() <= 0) {
-      active_graph = 0;
+      active_graph = nullptr;
       return;
     }
 
@@ -1279,7 +1283,7 @@ void MultiLayer::dropEvent(QDropEvent *event) {
         dynamic_cast<MantidMatrixCurve *>(g->curve(0));
     MantidMDCurve *asMDCurve = dynamic_cast<MantidMDCurve *>(g->curve(0));
 
-    if (NULL == asMatrixCurve && NULL != asMDCurve) {
+    if (nullptr == asMatrixCurve && nullptr != asMDCurve) {
       // Treat as a MDCurve
       dropOntoMDCurve(g, asMDCurve, tree);
     } else {
@@ -1322,7 +1326,7 @@ void MultiLayer::dropOntoMDCurve(Graph *g, MantidMDCurve *originalCurve,
     IMDWorkspace_sptr imdWS = boost::dynamic_pointer_cast<IMDWorkspace>(ws);
     // Only process IMDWorkspaces
     if (imdWS) {
-      QString currentName(imdWS->name().c_str());
+      QString currentName(imdWS->getName().c_str());
       try {
         MantidMDCurve *curve = new MantidMDCurve(currentName, g, showErrors);
         MantidQwtIMDWorkspaceData *data = curve->mantidData();
@@ -1350,14 +1354,14 @@ workspace(s) are to be dropped
 void MultiLayer::dropOntoMatrixCurve(Graph *g, MantidMatrixCurve *originalCurve,
                                      MantidTreeWidget *tree) {
   bool errorBars;
-  if (NULL != originalCurve) {
+  if (nullptr != originalCurve) {
     errorBars = originalCurve->hasErrorBars();
   } else {
     // Else we'll just have no error bars.
     errorBars = false;
   }
 
-  if (tree == NULL)
+  if (tree == nullptr)
     return; // (shouldn't happen)
   bool waterfallOpt = false;
   const auto userInput = tree->chooseSpectrumFromSelected(waterfallOpt);
@@ -1398,7 +1402,7 @@ void MultiLayer::dropOntoMatrixCurve(Graph *g, MantidMatrixCurve *originalCurve,
 */
 void MultiLayer::removeLayerSelectionFrame() {
   d_layers_selector->deleteLater();
-  d_layers_selector = NULL;
+  d_layers_selector = nullptr;
 }
 
 bool MultiLayer::swapLayers(int src, int dest) {
@@ -1522,7 +1526,7 @@ void MultiLayer::removeWaterfallBox() {
     return;
 
   QLayoutItem *child;
-  while ((child = waterfallBox->takeAt(0)) != 0) {
+  while ((child = waterfallBox->takeAt(0)) != nullptr) {
     delete child->widget();
   }
 }
@@ -1809,18 +1813,7 @@ MultiLayer::loadFromProject(const std::string &lines, ApplicationWindow *app,
 
       if (gtsv.selectLine("ggeometry")) {
         int x = 0, y = 0, w = 0, h = 0;
-        gtsv >> x >> y;
-
-        w = multiLayer->canvas->width();
-        w -= multiLayer->left_margin;
-        w -= multiLayer->right_margin;
-        w -= (multiLayer->d_cols - 1) * multiLayer->colsSpace;
-
-        h = multiLayer->canvas->height();
-        h -= multiLayer->top_margin;
-        h -= multiLayer->left_margin;
-        h -= (multiLayer->d_rows - 1) * multiLayer->rowsSpace;
-        h -= LayerButton::btnSize();
+        gtsv >> x >> y >> w >> h;
 
         if (isWaterfall)
           h -= LayerButton::btnSize(); // need an extra offset for the buttons
@@ -1866,6 +1859,39 @@ std::string MultiLayer::saveToProject(ApplicationWindow *app) {
   return tsv.outputLines();
 }
 
+std::vector<std::string> MultiLayer::getWorkspaceNames() {
+  std::vector<std::string> names;
+  std::string name;
+  MantidMatrixCurve *mmc;
+  Spectrogram *spec;
+  for (auto graph : graphsList) {
+    for (int i = 0; i < graph->getNumCurves(); ++i) {
+      auto item = graph->plotItem(i);
+
+      switch (item->rtti()) {
+      case QwtPlotItem::Rtti_PlotUserItem:
+        mmc = dynamic_cast<MantidMatrixCurve *>(item);
+        if (!mmc)
+          continue;
+
+        name = mmc->workspaceName().toStdString();
+        names.push_back(name);
+        break;
+      case QwtPlotItem::Rtti_PlotSpectrogram:
+        spec = dynamic_cast<Spectrogram *>(item);
+        if (!spec)
+          continue;
+
+        name = spec->workspaceName();
+        names.push_back(name);
+        break;
+      }
+    }
+  }
+
+  return names;
+}
+
 /**
  * Sets axes for all layers to the same scales, which are set to encompass the
  * widest range of data.
@@ -1893,5 +1919,6 @@ void MultiLayer::setCommonAxisScales() {
     auto *plot = layer(i)->plotWidget();
     plot->setAxisScale(AXIS_X, lowestX, highestX);
     plot->setAxisScale(AXIS_Y, lowestY, highestY);
+    layer(i)->replot();
   }
 }

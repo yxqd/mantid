@@ -1,5 +1,6 @@
 #include "MantidAlgorithms/GetTimeSeriesLogInformation.h"
 #include "MantidAPI/WorkspaceProperty.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/TableRow.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/EventWorkspace.h"
@@ -13,6 +14,7 @@
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::DataObjects;
+using Mantid::Types::Core::DateAndTime;
 
 using namespace std;
 
@@ -20,7 +22,7 @@ namespace Mantid {
 namespace Algorithms {
 
 DECLARE_ALGORITHM(GetTimeSeriesLogInformation)
-//----------------------------------------------------------------------------------------------
+
 /** Constructor
  */
 GetTimeSeriesLogInformation::GetTimeSeriesLogInformation()
@@ -83,7 +85,7 @@ void GetTimeSeriesLogInformation::exec() {
   }
 
   string logname = getProperty("LogName");
-  if (logname.size() == 0)
+  if (logname.empty())
     throw runtime_error("Input log value cannot be an empty string. ");
 
   Kernel::Property *log = m_dataWS->run().getProperty(logname);
@@ -157,9 +159,9 @@ void GetTimeSeriesLogInformation::processTimeRange() {
   // Time unit option
   string timeoption = this->getProperty("TimeRangeOption");
   int timecase = 0;
-  if (timeoption.compare("Absolute Time (nano second)") == 0)
+  if (timeoption == "Absolute Time (nano second)")
     timecase = 1;
-  else if (timeoption.compare("Relative Time (second)") == 0)
+  else if (timeoption == "Relative Time (second)")
     timecase = 0;
   else
     timecase = -1;
@@ -231,7 +233,7 @@ void GetTimeSeriesLogInformation::processTimeRange() {
  * absolute time from
   * 1990.01.01
   */
-Kernel::DateAndTime
+Types::Core::DateAndTime
 GetTimeSeriesLogInformation::getAbsoluteTime(double abstimens) {
   DateAndTime temptime(static_cast<int64_t>(abstimens));
 
@@ -241,7 +243,7 @@ GetTimeSeriesLogInformation::getAbsoluteTime(double abstimens) {
 /** Calculate the time from a given relative time from run start
   * @param deltatime :: double as a relative time to run start time in second
   */
-Kernel::DateAndTime
+Types::Core::DateAndTime
 GetTimeSeriesLogInformation::calculateRelativeTime(double deltatime) {
   int64_t totaltime =
       m_starttime.totalNanoseconds() + static_cast<int64_t>(deltatime * 1.0E9);
@@ -301,20 +303,15 @@ void GetTimeSeriesLogInformation::exportErrorLog(MatrixWorkspace_sptr ws,
   std::ofstream ofs;
   ofs.open(ofilename.c_str(), std::ios::out);
 
-  size_t numbaddt = 0;
-  Kernel::DateAndTime t0(ws->run().getProperty("run_start")->value());
+  Types::Core::DateAndTime t0(ws->run().getProperty("run_start")->value());
 
   for (size_t i = 1; i < abstimevec.size(); i++) {
     double tempdts = static_cast<double>(abstimevec[i].totalNanoseconds() -
                                          abstimevec[i - 1].totalNanoseconds()) *
                      1.0E-9;
     double dev = (tempdts - dts) / dts;
-    bool baddt = false;
-    if (fabs(dev) > 0.5)
-      baddt = true;
 
-    if (baddt) {
-      numbaddt++;
+    if (fabs(dev) > 0.5) {
       double deltapulsetimeSec1 =
           static_cast<double>(abstimevec[i - 1].totalNanoseconds() -
                               t0.totalNanoseconds()) *
@@ -343,7 +340,7 @@ void GetTimeSeriesLogInformation::exportErrorLog(MatrixWorkspace_sptr ws,
   * @param stepsize :: resolution of the delta time count bin
   */
 Workspace2D_sptr GetTimeSeriesLogInformation::calDistributions(
-    std::vector<Kernel::DateAndTime> timevec, double stepsize) {
+    std::vector<Types::Core::DateAndTime> timevec, double stepsize) {
   // 1. Get a vector of delta T (in unit of seconds)
   double dtmin = static_cast<double>(timevec.back().totalNanoseconds() -
                                      timevec[0].totalNanoseconds()) *
@@ -419,8 +416,8 @@ void GetTimeSeriesLogInformation::checkLogBasicInforamtion() {
   size_t countsame = 0;
   size_t countinverse = 0;
   for (size_t i = 1; i < m_timeVec.size(); i++) {
-    Kernel::DateAndTime tprev = m_timeVec[i - 1];
-    Kernel::DateAndTime tpres = m_timeVec[i];
+    Types::Core::DateAndTime tprev = m_timeVec[i - 1];
+    Types::Core::DateAndTime tpres = m_timeVec[i];
     if (tprev == tpres)
       countsame++;
     else if (tprev > tpres)
@@ -429,8 +426,8 @@ void GetTimeSeriesLogInformation::checkLogBasicInforamtion() {
 
   //   Written to summary map
   /*
-  Kernel::time_duration dts = m_timeVec[0]-m_starttime;
-  Kernel::time_duration dtf = m_timeVec.back() - m_timeVec[0];
+  Types::Core::time_duration dts = m_timeVec[0]-m_starttime;
+  Types::Core::time_duration dtf = m_timeVec.back() - m_timeVec[0];
   size_t f = m_timeVec.size()-1;
   */
 

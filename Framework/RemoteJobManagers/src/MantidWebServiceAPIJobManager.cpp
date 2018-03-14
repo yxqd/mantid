@@ -18,6 +18,7 @@ Mantid::Kernel::Logger g_log("MantidWebServiceAPIJobManager");
 }
 
 using namespace Mantid::Kernel;
+using Mantid::Types::Core::DateAndTime;
 
 /**
  * Abort a previously submitted job
@@ -369,8 +370,7 @@ std::string MantidWebServiceAPIJobManager::startRemoteTransaction() {
  * (remote) compute resource.
  */
 void MantidWebServiceAPIJobManager::stopRemoteTransaction(
-    const std::string &transactionID) {
-  std::string transId = transactionID;
+    const std::string &transId) {
   std::istream &respStream =
       httpGet("/transaction", std::string("Action=Stop&TransID=") + transId);
 
@@ -420,9 +420,8 @@ std::string MantidWebServiceAPIJobManager::submitRemoteJob(
   postData[runnable] = param;
 
   // Job name is optional
-  std::string jobName = taskName;
-  if (jobName.length() > 0) {
-    postData["JobName"] = jobName;
+  if (taskName.length() > 0) {
+    postData["JobName"] = taskName;
   }
 
   std::istream &respStream = httpPost("/submit", postData);

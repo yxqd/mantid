@@ -159,7 +159,7 @@ Where :math:`\lambda_{min}` is the minimum extent of the `IvsLambda` Workspace
 and :math:`\lambda_{max}` is the maximum extent of the `IvsLambda` Workspace.
 
 If you have not provided a value for `MomentumTransferStep` then the algorithm
-will use :ref:`algm-CalculateResolution` to calculate this value for you.
+will use :ref:`algm-NRCalculateSlitResolution` to calculate this value for you.
 
 Scaling
 =======
@@ -206,6 +206,13 @@ setup remains unchanged for other algorithms that may need to manipulate/use it.
     :height: 250px
     :align: center
 
+
+Processing Instructions
+#######################
+
+These enable a grouping pattern on workspace indices to yield only the detectors of interest. It allows usage of the operators :literal:`,:+-` to specify or exclude specific indices or to add
+spectra together. See :literal:`Grouping Pattern` from :Ref:`algm-GroupDetectors` for further details on their usage.
+
 Usage
 -----
 
@@ -218,11 +225,13 @@ Usage
    IvsQ, IvsLam, thetaOut = ReflectometryReductionOne(InputWorkspace=run, ThetaIn=0.7, I0MonitorIndex=2, ProcessingInstructions='3:4',
    WavelengthMin=1.0, WavelengthMax=17.0,
    MonitorBackgroundWavelengthMin=15.0, MonitorBackgroundWavelengthMax=17.0,
-   MonitorIntegrationWavelengthMin=4.0, MonitorIntegrationWavelengthMax=10.0 )
+   MonitorIntegrationWavelengthMin=4.0, MonitorIntegrationWavelengthMax=10.0, Version=1)
 
-   print "The first four IvsLam Y values are: [ %.4e, %.4e, %.4e, %.4e ]" % (IvsLam.readY(0)[0], IvsLam.readY(0)[1], IvsLam.readY(0)[2], IvsLam.readY(0)[3])
-   print "The first four IvsQ Y values are: [ %.4e, %.4e, %.4e, %.4e ]" % (IvsQ.readY(0)[0], IvsQ.readY(0)[1], IvsQ.readY(0)[2], IvsQ.readY(0)[3])
-   print "Theta out is the same as theta in:",thetaOut
+   print("The first four IvsLam Y values are: [ {:.4e}, {:.4e}, {:.4e}, {:.4e} ]".format(
+	  IvsLam.readY(0)[0], IvsLam.readY(0)[1], IvsLam.readY(0)[2], IvsLam.readY(0)[3]))
+   print("The first four IvsQ Y values are: [ {:.4e}, {:.4e}, {:.4e}, {:.4e} ]".format(
+          IvsQ.readY(0)[0], IvsQ.readY(0)[1], IvsQ.readY(0)[2], IvsQ.readY(0)[3]))
+   print("Theta out is the same as theta in: {}".format(thetaOut))
 
 
 Output:
@@ -230,7 +239,7 @@ Output:
 .. testoutput:: ExReflRedOneSimple
 
    The first four IvsLam Y values are: [ 0.0000e+00, 0.0000e+00, 7.8118e-07, 1.9346e-06 ]
-   The first four IvsQ Y values are: [ 6.2615e-04, 7.8498e-04, 9.2155e-04, 1.1042e-03 ]
+   The first four IvsQ Y values are: [ 1.3845e-03, 1.9717e-03, 2.7579e-03, 4.1467e-03 ]
    Theta out is the same as theta in: 0.7
 
 

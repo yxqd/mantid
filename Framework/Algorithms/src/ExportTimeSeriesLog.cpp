@@ -2,12 +2,13 @@
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/IEventList.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceFactory.h"
-#include "MantidAPI/WorkspaceProperty.h"
 #include "MantidAPI/WorkspaceProperty.h"
 #include "MantidDataObjects/EventList.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/Events.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/System.h"
@@ -15,11 +16,13 @@
 #include "MantidKernel/UnitFactory.h"
 #include <algorithm>
 #include <fstream>
+#include <sstream>
 
 using namespace Mantid;
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::DataObjects;
+using Mantid::Types::Core::DateAndTime;
 
 using namespace std;
 
@@ -28,7 +31,6 @@ namespace Algorithms {
 
 DECLARE_ALGORITHM(ExportTimeSeriesLog)
 
-//----------------------------------------------------------------------------------------------
 /** Definition of all input arguments
  */
 void ExportTimeSeriesLog::init() {
@@ -41,6 +43,10 @@ void ExportTimeSeriesLog::init() {
       Kernel::make_unique<WorkspaceProperty<MatrixWorkspace>>(
           "OutputWorkspace", "Dummy", Direction::Output),
       "Name of the workspace containing the log events in Export. ");
+
+  declareProperty("CalculateFirstDerivative", false,
+                  "If specified then the first derivative of exported data "
+                  "will be calcualted and put to spectrum 1.");
 
   declareProperty("LogName", "", "Log's name to filter events.");
 
@@ -73,7 +79,6 @@ void ExportTimeSeriesLog::init() {
                                             "is Workspace2D.");
 }
 
-//----------------------------------------------------------------------------------------------
 /** Main execution
  */
 void ExportTimeSeriesLog::exec() {
@@ -89,20 +94,23 @@ void ExportTimeSeriesLog::exec() {
   int numberoutputentries = getProperty("NumberEntriesExport");
   bool outputeventworkspace = getProperty("IsEventWorkspace");
 
+  bool cal1stderiv = getProperty("CalculateFirstDerivative");
+
   // Call the main
   exportLog(logname, time_unit, start_time, stop_time, exportEpochTime,
-            outputeventworkspace, numberoutputentries);
+            outputeventworkspace, numberoutputentries, cal1stderiv);
+
+  // calcualte first derivative
+  if (cal1stderiv)
+    calculateFirstDerivative(outputeventworkspace);
+
+  // set up the sample log values for meta information
+  setupMetaData(logname, time_unit, exportEpochTime);
 
   // 3. Output
   setProperty("OutputWorkspace", m_outWS);
 }
-/*
- *  * @param logname ::
-  * @param numentries ::
-  * @param outputeventws ::
- * true.
- */
-//----------------------------------------------------------------------------------------------
+
 /** Export part of designated log to an file in column format and a output file
  * @brief ExportTimeSeriesLog::exportLog
  * @param logname ::  name of log to export
@@ -112,19 +120,20 @@ void ExportTimeSeriesLog::exec() {
  * @param exportepoch :: flag to output time as epoch time/absolute time
  * @param outputeventws :: boolean.  output workspace is event workspace if
  * @param numentries :: number of log entries to export
+ * @param cal_first_deriv :: flag to calcualte the first derivative
  */
 void ExportTimeSeriesLog::exportLog(const std::string &logname,
                                     const std::string timeunit,
                                     const double &starttime,
                                     const double &stoptime,
                                     const bool exportepoch, bool outputeventws,
-                                    int numentries) {
+                                    int numentries, bool cal_first_deriv) {
 
   // Get log, time, and etc.
-  std::vector<Kernel::DateAndTime> times;
+  std::vector<Types::Core::DateAndTime> times;
   std::vector<double> values;
 
-  if (logname.size() > 0) {
+  if (!logname.empty()) {
     // Log
     Kernel::TimeSeriesProperty<double> *tlog =
         dynamic_cast<Kernel::TimeSeriesProperty<double> *>(
@@ -144,7 +153,7 @@ void ExportTimeSeriesLog::exportLog(const std::string &logname,
 
   // Get start time, stop time and unit factor
   double timeunitfactor = 1.;
-  if (timeunit.compare("Seconds") == 0)
+  if (timeunit == "Seconds")
     timeunitfactor = 1.E-9;
 
   // Get index for start time
@@ -191,8 +200,11 @@ void ExportTimeSeriesLog::exportLog(const std::string &logname,
     setupEventWorkspace(i_start, i_stop, numentries, times, values,
                         exportepoch);
   } else {
+    size_t nspec(1);
+    if (cal_first_deriv)
+      nspec = 2;
     setupWorkspace2D(i_start, i_stop, numentries, times, values, exportepoch,
-                     timeunitfactor);
+                     timeunitfactor, nspec);
   }
 }
 
@@ -201,21 +213,22 @@ void ExportTimeSeriesLog::exportLog(const std::string &logname,
  * @param start_index :: array index for the first log entry
  * @param stop_index :: array index for the last log entry
  * @param numentries :: number of log entries to output
- * @param times :: vector of Kernel::DateAndTime
+ * @param times :: vector of Types::Core::DateAndTime
  * @param values :: vector of log value in double
  * @param epochtime :: flag to output time in epoch time/absolute time
  * @param timeunitfactor :: conversion factor for various unit of time for
+ * @param nspec :: number of spectra of the workspace to create
  * output
  */
 void ExportTimeSeriesLog::setupWorkspace2D(
     const size_t &start_index, const size_t &stop_index, int numentries,
     vector<DateAndTime> &times, vector<double> values, const bool &epochtime,
-    const double &timeunitfactor) {
+    const double &timeunitfactor, size_t nspec) {
   // Determine time shift
   int64_t timeshift(0);
   if (!epochtime) {
     // relative time
-    Kernel::DateAndTime runstart(
+    Types::Core::DateAndTime runstart(
         m_inputWS->run().getProperty("run_start")->value());
     timeshift = runstart.totalNanoseconds();
   }
@@ -227,7 +240,8 @@ void ExportTimeSeriesLog::setupWorkspace2D(
 
   // Create 2D workspace
   m_outWS = boost::dynamic_pointer_cast<MatrixWorkspace>(
-      WorkspaceFactory::Instance().create("Workspace2D", 1, outsize, outsize));
+      WorkspaceFactory::Instance().create("Workspace2D", nspec, outsize,
+                                          outsize));
   if (!m_outWS)
     throw runtime_error(
         "Unable to create a Workspace2D casted to MatrixWorkspace.");
@@ -257,42 +271,31 @@ void ExportTimeSeriesLog::setupWorkspace2D(
   xaxis->setUnit("Time");
 }
 
-//----------------------------------------------------------------------------------------------
 /** Set up an Event workspace
  * @brief ExportTimeSeriesLog::setupEventWorkspace
  * @param start_index
  * @param stop_index
  * @param numentries :: number of log entries to output
- * @param times :: vector of Kernel::DateAndTime
+ * @param times :: vector of Types::Core::DateAndTime
  * @param values :: vector of log value in double
  * @param epochtime :: boolean flag for output time is absolute time/epoch time.
  */
 void ExportTimeSeriesLog::setupEventWorkspace(
     const size_t &start_index, const size_t &stop_index, int numentries,
     vector<DateAndTime> &times, vector<double> values, const bool &epochtime) {
-  Kernel::DateAndTime runstart(
+  Types::Core::DateAndTime runstart(
       m_inputWS->run().getProperty("run_start")->value());
 
   // Get some stuff from the input workspace
   const size_t numberOfSpectra = 1;
-  const int YLength = static_cast<int>(m_inputWS->blocksize());
   // determine output size
   size_t outsize = stop_index - start_index + 1;
   if (outsize > static_cast<size_t>(numentries))
     outsize = static_cast<size_t>(numentries);
 
-  // Make a brand new EventWorkspace
-  EventWorkspace_sptr outEventWS = boost::dynamic_pointer_cast<EventWorkspace>(
-      API::WorkspaceFactory::Instance().create(
-          "EventWorkspace", numberOfSpectra, YLength + 1, YLength));
-  // Copy geometry over.
-  API::WorkspaceFactory::Instance().initializeFromParent(m_inputWS, outEventWS,
-                                                         false);
-
-  m_outWS = boost::dynamic_pointer_cast<MatrixWorkspace>(outEventWS);
-  if (!m_outWS)
-    throw runtime_error(
-        "Output workspace cannot be casted to a MatrixWorkspace.");
+  boost::shared_ptr<EventWorkspace> outEventWS = create<EventWorkspace>(
+      *m_inputWS, numberOfSpectra, HistogramData::BinEdges(2));
+  m_outWS = outEventWS;
 
   // Create the output event list (empty)
   EventList &outEL = outEventWS->getSpectrum(0);
@@ -309,7 +312,7 @@ void ExportTimeSeriesLog::setupEventWorkspace(
   }
 
   for (size_t i = 0; i < outsize; i++) {
-    Kernel::DateAndTime tnow = times[i + start_index];
+    Types::Core::DateAndTime tnow = times[i + start_index];
     int64_t dt = tnow.totalNanoseconds() - time_shift_ns;
 
     // convert to microseconds
@@ -337,15 +340,15 @@ void ExportTimeSeriesLog::setupEventWorkspace(
  * second is 1E-9
  */
 bool ExportTimeSeriesLog::calculateTimeSeriesRangeByTime(
-    std::vector<Kernel::DateAndTime> &vec_times, const double &rel_start_time,
-    size_t &i_start, const double &rel_stop_time, size_t &i_stop,
-    const double &time_factor) {
+    std::vector<Types::Core::DateAndTime> &vec_times,
+    const double &rel_start_time, size_t &i_start, const double &rel_stop_time,
+    size_t &i_stop, const double &time_factor) {
   // Initialize if there is something wrong.
   i_start = 0;
   i_stop = vec_times.size() - 1;
 
   // Check existence of proton_charge as run start
-  Kernel::DateAndTime run_start(0);
+  Types::Core::DateAndTime run_start(0);
   if (m_inputWS->run().hasProperty("proton_charge")) {
     auto ts = dynamic_cast<TimeSeriesProperty<double> *>(
         m_inputWS->run().getProperty("proton_charge"));
@@ -367,7 +370,7 @@ bool ExportTimeSeriesLog::calculateTimeSeriesRangeByTime(
   if (rel_start_time != EMPTY_DBL()) {
     int64_t start_time_ns = run_start.totalNanoseconds() +
                             static_cast<int64_t>(rel_start_time / time_factor);
-    Kernel::DateAndTime start_time(start_time_ns);
+    Types::Core::DateAndTime start_time(start_time_ns);
     i_start = static_cast<size_t>(
         std::lower_bound(vec_times.begin(), vec_times.end(), start_time) -
         vec_times.begin());
@@ -380,13 +383,78 @@ bool ExportTimeSeriesLog::calculateTimeSeriesRangeByTime(
   if (rel_stop_time != EMPTY_DBL()) {
     int64_t stop_time_ns = run_start.totalNanoseconds() +
                            static_cast<int64_t>(rel_stop_time / time_factor);
-    Kernel::DateAndTime stop_time(stop_time_ns);
+    Types::Core::DateAndTime stop_time(stop_time_ns);
     i_stop = static_cast<size_t>(
         std::lower_bound(vec_times.begin(), vec_times.end(), stop_time) -
         vec_times.begin());
   }
 
   return true;
+}
+
+void ExportTimeSeriesLog::calculateFirstDerivative(bool is_event_ws) {
+  if (is_event_ws) {
+    g_log.error("It is not supported to calculate first derivative if the "
+                "output is an EventWorkspace.");
+    return;
+  }
+
+  // calcualte output
+  size_t datasize = m_outWS->mutableX(1).size();
+  auto vecX = m_outWS->mutableX(0);
+  auto vecY = m_outWS->mutableY(0);
+  auto &derivX = m_outWS->mutableX(1);
+  auto &derivY = m_outWS->mutableY(1);
+  if (vecY.size() != datasize)
+    throw std::runtime_error("Output workspace 2D is not supposed to have "
+                             "different size of X and Y.");
+
+  std::stringstream errmsg_ss;
+  for (size_t i = 1; i < datasize - 1; ++i) {
+    // set up X
+    derivX[i] = vecX[i];
+    // set up Y
+    double dx = vecX[i + 1] - vecX[i];
+    if (dx <= 0) {
+      errmsg_ss << "Entry " << i << ": " << vecX[i] << " >= " << vecX[i + 1]
+                << "\n";
+      derivY[i] = 1.;
+    } else {
+      derivY[i] = (vecY[i + 1] - vecY[i]) / dx;
+    }
+  }
+
+  // last value
+  derivX[datasize - 1] = vecX[datasize - 1];
+  derivY.back() = 0.;
+
+  // error message
+  std::string errmsg = errmsg_ss.str();
+  if (!errmsg.empty())
+    g_log.error(errmsg);
+
+  return;
+}
+
+/** Set up the meta data such as sample log name, unit of time, whether the time
+ * is epoch to
+ *   the output workspace
+ * @brief ExportTimeSeriesLog::setupMetaData
+ * @param log_name
+ * @param time_unit
+ * @param export_epoch
+ */
+void ExportTimeSeriesLog::setupMetaData(const std::string &log_name,
+                                        const std::string &time_unit,
+                                        const bool &export_epoch) {
+
+  m_outWS->mutableRun().addProperty("SampleLogName", log_name, true);
+  m_outWS->mutableRun().addProperty("TimeUnit", time_unit, true);
+
+  std::string is_epoch("0");
+  if (export_epoch)
+    is_epoch = "1";
+  m_outWS->mutableRun().addProperty("IsEpochTime", is_epoch, true);
 }
 
 } // namespace Mantid

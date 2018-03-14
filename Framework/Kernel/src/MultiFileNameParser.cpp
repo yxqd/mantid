@@ -5,14 +5,15 @@
 
 #include "MantidKernel/ConfigService.h"
 #include "MantidKernel/FacilityInfo.h"
+#include "MantidKernel/Strings.h"
 
 #include <numeric>
 #include <sstream>
 
-#include <boost/regex.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/bind.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/regex.hpp>
 
 namespace Mantid {
 namespace Kernel {
@@ -38,14 +39,18 @@ const std::string STEP_RANGE =
     "(" + SINGLE + COLON + SINGLE + COLON + SINGLE + ")";
 const std::string ADD_LIST = "(" + SINGLE + "(" + PLUS + SINGLE + ")+" + ")";
 const std::string ADD_RANGE = "(" + SINGLE + MINUS + SINGLE + ")";
+const std::string ADD_RANGES = "(" + ADD_RANGE + PLUS + ADD_RANGE + ")";
+const std::string ADD_SINGLE_TO_RANGE = "(" + SINGLE + PLUS + ADD_RANGE + ")";
+const std::string ADD_RANGE_TO_SINGLE = "(" + ADD_RANGE + PLUS + SINGLE + ")";
 const std::string ADD_STEP_RANGE =
     "(" + SINGLE + MINUS + SINGLE + COLON + SINGLE + ")";
 
-const std::string ANY = "(" + ADD_STEP_RANGE + "|" + ADD_RANGE + "|" +
-                        ADD_LIST + "|" + STEP_RANGE + "|" + RANGE + "|" +
-                        SINGLE + ")";
+const std::string ANY = "(" + ADD_STEP_RANGE + "|" + ADD_RANGES + "|" +
+                        ADD_SINGLE_TO_RANGE + "|" + ADD_RANGE_TO_SINGLE + "|" +
+                        ADD_RANGE + "|" + ADD_LIST + "|" + STEP_RANGE + "|" +
+                        RANGE + "|" + SINGLE + ")";
 const std::string LIST = "(" + ANY + "(" + COMMA + ANY + ")*" + ")";
-}
+} // namespace Regexs
 
 /////////////////////////////////////////////////////////////////////////////
 // Forward declarations.
@@ -83,7 +88,7 @@ struct RangeContainsRun {
 std::string toString(const RunRangeList &runRangeList);
 std::string &accumulateString(std::string &output,
                               std::pair<unsigned int, unsigned int> runRange);
-}
+} // namespace
 
 /////////////////////////////////////////////////////////////////////////////
 // Scoped, global functions.
@@ -175,7 +180,7 @@ std::string suggestWorkspaceName(const std::vector<std::string> &fileNames) {
  * overkill.
  */
 bool ReverseCaselessCompare::operator()(const std::string &a,
-                                        const std::string &b) {
+                                        const std::string &b) const {
   std::string lowerA(a);
   std::string lowerB(b);
 
@@ -507,6 +512,31 @@ parseToken(std::vector<std::vector<unsigned int>> &parsedRuns,
   else if (matchesFully(token, Regexs::ADD_RANGE)) {
     runs = generateRange(rangeDetails[0], rangeDetails[1], 1, true);
   }
+  // E.g. "2018-2020+2022-2023"
+  else if (matchesFully(token, Regexs::ADD_RANGES)) {
+    const auto lhs = generateRange(rangeDetails[0], rangeDetails[1], 1, true);
+    const auto rhs = generateRange(rangeDetails[2], rangeDetails[3], 1, true);
+    runs.resize(1);
+    auto it = std::back_inserter(runs.front());
+    std::copy(lhs.front().cbegin(), lhs.front().cend(), it);
+    std::copy(rhs.front().cbegin(), rhs.front().cend(), it);
+  }
+  // E.g. "2018+2020-2023"
+  else if (matchesFully(token, Regexs::ADD_SINGLE_TO_RANGE)) {
+    runs.resize(1);
+    runs.front().emplace_back(rangeDetails[0]);
+    const auto rhs = generateRange(rangeDetails[1], rangeDetails[2], 1, true);
+    auto it = std::back_inserter(runs.front());
+    std::copy(rhs.front().cbegin(), rhs.front().cend(), it);
+  }
+  // E.g. "2018-2020+2023"
+  else if (matchesFully(token, Regexs::ADD_RANGE_TO_SINGLE)) {
+    runs.resize(1);
+    const auto lhs = generateRange(rangeDetails[0], rangeDetails[1], 1, true);
+    auto it = std::back_inserter(runs.front());
+    std::copy(lhs.front().cbegin(), lhs.front().cend(), it);
+    runs.front().emplace_back(rangeDetails[2]);
+  }
   // E.g. "2012-2020:4".
   else if (matchesFully(token, Regexs::ADD_STEP_RANGE)) {
     runs =
@@ -546,11 +576,11 @@ std::vector<std::vector<unsigned int>> generateRange(unsigned int from,
     throw std::runtime_error(
         "Unable to generate a range with a step size of zero.");
 
-  size_t limit = 100;
-  int success =
-      ConfigService::Instance().getValue("loading.multifilelimit", limit);
-  if (!success) {
-    limit = 100;
+  size_t limit;
+  std::string limitStr;
+  ConfigService::Instance().getValue("loading.multifilelimit", limitStr);
+  if (!Strings::convert(limitStr, limit)) {
+    limit = ConfigService::Instance().getFacility().multiFileLimit();
   }
 
   unsigned int orderedTo = from > to ? from : to;
@@ -559,9 +589,9 @@ std::vector<std::vector<unsigned int>> generateRange(unsigned int from,
   if (numberOfFiles > limit) {
     std::stringstream sstream;
     sstream << "The range from " << orderedFrom << " to " << orderedTo
-            << " step " << stepSize << ", would genetate " << numberOfFiles
+            << " with step " << stepSize << " would generate " << numberOfFiles
             << " files.  "
-            << "This is greater then the current limit of " << limit << ".  "
+            << "This is greater than the current limit of " << limit << ".  "
             << "This limit can be configured in the Mantid.user.properties "
                "file using the key loading.multifilelimit=200.";
     throw std::range_error(sstream.str());
@@ -618,7 +648,7 @@ std::vector<std::vector<unsigned int>> generateRange(unsigned int from,
  */
 void validateToken(const std::string &token) {
   // Each token must be non-empty.
-  if (token.size() == 0)
+  if (token.empty())
     throw std::runtime_error("A comma-separated token is empty.");
 
   // Each token must begin and end with a numeric character.

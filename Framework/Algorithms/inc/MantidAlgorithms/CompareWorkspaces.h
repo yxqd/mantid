@@ -71,20 +71,27 @@ namespace Algorithms {
  */
 class DLLExport CompareWorkspaces : public API::Algorithm {
 public:
-  CompareWorkspaces();
-  ~CompareWorkspaces() override;
-
   /// Algorithm's name
-  const std::string name() const override;
+  const std::string name() const override { return "CompareWorkspaces"; }
 
-  /// Algorithm's version
-  int version() const override;
+  /// Algorithm's version for identification. @see Algorithm::version
+  int version() const override { return 1; }
 
-  /// Categories this algorithm belongs to
-  const std::string category() const override;
+  /// Algorithm's category for identification. @see Algorithm::category
+  const std::string category() const override { return "Utility\\Workspaces"; }
 
-  /// Summary of algorithm's purpose
-  const std::string summary() const override;
+  /// Algorithm's summary for use in the GUI and help. @see Algorithm::summary
+  const std::string summary() const override {
+    return "Compares two workspaces for equality. This algorithm is mainly "
+           "intended for use by the Mantid development team as part of the "
+           "testing process.";
+  }
+
+protected:
+  Parallel::ExecutionMode getParallelExecutionMode(
+      const std::map<std::string, Parallel::StorageMode> &storageModes)
+      const override;
+  void execMasterOnly() override;
 
 private:
   /// Initialise algorithm
@@ -138,20 +145,20 @@ private:
   bool relErr(double x1, double x2, double errorVal) const;
 
   /// Result of comparison (true if equal, false otherwise)
-  bool m_Result;
+  bool m_result{false};
 
   /// Mismatch messages that resulted from comparison
-  API::ITableWorkspace_sptr m_Messages;
+  API::ITableWorkspace_sptr m_messages;
 
   /// Report progress of comparison
-  API::Progress *m_Prog;
+  std::unique_ptr<API::Progress> m_progress = nullptr;
 
   /// Variable states if one wants to compare workspaces in parallell. This
   /// usully true but if one wants to look at the comparison logs, parallell
   /// comparison make things complicated as
   /// logs from different threads are mixed together.  In this case, it is
   /// better not to do parallell comparison.
-  bool m_ParallelComparison;
+  bool m_parallelComparison{false};
 };
 
 } // namespace Algorithms

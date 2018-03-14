@@ -12,7 +12,6 @@
 #include "MantidKernel/Timer.h"
 #include "MantidKernel/WarningSuppressions.h"
 #include "MantidTestHelpers/MDEventsTestHelper.h"
-#include <boost/math/special_functions/fpclassify.hpp>
 #include <cxxtest/TestSuite.h>
 #include <gmock/gmock.h>
 
@@ -618,7 +617,7 @@ public:
     // Now mask the box
     it->getBox()->mask();
     // For masked boxes, getNormalizedSignal() should return NaN.
-    TS_ASSERT(boost::math::isnan(it->getNormalizedSignal()));
+    TS_ASSERT(std::isnan(it->getNormalizedSignal()));
   }
 };
 
@@ -646,9 +645,9 @@ public:
   void do_test_iterator(bool leafOnly, bool ImplicitFunction, size_t expected) {
     // Count the top level box.
     size_t counter = 1;
-    MDBoxBase<MDLeanEvent<3>, 3> *box = NULL;
+    MDBoxBase<MDLeanEvent<3>, 3> *box = nullptr;
 
-    MDBoxImplicitFunction *function = NULL;
+    MDBoxImplicitFunction *function = nullptr;
     if (ImplicitFunction) {
       std::vector<coord_t> min(3, 2.001f);
       std::vector<coord_t> max(3, 2.999f);
@@ -721,7 +720,7 @@ public:
   void do_test_getBoxes(bool leafOnly, int ImplicitFunction, size_t expected) {
     std::vector<API::IMDNode *> boxes;
 
-    MDImplicitFunction *function = NULL;
+    MDImplicitFunction *function = nullptr;
     if (ImplicitFunction == 1) {
       // Box in 3D where 2 < (x,y,z) < 3
       std::vector<coord_t> min(3, 2.001f);

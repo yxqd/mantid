@@ -1,13 +1,11 @@
 // SaveNeXus
 // @author Freddie Akeroyd, STFC ISIS Faility
 // @author Ronald Fowler, STFC eScience. Modified to fit with SaveNexusProcessed
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidDataHandling/SaveNexus.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidAPI/FileProperty.h"
+#include "MantidAPI/WorkspaceHistory.h"
 #include "MantidKernel/BoundedValidator.h"
 
 #include <cmath>
@@ -23,9 +21,6 @@ DECLARE_ALGORITHM(SaveNexus)
 using namespace Kernel;
 using namespace API;
 using namespace DataObjects;
-
-/// Empty default constructor
-SaveNexus::SaveNexus() : Algorithm() {}
 
 /** Initialisation method.
  *
@@ -105,7 +100,7 @@ void SaveNexus::setOtherProperties(IAlgorithm *alg,
                                    const std::string &propertyName,
                                    const std::string &propertyValue,
                                    int perioidNum) {
-  if (!propertyName.compare("Append")) {
+  if (propertyName == "Append") {
     if (perioidNum != 1) {
       alg->setPropertyValue(propertyName, "1");
     } else
@@ -144,7 +139,7 @@ void SaveNexus::runSaveNexusProcessed() {
   // If we're tracking history, add the entry before we save it to file
   if (trackingHistory()) {
     m_history->fillAlgorithmHistory(
-        this, Mantid::Kernel::DateAndTime::getCurrentTime(), 0,
+        this, Mantid::Types::Core::DateAndTime::getCurrentTime(), 0,
         Algorithm::g_execCount);
     if (!isChild()) {
       m_inputWorkspace->history().addHistory(m_history);

@@ -3,6 +3,7 @@
 #include "MantidAlgorithms/ChangePulsetime.h"
 #include "MantidAPI/IMDIterator.h"
 #include "MantidAPI/IEventWorkspace.h"
+#include "MantidAPI/Run.h"
 #include "MantidDataObjects/EventList.h"
 #include "MantidKernel/System.h"
 #include "MantidKernel/TimeSeriesProperty.h"
@@ -22,6 +23,7 @@ DECLARE_ALGORITHM(ChangeTimeZero)
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
+using Types::Core::DateAndTime;
 using std::size_t;
 
 namespace {
@@ -39,7 +41,6 @@ bool isTimeSeries(Mantid::Kernel::Property *prop) {
 }
 }
 
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void ChangeTimeZero::init() {
@@ -58,7 +59,6 @@ void ChangeTimeZero::init() {
                   "An output workspace.");
 }
 
-//----------------------------------------------------------------------------------------------
 /** Execute the algorithm.
  */
 void ChangeTimeZero::exec() {
@@ -238,7 +238,7 @@ ChangeTimeZero::getStartTimeFromWorkspace(API::MatrixWorkspace_sptr ws) const {
   Mantid::Kernel::TimeSeriesProperty<double> *goodFrame = nullptr;
   try {
     goodFrame = run.getTimeSeriesProperty<double>("proton_charge");
-  } catch (std::invalid_argument) {
+  } catch (const std::invalid_argument &) {
     throw std::invalid_argument("ChangeTimeZero: The log needs a proton_charge "
                                 "time series to determine the zero time.");
   }
@@ -332,7 +332,7 @@ bool ChangeTimeZero::checkForDateTime(const std::string &val) const {
   // Hedge for bad lexical casts in the DateTimeValidator
   try {
     DateTimeValidator validator = DateTimeValidator();
-    isDateTime = validator.isValid(val) == "";
+    isDateTime = validator.isValid(val).empty();
   } catch (...) {
     isDateTime = false;
   }

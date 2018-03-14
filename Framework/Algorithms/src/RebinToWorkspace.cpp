@@ -1,12 +1,11 @@
-//--------------------------------
-// Includes
-//------------------------------
 #include "MantidAlgorithms/RebinToWorkspace.h"
-#include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/HistogramValidator.h"
+#include "MantidAPI/MatrixWorkspace.h"
 
-using namespace Mantid::API;
-using namespace Mantid::Algorithms;
+namespace Mantid {
+namespace Algorithms {
+
+using namespace API;
 
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(RebinToWorkspace)
@@ -62,6 +61,7 @@ void RebinToWorkspace::exec() {
   runRebin->setPropertyValue("OutputWorkspace", "rebin_out");
   runRebin->setProperty("params", rb_params);
   runRebin->setProperty("PreserveEvents", PreserveEvents);
+  runRebin->setProperty("IgnoreBinErrors", true);
   runRebin->executeAsChildAlg();
   progress(1);
   MatrixWorkspace_sptr ws = runRebin->getProperty("OutputWorkspace");
@@ -78,7 +78,7 @@ std::vector<double> RebinToWorkspace::createRebinParameters(
     Mantid::API::MatrixWorkspace_sptr toMatch) {
   using namespace Mantid::API;
 
-  const MantidVec &matchXdata = toMatch->readX(0);
+  auto &matchXdata = toMatch->x(0);
   // params vector should have the form [x_1, delta_1,x_2, ...
   // ,x_n-1,delta_n-1,x_n), see Rebin.cpp
   std::vector<double> rb_params;
@@ -93,3 +93,18 @@ std::vector<double> RebinToWorkspace::createRebinParameters(
   }
   return rb_params;
 }
+
+Parallel::ExecutionMode RebinToWorkspace::getParallelExecutionMode(
+    const std::map<std::string, Parallel::StorageMode> &storageModes) const {
+  // Probably we can relax these restrictions based on particular combination
+  // with storage mode of WorkspaceToRebin, but this is simple and sufficient
+  // for now.
+  if (storageModes.at("WorkspaceToMatch") != Parallel::StorageMode::Cloned)
+    throw std::runtime_error("WorkspaceToMatch must have " +
+                             Parallel::toString(Parallel::StorageMode::Cloned));
+  return Parallel::getCorrespondingExecutionMode(
+      storageModes.at("WorkspaceToRebin"));
+}
+
+} // namespace Algorithms
+} // namespace Mantid

@@ -7,21 +7,15 @@
 #include <Poco/Exception.h>
 #include <Poco/DOM/Element.h>
 
-using Poco::XML::DOMParser;
-using Poco::XML::InputSource;
-using Poco::XML::Document;
-using Poco::XML::NodeIterator;
-using Poco::XML::NodeFilter;
-using Poco::XML::Node;
-using Poco::XML::AutoPtr;
-using Poco::Exception;
-using Poco::XML::Element;
-
 #include "MantidKernel/Exception.h"
 #include "MantidKernel/Logger.h"
-#include "MantidGeometry/Objects/Object.h"
+#include "MantidGeometry/Objects/CSGObject.h"
 #include "MantidGeometry/Rendering/GeometryHandler.h"
 #include "MantidGeometry/Rendering/vtkGeometryCacheReader.h"
+
+using Poco::XML::DOMParser;
+using Poco::XML::Document;
+using Poco::XML::Element;
 
 namespace Mantid {
 namespace Geometry {
@@ -63,7 +57,7 @@ void vtkGeometryCacheReader::Init() {
 /**
  * Set the geometry for the object
  */
-void vtkGeometryCacheReader::readCacheForObject(Object *obj) {
+void vtkGeometryCacheReader::readCacheForObject(IObject *obj) {
   // Get the element corresponding to the name of the object
   std::stringstream objName;
   objName << obj->getName();
@@ -106,7 +100,7 @@ void vtkGeometryCacheReader::readCacheForObject(Object *obj) {
 Poco::XML::Element *
 vtkGeometryCacheReader::getElementByObjectName(std::string name) {
   Element *pRoot = mDoc->documentElement();
-  if (pRoot == nullptr || pRoot->nodeName().compare("VTKFile") != 0)
+  if (pRoot == nullptr || pRoot->nodeName() != "VTKFile")
     return nullptr;
   Element *pPolyData = pRoot->getChildElement("PolyData");
   if (pPolyData == nullptr)
@@ -130,7 +124,7 @@ void vtkGeometryCacheReader::readPoints(Poco::XML::Element *pEle,
     g_log.error("Cannot allocate memory for triangle cache of Object ");
     return;
   }
-  if (pEle->getAttribute("format").compare("ascii") == 0) { // Read from Ascii
+  if (pEle->getAttribute("format") == "ascii") { // Read from Ascii
     std::stringstream buf;
     buf << pEle->innerText();
     for (int i = 0; i < (*noOfPoints) * 3; i++) {
@@ -156,7 +150,7 @@ void vtkGeometryCacheReader::readTriangles(Poco::XML::Element *pEle,
     g_log.error("Cannot allocate memory for triangle cache of Object ");
     return;
   }
-  if (pEle->getAttribute("format").compare("ascii") == 0) { // Read from Ascii
+  if (pEle->getAttribute("format") == "ascii") { // Read from Ascii
     std::stringstream buf;
     buf << pEle->innerText();
     for (int i = 0; i < (*noOfTriangles) * 3; i++) {

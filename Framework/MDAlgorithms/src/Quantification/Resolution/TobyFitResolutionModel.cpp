@@ -1,10 +1,11 @@
-// Includes
 #include "MantidMDAlgorithms/Quantification/Resolution/TobyFitResolutionModel.h"
 #include "MantidMDAlgorithms/Quantification/Resolution/ModeratorChopperResolution.h"
 #include "MantidMDAlgorithms/Quantification/CachedExperimentInfo.h"
 
 #include "MantidAPI/FrameworkManager.h"
 #include "MantidAPI/IMDEventWorkspace.h"
+#include "MantidAPI/Run.h"
+#include "MantidAPI/Sample.h"
 #include "MantidGeometry/Instrument/ReferenceFrame.h"
 #include "MantidGeometry/Crystal/OrientedLattice.h"
 #include "MantidKernel/MersenneTwister.h"
@@ -16,11 +17,9 @@
 
 namespace Mantid {
 namespace MDAlgorithms {
-using Geometry::Instrument;
 using Geometry::Instrument_const_sptr;
 using Geometry::IObjComponent_const_sptr;
 using Geometry::IDetector_const_sptr;
-using API::Run;
 using API::IFunction;
 
 DECLARE_MDRESOLUTIONCONVOLUTION(TobyFitResolutionModel,

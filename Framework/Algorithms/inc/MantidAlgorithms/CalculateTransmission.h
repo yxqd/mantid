@@ -1,10 +1,7 @@
 #ifndef MANTID_ALGORITHMS_CALCULATETRANSMISSION_H_
 #define MANTID_ALGORITHMS_CALCULATETRANSMISSION_H_
 
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
-#include "MantidAPI/Algorithm.h"
+#include "MantidAPI/ParallelAlgorithm.h"
 #include "MantidKernel/System.h"
 
 namespace Mantid {
@@ -66,7 +63,7 @@ namespace Algorithms {
     File change history is stored at: <https://github.com/mantidproject/mantid>
     Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
-class DLLExport CalculateTransmission : public API::Algorithm {
+class DLLExport CalculateTransmission : public API::ParallelAlgorithm {
 public:
   /// Algorithm's name
   const std::string name() const override { return "CalculateTransmission"; }
@@ -87,7 +84,7 @@ public:
 private:
   /// stores an estimate of the progress so far as a proportion (starts at zero
   /// goes to 1.0)
-  mutable double m_done = 0.0;
+  mutable double m_done{0.0};
 
   /// Initialisation code
   void init() override;
@@ -100,7 +97,7 @@ private:
   /// Returns a workspace with the evaulation of the fit to the calculated
   /// transmission fraction
   API::MatrixWorkspace_sptr fit(API::MatrixWorkspace_sptr raw,
-                                std::vector<double> rebinParams,
+                                const std::vector<double> &rebinParams,
                                 const std::string fitMethod);
   /// Call the Linear fitting algorithm as a child algorithm
   API::MatrixWorkspace_sptr fitData(API::MatrixWorkspace_sptr WS, double &grad,
@@ -110,7 +107,7 @@ private:
                                           int order,
                                           std::vector<double> &coeficients);
   /// Calls the rebin algorithm
-  API::MatrixWorkspace_sptr rebin(std::vector<double> &binParams,
+  API::MatrixWorkspace_sptr rebin(const std::vector<double> &binParams,
                                   API::MatrixWorkspace_sptr ws);
   /// Outpus message to log if the detector at the given index is not a monitor
   /// in both input workspaces.

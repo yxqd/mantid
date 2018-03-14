@@ -38,6 +38,11 @@ public:
     return IMDEventWorkspace_uptr(doClone());
   }
 
+  /// Returns a default-initialized clone of the workspace
+  IMDEventWorkspace_uptr cloneEmpty() const {
+    return IMDEventWorkspace_uptr(doCloneEmpty());
+  }
+
   /// Perform initialization after dimensions (and others) have been set.
   virtual void initialize() = 0;
   IMDEventWorkspace &operator=(const IMDEventWorkspace &) = delete;
@@ -99,6 +104,11 @@ public:
       Mantid::API::MDNormalization preferredNormalization) = 0;
   Mantid::API::MDNormalization displayNormalization() const override = 0;
 
+  // Check if this class has an oriented lattice on a sample object
+  virtual bool hasOrientedLattice() const override {
+    return MultipleExperimentInfos::hasOrientedLattice();
+  }
+
 protected:
   /// Protected copy constructor. May be used by childs for cloning.
   IMDEventWorkspace(const IMDEventWorkspace &) = default;
@@ -110,6 +120,7 @@ protected:
 
 private:
   IMDEventWorkspace *doClone() const override = 0;
+  IMDEventWorkspace *doCloneEmpty() const override = 0;
 };
 
 } // namespace MDEvents

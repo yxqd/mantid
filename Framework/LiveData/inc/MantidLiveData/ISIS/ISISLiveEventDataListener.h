@@ -6,7 +6,7 @@
 //----------------------------------------------------------------------
 #include "MantidLiveData/ISIS/TCPEventStreamDefs.h"
 
-#include "MantidAPI/ILiveListener.h"
+#include "MantidAPI/LiveListener.h"
 #include "MantidDataObjects/EventWorkspace.h"
 
 #include "Poco/Net/StreamSocket.h"
@@ -53,7 +53,7 @@ namespace LiveData {
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-class ISISLiveEventDataListener : public API::ILiveListener,
+class ISISLiveEventDataListener : public API::LiveListener,
                                   public Poco::Runnable {
 public:
   /// Constructor.
@@ -95,7 +95,8 @@ public:
    *                   The value of 'now' is zero for compatibility with the SNS
    * live stream.
    */
-  void start(Kernel::DateAndTime startTime = Kernel::DateAndTime()) override;
+  void start(
+      Types::Core::DateAndTime startTime = Types::Core::DateAndTime()) override;
 
   /** Get the data that's been buffered since the last call to this method
    *  (or since start() was called).
@@ -147,7 +148,7 @@ protected:
   void initEventBuffer(const TCPStreamEventDataSetup &setup);
   // Save received event data in the buffer workspace
   void saveEvents(const std::vector<TCPStreamEventNeutron> &data,
-                  const Kernel::DateAndTime &pulseTime, size_t period);
+                  const Types::Core::DateAndTime &pulseTime, size_t period);
   // Set the spectra-detector map
   void loadSpectraMap();
   // Load the instrument
@@ -200,7 +201,7 @@ protected:
   /// Protects m_eventBuffer
   std::mutex m_mutex;
   /// Run start time
-  Kernel::DateAndTime m_startTime;
+  Types::Core::DateAndTime m_startTime;
   /// Run number
   int m_runNumber;
 

@@ -5,10 +5,13 @@
 #include "MantidAPI/AlgorithmFactory.h"
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/LiveListenerFactory.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/SpectrumDetectorMapping.h"
 #include "MantidAPI/WorkspaceFactory.h"
+#include "MantidAPI/WorkspaceGroup.h"
 
 #include "MantidKernel/DateAndTime.h"
+#include "MantidKernel/OptionalBool.h"
 #include "MantidKernel/TimeSeriesProperty.h"
 #include "MantidKernel/UnitFactory.h"
 #include "MantidKernel/WarningSuppressions.h"
@@ -39,9 +42,8 @@ Kernel::Logger g_log("ISISLiveEventDataListener");
  * The constructor
  */
 ISISLiveEventDataListener::ISISLiveEventDataListener()
-    : API::ILiveListener(), m_isConnected(false), m_stopThread(false),
-      m_runNumber(0), m_daeHandle(), m_numberOfPeriods(0),
-      m_numberOfSpectra(0) {
+    : LiveListener(), m_isConnected(false), m_stopThread(false), m_runNumber(0),
+      m_daeHandle(), m_numberOfPeriods(0), m_numberOfSpectra(0) {
   m_warnings["period"] = "Period number is outside the range. Changed to 0.";
 }
 
@@ -79,7 +81,7 @@ bool ISISLiveEventDataListener::connect(
   // If we don't have an address, force a connection to the test server running
   // on
   // localhost on the default port
-  if (address.host().toString().compare("0.0.0.0") == 0) {
+  if (address.host().toString() == "0.0.0.0") {
     Poco::Net::SocketAddress tempAddress("127.0.0.1:10000");
     try {
       m_socket.connect(tempAddress); // BLOCKING connect
@@ -148,7 +150,7 @@ bool ISISLiveEventDataListener::connect(
 }
 
 // start event collection
-void ISISLiveEventDataListener::start(Kernel::DateAndTime startTime) {
+void ISISLiveEventDataListener::start(Types::Core::DateAndTime startTime) {
   (void)startTime;
   m_thread.start(*this);
 }
@@ -181,8 +183,8 @@ boost::shared_ptr<API::Workspace> ISISLiveEventDataListener::extractData() {
                 1));
 
     // Copy geometry over.
-    API::WorkspaceFactory::Instance().initializeFromParent(m_eventBuffer[i],
-                                                           temp, false);
+    API::WorkspaceFactory::Instance().initializeFromParent(*m_eventBuffer[i],
+                                                           *temp, false);
 
     // Clear out the old logs
     temp->mutableRun().clearTimeSeriesLogs();
@@ -245,7 +247,7 @@ void ISISLiveEventDataListener::run() {
       CollectJunk(events.head_n);
 
       // absolute pulse (frame) time
-      Mantid::Kernel::DateAndTime pulseTime =
+      Mantid::Types::Core::DateAndTime pulseTime =
           m_startTime + static_cast<double>(events.head_n.frame_time_zero);
       // Save the pulse charge in the logs
       double protons = static_cast<double>(events.head_n.protons);
@@ -362,7 +364,7 @@ void ISISLiveEventDataListener::initEventBuffer(
 
       // Copy geometry over.
       API::WorkspaceFactory::Instance().initializeFromParent(
-          m_eventBuffer[0], m_eventBuffer[i], false);
+          *m_eventBuffer[0], *m_eventBuffer[i], false);
     }
   }
 }
@@ -373,7 +375,7 @@ void ISISLiveEventDataListener::initEventBuffer(
  */
 void ISISLiveEventDataListener::saveEvents(
     const std::vector<TCPStreamEventNeutron> &data,
-    const Kernel::DateAndTime &pulseTime, size_t period) {
+    const Types::Core::DateAndTime &pulseTime, size_t period) {
   std::lock_guard<std::mutex> scopedLock(m_mutex);
 
   if (period >= static_cast<size_t>(m_numberOfPeriods)) {
@@ -386,7 +388,7 @@ void ISISLiveEventDataListener::saveEvents(
   }
 
   for (const auto &streamEvent : data) {
-    Mantid::DataObjects::TofEvent event(streamEvent.time_of_flight, pulseTime);
+    Types::Event::TofEvent event(streamEvent.time_of_flight, pulseTime);
     m_eventBuffer[period]
         ->getSpectrum(streamEvent.spectrum)
         .addEventQuickly(event);

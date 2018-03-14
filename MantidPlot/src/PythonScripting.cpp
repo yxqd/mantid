@@ -35,12 +35,15 @@
 #include "ApplicationWindow.h"
 #include "Mantid/MantidUI.h"
 
-#include <QApplication>
-#include <Qsci/qscilexerpython.h>
 #include "MantidKernel/ConfigService.h"
 #include "MantidKernel/Logger.h"
+#include "MantidKernel/StringTokenizer.h"
+
+#include <QApplication>
+#include <Qsci/qscilexerpython.h>
 
 #include <cassert>
+#include <array>
 
 #include "sipAPI_qti.h"
 
@@ -57,6 +60,14 @@ PyMODINIT_FUNC init_qti();
 
 namespace {
 Mantid::Kernel::Logger g_log("PythonScripting");
+
+bool checkAndPrintError() {
+  if (PyErr_Occurred()) {
+    PyErr_Print();
+    return true;
+  }
+  return false;
+}
 }
 
 // Factory function
@@ -66,8 +77,8 @@ ScriptingEnv *PythonScripting::constructor(ApplicationWindow *parent) {
 
 /** Constructor */
 PythonScripting::PythonScripting(ApplicationWindow *parent)
-    : ScriptingEnv(parent, "Python"), m_globals(NULL), m_math(NULL),
-      m_sys(NULL), m_mainThreadState(NULL) {}
+    : ScriptingEnv(parent, "Python"), m_globals(nullptr), m_math(nullptr),
+      m_sys(nullptr), m_mainThreadState(nullptr) {}
 
 PythonScripting::~PythonScripting() {}
 
@@ -75,8 +86,7 @@ PythonScripting::~PythonScripting() {}
  * @param args A list of strings that denoting command line arguments
  */
 void PythonScripting::setSysArgs(const QStringList &args) {
-  ScopedPythonGIL gil;
-
+  ScopedPythonGIL lock;
   PyObject *argv = toPyList(args);
   if (argv && m_sys) {
     PyDict_SetItemString(m_sys, "argv", argv);
@@ -117,10 +127,10 @@ void PythonScripting::redirectStdOut(bool on) {
     setQObject(this, "stdout", m_sys);
     setQObject(this, "stderr", m_sys);
   } else {
-    PyDict_SetItemString(m_sys, "stdout",
-                         PyDict_GetItemString(m_sys, "__stdout__"));
-    PyDict_SetItemString(m_sys, "stderr",
-                         PyDict_GetItemString(m_sys, "__stderr__"));
+    PyDict_SetItem(m_sys, FROM_CSTRING("stdout"),
+                   PyDict_GetItemString(m_sys, "__stdout__"));
+    PyDict_SetItem(m_sys, FROM_CSTRING("stderr"),
+                   PyDict_GetItemString(m_sys, "__stderr__"));
   }
 }
 
@@ -136,18 +146,19 @@ bool PythonScripting::start() {
 #else
   PyImport_AppendInittab("_qti", &init_qti);
 #endif
-  Py_Initialize();
-  // Assume this is called at startup by the the main thread so no GIL
-  // required...yet
+  PythonInterpreter::initialize();
+  ScopedPythonGIL lock;
 
   // Keep a hold of the globals, math and sys dictionary objects
   PyObject *mainmod = PyImport_AddModule("__main__");
   if (!mainmod) {
+    checkAndPrintError();
     finalize();
     return false;
   }
   m_globals = PyModule_GetDict(mainmod);
   if (!m_globals) {
+    checkAndPrintError();
     finalize();
     return false;
   }
@@ -156,6 +167,10 @@ bool PythonScripting::start() {
   m_math = PyDict_New();
   // Keep a hold of the sys dictionary for accessing stdout/stderr
   PyObject *sysmod = PyImport_ImportModule("sys");
+  if (checkAndPrintError()) {
+    finalize();
+    return false;
+  }
   m_sys = PyModule_GetDict(sysmod);
   // Configure python paths to find our modules
   setupPythonPath();
@@ -168,6 +183,10 @@ bool PythonScripting::start() {
 
   // Custom setup for sip/PyQt4 before import _qti
   setupSip();
+  if (checkAndPrintError()) {
+    finalize();
+    return false;
+  }
   // Setup _qti
   PyObject *qtimod = PyImport_ImportModule("_qti");
   if (qtimod) {
@@ -177,6 +196,7 @@ bool PythonScripting::start() {
     PyDict_SetItemString(qti_dict, "mathFunctions", m_math);
     Py_DECREF(qtimod);
   } else {
+    checkAndPrintError();
     finalize();
     return false;
   }
@@ -186,21 +206,8 @@ bool PythonScripting::start() {
   if (loadInitRCFile()) {
     d_initialized = true;
   } else {
+    checkAndPrintError();
     d_initialized = false;
-  }
-  if (d_initialized) {
-    // We will be using C threads created outside of the Python threading module
-    // so we need the GIL. This creates and acquires the lock for this thread
-    PyEval_InitThreads();
-    // We immediately release the lock and threadstate so that other points in
-    // the code can simply use the PyGILstate_Ensure/PyGILstate_Release()
-    // mechanism (through the ScopedPythonGIL class) and they don't
-    // need to worry about swapping out the threadstate before hand.
-    // It would be better if the ScopedPythonGIL handled this but
-    // PyEval_SaveThread() needs to be called in the thread that spawns the
-    // new C thread meaning that ScopedPythonGIL could no longer
-    // be used as a simple RAII class on the stack from within the new thread.
-    m_mainThreadState = PyEval_SaveThread();
   }
   return d_initialized;
 }
@@ -209,9 +216,12 @@ bool PythonScripting::start() {
  * Shutdown the interpreter
  */
 void PythonScripting::shutdown() {
-  PyEval_RestoreThread(m_mainThreadState);
+  // The scoped lock cannot be used here as after the
+  // finalize call no Python code can execute.
+  PythonGIL gil;
+  gil.acquire();
   Py_XDECREF(m_math);
-  Py_Finalize();
+  PythonInterpreter::finalize();
 }
 
 void PythonScripting::setupPythonPath() {
@@ -221,6 +231,7 @@ void PythonScripting::setupPythonPath() {
 //     behaviour of the vanilla python interpreter
 //   - the directory of MantidPlot is added after this to find our bundled
 //   - modules
+//
 #if PY_MAJOR_VERSION >= 3
   PyObject *syspath = PySys_GetObject("path");
 #else
@@ -228,8 +239,29 @@ void PythonScripting::setupPythonPath() {
   PyObject *syspath = PySys_GetObject(&path[0]);
 #endif
   PyList_Insert(syspath, 0, FROM_CSTRING(""));
-  // This should contain only / separators
+
   const auto appPath = ConfigService::Instance().getPropertiesDir();
+
+  // These should contain only / separators
+  // Python paths required by VTK and ParaView
+  const auto pvPythonPaths =
+      ConfigService::Instance().getString("paraview.pythonpaths");
+
+  if (!pvPythonPaths.empty()) {
+    Mantid::Kernel::StringTokenizer tokenizer(
+        pvPythonPaths, ";", Mantid::Kernel::StringTokenizer::TOK_IGNORE_EMPTY |
+                                Mantid::Kernel::StringTokenizer::TOK_TRIM);
+    for (const auto &pvPath : tokenizer) {
+      if (pvPath.substr(0, 3) == "../") {
+        std::string fullPath = appPath + pvPath;
+        PyList_Insert(syspath, 1, FROM_CSTRING(fullPath.c_str()));
+      } else {
+        PyList_Insert(syspath, 1, FROM_CSTRING(pvPath.c_str()));
+      }
+    }
+  }
+
+  // MantidPlot Directory
   PyList_Insert(syspath, 1, FROM_CSTRING(appPath.c_str()));
 }
 
@@ -237,8 +269,18 @@ void PythonScripting::setupSip() {
   // Our use of the IPython console requires that we use the v2 api for these
   // PyQt types. This has to be set before the very first import of PyQt
   // which happens on importing _qti
-  PyRun_SimpleString(
-      "import sip\nsip.setapi('QString',2)\nsip.setapi('QVariant',2)");
+  PyObject *sipmod = PyImport_ImportModule("sip");
+  if (sipmod) {
+    constexpr std::array<const char *, 7> v2Types = {
+        {"QString", "QVariant", "QDate", "QDateTime", "QTextStream", "QTime",
+         "QUrl"}};
+    for (const auto &className : v2Types) {
+      PyObject_CallMethod(sipmod, STR_LITERAL("setapi"), STR_LITERAL("(si)"),
+                          className, 2);
+    }
+    Py_DECREF(sipmod);
+  }
+  // the global Python error handler is checked after this is called...
 }
 
 QString PythonScripting::toString(PyObject *object, bool decref) {
@@ -280,7 +322,7 @@ PyObject *PythonScripting::toPyList(const QStringList &items) {
   Py_ssize_t length = static_cast<Py_ssize_t>(items.length());
   PyObject *pylist = PyList_New((length));
   for (Py_ssize_t i = 0; i < length; ++i) {
-    QString item = items.at(static_cast<int>(i));
+    const QString &item = items.at(static_cast<int>(i));
     PyList_SetItem(pylist, i, FROM_CSTRING(item.toAscii()));
   }
   return pylist;
@@ -316,7 +358,7 @@ bool PythonScripting::setQObject(QObject *val, const char *name,
                                  PyObject *dict) {
   if (!val)
     return false;
-  PyObject *pyobj = NULL;
+  PyObject *pyobj = nullptr;
 
   if (!sipAPI__qti) {
     throw std::runtime_error("sipAPI_qti is undefined");
@@ -324,10 +366,10 @@ bool PythonScripting::setQObject(QObject *val, const char *name,
   if (!sipAPI__qti->api_find_class) {
     throw std::runtime_error("sipAPI_qti->api_find_class is undefined");
   }
-  sipWrapperType *klass = sipFindClass(val->metaObject()->className());
+  const sipTypeDef *klass = sipFindType(val->metaObject()->className());
   if (!klass)
     return false;
-  pyobj = sipConvertFromInstance(val, klass, NULL);
+  pyobj = sipConvertFromType(val, klass, nullptr);
 
   if (!pyobj)
     return false;
@@ -341,7 +383,7 @@ bool PythonScripting::setQObject(QObject *val, const char *name,
 }
 
 bool PythonScripting::setInt(int val, const char *name) {
-  return setInt(val, name, NULL);
+  return setInt(val, name, nullptr);
 }
 
 bool PythonScripting::setInt(int val, const char *name, PyObject *dict) {
@@ -357,7 +399,7 @@ bool PythonScripting::setInt(int val, const char *name, PyObject *dict) {
 }
 
 bool PythonScripting::setDouble(double val, const char *name) {
-  return setDouble(val, name, NULL);
+  return setDouble(val, name, nullptr);
 }
 
 bool PythonScripting::setDouble(double val, const char *name, PyObject *dict) {

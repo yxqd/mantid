@@ -1,11 +1,12 @@
 #include "MantidLiveData/LoadLiveData.h"
-#include "MantidLiveData/Exception.h"
-#include "MantidKernel/WriteLock.h"
-#include "MantidKernel/ReadLock.h"
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/Workspace.h"
+#include "MantidAPI/WorkspaceGroup.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidKernel/CPUTimer.h"
+#include "MantidKernel/ReadLock.h"
+#include "MantidKernel/WriteLock.h"
+#include "MantidLiveData/Exception.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -15,9 +16,43 @@
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::DataObjects;
+using Mantid::Types::Core::DateAndTime;
 
 namespace Mantid {
 namespace LiveData {
+
+namespace {
+
+/**
+ * Copy the Instrument from source workspace to target workspace if possible
+ *
+ * Handles cases where source does not exist, or are not forms of
+ *ExperimentInfo.
+ * Expects source and target workspaces to be the same type and size (if
+ *workspace group)
+ *
+ * @param source : Source workspace containing instrument
+ * @param target : Target workspace to write instrument to
+ */
+void copyInstrument(const API::Workspace *source, API::Workspace &target) {
+
+  // Special handling for Worspace Groups.
+  if (auto *sourceGroup = dynamic_cast<const API::WorkspaceGroup *>(source)) {
+    auto &targetGroup = dynamic_cast<API::WorkspaceGroup &>(target);
+    for (size_t index = 0;
+         index < std::min(sourceGroup->size(), targetGroup.size()); ++index) {
+      copyInstrument(sourceGroup->getItem(index).get(),
+                     *targetGroup.getItem(index));
+    }
+  } else {
+    if (auto *sourceExpInfo =
+            dynamic_cast<const API::ExperimentInfo *>(source)) {
+      dynamic_cast<API::ExperimentInfo &>(target)
+          .setInstrument(sourceExpInfo->getInstrument());
+    }
+  }
+}
+}
 
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(LoadLiveData)
@@ -262,8 +297,6 @@ void LoadLiveData::addMatrixWSChunk(const std::string &algoName,
           " Algorithm's OutputWorkspace property is not a WorkspaceProperty!");
     Workspace_sptr temp = wsProp->getWorkspace();
     accumWS = temp;
-    // And sort the events, if any
-    doSortEvents(accumWS);
   }
 }
 
@@ -274,11 +307,14 @@ void LoadLiveData::addMatrixWSChunk(const std::string &algoName,
  * @param chunkWS :: processed live data chunk workspace
  */
 void LoadLiveData::replaceChunk(Mantid::API::Workspace_sptr chunkWS) {
+  // We keep a temporary to the orignal workspace containing the instrument
+  auto instrumentWS = m_accumWS;
   // When the algorithm exits the chunk workspace will be renamed
   // and overwrite the old one
   m_accumWS = chunkWS;
-  // And sort the events, if any
-  doSortEvents(m_accumWS);
+  // Put the original instrument back. Otherwise geometry changes will not be
+  // persistent
+  copyInstrument(instrumentWS.get(), *m_accumWS);
 }
 
 //----------------------------------------------------------------------------------------------
@@ -352,28 +388,7 @@ Workspace_sptr LoadLiveData::appendMatrixWSChunk(Workspace_sptr accumWS,
 
   MatrixWorkspace_sptr temp = alg->getProperty("OutputWorkspace");
   accumWS = temp;
-  // And sort the events, if any
-  doSortEvents(accumWS);
   return accumWS;
-}
-
-//----------------------------------------------------------------------------------------------
-/** Perform SortEvents on the output workspaces (accumulation or output)
- * but only if they are EventWorkspaces. This will help the GUI
- * cope with redrawing.
- *
- * @param ws :: any Workspace. Does nothing if not EventWorkspace.
- */
-void LoadLiveData::doSortEvents(Mantid::API::Workspace_sptr ws) {
-  EventWorkspace_sptr eventWS = boost::dynamic_pointer_cast<EventWorkspace>(ws);
-  if (!eventWS)
-    return;
-  CPUTimer tim;
-  Algorithm_sptr alg = this->createChildAlgorithm("SortEvents");
-  alg->setProperty("InputWorkspace", eventWS);
-  alg->setPropertyValue("SortBy", "X Value");
-  alg->executeAsChildAlg();
-  g_log.debug() << tim << " to perform SortEvents on " << ws->name() << '\n';
 }
 
 //----------------------------------------------------------------------------------------------
@@ -493,7 +508,6 @@ void LoadLiveData::exec() {
     // Set both output workspaces
     this->setProperty("AccumulationWorkspace", m_accumWS);
     this->setProperty("OutputWorkspace", m_outputWS);
-    doSortEvents(m_outputWS);
   } else {
     // ----------- No post-processing -------------
     m_outputWS = m_accumWS;
@@ -508,7 +522,7 @@ void LoadLiveData::exec() {
     size_t n = static_cast<size_t>(out_gws->getNumberOfEntries());
     for (size_t i = 0; i < n; ++i) {
       auto ws = out_gws->getItem(i);
-      std::string itemName = ws->name();
+      const std::string &itemName = ws->getName();
       std::string wsName =
           getPropertyValue("OutputWorkspace") + "_" + std::to_string(i + 1);
       if (wsName != itemName) {

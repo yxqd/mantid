@@ -2,12 +2,15 @@
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/HistogramValidator.h"
 #include "MantidAPI/InstrumentValidator.h"
+#include "MantidAPI/SpectrumInfo.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidGeometry/Instrument/ParameterMap.h"
+#include "MantidGeometry/Objects/IObject.h"
+#include "MantidGeometry/Objects/Track.h"
 #include "MantidKernel/ArrayBoundedValidator.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/CompositeValidator.h"
@@ -101,7 +104,7 @@ void He3TubeEfficiency::exec() {
   }
 
   // Get the detector parameters
-  this->paraMap = &(this->inputWS->instrumentParameters());
+  this->paraMap = &(this->inputWS->constInstrumentParameters());
 
   // Store some information about the instrument setup that will not change
   this->samplePos = this->inputWS->getInstrument()->getSample()->getPos();
@@ -116,14 +119,15 @@ void He3TubeEfficiency::exec() {
 
   std::size_t numHists = this->inputWS->getNumberHistograms();
   this->progress = new API::Progress(this, 0.0, 1.0, numHists);
+  const auto &spectrumInfo = inputWS->spectrumInfo();
 
-  PARALLEL_FOR2(inputWS, outputWS)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*inputWS, *outputWS))
   for (int i = 0; i < static_cast<int>(numHists); ++i) {
     PARALLEL_START_INTERUPT_REGION
 
     this->outputWS->setX(i, this->inputWS->refX(i));
     try {
-      this->correctForEfficiency(i);
+      this->correctForEfficiency(i, spectrumInfo);
     } catch (std::out_of_range &) {
       // if we don't have all the data there will be spectra we can't correct,
       // avoid leaving the workspace part corrected
@@ -155,17 +159,20 @@ void He3TubeEfficiency::exec() {
  * information. Gets the detector information and uses this to calculate its
  * efficiency
  *  @param spectraIndex :: index of the spectrum to get the efficiency for
+ *  @param spectrumInfo :: the SpectrumInfo object for the input workspace
  *  @throw invalid_argument if the shape of a detector is isn't a cylinder
  *  aligned along one axis
  *  @throw NotFoundError if the detector or its gas pressure or wall thickness
  *  were not found
  */
-void He3TubeEfficiency::correctForEfficiency(std::size_t spectraIndex) {
-  Geometry::IDetector_const_sptr det = this->inputWS->getDetector(spectraIndex);
-  if (det->isMonitor() || det->isMasked()) {
+void He3TubeEfficiency::correctForEfficiency(
+    std::size_t spectraIndex, const API::SpectrumInfo &spectrumInfo) {
+  if (spectrumInfo.isMonitor(spectraIndex) ||
+      spectrumInfo.isMasked(spectraIndex)) {
     return;
   }
 
+  const auto &det = spectrumInfo.detector(spectraIndex);
   const double exp_constant = this->calculateExponential(spectraIndex, det);
   const double scale = this->getProperty("ScaleFactor");
 
@@ -201,9 +208,9 @@ void He3TubeEfficiency::correctForEfficiency(std::size_t spectraIndex) {
  * @throw out_of_range if twice tube thickness is greater than tube diameter
  * @return the exponential contribution for the given detector
  */
-double He3TubeEfficiency::calculateExponential(
-    std::size_t spectraIndex,
-    boost::shared_ptr<const Geometry::IDetector> idet) {
+double
+He3TubeEfficiency::calculateExponential(std::size_t spectraIndex,
+                                        const Geometry::IDetector &idet) {
   // Get the parameters for the current associated tube
   double pressure =
       this->getParameter("TubePressure", spectraIndex, "tube_pressure", idet);
@@ -221,9 +228,9 @@ double He3TubeEfficiency::calculateExponential(
   // now get the sin of the angle, it's the magnitude of the cross product of
   // unit vector along the detector tube axis and a unit vector directed from
   // the sample to the detector center
-  Kernel::V3D vectorFromSample = idet->getPos() - this->samplePos;
+  Kernel::V3D vectorFromSample = idet.getPos() - this->samplePos;
   vectorFromSample.normalize();
-  Kernel::Quat rot = idet->getRotation();
+  Kernel::Quat rot = idet.getRotation();
   // rotate the original cylinder object axis to get the detector axis in the
   // actual instrument
   rot.rotate(detAxis);
@@ -248,19 +255,19 @@ double He3TubeEfficiency::calculateExponential(
  * @param detRadius :: An output parameter that contains the detector radius
  * @param detAxis :: An output parameter that contains the detector axis vector
  */
-void He3TubeEfficiency::getDetectorGeometry(
-    const boost::shared_ptr<const Geometry::IDetector> &det, double &detRadius,
-    Kernel::V3D &detAxis) {
-  boost::shared_ptr<const Geometry::Object> shape_sptr = det->shape();
+void He3TubeEfficiency::getDetectorGeometry(const Geometry::IDetector &det,
+                                            double &detRadius,
+                                            Kernel::V3D &detAxis) {
+  boost::shared_ptr<const Geometry::IObject> shape_sptr = det.shape();
   if (!shape_sptr) {
     throw std::runtime_error(
         "Detector geometry error: detector with id: " +
-        std::to_string(det->getID()) +
+        std::to_string(det.getID()) +
         " does not have shape. Is this a detectors group?\n"
         "The algorithm works for instruments with one-to-one "
         "spectra-to-detector maps only!");
   }
-  std::map<const Geometry::Object *,
+  std::map<const Geometry::IObject *,
            std::pair<double, Kernel::V3D>>::const_iterator it =
       this->shapeCache.find(shape_sptr.get());
   if (it == this->shapeCache.end()) {
@@ -273,10 +280,10 @@ void He3TubeEfficiency::getDetectorGeometry(
       detAxis = Kernel::V3D(0, 1, 0);
       // assume radii in z and x and the axis is in the y
       PARALLEL_CRITICAL(deteff_shapecachea) {
-        this->shapeCache.insert(
-            std::pair<const Geometry::Object *, std::pair<double, Kernel::V3D>>(
-                shape_sptr.get(),
-                std::pair<double, Kernel::V3D>(detRadius, detAxis)));
+        this->shapeCache.insert(std::pair<const Geometry::IObject *,
+                                          std::pair<double, Kernel::V3D>>(
+            shape_sptr.get(),
+            std::pair<double, Kernel::V3D>(detRadius, detAxis)));
       }
       return;
     }
@@ -288,10 +295,10 @@ void He3TubeEfficiency::getDetectorGeometry(
       // assume that y and z are radii of the cylinder's circular cross-section
       // and the axis is perpendicular, in the x direction
       PARALLEL_CRITICAL(deteff_shapecacheb) {
-        this->shapeCache.insert(
-            std::pair<const Geometry::Object *, std::pair<double, Kernel::V3D>>(
-                shape_sptr.get(),
-                std::pair<double, Kernel::V3D>(detRadius, detAxis)));
+        this->shapeCache.insert(std::pair<const Geometry::IObject *,
+                                          std::pair<double, Kernel::V3D>>(
+            shape_sptr.get(),
+            std::pair<double, Kernel::V3D>(detRadius, detAxis)));
       }
       return;
     }
@@ -300,10 +307,10 @@ void He3TubeEfficiency::getDetectorGeometry(
       detRadius = xDist / 2.0;
       detAxis = Kernel::V3D(0, 0, 1);
       PARALLEL_CRITICAL(deteff_shapecachec) {
-        this->shapeCache.insert(
-            std::pair<const Geometry::Object *, std::pair<double, Kernel::V3D>>(
-                shape_sptr.get(),
-                std::pair<double, Kernel::V3D>(detRadius, detAxis)));
+        this->shapeCache.insert(std::pair<const Geometry::IObject *,
+                                          std::pair<double, Kernel::V3D>>(
+            shape_sptr.get(),
+            std::pair<double, Kernel::V3D>(detRadius, detAxis)));
       }
       return;
     }
@@ -326,7 +333,7 @@ void He3TubeEfficiency::getDetectorGeometry(
  * @returns The distance to the surface in metres
  */
 double He3TubeEfficiency::distToSurface(const Kernel::V3D start,
-                                        const Geometry::Object *shape) const {
+                                        const Geometry::IObject *shape) const {
   // get a vector from the point that was passed to the origin
   Kernel::V3D direction = Kernel::V3D(0.0, 0.0, 0.0) - start;
   // it needs to be a unit vector
@@ -386,13 +393,14 @@ void He3TubeEfficiency::logErrors() const {
  * @param idet :: the current detector
  * @return the value of the detector property
  */
-double He3TubeEfficiency::getParameter(
-    std::string wsPropName, std::size_t currentIndex, std::string detPropName,
-    boost::shared_ptr<const Geometry::IDetector> idet) {
+double He3TubeEfficiency::getParameter(std::string wsPropName,
+                                       std::size_t currentIndex,
+                                       std::string detPropName,
+                                       const Geometry::IDetector &idet) {
   std::vector<double> wsProp = this->getProperty(wsPropName);
 
   if (wsProp.empty()) {
-    return idet->getNumberParameter(detPropName).at(0);
+    return idet.getNumberParameter(detPropName).at(0);
   } else {
     if (wsProp.size() == 1) {
       return wsProp.at(0);
@@ -421,13 +429,15 @@ void He3TubeEfficiency::execEvent() {
       boost::dynamic_pointer_cast<DataObjects::EventWorkspace>(matrixOutputWS);
 
   std::size_t numHistograms = outputWS->getNumberHistograms();
+  auto &spectrumInfo = outputWS->mutableSpectrumInfo();
   this->progress = new API::Progress(this, 0.0, 1.0, numHistograms);
-  PARALLEL_FOR1(outputWS)
+
+  PARALLEL_FOR_IF(Kernel::threadSafe(*outputWS))
   for (int i = 0; i < static_cast<int>(numHistograms); ++i) {
     PARALLEL_START_INTERUPT_REGION
 
-    Geometry::IDetector_const_sptr det = outputWS->getDetector(i);
-    if (det->isMonitor() || det->isMasked()) {
+    const auto &det = spectrumInfo.detector(i);
+    if (spectrumInfo.isMonitor(i) || spectrumInfo.isMasked(i)) {
       continue;
     }
 
@@ -438,7 +448,8 @@ void He3TubeEfficiency::execEvent() {
       // Parameters are bad so skip correction
       PARALLEL_CRITICAL(deteff_invalid) {
         this->spectraSkipped.push_back(outputWS->getAxis(1)->spectraNo(i));
-        outputWS->maskWorkspaceIndex(i);
+        outputWS->getSpectrum(i).clearData();
+        spectrumInfo.setMasked(i, true);
       }
     }
 

@@ -44,7 +44,7 @@
 #include "ScriptingEnv.h"
 #include "Scripted.h"
 
-#include "MantidQtAPI/IProjectSerialisable.h"
+#include "MantidQtWidgets/Common/IProjectSerialisable.h"
 
 #include <qwt_double_rect.h>
 #include <qwt_color_map.h>
@@ -66,7 +66,7 @@ class Matrix : public MdiSubWindow, public Scripted {
 
 protected:
   Matrix(ScriptingEnv *env, const QString &label, QWidget *parent,
-         const QString &name = QString(), Qt::WFlags f = 0);
+         const QString &name = QString(), Qt::WFlags f = nullptr);
 
 public:
   /**
@@ -82,9 +82,10 @@ public:
    * @param f :: window flags
    */
   Matrix(ScriptingEnv *env, int r, int c, const QString &label, QWidget *parent,
-         const QString &name = QString(), Qt::WFlags f = 0);
+         const QString &name = QString(), Qt::WFlags f = nullptr);
   Matrix(ScriptingEnv *env, const QImage &image, const QString &label,
-         QWidget *parent, const QString &name = QString(), Qt::WFlags f = 0);
+         QWidget *parent, const QString &name = QString(),
+         Qt::WFlags f = nullptr);
   ~Matrix() override;
 
   enum Operation {
@@ -262,6 +263,7 @@ public slots:
   loadFromProject(const std::string &lines, ApplicationWindow *app,
                   const int fileVersion);
   std::string saveToProject(ApplicationWindow *app) override;
+  std::vector<std::string> getWorkspaceNames() override;
 
   // selection operations
   //! Standard cut operation
@@ -327,7 +329,7 @@ public slots:
   double *initWorkspace(int size);
   void freeWorkspace() {
     free(d_workspace);
-    d_workspace = NULL;
+    d_workspace = nullptr;
   };
 
   bool canCalculate(bool useMuParser = true);

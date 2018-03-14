@@ -2,12 +2,12 @@
 // Includes
 //------------------------------------------------------------------------------
 #include "MantidKernel/NeutronAtom.h"
-#include "MantidKernel/PhysicalConstants.h"
 #include <algorithm>
-#include <sstream>
+#include <cmath>
+#include <ostream>
+#include <string>
 #include <stdexcept>
-#include <boost/math/special_functions/fpclassify.hpp>
-#include <math.h>
+#include <sstream>
 
 namespace Mantid {
 
@@ -23,8 +23,16 @@ const double INV_FOUR_PI = 1. / (4. * M_PI);
 void calculateScatteringLengths(NeutronAtom *atom) {
   // 1 barn = 100 fm
   atom->tot_scatt_length = 10. * std::sqrt(atom->tot_scatt_xs * INV_FOUR_PI);
-  atom->coh_scatt_length = 10. * std::sqrt(atom->coh_scatt_xs * INV_FOUR_PI);
-  atom->inc_scatt_length = 10. * std::sqrt(atom->inc_scatt_xs * INV_FOUR_PI);
+
+  if (atom->coh_scatt_length_img == 0.)
+    atom->coh_scatt_length = fabs(atom->coh_scatt_length_real);
+  else
+    atom->coh_scatt_length = 10. * std::sqrt(atom->coh_scatt_xs * INV_FOUR_PI);
+
+  if (atom->inc_scatt_length_img == 0.)
+    atom->inc_scatt_length = fabs(atom->inc_scatt_length_real);
+  else
+    atom->inc_scatt_length = 10. * std::sqrt(atom->inc_scatt_xs * INV_FOUR_PI);
 }
 
 /**
@@ -589,7 +597,7 @@ static const size_t NUM_ATOMS = 371;
 bool NeutronAtomEqualsWithNaN(const double left, const double right) {
   if (left == right)
     return true;
-  if ((boost::math::isnan)(left) && (boost::math::isnan)(right))
+  if ((std::isnan)(left) && (std::isnan)(right))
     return true;
   return false;
 }

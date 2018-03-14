@@ -7,6 +7,7 @@
 #include "MantidAPI/HistogramValidator.h"
 #include "MantidAPI/InstrumentValidator.h"
 #include "MantidAPI/RawCountValidator.h"
+#include "MantidAPI/Sample.h"
 #include "MantidAPI/SampleValidator.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidAPI/WorkspaceProperty.h"
@@ -218,7 +219,7 @@ public:
   }
 
   void testSampleValidator() {
-    using Mantid::Geometry::Object;
+    using Mantid::Geometry::CSGObject;
     using Mantid::Kernel::Material;
     using Mantid::PhysicalConstants::NeutronAtom;
     // These should be separate tests when they are refactored out
@@ -230,7 +231,7 @@ public:
       TS_ASSERT_EQUALS(sampleVal->isValid(ws),
                        "The sample is missing the following properties: shape");
       auto shape = ComponentCreationHelper::createSphere(0.01);
-      ws->mutableSample().setShape(*shape);
+      ws->mutableSample().setShape(shape);
       TS_ASSERT_EQUALS(sampleVal->isValid(ws), "");
     }
 
@@ -242,9 +243,9 @@ public:
       TS_ASSERT_EQUALS(
           sampleVal->isValid(ws),
           "The sample is missing the following properties: material");
-      auto noShape = boost::make_shared<Object>();
+      auto noShape = boost::make_shared<CSGObject>();
       noShape->setMaterial(Material("V", NeutronAtom(), 0.072));
-      ws->mutableSample().setShape(*noShape);
+      ws->mutableSample().setShape(noShape);
       TS_ASSERT_EQUALS(sampleVal->isValid(ws), "");
     }
 
@@ -258,7 +259,7 @@ public:
           "The sample is missing the following properties: shape,material");
       auto shape = ComponentCreationHelper::createSphere(0.01);
       shape->setMaterial(Material("V", NeutronAtom(), 0.072));
-      ws->mutableSample().setShape(*shape);
+      ws->mutableSample().setShape(shape);
       TS_ASSERT_EQUALS(sampleVal->isValid(ws), "");
     }
   }

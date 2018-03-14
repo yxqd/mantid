@@ -79,11 +79,12 @@ Mantid::API::MatrixWorkspace_sptr
 provide1DWorkspace(NXcanSASTestParameters &parameters) {
   Mantid::API::MatrixWorkspace_sptr ws;
   if (parameters.hasDx) {
-    ws = WorkspaceCreationHelper::Create1DWorkspaceConstantWithXerror(
-        parameters.size, parameters.value, parameters.error, parameters.xerror);
+    ws = WorkspaceCreationHelper::create1DWorkspaceConstantWithXerror(
+        parameters.size, parameters.value, parameters.error, parameters.xerror,
+        false);
   } else {
-    ws = WorkspaceCreationHelper::Create1DWorkspaceConstant(
-        parameters.size, parameters.value, parameters.error);
+    ws = WorkspaceCreationHelper::create1DWorkspaceConstant(
+        parameters.size, parameters.value, parameters.error, false);
   }
 
   ws->setTitle(parameters.workspaceTitle);
@@ -95,6 +96,7 @@ provide1DWorkspace(NXcanSASTestParameters &parameters) {
 
   // Set instrument
   set_instrument(ws, parameters.instrumentName);
+  ws->getSpectrum(0).setDetectorID(1);
 
   // Set to point data or histogram data
   if (parameters.isHistogram) {
@@ -114,8 +116,8 @@ provide1DWorkspace(NXcanSASTestParameters &parameters) {
 
 Mantid::API::MatrixWorkspace_sptr
 getTransmissionWorkspace(NXcanSASTestTransmissionParameters &parameters) {
-  auto ws = WorkspaceCreationHelper::Create1DWorkspaceConstant(
-      parameters.size, parameters.value, parameters.error);
+  auto ws = WorkspaceCreationHelper::create1DWorkspaceConstant(
+      parameters.size, parameters.value, parameters.error, false);
   ws->setTitle(parameters.name);
   ws->getAxis(0)->unit() =
       Mantid::Kernel::UnitFactory::Instance().create("Wavelength");

@@ -1,9 +1,9 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAlgorithms/GroupWorkspaces.h"
 #include "MantidAPI/ADSValidator.h"
+#include "MantidAPI/AnalysisDataService.h"
+#include "MantidAPI/WorkspaceGroup.h"
 #include "MantidKernel/ArrayProperty.h"
+#include "MantidParallel/Communicator.h"
 
 namespace Mantid {
 namespace Algorithms {
@@ -12,9 +12,6 @@ DECLARE_ALGORITHM(GroupWorkspaces)
 
 using namespace API;
 using namespace Kernel;
-
-/// Default constructor
-GroupWorkspaces::GroupWorkspaces() : API::Algorithm(), m_group() {}
 
 /// Initialisation method
 void GroupWorkspaces::init() {
@@ -35,7 +32,8 @@ void GroupWorkspaces::exec() {
   const std::vector<std::string> inputWorkspaces =
       getProperty("InputWorkspaces");
 
-  m_group = boost::make_shared<WorkspaceGroup>();
+  // Clear WorkspaceGroup in case algorithm instance is reused.
+  m_group = nullptr;
   addToGroup(inputWorkspaces);
 
   setProperty("OutputWorkspace", m_group);
@@ -65,10 +63,24 @@ void GroupWorkspaces::addToGroup(const API::Workspace_sptr &workspace) {
   if (localGroup) {
     addToGroup(localGroup->getNames());
     // Remove the group from the ADS
-    AnalysisDataService::Instance().remove(workspace->name());
+    AnalysisDataService::Instance().remove(workspace->getName());
   } else {
+    if (!m_group)
+      m_group = boost::make_shared<WorkspaceGroup>(workspace->storageMode());
+    else if (communicator().size() != 1 &&
+             m_group->storageMode() != workspace->storageMode())
+      throw std::runtime_error(
+          "WorkspaceGroup with mixed Parallel::Storage mode is not supported.");
     m_group->addWorkspace(workspace);
   }
+}
+
+Parallel::ExecutionMode GroupWorkspaces::getParallelExecutionMode(
+    const std::map<std::string, Parallel::StorageMode> &storageModes) const {
+  static_cast<void>(storageModes);
+  const std::vector<std::string> names = getProperty("InputWorkspaces");
+  const auto ws = AnalysisDataService::Instance().retrieve(names.front());
+  return Parallel::getCorrespondingExecutionMode(ws->storageMode());
 }
 }
 }

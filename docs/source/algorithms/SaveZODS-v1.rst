@@ -87,13 +87,26 @@ using :ref:`CreateMDWorkspace <algm-CreateMDWorkspace>`.
     import os
     savefile = os.path.join(config["defaultsave.directory"], "ZODS.h5")
     SaveZODS(InputWorkspace=ws, FileName=savefile)
-    print "File created:", os.path.exists(savefile)
+    print("File created: {}".format(os.path.exists(savefile)))
 
 Output:
 
 .. testoutput:: SaveZODSEx
 
    File created: True 
+
+.. testcleanup:: SaveZODSEx
+
+    import os
+    def removeFiles(files):
+      for ws in files:
+        try:
+          path = os.path.join(os.path.expanduser("~"), ws)
+          os.remove(path)
+        except:
+          pass
+
+    removeFiles(["ZODS.h5"])
 
 
 .. categories::

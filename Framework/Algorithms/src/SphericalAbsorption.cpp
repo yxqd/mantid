@@ -82,7 +82,7 @@ void SphericalAbsorption::exec() {
   correctionFactors->setYUnitLabel("Attenuation factor");
   double m_sphRadius = getProperty("SphericalSampleRadius"); // in cm
 
-  Progress progress(this, 0, 1, 2);
+  Progress progress(this, 0.0, 1.0, 2);
 
   progress.report("AnvredCorrection");
 
@@ -124,8 +124,9 @@ void SphericalAbsorption::retrieveBaseProperties() {
     NeutronAtom neutron(static_cast<uint16_t>(EMPTY_DBL()),
                         static_cast<uint16_t>(0), 0.0, 0.0, sigma_s, 0.0,
                         sigma_s, sigma_atten);
-    Object shape = m_inputWS->sample().getShape(); // copy
-    shape.setMaterial(Material("SetInSphericalAbsorption", neutron, rho));
+    auto shape = boost::shared_ptr<IObject>(
+        m_inputWS->sample().getShape().cloneWithMaterial(
+            Material("SetInSphericalAbsorption", neutron, rho)));
     m_inputWS->mutableSample().setShape(shape);
   }
 

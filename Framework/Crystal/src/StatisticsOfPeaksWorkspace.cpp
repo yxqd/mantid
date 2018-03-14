@@ -36,9 +36,17 @@ void StatisticsOfPeaksWorkspace::init() {
                       "InputWorkspace", "", Direction::Input),
                   "An input PeaksWorkspace with an instrument.");
   std::vector<std::string> propOptions;
-  propOptions.reserve(m_pointGroups.size());
+  propOptions.reserve(2 * m_pointGroups.size() + 5);
+  for (auto &pointGroup : m_pointGroups)
+    propOptions.push_back(pointGroup->getSymbol());
   for (auto &pointGroup : m_pointGroups)
     propOptions.push_back(pointGroup->getName());
+  // Scripts may have Orthorhombic misspelled from past bug in PointGroupFactory
+  propOptions.push_back("222 (Orthorombic)");
+  propOptions.push_back("mm2 (Orthorombic)");
+  propOptions.push_back("2mm (Orthorombic)");
+  propOptions.push_back("m2m (Orthorombic)");
+  propOptions.push_back("mmm (Orthorombic)");
   declareProperty("PointGroup", propOptions[0],
                   boost::make_shared<StringListValidator>(propOptions),
                   "Which point group applies to this crystal?");
@@ -46,7 +54,9 @@ void StatisticsOfPeaksWorkspace::init() {
   std::vector<std::string> centeringOptions;
   std::vector<ReflectionCondition_sptr> reflectionConditions =
       getAllReflectionConditions();
-  centeringOptions.reserve(reflectionConditions.size());
+  centeringOptions.reserve(2 * reflectionConditions.size());
+  for (auto &reflectionCondition : reflectionConditions)
+    centeringOptions.push_back(reflectionCondition->getSymbol());
   for (auto &reflectionCondition : reflectionConditions)
     centeringOptions.push_back(reflectionCondition->getName());
   declareProperty("LatticeCentering", centeringOptions[0],
@@ -143,7 +153,7 @@ void StatisticsOfPeaksWorkspace::exec() {
     else
       sequence = p.getBankName();
 
-    if (sequence.compare(oldSequence) != 0 && tempWS->getNumberPeaks() > 0) {
+    if (sequence != oldSequence && tempWS->getNumberPeaks() > 0) {
       if (tempWS->getNumberPeaks() > 1)
         doSortHKL(tempWS, oldSequence);
       tempWS = WorkspaceFactory::Instance().createPeaks();
@@ -174,12 +184,12 @@ void StatisticsOfPeaksWorkspace::doSortHKL(Mantid::API::Workspace_sptr ws,
   statsAlg->setProperty("PointGroup", pointGroup);
   statsAlg->setProperty("LatticeCentering", latticeCentering);
   statsAlg->setProperty("RowName", runName);
-  if (runName.compare("Overall") != 0)
+  if (runName != "Overall")
     statsAlg->setProperty("Append", true);
   statsAlg->executeAsChildAlg();
   PeaksWorkspace_sptr statsWksp = statsAlg->getProperty("OutputWorkspace");
   ITableWorkspace_sptr tablews = statsAlg->getProperty("StatisticsTable");
-  if (runName.compare("Overall") == 0)
+  if (runName == "Overall")
     setProperty("OutputWorkspace", statsWksp);
   setProperty("StatisticsTable", tablews);
 }

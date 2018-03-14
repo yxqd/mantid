@@ -1,6 +1,3 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAlgorithms/Scale.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidKernel/ListValidator.h"
@@ -39,7 +36,7 @@ void Scale::exec() {
 
   auto hasDx = inputWS->hasDx(0);
 
-  Progress progress(this, 0, 1, 2);
+  Progress progress(this, 0.0, 1.0, 2);
 
   // We require a copy of the workspace if the
   auto inPlace = outputWS == inputWS;

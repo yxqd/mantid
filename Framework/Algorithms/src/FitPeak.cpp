@@ -28,7 +28,6 @@ using namespace Mantid::API;
 using namespace Mantid::DataObjects;
 using namespace Mantid::Kernel;
 using Mantid::HistogramData::HistogramX;
-using Mantid::HistogramData::HistogramY;
 
 using namespace std;
 
@@ -264,7 +263,7 @@ bool FitOneSinglePeak::hasSetupToFitPeak(std::string &errmsg) {
   if (!m_dataWS)
     errmsg += "Data workspace ";
 
-  if (errmsg.size() > 0) {
+  if (!errmsg.empty()) {
     errmsg = "These parameters have not been set for fitting peak: " + errmsg;
     return false;
   }
@@ -305,7 +304,7 @@ bool FitOneSinglePeak::simpleFit() {
   // Fit with different starting values of peak width
   size_t numfits = m_vecFWHM.size();
 
-  Progress progress(this, 0, 1, numfits);
+  Progress progress(this, 0.0, 1.0, numfits);
 
   for (size_t i = 0; i < numfits; ++i) {
     // set FWHM
@@ -519,7 +518,7 @@ void FitOneSinglePeak::highBkgdFit() {
   // Store starting setup
   m_bkupPeakFunc = backup(m_peakFunc);
 
-  Progress progress(this, 0, 1, m_vecFWHM.size());
+  Progress progress(this, 0.0, 1.0, m_vecFWHM.size());
 
   // Fit with different starting values of peak width
   for (size_t i = 0; i < m_vecFWHM.size(); ++i) {
@@ -835,7 +834,7 @@ double FitOneSinglePeak::fitCompositeFunction(
   // Check fit result
   goodness = checkFittedPeak(peakfunc, goodness, errorreason);
 
-  if (errorreason.size() > 0)
+  if (!errorreason.empty())
     m_sstream << "Error reason of fit peak+background composite: "
               << errorreason << "\n";
 
@@ -1147,7 +1146,7 @@ void FitPeak::init() {
                   "from proposed value more than "
                   "the given value, fit is treated as failure. ");
 
-  vector<string> costFuncOptions{"Chi-Square", "Rwp"};
+  std::array<string, 2> costFuncOptions = {{"Chi-Square", "Rwp"}};
   declareProperty("CostFunction", "Chi-Square",
                   Kernel::IValidator_sptr(
                       new Kernel::ListValidator<std::string>(costFuncOptions)),

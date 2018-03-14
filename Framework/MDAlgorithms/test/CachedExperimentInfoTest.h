@@ -5,6 +5,8 @@
 #include "MantidKernel/DeltaEMode.h"
 #include "MantidGeometry/Crystal/OrientedLattice.h"
 #include "MantidGeometry/Instrument/ReferenceFrame.h"
+#include "MantidAPI/Run.h"
+#include "MantidAPI/Sample.h"
 
 #include "MantidTestHelpers/ComponentCreationHelper.h"
 #include <cxxtest/TestSuite.h>
@@ -42,8 +44,7 @@ public:
   void test_trying_to_construct_object_with_unknown_id_throws_exception() {
     // createEmptyExptInfo();
     auto expt = boost::make_shared<Mantid::API::ExperimentInfo>();
-    TS_ASSERT_THROWS(CachedExperimentInfo(*expt, 1000),
-                     Mantid::Kernel::Exception::NotFoundError);
+    TS_ASSERT_THROWS(CachedExperimentInfo(*expt, 1000), std::out_of_range);
   }
 
   void test_trying_to_construct_object_with_no_chopper_throws() {
@@ -199,7 +200,7 @@ private:
         "frame"));
     Detector *det1 = new Detector("det1", g_test_id, instrument.get());
     if (addDetShape == WithDetShape) {
-      Object_sptr shape = ComponentCreationHelper::createCappedCylinder(
+      auto shape = ComponentCreationHelper::createCappedCylinder(
           0.012, 0.01, detPos, V3D(0, 1, 0), "cyl");
       det1->setShape(shape);
     }
@@ -215,9 +216,8 @@ private:
     ObjComponent *samplePos = new ObjComponent("samplePos");
     instrument->add(samplePos);
     instrument->markAsSamplePos(samplePos);
-    Object_sptr sampleShape =
-        ComponentCreationHelper::createCuboid(0.1, 0.2, 0.3);
-    m_expt->mutableSample().setShape(*sampleShape);
+    auto sampleShape = ComponentCreationHelper::createCuboid(0.1, 0.2, 0.3);
+    m_expt->mutableSample().setShape(sampleShape);
 
     if (addChopper == WithChopper) {
       ObjComponent *chopper = new ObjComponent("firstChopperPos");
@@ -229,8 +229,7 @@ private:
     if (addAperture == WithAperture) {
       ObjComponent *aperture = new ObjComponent("aperture");
       aperture->setPos(m_aperturePos);
-      Object_sptr shape =
-          ComponentCreationHelper::createCuboid(0.04, 0.025, 0.05);
+      auto shape = ComponentCreationHelper::createCuboid(0.04, 0.025, 0.05);
       aperture->setShape(shape);
       instrument->add(aperture);
     }

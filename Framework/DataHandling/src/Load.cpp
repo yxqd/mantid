@@ -1,6 +1,3 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidDataHandling/Load.h"
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/FileProperty.h"
@@ -10,6 +7,7 @@
 #include "MantidAPI/ITableWorkspace.h"
 #include "MantidAPI/IWorkspaceProperty.h"
 #include "MantidAPI/MultipleFileProperty.h"
+#include "MantidAPI/WorkspaceGroup.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/FacilityInfo.h"
 
@@ -96,9 +94,6 @@ using namespace API;
 //--------------------------------------------------------------------------
 // Public methods
 //--------------------------------------------------------------------------
-
-/// Default constructor
-Load::Load() : Algorithm(), m_baseProps(), m_loader(), m_filenamePropName() {}
 
 /** Override setPropertyValue to catch if filename is being set, as this may
  * mean
@@ -245,7 +240,7 @@ void Load::declareLoaderProperties(const API::IAlgorithm_sptr &loader) {
   // THIS IS A COPY as the properties are mutated as we move through them
   const std::vector<Property *> existingProps = this->getProperties();
   for (auto existingProp : existingProps) {
-    const std::string name = existingProp->name();
+    const std::string &name = existingProp->name();
     // Wipe all properties except the Load native ones
     if (m_baseProps.find(name) == m_baseProps.end()) {
       this->removeProperty(name);
@@ -751,6 +746,15 @@ Load::groupWsList(const std::vector<API::Workspace_sptr> &wsList) {
   }
 
   return group;
+}
+
+Parallel::ExecutionMode Load::getParallelExecutionMode(
+    const std::map<std::string, Parallel::StorageMode> &storageModes) const {
+  static_cast<void>(storageModes);
+  // The actually relevant execution mode is that of the underlying loader. Here
+  // we simply default to ExecutionMode::Distributed to guarantee that the
+  // normal exec() is being run on all ranks.
+  return Parallel::ExecutionMode::Distributed;
 }
 
 } // namespace DataHandling

@@ -4,6 +4,9 @@
 #include "MantidPythonInterface/kernel/Environment/CallMethod.h"
 #include "MantidPythonInterface/kernel/Environment/GlobalInterpreterLock.h"
 #include "MantidAPI/DataProcessorAlgorithm.h"
+#include "MantidAPI/SerialAlgorithm.h"
+#include "MantidAPI/ParallelAlgorithm.h"
+#include "MantidAPI/DistributedAlgorithm.h"
 
 #include <boost/python/class.hpp>
 #include <boost/python/dict.hpp>
@@ -103,8 +106,20 @@ const std::string AlgorithmAdapter<BaseAlgorithm>::summary() const {
 }
 
 /**
- * @return True if the algorithm is considered to be running
+ * Optional documentation URL of the algorithm, empty string if not overridden.
  */
+template <typename BaseAlgorithm>
+const std::string AlgorithmAdapter<BaseAlgorithm>::helpURL() const {
+  try {
+    return callMethod<std::string>(getSelf(), "helpURL");
+  } catch (UndefinedAttributeError &) {
+    return std::string();
+  }
+}
+
+/**
+*@return True if the algorithm is considered to be running
+*/
 template <typename BaseAlgorithm>
 bool AlgorithmAdapter<BaseAlgorithm>::isRunning() const {
   if (!m_isRunningObj) {
@@ -298,7 +313,13 @@ template <typename BaseAlgorithm> void AlgorithmAdapter<BaseAlgorithm>::exec() {
 //-----------------------------------------------------------------------------------------------------------------------------
 /// API::Algorithm as base
 template class AlgorithmAdapter<API::Algorithm>;
+template class AlgorithmAdapter<API::SerialAlgorithm>;
+template class AlgorithmAdapter<API::ParallelAlgorithm>;
+template class AlgorithmAdapter<API::DistributedAlgorithm>;
 /// API::DataProcesstor as base
 template class AlgorithmAdapter<API::DataProcessorAlgorithm>;
+template class AlgorithmAdapter<API::SerialDataProcessorAlgorithm>;
+template class AlgorithmAdapter<API::ParallelDataProcessorAlgorithm>;
+template class AlgorithmAdapter<API::DistributedDataProcessorAlgorithm>;
 }
 }

@@ -1,9 +1,6 @@
 #ifndef MANTID_DATAOBJECTS_PEAKSPACE_H_
 #define MANTID_DATAOBJECTS_PEAKSPACE_H_ 1
 
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAPI/Column.h"
 #include "MantidAPI/ExperimentInfo.h"
 #include "MantidAPI/IPeaksWorkspace.h"
@@ -78,17 +75,16 @@ public:
     * Use mutableRun interface to change log values rather then this method.
    **/
   API::LogManager_sptr logs() override;
-  /**Get constant access to shared pointer containing workspace porperties;
-     Copies logs into new LogManager variable
-     Meaningfull only for some multithereaded methods when a thread wants to
-     have its own copy of logs   */
-  API::LogManager_const_sptr getLogs() const override {
-    return API::LogManager_const_sptr(new API::LogManager(this->run()));
-  }
+  API::LogManager_const_sptr getLogs() const override;
 
   /// Returns a clone of the workspace
   std::unique_ptr<PeaksWorkspace> clone() const {
     return std::unique_ptr<PeaksWorkspace>(doClone());
+  }
+
+  /// Returns a default-initialized clone of the workspace
+  std::unique_ptr<PeaksWorkspace> cloneEmpty() const {
+    return std::unique_ptr<PeaksWorkspace>(doCloneEmpty());
   }
 
   void appendFile(std::string filename, Geometry::Instrument_sptr inst);
@@ -102,13 +98,23 @@ public:
   int getNumberPeaks() const override;
   std::string getConvention() const override;
   void removePeak(int peakNum) override;
-  void addPeak(const Geometry::IPeak &ipeak) override;
+  void removePeaks(std::vector<int> badPeaks) override;
+  void addPeak(const Geometry::IPeak &peak) override;
+  /// Move a peak object into this peaks workspace
+  void addPeak(Peak &&peak);
+  void addPeak(const Kernel::V3D &position,
+               const Kernel::SpecialCoordinateSystem &frame) override;
   Peak &getPeak(int peakNum) override;
   const Peak &getPeak(int peakNum) const override;
 
   Geometry::IPeak *createPeak(
       const Kernel::V3D &QLabFrame,
       boost::optional<double> detectorDistance = boost::none) const override;
+
+  std::unique_ptr<Geometry::IPeak>
+  createPeak(const Kernel::V3D &Position,
+             const Kernel::SpecialCoordinateSystem &frame) const override;
+
   std::vector<std::pair<std::string, std::string>>
   peakInfo(const Kernel::V3D &qFrame, bool labCoords) const override;
 
@@ -185,6 +191,7 @@ protected:
 
 private:
   PeaksWorkspace *doClone() const override { return new PeaksWorkspace(*this); }
+  PeaksWorkspace *doCloneEmpty() const override { return new PeaksWorkspace(); }
   ITableWorkspace *
   doCloneColumns(const std::vector<std::string> &colNames) const override;
 
@@ -192,6 +199,8 @@ private:
   void initColumns();
   /// Adds a new PeakColumn of the given type
   void addPeakColumn(const std::string &name);
+  /// Create a peak from a QSample position
+  Peak *createPeakQSample(const Kernel::V3D &position) const;
 
   // ====================================== ITableWorkspace Methods
   // ==================================
@@ -283,11 +292,6 @@ private:
 
   /// Coordinates
   Kernel::SpecialCoordinateSystem m_coordSystem;
-
-  // adapter for logs() function, which create reference to this class itself
-  // and does not allow to delete the shared pointers,
-  // returned by logs() function when they go out of scope
-  API::LogManager_sptr m_logCash;
 };
 
 /// Typedef for a shared pointer to a peaks workspace.

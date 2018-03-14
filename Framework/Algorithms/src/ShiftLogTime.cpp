@@ -1,5 +1,6 @@
 #include "MantidAlgorithms/ShiftLogTime.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/Run.h"
 #include "MantidKernel/System.h"
 #include "MantidKernel/TimeSeriesProperty.h"
 
@@ -10,6 +11,7 @@ using namespace Mantid::API;
 using std::string;
 using std::stringstream;
 using std::vector;
+using Mantid::Types::Core::DateAndTime;
 
 namespace Mantid {
 namespace Algorithms {
@@ -26,7 +28,6 @@ int ShiftLogTime::version() const { return 1; }
 /// Algorithm's category for identification
 const string ShiftLogTime::category() const { return "DataHandling\\Logs"; }
 
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
  */
 void ShiftLogTime::init() {
@@ -42,7 +43,6 @@ void ShiftLogTime::init() {
       "Number of (integer) values to move the log values. Required.");
 }
 
-//----------------------------------------------------------------------------------------------
 /** Execute the algorithm.
  */
 void ShiftLogTime::exec() {
@@ -85,8 +85,9 @@ void ShiftLogTime::exec() {
     times.erase(times.begin(), times.begin() + indexshift);
   } else // indexshift < 0
   {
-    values.erase(values.begin(), values.begin() + indexshift);
-    times.erase(times.end() - indexshift, times.end());
+    // indexshift<0, so -indexshift>0
+    values.erase(values.begin(), values.begin() - indexshift);
+    times.erase(times.end() + indexshift, times.end());
   }
 
   // Create the new log

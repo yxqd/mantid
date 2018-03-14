@@ -3,17 +3,14 @@
 
 #include <cxxtest/TestSuite.h>
 
-#include "MantidAlgorithms/FindDetectorsOutsideLimits.h"
 #include "MantidAPI/AnalysisDataService.h"
-#include "MantidAPI/WorkspaceFactory.h"
-#include "MantidDataObjects/Workspace2D.h"
+#include "MantidAPI/SpectrumInfo.h"
+#include "MantidAlgorithms/FindDetectorsOutsideLimits.h"
 #include "MantidDataObjects/EventWorkspace.h"
+#include "MantidDataObjects/Workspace2D.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidTestHelpers/ComponentCreationHelper.h"
 #include "MantidTestHelpers/WorkspaceCreationHelper.h"
-
-#include <Poco/File.h>
-#include <fstream>
 
 using namespace Mantid::Algorithms;
 using namespace Mantid::API;
@@ -22,6 +19,8 @@ using namespace Mantid::Geometry;
 using namespace Mantid::Kernel;
 using Mantid::HistogramData::Counts;
 using Mantid::HistogramData::CountStandardDeviations;
+using Mantid::Types::Core::DateAndTime;
+using Mantid::Types::Event::TofEvent;
 
 class FindDetectorsOutsideLimitsTest : public CxxTest::TestSuite {
 public:
@@ -38,10 +37,9 @@ public:
     // data
     Workspace2D_sptr work_in =
         // the x values look like this -1, 2, 5, 8, 11, 14, 17, 20, 23, 26
-        WorkspaceCreationHelper::Create2DWorkspaceBinned(sizey, sizex, -1, 3.0);
+        WorkspaceCreationHelper::create2DWorkspaceBinned(sizey, sizex, -1, 3.0);
 
     Instrument_sptr instr(new Instrument);
-    work_in->setInstrument(instr);
 
     // yVeryDead is a detector with low counts
     Counts yVeryDead(sizex, 0.1);
@@ -73,11 +71,12 @@ public:
       work_in->getSpectrum(i).setSpectrumNo(i);
 
       Mantid::Geometry::Detector *det =
-          new Mantid::Geometry::Detector("", i, NULL);
+          new Mantid::Geometry::Detector("", i, nullptr);
       instr->add(det);
       instr->markAsDetector(det);
       work_in->getSpectrum(i).setDetectorID(i);
     }
+    work_in->setInstrument(instr);
 
     FindDetectorsOutsideLimits alg;
 
@@ -102,6 +101,8 @@ public:
     const int numFailed = alg.getProperty("NumberOfFailures");
     TS_ASSERT_EQUALS(numFailed, 11);
 
+    const auto &spectrumInfo = work_out->spectrumInfo();
+
     const double liveValue(0.0);
     const double maskValue(1.0);
     for (int i = 0; i < sizey; i++) {
@@ -109,7 +110,7 @@ public:
       double valExpected = liveValue;
       // Check masking
       IDetector_const_sptr det;
-      TS_ASSERT_THROWS_NOTHING(det = work_out->getDetector(i));
+      TS_ASSERT_EQUALS(spectrumInfo.hasDetectors(i), true);
       // Spectra set up with yVeryDead fail low counts or yStrange fail on high
       if (i % 2 == 0 || i == 19) {
         valExpected = maskValue;
@@ -132,13 +133,15 @@ public:
     const int numFailed2 = alg.getProperty("NumberOfFailures");
     TS_ASSERT_EQUALS(numFailed2, 10);
 
+    const auto &spectrumInfo2 = work_out->spectrumInfo();
+
     // Check the dead detectors found agrees with what was setup above
     for (int i = 0; i < sizey; i++) {
       const double val = work_out->y(i)[0];
       double valExpected = liveValue;
       // Check masking
       IDetector_const_sptr det;
-      TS_ASSERT_THROWS_NOTHING(det = work_out->getDetector(i));
+      TS_ASSERT_EQUALS(spectrumInfo2.hasDetectors(i), true);
       // Spectra set up with yVeryDead fail low counts or yStrange fail on high
       if (i % 2 == 0) {
         valExpected = maskValue;
@@ -153,7 +156,7 @@ public:
 
   void testExec_Event() {
     // Make a workspace with 50 pixels, 200 events per pixel.
-    EventWorkspace_sptr work_in = WorkspaceCreationHelper::CreateEventWorkspace(
+    EventWorkspace_sptr work_in = WorkspaceCreationHelper::createEventWorkspace(
         50, 100, 100, 0.0, 1.0, 2, 1);
     Instrument_sptr inst =
         ComponentCreationHelper::createTestInstrumentCylindrical(10);

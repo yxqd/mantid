@@ -36,7 +36,7 @@ public:
     const std::string workspaceName("raggedMask");
     int nBins = 10;
     MatrixWorkspace_sptr WS =
-        WorkspaceCreationHelper::Create2DWorkspaceBinned(5, nBins, 0.0);
+        WorkspaceCreationHelper::create2DWorkspaceBinned(5, nBins, 0.0);
     AnalysisDataService::Instance().add(workspaceName, WS);
 
     // 2. Generate a TableWorskpace
@@ -84,7 +84,7 @@ public:
     const std::string opWSName("maskedWorkspace");
     int nBins = 10;
     MatrixWorkspace_sptr WS =
-        WorkspaceCreationHelper::Create2DWorkspaceBinned(5, nBins, 0.0);
+        WorkspaceCreationHelper::create2DWorkspaceBinned(5, nBins, 0.0);
     AnalysisDataService::Instance().add(workspaceName, WS);
 
     // 2. Generate a TableWorskpace
@@ -134,7 +134,7 @@ public:
     int nBins = 10;
     int nHist = 12;
     MatrixWorkspace_sptr WS =
-        WorkspaceCreationHelper::Create2DWorkspaceBinned(nHist, nBins, 0.0);
+        WorkspaceCreationHelper::create2DWorkspaceBinned(nHist, nBins, 0.0);
     AnalysisDataService::Instance().add(workspaceName, WS);
 
     // 2. Generate a TableWorskpace
@@ -221,7 +221,7 @@ public:
     const std::string workspaceName("raggedMask");
     int nBins = 10;
     MatrixWorkspace_sptr WS =
-        WorkspaceCreationHelper::Create2DWorkspaceBinned(5, nBins, 0.0);
+        WorkspaceCreationHelper::create2DWorkspaceBinned(5, nBins, 0.0);
     AnalysisDataService::Instance().add(workspaceName, WS);
 
     // 2. Generate a TableWorskpace
@@ -268,14 +268,12 @@ public:
     const std::string workspaceName("raggedMask5");
     int nBins = 10;
     MatrixWorkspace_sptr dataws =
-        WorkspaceCreationHelper::Create2DWorkspaceBinned(5, nBins, 0.0);
+        WorkspaceCreationHelper::create2DWorkspaceBinned(5, nBins, 0.0);
     AnalysisDataService::Instance().add(workspaceName, dataws);
 
-    // Find out mapping between spectra/workspace indexes and detectors IDs
-    for (size_t i = 0; i < 5; ++i) {
-      for (const auto &id : dataws->getSpectrum(i).getDetectorIDs())
-        cout << "WorkspaceIndex = " << i << ":  Detector ID = " << id << ".\n";
-    }
+    // Set up default detector IDs. Note there are no corresponding detectors.
+    for (int i = 0; i < 5; ++i)
+      dataws->getSpectrum(i).setDetectorID(i + 1);
 
     // Generate a TableWorksapce
     auto tablews = boost::make_shared<TableWorkspace>();

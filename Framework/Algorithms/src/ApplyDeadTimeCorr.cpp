@@ -1,10 +1,8 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAlgorithms/ApplyDeadTimeCorr.h"
 #include "MantidAPI/EqualBinSizesValidator.h"
 #include "MantidAPI/ITableWorkspace.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidAPI/Run.h"
 #include "MantidAPI/TableRow.h"
 #include "MantidKernel/PropertyWithValue.h"
 #include "MantidKernel/System.h"
@@ -24,7 +22,6 @@ namespace Algorithms {
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(ApplyDeadTimeCorr)
 
-//----------------------------------------------------------------------------------------------
 /** Initialize the algorithm's properties.
    */
 void ApplyDeadTimeCorr::init() {
@@ -44,7 +41,6 @@ void ApplyDeadTimeCorr::init() {
       "The name of the output workspace containing corrected counts");
 }
 
-//----------------------------------------------------------------------------------------------
 /** Execute the algorithm.
    */
 void ApplyDeadTimeCorr::exec() {
@@ -88,14 +84,14 @@ void ApplyDeadTimeCorr::exec() {
             size_t index =
                 static_cast<size_t>(inputWs->getIndexFromSpectrumNumber(
                     static_cast<int>(deadTimeRow.Int(0))));
-
-            for (size_t j = 0; j < inputWs->blocksize(); ++j) {
-              double temp(
-                  1 -
-                  inputWs->y(index)[j] *
-                      (deadTimeRow.Double(1) / (timeBinWidth * numGoodFrames)));
+            const auto &yIn = inputWs->y(index);
+            auto &yOut = outputWs->mutableY(index);
+            for (size_t j = 0; j < yIn.size(); ++j) {
+              const double temp(1 -
+                                yIn[j] * (deadTimeRow.Double(1) /
+                                          (timeBinWidth * numGoodFrames)));
               if (temp != 0) {
-                outputWs->mutableY(index)[j] = inputWs->y(index)[j] / temp;
+                yOut[j] = yIn[j] / temp;
               } else {
                 g_log.error() << "1 - MeasuredCount * (Deadtime/TimeBin width "
                                  "is currently (" << temp

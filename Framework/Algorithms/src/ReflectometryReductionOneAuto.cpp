@@ -1,5 +1,6 @@
 #include "MantidAlgorithms/BoostOptionalToAlgorithmProperty.h"
 #include "MantidAlgorithms/ReflectometryReductionOneAuto.h"
+#include "MantidAPI/WorkspaceGroup.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/BoundedValidator.h"
@@ -364,7 +365,8 @@ void ReflectometryReductionOneAuto::exec() {
 
   // Pass the arguments and execute the main algorithm.
 
-  IAlgorithm_sptr refRedOne = createChildAlgorithm("ReflectometryReductionOne");
+  IAlgorithm_sptr refRedOne =
+      createChildAlgorithm("ReflectometryReductionOne", -1, -1, true, 1);
   refRedOne->initialize();
   if (refRedOne->isInitialized()) {
     refRedOne->setProperty("InputWorkspace", in_ws);
@@ -524,13 +526,13 @@ void ReflectometryReductionOneAuto::exec() {
         momentumTransferMinimum = calculateQ(wavelength_max, theta_in.get());
       if (!momentumTransferStep.is_initialized()) {
         IAlgorithm_sptr calcResAlg =
-            AlgorithmManager::Instance().create("CalculateResolution");
+            AlgorithmManager::Instance().create("NRCalculateSlitResolution");
         calcResAlg->setProperty("Workspace", in_ws);
         calcResAlg->setProperty("TwoTheta", theta_in.get());
         calcResAlg->execute();
         if (!calcResAlg->isExecuted())
           throw std::runtime_error(
-              "CalculateResolution failed. Please manually "
+              "NRCalculateSlitResolution failed. Please manually "
               "enter a value in the dQ/Q column.");
         double resolution = calcResAlg->getProperty("Resolution");
         momentumTransferStep = resolution;
@@ -568,8 +570,10 @@ void ReflectometryReductionOneAuto::exec() {
     setProperty("MomentumTransferMaximum",
                 boost::lexical_cast<double>(
                     refRedOne->getPropertyValue("MomentumTransferMaximum")));
-    setProperty("ThetaIn", boost::lexical_cast<double>(
-                               refRedOne->getPropertyValue("ThetaIn")));
+    if (theta_in.is_initialized())
+      setProperty("ThetaIn", theta_in.get());
+    else
+      setProperty("ThetaIn", thetaOut1 / 2.);
 
   } else {
     throw std::runtime_error(
@@ -748,12 +752,13 @@ bool ReflectometryReductionOneAuto::processGroups() {
     // Otherwise, if polarization correction is off, we process them
     // using one transmission group member at a time.
     if (firstTransG && !isPolarizationCorrectionOn) // polarization off
-      alg->setProperty("FirstTransmissionRun", firstTransG->getItem(i)->name());
+      alg->setProperty("FirstTransmissionRun",
+                       firstTransG->getItem(i)->getName());
     if (secondTransG && !isPolarizationCorrectionOn) // polarization off
       alg->setProperty("SecondTransmissionRun",
-                       secondTransG->getItem(i)->name());
+                       secondTransG->getItem(i)->getName());
 
-    alg->setProperty("InputWorkspace", group->getItem(i)->name());
+    alg->setProperty("InputWorkspace", group->getItem(i)->getName());
     alg->setProperty("OutputWorkspace", IvsQName);
     alg->setProperty("OutputWorkspaceWavelength", IvsLamName);
     alg->execute();

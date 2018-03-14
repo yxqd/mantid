@@ -1,12 +1,12 @@
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stddef.h>
-#include <qmessagebox.h>
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_math.h>
 #include "fit_gsl.h"
 #include "MyParser.h"
+#include <cmath>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <gsl/gsl_blas.h>
+#include <gsl/gsl_math.h>
+#include <qmessagebox.h>
 int expd3_f(const gsl_vector *x, void *params, gsl_vector *f) {
   size_t n = ((struct FitData *)params)->n;
   double *X = ((struct FitData *)params)->X;
@@ -502,13 +502,12 @@ int user_f(const gsl_vector *x, void *params, gsl_vector *f) {
     }
     parser.SetExpr(function);
     for (int j = 0; j < (int)n; j++) {
-      // cppcheck-suppress unreadVariable
       xvar = X[j];
       gsl_vector_set(f, j, (parser.Eval() - Y[j]) / sigma[j]);
     }
     delete[] parameters;
   } catch (mu::ParserError &e) {
-    QMessageBox::critical(0, "MantidPlot - Input function error",
+    QMessageBox::critical(nullptr, "MantidPlot - Input function error",
                           QString::fromStdString(e.GetMsg()));
     return GSL_EINVAL;
   }
@@ -535,14 +534,13 @@ double user_d(const gsl_vector *x, void *params) {
     }
     parser.SetExpr(function);
     for (int j = 0; j < (int)n; j++) {
-      // cppcheck-suppress unreadVariable
       xvar = X[j];
       double t = (parser.Eval() - Y[j]) / sigma[j];
       val += t * t;
     }
     delete[] parameters;
   } catch (mu::ParserError &e) {
-    QMessageBox::critical(0, "MantidPlot - Input function error",
+    QMessageBox::critical(nullptr, "MantidPlot - Input function error",
                           QString::fromStdString(e.GetMsg()));
     return GSL_EINVAL;
   }
@@ -567,7 +565,6 @@ int user_df(const gsl_vector *x, void *params, gsl_matrix *J) {
     }
     parser.SetExpr(function);
     for (int i = 0; i < (int)n; i++) {
-      // cppcheck-suppress unreadVariable
       xvar = X[i];
       for (int j = 0; j < (int)p; j++)
         gsl_matrix_set(J, i, j,

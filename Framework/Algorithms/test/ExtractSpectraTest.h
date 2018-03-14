@@ -4,18 +4,72 @@
 #include <cxxtest/TestSuite.h>
 
 #include "MantidAPI/Axis.h"
+#include "MantidAPI/SpectrumInfo.h"
 #include "MantidAlgorithms/ExtractSpectra.h"
 #include "MantidDataObjects/EventWorkspace.h"
-#include "MantidKernel/EmptyValues.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidKernel/UnitFactory.h"
+#include "MantidIndexing/IndexInfo.h"
+
 #include "MantidTestHelpers/ComponentCreationHelper.h"
+#include "MantidTestHelpers/ParallelAlgorithmCreation.h"
+#include "MantidTestHelpers/ParallelRunner.h"
 #include "MantidTestHelpers/WorkspaceCreationHelper.h"
 
 using Mantid::Algorithms::ExtractSpectra;
-using namespace Mantid::API;
-using namespace Mantid::Kernel;
-using namespace Mantid::DataObjects;
 using namespace Mantid;
+using namespace API;
+using namespace Kernel;
+using namespace DataObjects;
+using namespace HistogramData;
+
+namespace {
+void run_parallel_DetectorList_fails(const Parallel::Communicator &comm) {
+  Indexing::IndexInfo indexInfo(1000, Parallel::StorageMode::Distributed, comm);
+  auto alg = ParallelTestHelpers::create<ExtractSpectra>(comm);
+  alg->setProperty("InputWorkspace", create<Workspace2D>(indexInfo, Points(1)));
+  alg->setProperty("DetectorList", "1");
+  if (comm.size() == 1) {
+    TS_ASSERT_THROWS_NOTHING(alg->execute());
+  } else {
+    TS_ASSERT_THROWS_EQUALS(
+        alg->execute(), const std::runtime_error &e, std::string(e.what()),
+        "MatrixWorkspace: Using getIndicesFromDetectorIDs in "
+        "a parallel run is most likely incorrect. Aborting.");
+  }
+}
+
+void run_parallel_WorkspaceIndexList(const Parallel::Communicator &comm) {
+  Indexing::IndexInfo indexInfo(1000, Parallel::StorageMode::Distributed, comm);
+  auto alg = ParallelTestHelpers::create<ExtractSpectra>(comm);
+  alg->setProperty("InputWorkspace", create<Workspace2D>(indexInfo, Points(1)));
+  alg->setProperty("WorkspaceIndexList", "0-" + std::to_string(comm.size()));
+  TS_ASSERT_THROWS_NOTHING(alg->execute());
+  MatrixWorkspace_const_sptr out = alg->getProperty("OutputWorkspace");
+  TS_ASSERT_EQUALS(out->storageMode(), Parallel::StorageMode::Distributed);
+  if (comm.rank() == 0) {
+    TS_ASSERT_EQUALS(out->getNumberHistograms(), 2);
+  } else {
+    TS_ASSERT_EQUALS(out->getNumberHistograms(), 1);
+  }
+}
+
+void run_parallel_WorkspaceIndexRange(const Parallel::Communicator &comm) {
+  Indexing::IndexInfo indexInfo(3 * comm.size(),
+                                Parallel::StorageMode::Distributed, comm);
+  auto alg = ParallelTestHelpers::create<ExtractSpectra>(comm);
+  alg->setProperty("InputWorkspace", create<Workspace2D>(indexInfo, Points(1)));
+  alg->setProperty("StartWorkspaceIndex", std::to_string(comm.size() + 1));
+  TS_ASSERT_THROWS_NOTHING(alg->execute());
+  MatrixWorkspace_const_sptr out = alg->getProperty("OutputWorkspace");
+  TS_ASSERT_EQUALS(out->storageMode(), Parallel::StorageMode::Distributed);
+  if (comm.rank() == 0) {
+    TS_ASSERT_EQUALS(out->getNumberHistograms(), 1);
+  } else {
+    TS_ASSERT_EQUALS(out->getNumberHistograms(), 2);
+  }
+}
+}
 
 class ExtractSpectraTest : public CxxTest::TestSuite {
 public:
@@ -262,12 +316,7 @@ public:
   void test_invalid_x_range_event() {
     Parameters params("event");
     params.setInvalidXRange();
-    auto ws = runAlgorithm(params, true);
-    // this is a bit unexpected but at least no crash
-    TS_ASSERT_EQUALS(ws->getNumberHistograms(), nSpec);
-    TS_ASSERT_EQUALS(ws->blocksize(), 1);
-    TS_ASSERT_EQUALS(ws->x(0)[0], 2);
-    TS_ASSERT_EQUALS(ws->x(0)[1], 1);
+    auto ws = runAlgorithm(params, false);
   }
 
   void test_invalid_index_range_event() {
@@ -385,6 +434,16 @@ public:
     auto ws = runAlgorithm(params, false);
   }
 
+  void test_parallel_DetectorList_fails() {
+    ParallelTestHelpers::runParallel(run_parallel_DetectorList_fails);
+  }
+  void test_parallel_WorkspaceIndexList() {
+    ParallelTestHelpers::runParallel(run_parallel_WorkspaceIndexList);
+  }
+  void test_parallel_WorkspaceIndexRange() {
+    ParallelTestHelpers::runParallel(run_parallel_WorkspaceIndexRange);
+  }
+
 private:
   // -----------------------  helper methods ------------------------
 
@@ -429,8 +488,8 @@ private:
     auto ws = createInputWorkspaceHisto();
     // Add the delta x values
     for (size_t j = 0; j < nSpec; ++j) {
-      ws->setBinEdgeStandardDeviations(j, nBins + 1);
-      for (size_t k = 0; k <= nBins; ++k) {
+      ws->setPointStandardDeviations(j, nBins);
+      for (size_t k = 0; k < nBins; ++k) {
         // Add a constant error to all spectra
         ws->mutableDx(j)[k] = sqrt(double(k));
       }
@@ -454,7 +513,7 @@ private:
   }
 
   MatrixWorkspace_sptr createInputWorkspaceEvent() const {
-    EventWorkspace_sptr ws = WorkspaceCreationHelper::CreateEventWorkspace(
+    EventWorkspace_sptr ws = WorkspaceCreationHelper::createEventWorkspace(
         int(nSpec), int(nBins), 50, 0.0, 1., 2);
     ws->getAxis(0)->unit() = UnitFactory::Instance().create("TOF");
     ws->setInstrument(
@@ -468,13 +527,13 @@ private:
   MatrixWorkspace_sptr createInputWorkspaceEventWithDx() const {
     auto ws = createInputWorkspaceEvent();
     // Add the delta x values
-    auto dXvals = HistogramData::BinEdgeStandardDeviations(nBins + 1, 0.0);
+    auto dXvals = HistogramData::PointStandardDeviations(nBins, 0.0);
     auto &dX = dXvals.mutableData();
-    for (size_t k = 0; k <= nBins; ++k) {
+    for (size_t k = 0; k < nBins; ++k) {
       dX[k] = sqrt(double(k)) + 1;
     }
     for (size_t j = 0; j < nSpec; ++j) {
-      ws->setBinEdgeStandardDeviations(j, dXvals);
+      ws->setPointStandardDeviations(j, dXvals);
     }
     return ws;
   }
@@ -566,9 +625,10 @@ private:
         TS_ASSERT_EQUALS(ws.y(1)[0], 2.0);
         TS_ASSERT_EQUALS(ws.y(2)[0], 3.0);
       } else if (wsType == "event") {
-        TS_ASSERT_EQUALS(ws.getDetector(0)->getID(), 2);
-        TS_ASSERT_EQUALS(ws.getDetector(1)->getID(), 3);
-        TS_ASSERT_EQUALS(ws.getDetector(2)->getID(), 4);
+        const auto &specrumInfo = ws.spectrumInfo();
+        TS_ASSERT_EQUALS(specrumInfo.detector(0).getID(), 2);
+        TS_ASSERT_EQUALS(specrumInfo.detector(1).getID(), 3);
+        TS_ASSERT_EQUALS(specrumInfo.detector(2).getID(), 4);
       }
     }
 
@@ -587,9 +647,10 @@ private:
         TS_ASSERT_EQUALS(ws.y(1)[0], 2.0);
         TS_ASSERT_EQUALS(ws.y(2)[0], 4.0);
       } else if (wsType == "event") {
-        TS_ASSERT_EQUALS(ws.getDetector(0)->getID(), 1);
-        TS_ASSERT_EQUALS(ws.getDetector(1)->getID(), 3);
-        TS_ASSERT_EQUALS(ws.getDetector(2)->getID(), 5);
+        const auto &specrumInfo = ws.spectrumInfo();
+        TS_ASSERT_EQUALS(specrumInfo.detector(0).getID(), 1);
+        TS_ASSERT_EQUALS(specrumInfo.detector(1).getID(), 3);
+        TS_ASSERT_EQUALS(specrumInfo.detector(2).getID(), 5);
       }
     }
 
@@ -608,9 +669,10 @@ private:
         TS_ASSERT_EQUALS(ws.y(1)[0], 2.0);
         TS_ASSERT_EQUALS(ws.y(2)[0], 4.0);
       } else if (wsType == "event-detector") {
-        TS_ASSERT_EQUALS(ws.getDetector(0)->getID(), 1);
-        TS_ASSERT_EQUALS(ws.getDetector(1)->getID(), 3);
-        TS_ASSERT_EQUALS(ws.getDetector(2)->getID(), 5);
+        const auto &specrumInfo = ws.spectrumInfo();
+        TS_ASSERT_EQUALS(specrumInfo.detector(0).getID(), 1);
+        TS_ASSERT_EQUALS(specrumInfo.detector(1).getID(), 3);
+        TS_ASSERT_EQUALS(specrumInfo.detector(2).getID(), 5);
       }
     }
 
@@ -636,11 +698,8 @@ private:
         TS_ASSERT_EQUALS(ws.dx(0)[1], 1.0);
         TS_ASSERT_EQUALS(ws.dx(0)[2], M_SQRT2);
         TS_ASSERT_EQUALS(ws.dx(0)[3], sqrt(3.0));
-        // Check that the length of x and dx is the same
-        auto &x = ws.x(0);
-        auto dX = ws.dx(0);
-        TS_ASSERT_EQUALS(x.size(), dX.size());
-
+        // Check that the length of x and dx differs by 1
+        TS_ASSERT_EQUALS(ws.x(0).size() - 1, ws.dx(0).size());
       } else if (wsType == "event-dx") {
         TS_ASSERT(ws.hasDx(0));
         TS_ASSERT_EQUALS(ws.dx(0)[0], 0.0 + 1.0);
@@ -719,9 +778,9 @@ public:
   }
 
   ExtractSpectraTestPerformance() {
-    input = WorkspaceCreationHelper::Create2DWorkspaceBinned(40000, 10000);
+    input = WorkspaceCreationHelper::create2DWorkspaceBinned(40000, 10000);
     inputEvent =
-        WorkspaceCreationHelper::CreateEventWorkspace(40000, 10000, 2000);
+        WorkspaceCreationHelper::createEventWorkspace(40000, 10000, 2000);
   }
 
   void testExec2D() {

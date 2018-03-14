@@ -1,8 +1,6 @@
-#include <fstream>
-#include <sstream>
-
 #include "MantidGeometry/Rendering/vtkGeometryCacheWriter.h"
-#include "MantidGeometry/Objects/Object.h"
+
+#include "MantidGeometry/Objects/CSGObject.h"
 #include "MantidGeometry/Rendering/GeometryHandler.h"
 #include "MantidKernel/Logger.h"
 
@@ -11,23 +9,13 @@
 #include <Poco/DOM/DOMWriter.h>
 #include <Poco/DOM/Element.h>
 #include <Poco/DOM/Text.h>
-
-#ifdef _MSC_VER
-// Disable a flood of warnings from Poco about inheriting from
-// std::basic_istream
-// See
-// http://connect.microsoft.com/VisualStudio/feedback/details/733720/inheriting-from-std-fstream-produces-c4250-warning
-#pragma warning(push)
-#pragma warning(disable : 4250)
-#endif
-#include <Poco/FileStream.h>
-#include <Poco/XML/XMLWriter.h>
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-
 #include <Poco/File.h>
+#include <Poco/FileStream.h>
 #include <Poco/Path.h>
+#include <Poco/XML/XMLWriter.h>
+
+#include <fstream>
+#include <sstream>
 
 using Poco::XML::Document;
 using Poco::XML::Element;
@@ -88,7 +76,7 @@ void vtkGeometryCacheWriter::createVTKFileHeader() {
  * Adds the geometry of the Object to the document
  * @param obj :: The object to add
  */
-void vtkGeometryCacheWriter::addObject(Object *obj) {
+void vtkGeometryCacheWriter::addObject(CSGObject *obj) {
   // First check whether Object can be written to the file
   boost::shared_ptr<GeometryHandler> handle = obj->getGeometryHandler();
   if (!(handle->canTriangulate()))

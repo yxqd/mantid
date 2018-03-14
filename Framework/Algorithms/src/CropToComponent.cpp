@@ -1,31 +1,27 @@
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAlgorithms/CropToComponent.h"
-#include "MantidGeometry/IDetector.h"
 #include "MantidGeometry/Instrument.h"
+#include "MantidGeometry/Instrument/ComponentInfo.h"
 #include "MantidKernel/ArrayProperty.h"
+#include "MantidIndexing/Conversion.h"
+#include "MantidIndexing/GlobalSpectrumIndex.h"
+#include "MantidIndexing/IndexInfo.h"
 
 namespace {
-
-void getDetectors(
-    Mantid::API::MatrixWorkspace_sptr workspace,
-    const std::vector<std::string> &componentNames,
-    std::vector<Mantid::Geometry::IDetector_const_sptr> &detectors) {
-  auto instrument = workspace->getInstrument();
+std::vector<size_t>
+getDetectorIndices(const Mantid::API::MatrixWorkspace &workspace,
+                   const std::vector<std::string> &componentNames) {
+  const auto &compInfo = workspace.componentInfo();
+  const auto instrument = workspace.getInstrument();
+  std::vector<size_t> detIndices;
   for (const auto &componentName : componentNames) {
-    instrument->getDetectorsInBank(detectors, componentName);
+    const auto comp = instrument->getComponentByName(componentName);
+    const auto compIndex = compInfo.indexOf(comp->getComponentID());
+    const auto indices = compInfo.detectorsInSubtree(compIndex);
+    detIndices.insert(detIndices.end(), indices.begin(), indices.end());
   }
-}
-
-void getDetectorIDs(
-    std::vector<Mantid::Geometry::IDetector_const_sptr> &detectors,
-    std::vector<Mantid::detid_t> &detectorIDs) {
-  auto numberOfDetectors = static_cast<int>(detectors.size());
-  PARALLEL_FOR_NO_WSP_CHECK()
-  for (int index = 0; index < numberOfDetectors; ++index) {
-    auto det = detectors[index];
-    detectorIDs[index] = det->getID();
-  }
+  return detIndices;
 }
 }
 
@@ -73,9 +69,6 @@ void CropToComponent::init() {
           "ComponentNames"),
       "List of component names which are used to crop the workspace."
       "to.");
-  declareProperty("OrderByDetId", false,
-                  "Whether to order the elements of "
-                  "the component by increasing detector ID.");
 }
 
 //----------------------------------------------------------------------------------------------
@@ -88,17 +81,13 @@ void CropToComponent::exec() {
       getProperty("InputWorkspace");
 
   // Get all detectors
-  std::vector<Mantid::Geometry::IDetector_const_sptr> detectors;
-  getDetectors(inputWorkspace, componentNames, detectors);
+  const auto &detectorIndices =
+      getDetectorIndices(*inputWorkspace, componentNames);
 
-  // Get the detector IDs from the Detectors
-  std::vector<detid_t> detectorIDs(detectors.size());
-  getDetectorIDs(detectors, detectorIDs);
-
-  const bool orderByDetID = getProperty("OrderByDetId");
-  if (orderByDetID) {
-    std::sort(detectorIDs.begin(), detectorIDs.end());
-  }
+  // Get the corresponding workspace indices from the detectors
+  const auto &workspaceIndices =
+      inputWorkspace->indexInfo().globalSpectrumIndicesFromDetectorIndices(
+          detectorIndices);
 
   // Run ExtractSpectra in order to obtain the cropped workspace
   auto extract_alg = Mantid::API::AlgorithmManager::Instance().createUnmanaged(
@@ -107,7 +96,8 @@ void CropToComponent::exec() {
   extract_alg->initialize();
   extract_alg->setProperty("InputWorkspace", inputWorkspace);
   extract_alg->setProperty("OutputWorkspace", "dummy");
-  extract_alg->setProperty("DetectorList", detectorIDs);
+  extract_alg->setProperty("WorkspaceIndexList",
+                           Indexing::castVector<size_t>(workspaceIndices));
   extract_alg->execute();
   Mantid::API::MatrixWorkspace_sptr outputWorkspace =
       extract_alg->getProperty("OutputWorkspace");

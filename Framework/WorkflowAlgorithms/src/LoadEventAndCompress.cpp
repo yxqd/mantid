@@ -205,7 +205,7 @@ void LoadEventAndCompress::exec() {
 
   m_chunkingTable = determineChunk(filename);
 
-  Progress progress(this, 0, 1, 2);
+  Progress progress(this, 0.0, 1.0, 2);
 
   // first run is free
   progress.report("Loading Chunk");
@@ -237,6 +237,12 @@ void LoadEventAndCompress::exec() {
   // to prefer loading full banks so no further savings should be available.
 
   setProperty("OutputWorkspace", total);
+}
+
+Parallel::ExecutionMode LoadEventAndCompress::getParallelExecutionMode(
+    const std::map<std::string, Parallel::StorageMode> &storageModes) const {
+  static_cast<void>(storageModes);
+  return Parallel::ExecutionMode::Distributed;
 }
 
 } // namespace WorkflowAlgorithms

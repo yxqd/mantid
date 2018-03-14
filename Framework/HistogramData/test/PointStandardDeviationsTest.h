@@ -3,7 +3,6 @@
 
 #include <cxxtest/TestSuite.h>
 
-#include "MantidHistogramData/BinEdgeStandardDeviations.h"
 #include "MantidHistogramData/PointStandardDeviations.h"
 
 using namespace Mantid;
@@ -20,47 +19,14 @@ public:
 
   void test_has_correct_mixins() {
     PointStandardDeviations data;
-// AppleClang gives warning if the result is unused.
-#if __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-value"
-#endif
-    TS_ASSERT_THROWS_NOTHING((dynamic_cast<detail::StandardDeviationVectorOf<
-        PointStandardDeviations, HistogramDx, PointVariances> &>(data)));
-#if __clang__
-#pragma clang diagnostic pop
-#endif
+    TS_ASSERT_THROWS_NOTHING(
+        UNUSED_ARG((dynamic_cast<detail::StandardDeviationVectorOf<
+            PointStandardDeviations, HistogramDx, PointVariances> &>(data))));
   }
 
   void test_construct_default() {
     const PointStandardDeviations points{};
     TS_ASSERT(!points);
-  }
-
-  void test_construct_from_null_BinEdgeStandardDeviations() {
-    const BinEdgeStandardDeviations edges{};
-    const PointStandardDeviations points(edges);
-    TS_ASSERT(!points);
-  }
-
-  void test_construct_from_empty_BinEdgeStandardDeviations() {
-    const BinEdgeStandardDeviations edges(0);
-    const PointStandardDeviations points(edges);
-    TS_ASSERT_EQUALS(points.size(), 0);
-  }
-
-  void test_construct_from_invalid_BinEdgeStandardDeviations() {
-    const BinEdgeStandardDeviations edges(1);
-    TS_ASSERT_THROWS(PointStandardDeviations points(edges), std::logic_error);
-  }
-
-  void test_construct_from_BinEdgeStandardDeviations() {
-    const BinEdgeStandardDeviations edges{1.0, 3.0, 7.0, 15.0};
-    const PointStandardDeviations points(edges);
-    TS_ASSERT_EQUALS(points.size(), 3);
-    TS_ASSERT_DELTA(points[0], 2.0, 1e-14);
-    TS_ASSERT_DELTA(points[1], 5.0, 1e-14);
-    TS_ASSERT_DELTA(points[2], 11.0, 1e-14);
   }
 };
 

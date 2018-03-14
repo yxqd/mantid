@@ -13,6 +13,7 @@ using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::Algorithms;
 using namespace Mantid::DataObjects;
+using Mantid::Types::Core::DateAndTime;
 
 namespace {
 EventWorkspace_sptr
@@ -53,7 +54,7 @@ public:
     TS_ASSERT(alg.isInitialized())
 
     EventWorkspace_sptr in_ws, out_ws;
-    in_ws = WorkspaceCreationHelper::CreateEventWorkspace2(100, 100);
+    in_ws = WorkspaceCreationHelper::createEventWorkspace2(100, 100);
     AnalysisDataService::Instance().addOrReplace(in_ws_name, in_ws);
 
     alg.setPropertyValue("InputWorkspace", in_ws_name);
@@ -136,7 +137,7 @@ private:
 public:
   void setUp() override {
     EventWorkspace_sptr in_ws =
-        WorkspaceCreationHelper::CreateEventWorkspace2(30000, 30000);
+        WorkspaceCreationHelper::createEventWorkspace2(30000, 30000);
     m_workspace = in_ws;
   }
 

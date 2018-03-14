@@ -1,16 +1,10 @@
 #ifndef MANTID_DATAHANDLING_LOADNEXUSLOGS_H_
 #define MANTID_DATAHANDLING_LOADNEXUSLOGS_H_
 
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
-#include "MantidAPI/Algorithm.h"
+#include "MantidAPI/DistributedAlgorithm.h"
 #include <nexus/NeXusFile.hpp>
 
 namespace Mantid {
-//----------------------------------------------------------------------
-// Forward declaration
-//----------------------------------------------------------------------
 namespace Kernel {
 class Property;
 }
@@ -54,7 +48,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 File change history is stored at: <https://github.com/mantidproject/mantid>.
 Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
-class DLLExport LoadNexusLogs : public API::Algorithm {
+class DLLExport LoadNexusLogs : public API::DistributedAlgorithm {
 public:
   /// Default constructor
   LoadNexusLogs();
@@ -97,6 +91,7 @@ private:
   /// Create a time series property
   Kernel::Property *createTimeSeries(::NeXus::File &file,
                                      const std::string &prop_name) const;
+
   /// Progress reporting object
   boost::shared_ptr<API::Progress> m_progress;
 

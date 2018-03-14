@@ -1,21 +1,16 @@
-//------------------------------------------------------------------------------
-// Includes
-//------------------------------------------------------------------------------
 #include "MantidAlgorithms/Rebin2D.h"
 #include "MantidAPI/BinEdgeAxis.h"
-#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceProperty.h"
-#include "MantidDataObjects/RebinnedOutput.h"
 #include "MantidDataObjects/FractionalRebinning.h"
+#include "MantidDataObjects/RebinnedOutput.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidGeometry/Math/ConvexPolygon.h"
 #include "MantidGeometry/Math/PolygonIntersection.h"
 #include "MantidGeometry/Math/Quadrilateral.h"
 #include "MantidKernel/ArrayProperty.h"
-#include "MantidKernel/RebinParamsValidator.h"
 #include "MantidKernel/PropertyWithValue.h"
+#include "MantidKernel/RebinParamsValidator.h"
 #include "MantidKernel/VectorHelper.h"
-
-#include <boost/math/special_functions/fpclassify.hpp>
 
 namespace Mantid {
 namespace Algorithms {
@@ -26,7 +21,7 @@ DECLARE_ALGORITHM(Rebin2D)
 using namespace API;
 using namespace DataObjects;
 using namespace Geometry;
-using Kernel::V2D;
+using namespace Mantid::HistogramData;
 
 //--------------------------------------------------------------------------
 // Private methods
@@ -83,7 +78,7 @@ void Rebin2D::exec() {
         "If it is a spectra axis try running ConvertSpectrumAxis first.");
   }
 
-  const MantidVec &oldXEdges = inputWS->readX(0);
+  const auto &oldXEdges = inputWS->x(0);
   const size_t numXBins = inputWS->blocksize();
   const size_t numYBins = inputWS->getNumberHistograms();
   std::vector<double> oldYEdges;
@@ -98,50 +93,63 @@ void Rebin2D::exec() {
   }
 
   // Output grid and workspace. Fills in the new X and Y bin vectors
-  MantidVecPtr newXBins;
-  MantidVec newYBins;
+  // MantidVecPtr newXBins;
+  BinEdges newXBins(oldXEdges.size());
+  BinEdges newYBins(oldXEdges.size());
 
   // Flag for using a RebinnedOutput workspace
+  // NB. This is now redundant because if the input is a MatrixWorkspace,
+  // useFractionArea=false is forced since there is no fractional area info.
+  // But if the input is RebinnedOutput, useFractionalArea=true is forced to
+  // give correct signal/errors. It is kept for compatibility with old scripts.
   bool useFractionalArea = getProperty("UseFractionalArea");
-  MatrixWorkspace_sptr outputWS = createOutputWorkspace(
-      inputWS, newXBins.access(), newYBins, useFractionalArea);
-  if (useFractionalArea &&
-      !boost::dynamic_pointer_cast<RebinnedOutput>(outputWS)) {
+  auto inputHasFA = boost::dynamic_pointer_cast<const RebinnedOutput>(inputWS);
+  // For MatrixWorkspace, only UseFractionalArea=False makes sense.
+  if (useFractionalArea && !inputHasFA) {
     g_log.warning("Fractional area tracking requires the input workspace to "
                   "contain calculated bin fractions from a parallelpiped rebin "
-                  "like SofQW"
-                  "Continuing without fractional area tracking");
+                  "like SofQW. Continuing without fractional area tracking");
     useFractionalArea = false;
   }
+  // For RebinnedOutput, should always use useFractionalArea to get the
+  // correct signal and errors (so that weights of input ws is accounted for).
+  if (inputHasFA && !useFractionalArea) {
+    g_log.warning("Input workspace has bin fractions (e.g. from a "
+                  "parallelpiped rebin like SofQW3). To give accurate results, "
+                  "fractional area tracking has been turn on.");
+    useFractionalArea = true;
+  }
+
+  MatrixWorkspace_sptr outputWS =
+      createOutputWorkspace(inputWS, newXBins, newYBins, useFractionalArea);
+  auto outputRB = boost::dynamic_pointer_cast<RebinnedOutput>(outputWS);
 
   // Progress reports & cancellation
-  const size_t nreports(static_cast<size_t>(inputWS->getNumberHistograms() *
-                                            inputWS->blocksize()));
+  const size_t nreports(static_cast<size_t>(numYBins));
   m_progress = boost::shared_ptr<API::Progress>(
       new API::Progress(this, 0.0, 1.0, nreports));
 
-  PARALLEL_FOR2(inputWS, outputWS)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*inputWS, *outputWS))
   for (int64_t i = 0; i < static_cast<int64_t>(numYBins);
        ++i) // signed for openmp
   {
     PARALLEL_START_INTERUPT_REGION
 
+    m_progress->report("Computing polygon intersections");
     const double vlo = oldYEdges[i];
     const double vhi = oldYEdges[i + 1];
     for (size_t j = 0; j < numXBins; ++j) {
-      m_progress->report("Computing polygon intersections");
       // For each input polygon test where it intersects with
       // the output grid and assign the appropriate weights of Y/E
       const double x_j = oldXEdges[j];
       const double x_jp1 = oldXEdges[j + 1];
       Quadrilateral inputQ = Quadrilateral(x_j, x_jp1, vlo, vhi);
       if (!useFractionalArea) {
-        FractionalRebinning::rebinToOutput(inputQ, inputWS, i, j, outputWS,
-                                           newYBins);
+        FractionalRebinning::rebinToOutput(inputQ, inputWS, i, j, *outputWS,
+                                           newYBins.rawData());
       } else {
         FractionalRebinning::rebinToFractionalOutput(
-            inputQ, inputWS, i, j,
-            boost::dynamic_pointer_cast<RebinnedOutput>(outputWS), newYBins);
+            inputQ, inputWS, i, j, *outputRB, newYBins.rawData(), inputHasFA);
       }
     }
 
@@ -149,7 +157,7 @@ void Rebin2D::exec() {
   }
   PARALLEL_CHECK_INTERUPT_REGION
   if (useFractionalArea) {
-    boost::dynamic_pointer_cast<RebinnedOutput>(outputWS)->finalize();
+    outputRB->finalize(true, true);
   }
 
   FractionalRebinning::normaliseOutput(outputWS, inputWS, m_progress);
@@ -177,36 +185,30 @@ void Rebin2D::exec() {
  * @return A pointer to the output workspace
  */
 MatrixWorkspace_sptr
-Rebin2D::createOutputWorkspace(MatrixWorkspace_const_sptr parent,
-                               MantidVec &newXBins, MantidVec &newYBins,
+Rebin2D::createOutputWorkspace(const MatrixWorkspace_const_sptr &parent,
+                               BinEdges &newXBins, BinEdges &newYBins,
                                const bool useFractionalArea) const {
   using Kernel::VectorHelper::createAxisFromRebinParams;
+
+  auto &newY = newYBins.mutableRawData();
   // First create the two sets of bin boundaries
-  const int newXSize =
-      createAxisFromRebinParams(getProperty("Axis1Binning"), newXBins);
+  static_cast<void>(createAxisFromRebinParams(getProperty("Axis1Binning"),
+                                              newXBins.mutableRawData()));
   const int newYSize =
-      createAxisFromRebinParams(getProperty("Axis2Binning"), newYBins);
+      createAxisFromRebinParams(getProperty("Axis2Binning"), newY);
   // and now the workspace
+  HistogramData::BinEdges binEdges(newXBins);
   MatrixWorkspace_sptr outputWS;
   if (!useFractionalArea) {
-    outputWS = WorkspaceFactory::Instance().create(parent, newYSize - 1,
-                                                   newXSize, newXSize - 1);
+    outputWS = create<MatrixWorkspace>(*parent, newYSize - 1, binEdges);
   } else {
-    outputWS = WorkspaceFactory::Instance().create(
-        "RebinnedOutput", newYSize - 1, newXSize, newXSize - 1);
-    WorkspaceFactory::Instance().initializeFromParent(parent, outputWS, true);
+    outputWS = create<RebinnedOutput>(*parent, newYSize - 1, binEdges);
   }
-  Axis *const verticalAxis = new BinEdgeAxis(newYBins);
+  Axis *const verticalAxis = new BinEdgeAxis(newY);
   // Meta data
   verticalAxis->unit() = parent->getAxis(1)->unit();
   verticalAxis->title() = parent->getAxis(1)->title();
   outputWS->replaceAxis(1, verticalAxis);
-
-  HistogramData::BinEdges binEdges(newXBins);
-  // Now set the axis values
-  for (size_t i = 0; i < static_cast<size_t>(newYSize - 1); ++i) {
-    outputWS->setBinEdges(i, binEdges);
-  }
 
   return outputWS;
 }

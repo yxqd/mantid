@@ -1,6 +1,3 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAlgorithms/UnaryOperation.h"
 #include "MantidAPI/WorkspaceProperty.h"
 #include "MantidAPI/WorkspaceFactory.h"
@@ -13,10 +10,6 @@ using namespace Mantid::DataObjects;
 
 namespace Mantid {
 namespace Algorithms {
-UnaryOperation::UnaryOperation() : API::Algorithm() {
-  this->useHistogram = false;
-}
-
 /** Initialisation method.
  *  Defines input and output workspace properties
  */
@@ -50,17 +43,11 @@ void UnaryOperation::exec() {
   MatrixWorkspace_sptr out_work = getProperty(outputPropName());
   // Only create output workspace if different to input one
   if (out_work != in_work) {
-    out_work = WorkspaceFactory::Instance().create(in_work);
-    if (out_work->id() == "RebinnedOutput") {
-      RebinnedOutput_const_sptr intemp =
-          boost::dynamic_pointer_cast<const RebinnedOutput>(in_work);
-      RebinnedOutput_sptr outtemp =
-          boost::dynamic_pointer_cast<RebinnedOutput>(out_work);
-      for (size_t i = 0; i < outtemp->getNumberHistograms(); ++i) {
-        MantidVecPtr F;
-        F.access() = intemp->dataF(i);
-        outtemp->setF(i, F);
-      }
+    if (in_work->id() == "EventWorkspace") {
+      // Handles case of EventList which needs to be converted to Workspace2D
+      out_work = WorkspaceFactory::Instance().create(in_work);
+    } else {
+      out_work = in_work->clone();
     }
     setProperty(outputPropName(), out_work);
   }
@@ -76,19 +63,19 @@ void UnaryOperation::exec() {
 
   // Loop over every cell in the workspace, calling the abstract correction
   // function
-  PARALLEL_FOR2(in_work, out_work)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*in_work, *out_work))
   for (int64_t i = 0; i < int64_t(numSpec); ++i) {
     PARALLEL_START_INTERUPT_REGION
     // Copy the X values over
-    out_work->setX(i, in_work->refX(i));
+    out_work->setSharedX(i, in_work->sharedX(i));
     // Get references to the data
     // Output (non-const) ones first because they may copy the vector
     // if it's shared, which isn't thread-safe.
-    MantidVec &YOut = out_work->dataY(i);
-    MantidVec &EOut = out_work->dataE(i);
+    auto &YOut = out_work->mutableY(i);
+    auto &EOut = out_work->mutableE(i);
     const auto X = in_work->points(i);
-    const MantidVec &Y = in_work->readY(i);
-    const MantidVec &E = in_work->readE(i);
+    const auto &Y = in_work->y(i);
+    const auto &E = in_work->e(i);
 
     for (size_t j = 0; j < specSize; ++j) {
       // Call the abstract function, passing in the current values
@@ -120,7 +107,7 @@ void UnaryOperation::execEvent() {
 
   int64_t numHistograms = static_cast<int64_t>(outputWS->getNumberHistograms());
   API::Progress prog = API::Progress(this, 0.0, 1.0, numHistograms);
-  PARALLEL_FOR1(outputWS)
+  PARALLEL_FOR_IF(Kernel::threadSafe(*outputWS))
   for (int64_t i = 0; i < numHistograms; ++i) {
     PARALLEL_START_INTERUPT_REGION
     // switch to weighted events if needed, and use the appropriate helper

@@ -1,6 +1,5 @@
 #include "AlgorithmMonitor.h"
 #include "MantidUI.h"
-#include "MantidDock.h"
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidKernel/PropertyManager.h"
 #include "MantidKernel/MaskedProperty.h"
@@ -63,7 +62,6 @@ void AlgorithmMonitor::add(Mantid::API::IAlgorithm_sptr alg) {
   emit algorithmStarted(alg->getAlgorithmID());
   emit countChanged();
   unlock();
-  m_mantidUI->showAlgWidget();
 }
 
 //-----------------------------------------------------------------------------
@@ -131,7 +129,7 @@ void AlgorithmMonitor::showDialog() {
 //-----------------------------------------------------------------------------
 /** Cancel the given algorithm's execution */
 void AlgorithmMonitor::cancel(Mantid::API::AlgorithmID id,
-                              QPushButton *cancelBtn = NULL) {
+                              QPushButton *cancelBtn = nullptr) {
   if ((cancelBtn) && (cancelBtn->text() == "Cancel")) {
     cancelBtn->setText("Cancelling");
     cancelBtn->setEnabled(false);
@@ -153,7 +151,7 @@ void AlgorithmMonitor::cancelAll() {
 //-----------------------------------------------------------------------------------------------//
 MonitorDlg::MonitorDlg(QWidget *parent, AlgorithmMonitor *algMonitor)
     : QDialog(parent), m_algMonitor(algMonitor) {
-  m_tree = 0;
+  m_tree = nullptr;
   update();
   connect(algMonitor, SIGNAL(countChanged()), this, SLOT(update()),
           Qt::QueuedConnection);
@@ -208,6 +206,9 @@ void MonitorDlg::update() {
        itr != iend; ++itr) {
     IAlgorithm_sptr alg =
         Mantid::API::AlgorithmManager::Instance().getAlgorithm(*itr);
+    if (!alg) {
+      continue;
+    }
     // m_algorithms << alg;
     QStringList iList;
     iList << QString::fromStdString(alg->name());

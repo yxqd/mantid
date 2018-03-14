@@ -2,8 +2,12 @@
 #define MANTID_ALGORITHM_DETECTEFFICIENCYCOR_H_
 
 #include "MantidAPI/Algorithm.h"
+#include "MantidAPI/SpectrumInfo.h"
 #include "MantidKernel/V3D.h"
 #include "MantidGeometry/IDetector.h"
+#include "MantidGeometry/Objects/IObject.h"
+
+#include <list>
 
 namespace Mantid {
 namespace Algorithms {
@@ -102,15 +106,16 @@ private:
   /// Retrieve algorithm properties
   void retrieveProperties();
   /// Correct the given spectra index for efficiency
-  void correctForEfficiency(int64_t spectraIn);
+  void correctForEfficiency(int64_t spectraIn,
+                            const API::SpectrumInfo &spectrumInfo);
   /// Calculate one over the wave vector for 2 bin bounds
   double calculateOneOverK(double loBinBound, double uppBinBound) const;
   /// Sets the detector geometry cache if necessary
-  void getDetectorGeometry(const Geometry::IDetector_const_sptr &det,
-                           double &detRadius, Kernel::V3D &detAxis);
+  void getDetectorGeometry(const Geometry::IDetector &det, double &detRadius,
+                           Kernel::V3D &detAxis);
   /// Computes the distance to the given shape from a starting point
   double distToSurface(const Kernel::V3D &start,
-                       const Geometry::Object *shape) const;
+                       const Geometry::IObject *shape) const;
   /// Computes the detector efficiency for a given paramater
   double detectorEfficiency(const double alpha) const;
   /// Computes an approximate expansion of a Chebysev polynomial
@@ -134,7 +139,7 @@ private:
 
   /// A lookup of previously seen shape objects used to save calculation time as
   /// most detectors have the same shape
-  std::map<const Geometry::Object *, std::pair<double, Kernel::V3D>>
+  std::map<const Geometry::IObject *, std::pair<double, Kernel::V3D>>
       m_shapeCache;
   /// Sample position
   Kernel::V3D m_samplePos;

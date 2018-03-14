@@ -28,10 +28,8 @@ namespace Algorithms {
 
 using namespace Kernel;
 using API::WorkspaceProperty;
-using API::Axis;
 using API::MatrixWorkspace_const_sptr;
 using API::MatrixWorkspace;
-using API::Algorithm;
 using API::Progress;
 using API::Jacobian;
 
@@ -65,6 +63,9 @@ public:
       return gsl_matrix_get(m_J, iY, j);
     return 0.0;
   }
+  /** Zero all matrix elements.
+  */
+  void zero() override { gsl_matrix_set_zero(m_J); }
   /// Set the pointer to the GSL's jacobian
   void setJ(gsl_matrix *J) { m_J = J; }
 

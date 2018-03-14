@@ -1,11 +1,11 @@
 #include "MantidDataObjects/SpecialWorkspace2D.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/SpectraAxis.h"
+#include "MantidKernel/IPropertyManager.h"
 
 #include <fstream>
 #include <sstream>
 
-using Mantid::API::SpectraAxis;
 using std::set;
 using std::size_t;
 
@@ -29,7 +29,7 @@ DECLARE_WORKSPACE(SpecialWorkspace2D)
 SpecialWorkspace2D::SpecialWorkspace2D(Geometry::Instrument_const_sptr inst,
                                        const bool includeMonitors) {
   // Init the Workspace2D with one spectrum per detector, in the same order.
-  this->init(inst->getNumberDetectors(!includeMonitors), 1, 1);
+  this->initialize(inst->getNumberDetectors(!includeMonitors), 1, 1);
 
   // Copy the instrument
   this->setInstrument(inst);
@@ -39,7 +39,7 @@ SpecialWorkspace2D::SpecialWorkspace2D(Geometry::Instrument_const_sptr inst,
 
   // Make the mapping, which will be used for speed later.
   detID_to_WI.clear();
-  for (size_t wi = 0; wi < m_noVectors; wi++) {
+  for (size_t wi = 0; wi < getNumberHistograms(); wi++) {
     auto &dets = getSpectrum(wi).getDetectorIDs();
     for (auto det : dets) {
       detID_to_WI[det] = wi;
@@ -54,12 +54,11 @@ SpecialWorkspace2D::SpecialWorkspace2D(Geometry::Instrument_const_sptr inst,
  * @return created SpecialWorkspace2D
  */
 SpecialWorkspace2D::SpecialWorkspace2D(API::MatrixWorkspace_const_sptr parent) {
-  this->init(parent->getNumberHistograms(), 1, 1);
-  API::WorkspaceFactory::Instance().initializeFromParent(
-      parent, API::MatrixWorkspace_sptr(this, Mantid::NoDeleting()), false);
+  this->initialize(parent->getNumberHistograms(), 1, 1);
+  API::WorkspaceFactory::Instance().initializeFromParent(*parent, *this, false);
   // Make the mapping, which will be used for speed later.
   detID_to_WI.clear();
-  for (size_t wi = 0; wi < m_noVectors; wi++) {
+  for (size_t wi = 0; wi < getNumberHistograms(); wi++) {
     auto &dets = getSpectrum(wi).getDetectorIDs();
     for (auto det : dets) {
       detID_to_WI[det] = wi;
@@ -81,6 +80,16 @@ void SpecialWorkspace2D::init(const size_t &NVectors, const size_t &XLength,
         "SpecialWorkspace2D must have 'spectra' of length 1 only.");
   // Continue with standard initialization
   Workspace2D::init(NVectors, XLength, YLength);
+}
+
+void SpecialWorkspace2D::init(const HistogramData::Histogram &histogram) {
+  if (histogram.xMode() != HistogramData::Histogram::XMode::Points)
+    throw std::runtime_error(
+        "SpecialWorkspace2D can only be initialized with XMode::Points");
+  if (histogram.x().size() != 1)
+    throw std::runtime_error(
+        "SpecialWorkspace2D can only be initialized with length 1");
+  Workspace2D::init(histogram);
 }
 
 /**
@@ -128,7 +137,8 @@ double SpecialWorkspace2D::getValue(const detid_t detectorID,
   if (it == detID_to_WI.end())
     return defaultValue;
   else {
-    if (it->second < m_noVectors) // don't let it generate an exception
+    if (it->second <
+        getNumberHistograms()) // don't let it generate an exception
     {
       return this->dataY(it->second)[0];
     } else {
