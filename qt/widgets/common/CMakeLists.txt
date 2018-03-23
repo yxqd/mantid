@@ -53,6 +53,7 @@ set ( SRC_FILES
 	src/CatalogSearch.cpp
 	src/CatalogSelector.cpp
 	src/CheckboxHeader.cpp
+  src/Batch/BatchWidget.cpp
 	src/DataProcessorUI/AbstractTreeModel.cpp
 	src/DataProcessorUI/GenerateNotebook.cpp
 	src/DataProcessorUI/OneLevelTreeManager.cpp
@@ -234,6 +235,7 @@ set ( MOC_FILES
   inc/MantidQtWidgets/Common/FindFilesWorker.h
   inc/MantidQtWidgets/Common/WorkspacePresenter/WorkspaceTreeWidget.h
   inc/MantidQtWidgets/Common/WorkspacePresenter/WorkspaceTreeWidgetSimple.h
+  inc/MantidQtWidgets/Common/Batch/BatchWidget.h
   inc/MantidQtWidgets/Common/QtPropertyBrowser/ButtonEditorFactory.h
   inc/MantidQtWidgets/Common/QtPropertyBrowser/DoubleEditorFactory.h
   inc/MantidQtWidgets/Common/QtPropertyBrowser/DoubleDialogEditor.h
@@ -337,7 +339,8 @@ set ( INC_FILES
 	inc/MantidQtWidgets/Common/DataProcessorUI/DataProcessorView.h
 	inc/MantidQtWidgets/Common/DataProcessorUI/WhiteList.h
 	inc/MantidQtWidgets/Common/DataProcessorUI/WorkspaceCommand.h
-        inc/MantidQtWidgets/Common/DataProcessorUI/WorkspaceNameUtils.h
+	inc/MantidQtWidgets/Common/Batch/BatchWidget.h
+  inc/MantidQtWidgets/Common/DataProcessorUI/WorkspaceNameUtils.h
 	inc/MantidQtWidgets/Common/DataProcessorUI/GenericDataProcessorPresenterFactory.h
 	inc/MantidQtWidgets/Common/ParseKeyValueString.h
 	inc/MantidQtWidgets/Common/ParseNumerics.h
@@ -410,6 +413,7 @@ set ( UI_FILES
   inc/MantidQtWidgets/Common/UserFunctionDialog.ui
   inc/MantidQtWidgets/Common/PeriodicTableWidget.ui
   inc/MantidQtWidgets/Common/pqHelpWindow.ui
+  inc/MantidQtWidgets/Common/Batch/BatchWidget.ui
 )
 
 # Temporary workaround to remove stale ui_* header files after they
@@ -519,6 +523,7 @@ set( TEST_FILES
   test/SignalBlockerTest.h
   test/AlgorithmHintStrategyTest.h
   test/TrackedActionTest.h
+  test/Batch/RowTest.h
   test/DataProcessorUI/CommandsTest.h
   test/DataProcessorUI/GenerateNotebookTest.h
   test/DataProcessorUI/OneLevelTreeManagerTest.h
