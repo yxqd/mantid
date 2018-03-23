@@ -11,14 +11,13 @@ class TreeNode {
   using iterator = typename ChildrenStorage::iterator;
   using const_iterator = typename ChildrenStorage::const_iterator;
 
-  TreeNode();
-  explicit TreeNode(std::vector<TreeNode<T>> children);
+  TreeNode(T const& value);
+  explicit TreeNode(T const& value, std::vector<TreeNode<T>> children);
 
   bool hasParent() const;
-  TreeNode<T>& parent();
-  TreeNode<T> const& parent() const;
+  TreeNode<T>& parent() const;
 
-  void setParent(TreeNode<T>& parent);
+  void setParent(TreeNode<T>* parent);
   void setValue(T const& value);
 
   TreeNode<T>& push_back(T const&);
