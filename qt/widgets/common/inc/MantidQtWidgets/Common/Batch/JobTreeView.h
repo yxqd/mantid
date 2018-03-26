@@ -38,7 +38,7 @@ public:
   QModelIndex moveCursor(CursorAction cursorAction,
                          Qt::KeyboardModifiers modifiers) override;
 protected:
-
+  void keyPressEvent(QKeyEvent *event) override;
 private:
   QtTreeModelAdapter m_modelAdapter;
 };

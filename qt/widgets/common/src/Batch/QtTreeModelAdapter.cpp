@@ -32,6 +32,19 @@ RowNode *QtTreeModelAdapter::nthChildIfExists(RowNode &parent,
     return nullptr;
 }
 
+QModelIndex QtTreeModelAdapter::insertRow(const QModelIndex &parent, QtTreeRow row) {
+  if (parent.isValid()) {
+    auto newRowIndex = rowCount(parent);
+    auto& node = nodeFromModelIndex(parent);
+    beginInsertRows(parent, 0, newRowIndex);
+    node.push_back(RowNode(std::move(row)));
+    node.updateParentPointers();
+    endInsertRows();
+    return index(newRowIndex, 0, parent);
+  }
+  return QModelIndex();
+}
+
 QModelIndex QtTreeModelAdapter::index(int row, int column,
                                       const QModelIndex &parentIndex) const {
 
@@ -113,6 +126,6 @@ Cell& QtTreeModelAdapter::cellAt(const QModelIndex &modelIndex) {
   return row.value()[modelIndex.column()];
 }
 
-}; // namespace Batch
+} // namespace Batch
 } // namespace MantidWidgets
 } // namespace MantidQt

@@ -28,10 +28,12 @@ public:
   bool setData(const QModelIndex &index, const QVariant &value,
                int role = Qt::EditRole) override;
   Qt::ItemFlags flags(const QModelIndex &index) const override;
+  QModelIndex insertRow(const QModelIndex &parent, QtTreeRow row);
 
   virtual ~QtTreeModelAdapter() = default;
 
-  Cell& cellAt(const QModelIndex &modelIndex);
+  Cell &cellAt(const QModelIndex &modelIndex);
+
 private:
   RowNode &
   nodeFromModelIndex(const QModelIndex &modelIndex = QModelIndex()) const;

@@ -1,4 +1,6 @@
 #include "MantidQtWidgets/Common/Batch/JobTreeView.h"
+#include <QKeyEvent>
+#include <iostream>
 namespace MantidQt {
 namespace MantidWidgets {
 namespace Batch {
@@ -8,6 +10,28 @@ JobTreeView::JobTreeView(QWidget *parent)
   setModel(&m_modelAdapter);
   setItemDelegate(new CellDelegate(nullptr, m_modelAdapter));
   setAlternatingRowColors(false);
+}
+
+void JobTreeView::keyPressEvent(QKeyEvent *event) {
+  if (event->key() == Qt::Key_Return &&
+      (event->modifiers() & Qt::ControlModifier)) {
+    event->accept();
+    auto parent = m_modelAdapter.parent(selectedIndexes()[0]);
+    setCurrentIndex(parent);
+    edit(parent);
+    //auto index = m_modelAdapter.insertRow(
+        //selectedIndexes()[0], QtTreeRow({QtTreeCell("New"), QtTreeCell("Row")}));
+    //
+    //    auto expandAt = index;
+    //    while (expandAt.isValid()) {
+    //      setExpanded(expandAt, true);
+    //      expandAt = model()->parent(expandAt);
+    //    }
+    //    setCurrentIndex(index);
+    //    edit(index);
+  } else {
+    QTreeView::keyPressEvent(event);
+  }
 }
 
 QModelIndex JobTreeView::moveCursor(CursorAction cursorAction,

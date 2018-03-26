@@ -28,7 +28,7 @@ public:
   void addManyBeforeSibling(NodeLocation const& sibling, std::vector<T> value);
 
   void removeAt(NodeLocation location);
-  void removeAll(std::vector<NodeLocation> const& locations);
+  void removeMany(std::vector<NodeLocation> const& locations);
 
   Tree& operator=(Tree const& other);
 private:

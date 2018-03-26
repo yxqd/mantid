@@ -132,9 +132,6 @@ public:
     TS_ASSERT_EQUALS(3, rootNode[2].value());
   }
 
-  void test() {
-  }
-
   void testParentPointersOnThreeLevelDeepTree() {
     // clang-format off
     auto tree = TreeNode<int>(0,
