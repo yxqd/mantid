@@ -7,6 +7,7 @@ JobTreeView::JobTreeView(QWidget *parent)
     : QTreeView(parent), m_modelAdapter(this) {
   setModel(&m_modelAdapter);
   setItemDelegate(new CellDelegate(nullptr, m_modelAdapter));
+  setAlternatingRowColors(false);
 }
 
 QModelIndex JobTreeView::moveCursor(CursorAction cursorAction,

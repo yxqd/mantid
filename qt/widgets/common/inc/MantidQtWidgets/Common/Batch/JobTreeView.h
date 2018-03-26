@@ -37,6 +37,7 @@ public:
   JobTreeView(QWidget *parent = nullptr);
   QModelIndex moveCursor(CursorAction cursorAction,
                          Qt::KeyboardModifiers modifiers) override;
+protected:
 
 private:
   QtTreeModelAdapter m_modelAdapter;
