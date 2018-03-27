@@ -1,6 +1,5 @@
 #ifndef MANTIDQTMANTIDWIDGETS_BATCHWIDGET_H_
 #define MANTIDQTMANTIDWIDGETS_BATCHWIDGET_H_
-#include "MantidQtWidgets/Common/Batch/QtTreeModelAdapter.h"
 #include "MantidQtWidgets/Common/DllOption.h"
 #include "ui_BatchWidget.h"
 namespace MantidQt {

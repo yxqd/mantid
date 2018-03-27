@@ -54,10 +54,7 @@ set ( SRC_FILES
 	src/CatalogSelector.cpp
 	src/CheckboxHeader.cpp
   src/Batch/BatchWidget.cpp
-  src/Batch/QtTreeModelAdapter.cpp
   src/Batch/JobTreeView.cpp
-  src/Batch/QtTreeCell.cpp
-  src/Batch/QtTreeRow.cpp
 	src/DataProcessorUI/AbstractTreeModel.cpp
 	src/DataProcessorUI/GenerateNotebook.cpp
 	src/DataProcessorUI/OneLevelTreeManager.cpp
@@ -240,9 +237,6 @@ set ( MOC_FILES
   inc/MantidQtWidgets/Common/WorkspacePresenter/WorkspaceTreeWidget.h
   inc/MantidQtWidgets/Common/WorkspacePresenter/WorkspaceTreeWidgetSimple.h
   inc/MantidQtWidgets/Common/Batch/BatchWidget.h
-  inc/MantidQtWidgets/Common/Batch/QtTreeModelAdapter.h
-  inc/MantidQtWidgets/Common/Batch/TreeNode.h
-  inc/MantidQtWidgets/Common/Batch/TreeNode.tcc
   inc/MantidQtWidgets/Common/Batch/JobTreeView.h
   inc/MantidQtWidgets/Common/QtPropertyBrowser/ButtonEditorFactory.h
   inc/MantidQtWidgets/Common/QtPropertyBrowser/DoubleEditorFactory.h
@@ -531,7 +525,6 @@ set( TEST_FILES
   test/SignalBlockerTest.h
   test/AlgorithmHintStrategyTest.h
   test/TrackedActionTest.h
-  test/Batch/TreeNodeTest.h
   test/DataProcessorUI/CommandsTest.h
   test/DataProcessorUI/GenerateNotebookTest.h
   test/DataProcessorUI/OneLevelTreeManagerTest.h
