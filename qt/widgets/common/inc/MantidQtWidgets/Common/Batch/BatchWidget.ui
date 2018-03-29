@@ -39,6 +39,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QLineEdit" name="filterEdit">
+       <property name="placeholderText">
+        <string>Filter Rows</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="MantidQt::MantidWidgets::Batch::JobTreeView" name="viewTable">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">

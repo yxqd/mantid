@@ -1,6 +1,7 @@
 #ifndef MANTIDQTMANTIDWIDGETS_JOBTREEVIEW_H_
 #define MANTIDQTMANTIDWIDGETS_JOBTREEVIEW_H_
 #include "MantidQtWidgets/Common/DllOption.h"
+#include "MantidQtWidgets/Common/Batch/QtTreeCursorNavigation.h"
 #include <QTreeView>
 #include <QStyledItemDelegate>
 #include <QStandardItemModel>
@@ -21,7 +22,7 @@ public:
     painter->save();
     auto pen =
         (m_view.currentIndex() == index) ? QPen(Qt::black) : QPen(Qt::darkGray);
-    pen.setWidth(1);
+    pen.setWidth((m_view.currentIndex() == index) ? 2 : 1);
     painter->setPen(pen);
     painter->drawRect(option.rect.adjusted(1, 1, -1, -1));
     painter->restore();
@@ -45,11 +46,13 @@ private:
 };
 
 class IJobTreeViewSubscriber {
-  void notifyCellChanged(RowLocation itemIndex, int column,
-                         std::string newValue);
-  void notifyRequestRowInserted(RowLocation itemIndex);
-  void notifyRequestRowRemoved(RowLocation itemIndex);
-  void notifySelectedRowsChanged(std::vector<RowLocation> const &selection);
+public:
+  virtual void notifyCellChanged(RowLocation itemIndex, int column,
+                                 std::string newValue) = 0;
+  virtual void notifyRowInserted(RowLocation itemIndex) = 0;
+  virtual void notifyRowRemoved(RowLocation itemIndex) = 0;
+  virtual void
+  notifySelectedRowsChanged(std::vector<RowLocation> const &selection) = 0;
 };
 
 inline void assertOrThrow(bool condition, std::string const &message) {
@@ -61,12 +64,10 @@ inline void assertOrThrow(bool condition, std::string const &message) {
 class EXPORT_OPT_MANTIDQT_COMMON JobTreeView : public QTreeView {
   Q_OBJECT
 public:
-  QList<QStandardItem *>
-  rowFromStringVector(std::vector<std::string> const &rowText) const;
   JobTreeView(QWidget *parent = nullptr);
   JobTreeView(QStringList const &columnHeadings, QWidget *parent = nullptr);
 
-  void subscribe(IJobTreeViewSubscriber &notifyee);
+  void subscribe(IJobTreeViewSubscriber &subscriber);
 
   void insertChildRowOf(RowLocation const &parent, int beforeRow,
                         std::vector<std::string> const &rowText);
@@ -85,26 +86,43 @@ public:
 
   QModelIndex moveCursor(CursorAction cursorAction,
                          Qt::KeyboardModifiers modifiers) override;
+  void make(QModelIndex const &){};
 
 protected:
   void keyPressEvent(QKeyEvent *event) override;
-  QModelIndex addExpandAndMoveToSibling(QModelIndex const &index);
-  QModelIndex addExpandAndMoveToChild(QModelIndex const &index);
-  QModelIndex addSibling(QModelIndex const &index);
-  QModelIndex addChild(QModelIndex const &index);
-  void expand(QModelIndex const &index);
-  void expandAndMoveTo(QModelIndex const &index);
 
 private:
-  QModelIndex parentIndexOf(RowLocation const &location) const;
-  QStandardItem *parentItemOf(RowLocation const &location) const;
+  QModelIndex appendedEmptySiblingRow(QModelIndex const &index);
+  QModelIndex appendedSiblingRow(QModelIndex const &index,
+                                 QList<QStandardItem *> cells);
+  QModelIndex appendedEmptyChildRow(QModelIndex const &parent);
+  QModelIndex appendedChildRow(QModelIndex const &parent,
+                               QList<QStandardItem *> cells);
+  QModelIndex insertedChildRow(QModelIndex const &parent, int column,
+                               QList<QStandardItem *> cells);
 
-  QModelIndex modelIndexAt(RowLocation const &location) const;
-  QStandardItem *modelItemAt(RowLocation const &location) const;
+  QModelIndex expanded(QModelIndex const &index);
+  QModelIndex editAt(QModelIndex const &index);
+
+  QtTreeCursorNavigation navigation() const;
+
+  QModelIndex applyNavigationResult(QtTreeCursorNavigationResult const &result);
+  QModelIndex findOrMakeCellBelow(QModelIndex const &index);
+
+  QList<QStandardItem *>
+  rowFromRowText(std::vector<std::string> const &rowText) const;
+  std::vector<std::string> rowTextFromRow(QModelIndex firstCellIndex) const;
+
+  QModelIndex parentIndexOf(RowLocation const &location, int column = 0) const;
+  QStandardItem *parentItemOf(RowLocation const &location,
+                              int column = 0) const;
+
+  QModelIndex modelIndexAt(RowLocation const &location, int column = 0) const;
+  RowLocation rowLocationAt(QModelIndex const &index) const;
+  QStandardItem *modelItemAt(RowLocation const &location, int column = 0) const;
 
   QStandardItem *modelItemFromIndex(QModelIndex const &location) const;
 
-  QStandardItem *emptyRow() const;
   IJobTreeViewSubscriber *m_notifyee;
   QStandardItemModel m_model;
 };

@@ -55,6 +55,7 @@ set ( SRC_FILES
 	src/CheckboxHeader.cpp
   src/Batch/BatchWidget.cpp
   src/Batch/JobTreeView.cpp
+  src/Batch/QtTreeCursorNavigation.cpp
 	src/DataProcessorUI/AbstractTreeModel.cpp
 	src/DataProcessorUI/GenerateNotebook.cpp
 	src/DataProcessorUI/OneLevelTreeManager.cpp
@@ -238,6 +239,7 @@ set ( MOC_FILES
   inc/MantidQtWidgets/Common/WorkspacePresenter/WorkspaceTreeWidgetSimple.h
   inc/MantidQtWidgets/Common/Batch/BatchWidget.h
   inc/MantidQtWidgets/Common/Batch/JobTreeView.h
+  inc/MantidQtWidgets/Common/Batch/QtTreeCursorNavigation.h
   inc/MantidQtWidgets/Common/QtPropertyBrowser/ButtonEditorFactory.h
   inc/MantidQtWidgets/Common/QtPropertyBrowser/DoubleEditorFactory.h
   inc/MantidQtWidgets/Common/QtPropertyBrowser/DoubleDialogEditor.h
