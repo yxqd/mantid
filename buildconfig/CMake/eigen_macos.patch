@@ -1,0 +1,19 @@
+# HG changeset patch
+# User Christoph Hertzberg <chtz@informatik.uni-bremen.de>
+# Date 1497970683 -7200
+# Node ID dbab66d00651bf050d1426334a39b627abe7216e
+# Parent  0cb43994733f413565eb6dbe1495d5ec2694436f
+Make sure CMAKE_Fortran_COMPILER is set before checking for Fortran functions
+
+diff --git a/cmake/FindBLAS.cmake b/cmake/FindBLAS.cmake
+--- a/cmake/FindBLAS.cmake
++++ b/cmake/FindBLAS.cmake
+@@ -152,7 +152,7 @@
+ 
+ # Check the language being used
+ get_property( _LANGUAGES_ GLOBAL PROPERTY ENABLED_LANGUAGES )
+-if( _LANGUAGES_ MATCHES Fortran )
++if( _LANGUAGES_ MATCHES Fortran AND CMAKE_Fortran_COMPILER)
+   set( _CHECK_FORTRAN TRUE )
+ elseif( (_LANGUAGES_ MATCHES C) OR (_LANGUAGES_ MATCHES CXX) )
+   set( _CHECK_FORTRAN FALSE )
