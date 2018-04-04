@@ -2,12 +2,11 @@ cmake_minimum_required ( VERSION 3.5 )
 include( ExternalProject )
 
 ExternalProject_Add(eigen
-  URL "https://bitbucket.org/eigen/eigen/get/3.3.4.tar.gz"
-  URL_HASH "MD5=1a47e78efe365a97de0c022d127607c3"
-  DOWNLOAD_DIR ${CMAKE_CURRENT_BINARY_DIR}/extern-eigen/download
+  GIT_REPOSITORY https://github.com/eigenteam/eigen-git-mirror.git
+  GIT_TAG "@eigen_version@"
   SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/extern-eigen/source
   INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/extern-eigen/install
-  PATCH_COMMAND     "@GIT_EXECUTABLE@" reset --hard ${_tag}
+  PATCH_COMMAND     "@GIT_EXECUTABLE@" reset --hard @eigen_version@
             COMMAND "@GIT_EXECUTABLE@" apply --whitespace fix "@CMAKE_SOURCE_DIR@/buildconfig/CMake/eigen_macos.patch"
   CMAKE_CACHE_ARGS
     -DCMAKE_BUILD_TYPE:STRING=Release
