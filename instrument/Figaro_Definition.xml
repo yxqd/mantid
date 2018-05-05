@@ -39,6 +39,7 @@
       <along-beam axis="z"/>
       <pointing-up axis="y"/>
       <handedness val="right"/>
+      <theta-sign axis="y"/>
     </reference-frame>
   </defaults>
   <!--SOURCE-->

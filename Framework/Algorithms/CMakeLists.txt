@@ -321,6 +321,7 @@ set ( SRC_FILES
 	src/UnwrapSNS.cpp
 	src/UpdateScriptRepository.cpp
 	src/VesuvioL1ThetaResolution.cpp
+	src/Warp.cpp
 	src/WeightedMean.cpp
 	src/WeightedMeanOfWorkspace.cpp
 	src/WeightingStrategy.cpp
@@ -660,6 +661,7 @@ set ( INC_FILES
 	inc/MantidAlgorithms/UnwrapSNS.h
 	inc/MantidAlgorithms/UpdateScriptRepository.h
 	inc/MantidAlgorithms/VesuvioL1ThetaResolution.h
+	inc/MantidAlgorithms/Warp.h
 	inc/MantidAlgorithms/WeightedMean.h
 	inc/MantidAlgorithms/WeightedMeanOfWorkspace.h
 	inc/MantidAlgorithms/WeightingStrategy.h
