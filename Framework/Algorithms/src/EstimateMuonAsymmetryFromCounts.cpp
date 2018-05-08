@@ -52,6 +52,10 @@ void EstimateMuonAsymmetryFromCounts::init() {
                                           "instead of being estimated.");
   declareProperty(Kernel::make_unique<Kernel::ArrayProperty<double>>(
       "NormalizationConstant", Direction::Output));
+  declareProperty("OutputUnNormData", false, "If to output the unnormalised and unshifted data");
+  declareProperty(make_unique<API::WorkspaceProperty<API::MatrixWorkspace>>(
+	  "OutputUnNormWorkspace", "unNormalisedData", Direction::Output),
+	  "The name of the output 2D unnormalised workspace.");
 }
 
 /*
@@ -94,6 +98,8 @@ void EstimateMuonAsymmetryFromCounts::exec() {
   if (inputWS != outputWS) {
     outputWS = API::WorkspaceFactory::Instance().create(inputWS);
   }
+  bool extraData = getProperty("OutputUnNormData");
+  API::MatrixWorkspace_sptr tmpWS = API::WorkspaceFactory::Instance().create(outputWS);
   double startX = getProperty("StartX");
   double endX = getProperty("EndX");
   const Mantid::API::Run &run = inputWS->run();
@@ -149,10 +155,16 @@ void EstimateMuonAsymmetryFromCounts::exec() {
     if (normConst == 0.0) {
       normConst = estimateNormalisationConst(inputWS->histogram(specNum),
                                              numGoodFrames, startX, endX);
-    }
-    // Calculate the asymmetry
-    outputWS->setHistogram(
+    }    
+	outputWS->setHistogram(
         specNum, normaliseCounts(inputWS->histogram(specNum), numGoodFrames));
+	if (extraData) {
+		tmpWS->mutableX(specNum) = outputWS->x(specNum);
+		tmpWS->mutableY(specNum) = outputWS->y(specNum);
+		tmpWS->mutableE(specNum) = outputWS->e(specNum);
+		
+	}
+    // Calculate the asymmetry
     outputWS->mutableY(specNum) /= normConst;
     outputWS->mutableY(specNum) -= 1.0;
     outputWS->mutableE(specNum) /= normConst;
@@ -161,7 +173,10 @@ void EstimateMuonAsymmetryFromCounts::exec() {
     PARALLEL_END_INTERUPT_REGION
   }
   PARALLEL_CHECK_INTERUPT_REGION
-
+	  if (extraData) {
+		  tmpWS->setYUnit("Asymmetry");
+		  setProperty("OutputUnNormWorkspace", tmpWS);
+	  }
   setProperty("NormalizationConstant", norm);
   // Update Y axis units
   outputWS->setYUnit("Asymmetry");

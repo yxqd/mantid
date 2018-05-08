@@ -451,18 +451,27 @@ std::string MuonAnalysis::addItem(ItemType itemType, int tableRow,
 
   // Create workspace and a raw (unbinned) version of it
   auto ws = createAnalysisWorkspace(itemType, tableRow, plotType);
+  const std::string wsName = getNewAnalysisWSName(itemType, tableRow, plotType);
+  if (itemType == Group && plotType == Asymmetry) {
+	 ads.rename("tmp_unNorm", wsName + ";unNorm");
+	  
+  }
   auto wsRaw = createAnalysisWorkspace(itemType, tableRow, plotType, true);
 
   // Find names for new workspaces
-  const std::string wsName = getNewAnalysisWSName(itemType, tableRow, plotType);
   const std::string wsRawName = wsName + "_Raw";
+  std::vector<std::string> wsNames = { wsName, wsRawName };
 
   // Make sure they end up in the ADS
   ads.addOrReplace(wsName, ws);
   ads.addOrReplace(wsRawName, wsRaw);
-
+  if (itemType == Group && plotType == Asymmetry) {
+	  // move raw data
+	  ads.rename("tmp_unNorm", wsRawName + ";unNorm");
+	  wsNames.push_back(wsRawName + ";unNorm");
+	  wsNames.push_back(wsName + ";unNorm");
+  }
   // Make sure they are grouped
-  std::vector<std::string> wsNames = {wsName, wsRawName};
   MuonAnalysisHelper::groupWorkspaces(m_currentLabel, wsNames);
   return wsName;
 }

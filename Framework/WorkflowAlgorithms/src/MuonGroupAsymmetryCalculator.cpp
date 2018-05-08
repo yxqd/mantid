@@ -1,4 +1,5 @@
 #include "MantidWorkflowAlgorithms/MuonGroupAsymmetryCalculator.h"
+#include "MantidAPI/AnalysisDataService.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/ITableWorkspace.h"
 #include "MantidAPI/TableRow.h"
@@ -133,7 +134,15 @@ MuonGroupAsymmetryCalculator::estimateAsymmetry(const Workspace_sptr &inputWS,
     asym->setProperty("StartX", m_startX);
     asym->setProperty("EndX", m_endX);
     asym->setProperty("NormalizationIn", getStoredNorm());
+	asym->setProperty("OutputUnNormData", true);
+	asym->setProperty("OutputUnNormWorkspace", "tmp_unNorm");
     asym->execute();
+
+	API::MatrixWorkspace_sptr unnorm = asym->getProperty("OutputUnNormWorkspace");
+	API::AnalysisDataServiceImpl &ads = API::AnalysisDataService::Instance();
+    MatrixWorkspace_sptr singleWS = extractSpectrum(unnorm, index);
+    ads.addOrReplace("tmp_unNorm", singleWS);
+
     outWS = asym->getProperty("OutputWorkspace");
     auto tmp = asym->getPropertyValue("NormalizationConstant");
     // move to helper later as a function

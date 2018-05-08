@@ -166,10 +166,7 @@ private slots:
   void enumChanged(QtProperty *prop) override;
 
 private:
-  /// new menu option
-  QAction *m_fitActionTFAsymm;
-  /// override populating fit menu
-  void populateFitMenuButton(QSignalMapper *fitMapper, QMenu *fitMenu) override;
+
   void rescaleWS(const std::map<std::string, double> norm,
                  const std::string wsName, const double shift);
   void rescaleWS(const double norm, const std::string wsName,
