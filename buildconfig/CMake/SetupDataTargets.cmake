@@ -29,4 +29,5 @@ endfunction()
 #  - StandardTestData: data required by the unit tests and documentation tests
 #  - SystemTestData: data required for the system tests
 _create_data_target(StandardTestData "Testing/Data/DocTest/*.md5;Testing/Data/UnitTest/*.md5")
+_create_data_target(AcceptanceTestData "Testing/Data/AcceptanceTest/*.md5;Testing/Data/AcceptanceTest/*.md5")
 _create_data_target(SystemTestData "Testing/Data/SystemTest/*.md5;Testing/SystemTests/tests/analysis/reference/*.md5")
