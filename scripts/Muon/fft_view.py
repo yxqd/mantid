@@ -105,8 +105,8 @@ class FFTView(QtGui.QWidget):
         table_utils.setTableHeaders(self.FFTTable)
         table_utils.setTableHeaders(self.FFTTableA)
 
-        self.horizontalSpacer1 = QtGui.QSpacerItem(20, 94, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-        self.horizontalSpacer2 = QtGui.QSpacerItem(20, 280, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        self.horizontalSpacer1 = QtGui.QSpacerItem(20, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        self.horizontalSpacer2 = QtGui.QSpacerItem(20, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         # add to layout
         self.grid.addWidget(self.FFTTable)
         self.grid.addItem(self.horizontalSpacer1)
@@ -115,7 +115,10 @@ class FFTView(QtGui.QWidget):
         self.grid.addItem(self.horizontalSpacer2)
         self.grid.addWidget(self.button)
 
-   # add data to view
+    def getLayout(self):
+        return self.grid 
+
+  # add data to view
     def addItems(self,options):
         self.ws.clear()
         self.ws.addItems(options)

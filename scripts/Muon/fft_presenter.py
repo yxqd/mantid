@@ -22,6 +22,10 @@ class FFTPresenter(object):
         self.view.buttonSignal.connect(self.handleButton)
         self.view.phaseCheckSignal.connect(self.phaseCheck)
 
+    @property
+    def widget(self):
+        return self.view
+
     # turn on button
     def activate(self):
         self.view.activateButton()
@@ -59,8 +63,7 @@ class FFTPresenter(object):
             return
         # put this on its own thread so not to freeze Mantid
         self.thread=self.createThread()
-        self.thread.started.connect(self.deactivate)
-        self.thread.finished.connect(self.handleFinished)
+        self.thread.threadWrapperSetUp(self.deactivate,self.handleFinished)
 
         # make some inputs
         inputs={}
@@ -102,18 +105,16 @@ class FFTPresenter(object):
             if self.view.isRaw():
                 self.view.addRaw(FFTInputs,"OutputWorkspace")
         inputs["FFT"]=FFTInputs
-        try:
-            self.thread.loadData(inputs)
-            self.thread.start()
-            self.view.setPhaseBox()
-        except:
-            pass
+        self.thread.loadData(inputs)
+        self.thread.start()
+        self.view.setPhaseBox()
 
     # kills the thread at end of execution
     def handleFinished(self):
         self.activate()
+        self.thread.threadWrapperTearDown(self.deactivate,self.handleFinished)
         self.thread.deleteLater()
-        self.thread=None
+        self.thread = None
 
     def get_FFT_input(self):
         FFTInputs=self.view.initFFTInput()
