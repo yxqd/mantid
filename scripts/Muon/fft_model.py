@@ -45,7 +45,6 @@ class FFTWrapper(object):
             if self.phaseTable["newTable"]:
                 self.model.makePhaseQuadTable(self.phaseTable)
             self.model.PhaseQuad()
- 
         if self.preRe is not None:
             self.model.preAlg(self.preRe)
  
@@ -128,7 +127,7 @@ class FFTModel(object):
         phaseQuad.setProperty("PhaseTable","PhaseTable")
         phaseQuad.setProperty("OutputWorkspace","__phaseQuad__")
         phaseQuad.execute()
-        mantid.AnalysisDataService.addOrReplace("PhaseTable","__phaseQuad__")
+        mantid.AnalysisDataService.addOrReplace("__phaseQuad__",alg.getProperty("OutputWorkspace").value)
 
     def getName(self):
         return self.name
