@@ -413,14 +413,14 @@ void OptimizeCrystalPlacement::exec() {
     g_log.notice() << "Output Status=" << OutputStatus << '\n';
 
     //------------------ Fix up Covariance output --------------------
-    declareProperty(
+    /*declareProperty(
         make_unique<WorkspaceProperty<ITableWorkspace> >(
             "OutputNormalisedCovarianceMatrixOptX", "CovarianceInfo",
             Direction::Output),
         "The name of the TableWorkspace in which to store the final "
         "covariance matrix");
 
-    /*ITableWorkspace_sptr NormCov =
+    ITableWorkspace_sptr NormCov =
         fit_alg->getProperty("OutputNormalisedCovarianceMatrix");
     setProperty("OutputNormalisedCovarianceMatrixOptX",
                 NormCov); // What if 2 instances are run*/
