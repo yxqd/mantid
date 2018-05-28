@@ -454,5 +454,14 @@ void AddSampleLog::getMetaData(API::MatrixWorkspace_const_sptr dataws,
   return;
 }
 
+Parallel::ExecutionMode AddSampleLog::getParallelExecutionMode(
+    const std::map<std::string, Parallel::StorageMode> &storageModes) const {
+  // TimeSeriesWorkspace uses WorkspaceIndex, so this would only work if it is
+  // cloned. Could to a less restrictive test if required, allowing cloned.
+  if (storageModes.count("TimeSeriesWorkspace") != 0)
+    return Parallel::ExecutionMode::Invalid;
+  return getCorrespondingExecutionMode(storageModes.at("Workspace"));
+}
+
 } // namespace Algorithms
 } // namespace Mantid

@@ -1,14 +1,9 @@
 #ifndef MANTID_ALGORITHMS_DETECTORDIAGNOSTIC_H_
 #define MANTID_ALGORITHMS_DETECTORDIAGNOSTIC_H_
 
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
-#include "MantidAPI/Algorithm.h"
+#include "MantidAPI/DistributedAlgorithm.h"
 #include "MantidDataObjects/MaskWorkspace.h"
 #include "MantidGeometry/IComponent.h"
-
-#include <set>
 
 namespace Mantid {
 namespace Algorithms {
@@ -42,10 +37,8 @@ namespace Algorithms {
   File change history is stored at: <https://github.com/mantidproject/mantid>
   Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
-class DLLExport DetectorDiagnostic : public API::Algorithm {
+class DLLExport DetectorDiagnostic : public API::DistributedAlgorithm {
 public:
-  /// Default constructor
-  DetectorDiagnostic();
   /// Algorithm's category for identification
   const std::string category() const override;
   /// Algorithm's name for identification overriding a virtual method
@@ -130,23 +123,23 @@ protected:
 
   /// An estimate of the percentage of the algorithm runtimes that has been
   /// completed
-  double m_fracDone;
+  double m_fracDone{0.0};
   /// An estimate total number of additions or equilivent required to compute a
   /// spectrum
-  int m_TotalTime;
+  int m_TotalTime{RTTotal};
 
   /// number of parents up, 0 go to instrument
-  int m_parents;
+  int m_parents{0};
   /// The number of tests to be run
-  double m_progStepWidth;
+  double m_progStepWidth{0.0};
   /// Starting workspace index to run tests on
-  int m_minIndex;
+  int m_minIndex{0};
   /// Ending workspace index to run tests on
-  int m_maxIndex;
+  int m_maxIndex{EMPTY_INT()};
   /// Starting x-axis value for integrations
-  double m_rangeLower;
+  double m_rangeLower{EMPTY_DBL()};
   /// Ending x-axis value for integrations
-  double m_rangeUpper;
+  double m_rangeUpper{EMPTY_DBL()};
   //@}
 };
 

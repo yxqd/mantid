@@ -62,6 +62,7 @@ public:
 
   int rank() const;
   int size() const;
+  void barrier() const;
   template <typename... T> void send(T &&... args) const;
   template <typename... T> Status recv(T &&... args) const;
   template <typename... T> Request isend(T &&... args) const;

@@ -56,7 +56,7 @@ class CNCSReductionTest(stresstesting.MantidStressTest):
                         DetVanIntRangeLow=52000.0,
                         DetVanIntRangeHigh=53000.0,
                         DetVanIntRangeUnits="TOF",
-                        SaveProcessedDetVan=True,
+                        SaveProcessedDetVan=False,
                         SaveProcDetVanFilename=self.vanFile)
 
         rotationdevice="SERotator2"

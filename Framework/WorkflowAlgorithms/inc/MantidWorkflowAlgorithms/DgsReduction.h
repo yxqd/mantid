@@ -34,7 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 File change history is stored at: <https://github.com/mantidproject/mantid>
 Code Documentation is available at: <http://doxygen.mantidproject.org>
  */
-class DLLExport DgsReduction : public API::DataProcessorAlgorithm {
+class DLLExport DgsReduction : public API::DistributedDataProcessorAlgorithm {
 public:
   const std::string name() const override;
   /// Summary of algorithms purpose

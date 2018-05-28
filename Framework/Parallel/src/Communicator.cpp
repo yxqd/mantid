@@ -38,6 +38,14 @@ int Communicator::size() const {
   return 1;
 }
 
+void Communicator::barrier() const {
+  if (m_backend)
+    return m_backend->barrier();
+#ifdef MPI_EXPERIMENTAL
+  return m_communicator.barrier();
+#endif
+}
+
 #ifdef MPI_EXPERIMENTAL
 /// For internal use only. Casts the Communicator to the underlying
 /// boost::mpi::communicator object.

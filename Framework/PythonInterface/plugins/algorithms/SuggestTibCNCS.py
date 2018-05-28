@@ -1,6 +1,6 @@
 #pylint: disable=no-init,invalid-name
 from __future__ import (absolute_import, division, print_function)
-from mantid.api import PythonAlgorithm, AlgorithmFactory
+from mantid.api import PythonParallelAlgorithm, AlgorithmFactory
 from mantid.kernel import FloatBoundedValidator,Direction
 import numpy as np
 
@@ -25,7 +25,7 @@ class Interval(object):
         return False
 
 
-class SuggestTibCNCS(PythonAlgorithm):
+class SuggestTibCNCS(PythonParallelAlgorithm):
     """ Check if certain sample logs exists on a workspace
     """
 

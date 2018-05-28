@@ -2,7 +2,7 @@
 #define MANTID_WORKFLOWALGORITHMS_DGSPREPROCESSDATA_H_
 
 #include "MantidKernel/System.h"
-#include "MantidAPI/Algorithm.h"
+#include "MantidAPI/DistributedAlgorithm.h"
 
 namespace Mantid {
 namespace WorkflowAlgorithms {
@@ -34,7 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 File change history is stored at: <https://github.com/mantidproject/mantid>
 Code Documentation is available at: <http://doxygen.mantidproject.org>
  */
-class DLLExport DgsPreprocessData : public API::Algorithm {
+class DLLExport DgsPreprocessData : public API::DistributedAlgorithm {
 public:
   const std::string name() const override;
   /// Summary of algorithms purpose

@@ -453,18 +453,6 @@ DetectorDiagnostic::doDetVanTest(API::MatrixWorkspace_sptr inputWS,
   return localMask;
 }
 
-//--------------------------------------------------------------------------
-// Public member functions
-//--------------------------------------------------------------------------
-DetectorDiagnostic::DetectorDiagnostic()
-    : API::Algorithm(), m_fracDone(0.0), m_TotalTime(RTTotal), m_parents(0),
-      m_progStepWidth(0.0), m_minIndex(0), m_maxIndex(EMPTY_INT()),
-      m_rangeLower(EMPTY_DBL()), m_rangeUpper(EMPTY_DBL()) {}
-
-//--------------------------------------------------------------------------
-// Protected member functions
-//--------------------------------------------------------------------------
-
 /**
  * Integrate each spectra to get the number of counts
  * @param inputWS :: The workspace to integrate

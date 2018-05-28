@@ -60,6 +60,7 @@ public:
   const ThreadingBackend &operator=(const ThreadingBackend &) = delete;
 
   int size() const;
+  void barrier() const;
 
   template <typename... T>
   void send(int source, int dest, int tag, T &&... args);

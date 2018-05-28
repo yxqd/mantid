@@ -1,7 +1,6 @@
-//----------------------------------------------------------------------
-// Includes
-//----------------------------------------------------------------------
 #include "MantidAlgorithms/Integration.h"
+#include "MantidAlgorithms/ExtractSpectra2.h"
+#include "MantidAPI/Algorithm.tcc"
 #include "MantidAPI/NumericAxis.h"
 #include "MantidAPI/TextAxis.h"
 #include "MantidAPI/WorkspaceFactory.h"
@@ -28,9 +27,8 @@ using namespace DataObjects;
  *
  */
 void Integration::init() {
-  declareProperty(
-      make_unique<WorkspaceProperty<>>("InputWorkspace", "", Direction::Input),
-      "The input workspace to integrate.");
+  declareWorkspaceInputProperties<MatrixWorkspace>(
+      "InputWorkspace", "The input workspace to integrate.");
   declareProperty(make_unique<WorkspaceProperty<>>("OutputWorkspace", "",
                                                    Direction::Output),
                   "The output workspace with the results of the integration.");
@@ -43,9 +41,9 @@ void Integration::init() {
   auto mustBePositive = boost::make_shared<BoundedValidator<int>>();
   mustBePositive->setLower(0);
   declareProperty("StartWorkspaceIndex", 0, mustBePositive,
-                  "Index of the first spectrum to integrate.");
+                  "Deprecated, use InputWorkspaceIndexSet.");
   declareProperty("EndWorkspaceIndex", EMPTY_INT(), mustBePositive,
-                  "Index of the last spectrum to integrate.");
+                  "Deprecated, use InputWorkspaceIndexSet.");
   declareProperty("IncludePartialBins", false,
                   "If true then partial bins from the beginning and end of the "
                   "input range are also included in the integration.");
@@ -92,31 +90,31 @@ void Integration::exec() {
   /// List of X values to finish the integration at
   const std::vector<double> maxRanges = getProperty("RangeUpperList");
 
+  // Copy indices from legacy properties
+  if ((minWsIndex != 0) || (maxWsIndex != EMPTY_INT())) {
+    if (!isDefault("InputWorkspaceIndexSet"))
+      throw std::runtime_error("Cannot provide both InputWorkspaceIndexSet and "
+                               "(Start|End)WorkspaceIndex at the same time.");
+    setProperty("InputWorkspaceIndexSet",
+                std::to_string(minWsIndex) + '-' + std::to_string(maxWsIndex));
+    g_log.warning("The 'StartWorkspaceIndex' and 'EndWorkspaceIndex' "
+                  "properties are deprecated. Use 'InputWorkspaceIndexSet' "
+                  "instead.");
+  }
+
   // Get the input workspace
-  MatrixWorkspace_sptr localworkspace = this->getInputWorkspace();
+  MatrixWorkspace_sptr localworkspace;
+  Indexing::SpectrumIndexSet indexSet;
+  std::tie(localworkspace, indexSet) =
+      getWorkspaceAndIndices<MatrixWorkspace>("InputWorkspace");
 
-  const int numberOfSpectra =
-      static_cast<int>(localworkspace->getNumberHistograms());
-
-  // Check 'StartWorkspaceIndex' is in range 0-numberOfSpectra
-  if (minWsIndex >= numberOfSpectra) {
-    g_log.warning("StartWorkspaceIndex out of range! Set to 0.");
-    minWsIndex = 0;
-  }
-  if (isEmpty(maxWsIndex))
-    maxWsIndex = numberOfSpectra - 1;
-  if (maxWsIndex > numberOfSpectra - 1 || maxWsIndex < minWsIndex) {
-    g_log.warning(
-        "EndWorkspaceIndex out of range! Set to max workspace index.");
-    maxWsIndex = numberOfSpectra - 1;
-  }
   auto rangeListCheck = [minWsIndex, maxWsIndex](
       const std::vector<double> &list, const char *name) {
     if (!list.empty() &&
-        list.size() != static_cast<size_t>(maxWsIndex - minWsIndex) + 1) {
+        list.size() != indexSet.size() {
       std::ostringstream sout;
       sout << name << " has " << list.size() << " values but it should contain "
-           << maxWsIndex - minWsIndex + 1 << '\n';
+           << indexSet.size() << '\n';
       throw std::runtime_error(sout.str());
     }
   };
@@ -150,58 +148,41 @@ void Integration::exec() {
   }
 
   // Create the 2D workspace (with 1 bin) for the output
+  auto extract = boost::make_shared<ExtractSpectra2>();
+  setupAsChildAlgorithm(extract);
+  IndexType indexType = getProperty("InputWorkspaceIndexType");
+  std::vector<int64_t> indices = getProperty("InputWorkspaceIndexSet");
+  extract->setWorkspaceInputProperties("InputWorkspace", localworkspace,
+                                       indexType, indices);
+  extract->execute();
   MatrixWorkspace_sptr outputWorkspace =
-      API::WorkspaceFactory::Instance().create(
-          localworkspace, maxWsIndex - minWsIndex + 1, 2, 1);
-  auto rebinned_input =
-      boost::dynamic_pointer_cast<const RebinnedOutput>(localworkspace);
+      extract->getProperty("OutputWorkspace");
   auto rebinned_output =
       boost::dynamic_pointer_cast<RebinnedOutput>(outputWorkspace);
 
   bool is_distrib = outputWorkspace->isDistribution();
-  Progress progress(this, progressStart, 1.0, maxWsIndex - minWsIndex + 1);
-
-  const bool axisIsText = localworkspace->getAxis(1)->isText();
-  const bool axisIsNumeric = localworkspace->getAxis(1)->isNumeric();
+  Progress progress(this, progressStart, 1.0,
+                    outputWorkspace.getNumberHistograms());
 
   // Loop over spectra
-  PARALLEL_FOR_IF(Kernel::threadSafe(*localworkspace, *outputWorkspace))
-  for (int i = minWsIndex; i <= maxWsIndex; ++i) {
+  PARALLEL_FOR_IF(Kernel::threadSafe(*outputWorkspace))
+  for (int i = 0; i < static_cast<int>(outputWorkspace->getNumberHistograms());
+       ++i) {
     PARALLEL_START_INTERUPT_REGION
-    // Workspace index on the output
-    const int outWI = i - minWsIndex;
 
-    // Copy Axis values from previous workspace
-    if (axisIsText) {
-      TextAxis *newAxis = dynamic_cast<TextAxis *>(outputWorkspace->getAxis(1));
-      if (newAxis)
-        newAxis->setLabel(outWI, localworkspace->getAxis(1)->label(i));
-    } else if (axisIsNumeric) {
-      NumericAxis *newAxis =
-          dynamic_cast<NumericAxis *>(outputWorkspace->getAxis(1));
-      if (newAxis)
-        newAxis->setValue(outWI, (*(localworkspace->getAxis(1)))(i));
-    }
-
-    // This is the output
-    auto &outSpec = outputWorkspace->getSpectrum(outWI);
-    // This is the input
-    const auto &inSpec = localworkspace->getSpectrum(i);
-
-    // Copy spectrum number, detector IDs
-    outSpec.copyInfoFrom(inSpec);
+    auto &spec = outputWorkspace->getSpectrum(i);
 
     // Retrieve the spectrum into a vector (Histogram)
-    const auto &X = inSpec.x();
-    const auto &Y = inSpec.y();
-    const auto &E = inSpec.e();
+    const auto &X = spec.x();
+    const auto &Y = spec.y();
+    const auto &E = spec.e();
 
     // Find the range [min,max]
     MantidVec::const_iterator lowit, highit;
     const double lowerLimit =
-        minRanges.empty() ? minRange : std::max(minRange, minRanges[outWI]);
+        minRanges.empty() ? minRange : std::max(minRange, minRanges[i]);
     const double upperLimit =
-        maxRanges.empty() ? maxRange : std::min(maxRange, maxRanges[outWI]);
+        maxRanges.empty() ? maxRange : std::min(maxRange, maxRanges[i]);
 
     // If doing partial bins, we want to set the bin boundaries to the specified
     // values regardless of whether they're 'in range' for this spectrum

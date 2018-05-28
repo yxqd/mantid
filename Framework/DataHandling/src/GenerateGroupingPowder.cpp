@@ -7,6 +7,7 @@
 #include "MantidGeometry/Instrument.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/System.h"
+#include "MantidParallel/Communicator.h"
 
 #include <Poco/DOM/AutoPtr.h>
 #include <Poco/DOM/Document.h>
@@ -60,6 +61,12 @@ void GenerateGroupingPowder::init() {
 /** Execute the algorithm.
  */
 void GenerateGroupingPowder::exec() {
+  if (communicator().rank() != 0) {
+    // File is written by rank 0. Must wait until complete.
+    communicator().barrier();
+    return;
+  }
+
   MatrixWorkspace_const_sptr input_ws = getProperty("InputWorkspace");
   // Check if workspace has detectors. If not, throw an exception.
   const auto &detectorInfo = input_ws->detectorInfo();
@@ -172,6 +179,7 @@ void GenerateGroupingPowder::exec() {
 
   // Close the file
   outPAR_file.close();
+  communicator().barrier();
 }
 
 } // namespace Mantid
