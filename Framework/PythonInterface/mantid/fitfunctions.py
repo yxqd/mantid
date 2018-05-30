@@ -139,13 +139,14 @@ class FunctionWrapper(object):
             prod = prod.flatten()
         return prod
 
-    def __call__(self, x, *params):
+    def __call__(self, x, *params, **attrs):
         """
         Implement function evaluation, such that
         func(args) is equivalent func.__call__(args)
 
         :param x:      x value or list of x values
         :param params: list of parameter values
+        :param attrs: attributes as name/value pairs
         """
         import numpy as np
 
@@ -165,6 +166,9 @@ class FunctionWrapper(object):
             x_list = x
         else:
             x_list = [x]
+
+        for name, value in kwargs:
+            self.fun.setAttributeValue(name, value)
 
         for i in range(len(params)):
             self.fun.setParameter(i, params[i])
@@ -802,3 +806,56 @@ class _IFunction1DWrapperCreator(_ExportedIFunction1D):
 
 
 IFunction1D = _IFunction1DWrapperCreator
+
+
+def make_fit_function(*args, **kwargs):
+    """ Decorator that transforms a python function into a Mantid fit function.
+
+    The function must have one or more arguments. The first argument is the x-values (numpy array) on which to evaluate the
+    function. The rest of the arguments are the fitting parameters. This is the interface used by `scipy.optimize.curve_fit`
+    function. The parameters can be given defaults which will be used as the initial values.
+
+    Examples:
+
+    @make_fit_function
+    def my_fun(x, a, b):
+        # makes: name=my_fun,a=0,b=0
+        return x*a + b
+
+    @make_fit_function
+    def other_fun(x, a=1, b=2):
+        # makes: name=other_fun,a=1,b=2
+        return x*a + b
+
+    The function name becomes the name of the fit function. It can be used as any other fit function:
+
+    f = my_fun()
+    f.a = 3
+    Fit(f, workspace)
+    y = f([1, 2, 3])
+    """
+
+    initial_values = kwargs
+
+    def maker(fun):
+
+        class WrapperFFClass(IFunction1D):
+            # collect names of the arguments starting with the second one.
+            param_names = fun.__code__.co_varnames[1:fun.__code__.co_argcount]
+
+            def init(self):
+                for name in self.param_names:
+                    self.declareParameter(name, initial_values.get(name, 0.0))
+
+            def function1D(self, xvals):
+                params = [self.getParameterValue(name) for name in self.param_names]
+                return fun(xvals, *params)
+
+        cls = WrapperFFClass
+        cls.__name__ = fun.__name__
+        FunctionFactory.subscribe(cls)
+        return cls
+
+    if len(args) == 1 and hasattr(args[0], '__call__'):
+        return maker(args[0])
+    return maker
