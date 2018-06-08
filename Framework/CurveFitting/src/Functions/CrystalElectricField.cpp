@@ -610,6 +610,12 @@ void zeeman(ComplexFortranMatrix &hamiltonian, const int nre,
   }
 }
 
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
+} // anonymous namespace
+
 //---------------------------------------
 // Calculation of the eigenvalues/vectors
 //---------------------------------------
@@ -635,12 +641,6 @@ void diagonalise(const ComplexFortranMatrix &hamiltonian,
   auto eshift = eigenvalues(indexMin);
   eigenvalues += -eshift;
 }
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-
-} // anonymous namespace
 
 /// Calculates the eigenvalues/vectors of a crystal field Hamiltonian in a
 /// specified external magnetic field.
@@ -669,12 +669,7 @@ void calculateZeemanEigensystem(DoubleFortranVector &eigenvalues,
   diagonalise(h, eigenvalues, eigenvectors);
 }
 
-/// Calculate eigenvalues and eigenvectors of the crystal field hamiltonian.
-/// @param eigenvalues :: Output. The eigenvalues in ascending order. The
-/// smallest value is subtracted from all eigenvalues so they always
-/// start with 0.
-/// @param eigenvectors :: Output. The matrix of eigenvectors. The eigenvectors
-///    are in columns with indices corresponding to the indices of eigenvalues.
+/// Calculate the crystal field hamiltonian.
 /// @param hamiltonian  :: Output. The crystal field hamiltonian.
 /// @param hzeeman  :: Output. The zeeman hamiltonian.
 /// @param nre :: A number denoting the type of ion.
@@ -686,9 +681,7 @@ void calculateZeemanEigensystem(DoubleFortranVector &eigenvalues,
 /// @param alpha_euler :: The alpha Euler angle in radians
 /// @param beta_euler :: The beta Euler angle in radians
 /// @param gamma_euler :: The gamma Euler angle in radians
-void calculateEigensystem(DoubleFortranVector &eigenvalues,
-                          ComplexFortranMatrix &eigenvectors,
-                          ComplexFortranMatrix &hamiltonian,
+void calculateHamiltonian(ComplexFortranMatrix &hamiltonian,
                           ComplexFortranMatrix &hzeeman, int nre,
                           const DoubleFortranVector &bmol,
                           const DoubleFortranVector &bext,
@@ -826,8 +819,37 @@ void calculateEigensystem(DoubleFortranVector &eigenvalues,
   // Adds the external and molecular fields
   zeeman(hzeeman, nre, rbext, bmol);
   hamiltonian -= hzeeman;
+}
 
-  // Now run the actual diagonalisation
+
+/// Calculate eigenvalues and eigenvectors of the crystal field hamiltonian.
+/// @param eigenvalues :: Output. The eigenvalues in ascending order. The
+/// smallest value is subtracted from all eigenvalues so they always
+/// start with 0.
+/// @param eigenvectors :: Output. The matrix of eigenvectors. The eigenvectors
+///    are in columns with indices corresponding to the indices of eigenvalues.
+/// @param hamiltonian  :: Output. The crystal field hamiltonian.
+/// @param hzeeman  :: Output. The zeeman hamiltonian.
+/// @param nre :: A number denoting the type of ion.
+///  |1=Ce|2=Pr|3=Nd|4=Pm|5=Sm|6=Eu|7=Gd|8=Tb|9=Dy|10=Ho|11=Er|12=Tm|13=Yb|
+/// @param bmol :: The molecular field in Cartesian (Bx, By, Bz) in Tesla
+/// @param bext :: The external field in Cartesian (Hx, Hy, Hz) in Tesla
+///    The z-axis is parallel to the crystal field quantisation axis.
+/// @param bkq :: The crystal field parameters in meV.
+/// @param alpha_euler :: The alpha Euler angle in radians
+/// @param beta_euler :: The beta Euler angle in radians
+/// @param gamma_euler :: The gamma Euler angle in radians
+void calculateEigensystem(DoubleFortranVector &eigenvalues,
+                          ComplexFortranMatrix &eigenvectors,
+                          ComplexFortranMatrix &hamiltonian,
+                          ComplexFortranMatrix &hzeeman, int nre,
+                          const DoubleFortranVector &bmol,
+                          const DoubleFortranVector &bext,
+                          const ComplexFortranMatrix &bkq, double alpha_euler,
+                          double beta_euler, double gamma_euler) {
+
+  calculateHamiltonian(hamiltonian, hzeeman, nre, bmol, bext, bkq, alpha_euler,
+                       beta_euler, gamma_euler);
   diagonalise(hamiltonian, eigenvalues, eigenvectors);
 }
 

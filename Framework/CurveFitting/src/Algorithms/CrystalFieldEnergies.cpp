@@ -1,5 +1,4 @@
 #include "MantidCurveFitting/Algorithms/CrystalFieldEnergies.h"
-//#include "MantidKernel/ArrayLengthValidator.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/make_unique.h"

@@ -55,6 +55,8 @@ protected:
   /// Store the default domain size after first
   /// function evaluation
   mutable size_t m_defaultDomainSize;
+private:
+  void modifyHamiltonian(ComplexFortranMatrix &ham) const;
 };
 
 class MANTID_CURVEFITTING_DLL CrystalFieldPeaksBaseImpl

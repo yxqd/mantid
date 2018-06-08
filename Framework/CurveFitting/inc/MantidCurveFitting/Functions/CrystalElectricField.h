@@ -15,6 +15,16 @@ void MANTID_CURVEFITTING_DLL calculateEigensystem(
     const ComplexFortranMatrix &bkq, double alpha_euler = 0.0,
     double beta_euler = 0.0, double gamma_euler = 0.0);
 
+void MANTID_CURVEFITTING_DLL calculateHamiltonian(
+    ComplexFortranMatrix &hamiltonian, ComplexFortranMatrix &hzeeman, int nre,
+    const DoubleFortranVector &bmol, const DoubleFortranVector &bext,
+    const ComplexFortranMatrix &bkq, double alpha_euler = 0.0,
+    double beta_euler = 0.0, double gamma_euler = 0.0);
+
+void MANTID_CURVEFITTING_DLL diagonalise(
+    const ComplexFortranMatrix &hamiltonian, DoubleFortranVector &eigenvalues,
+    ComplexFortranMatrix &eigenvectors);
+
 inline void MANTID_CURVEFITTING_DLL
 calculateEigensystem(DoubleFortranVector &eigenvalues,
                      ComplexFortranMatrix &eigenvectors,

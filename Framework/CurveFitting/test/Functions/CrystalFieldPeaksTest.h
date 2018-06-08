@@ -10,14 +10,55 @@
 #include "MantidAPI/ParameterTie.h"
 #include "MantidAPI/TableRow.h"
 #include "MantidCurveFitting/Algorithms/EvaluateFunction.h"
+#include "MantidCurveFitting/FortranDefs.h"
 #include "MantidCurveFitting/Functions/CrystalFieldPeaks.h"
 #include "MantidDataObjects/TableWorkspace.h"
-#include "MantidCurveFitting/FortranDefs.h"
+#include "MantidKernel/ArrayProperty.h"
 
 using Mantid::CurveFitting::Functions::CrystalFieldPeaks;
+using namespace Mantid::CurveFitting;
 using namespace Mantid::CurveFitting::Algorithms;
 using namespace Mantid::API;
 using namespace Mantid::DataObjects;
+using namespace Mantid::Kernel;
+
+class CrystalFieldPeaksTest_NewHamiltonian : public Algorithm {
+public:
+  const std::string name() const override {return "CrystalFieldPeaksTest_NewHamiltonian";}
+  int version() const override {return 1;}
+  const std::string summary() const override {return "";}
+private:
+  void init() override {
+    declareProperty(make_unique<ArrayProperty<double>>("InputHamiltonian"));
+    declareProperty(make_unique<ArrayProperty<double>>("OutputHamiltonian", Direction::Output));
+  }
+  void exec() override {
+    std::vector<double> packed = getProperty("InputHamiltonian");
+    auto nHam = static_cast<size_t>(sqrt(static_cast<double>(packed.size() / 2)));
+    if (2 * nHam * nHam != packed.size()) {
+      throw std::runtime_error(
+          "Cannot unpack vector into ComplexMatrix: size mismatch.");
+    }
+    ComplexMatrix hamiltonian(nHam, nHam);
+    hamiltonian.unpackFromStdVector(packed);
+
+    ComplexMatrix out(2*nHam, 2*nHam);
+    for(size_t i = 0; i < nHam; ++i)
+    for(size_t j = 0; j < nHam; ++j) {
+      std::complex<double> val = hamiltonian(i, j);
+      out(i, j) = val;
+      out(2*i, 2*j) = val;
+      if (i != j) {
+        out(j, i) = std::conj(val);
+        out(2*j, 2*i) = std::conj(val);
+      }
+    }
+
+    setProperty("OutputHamiltonian", out.packToStdVector());
+  }
+};
+
+DECLARE_ALGORITHM(CrystalFieldPeaksTest_NewHamiltonian);
 
 class CrystalFieldPeaksTest : public CxxTest::TestSuite {
 public:
@@ -84,7 +125,7 @@ public:
     auto fun = FunctionFactory::Instance().createInitialized(ini);
     TS_ASSERT(fun);
     TS_ASSERT_EQUALS(fun->nParams(), 34);
-    TS_ASSERT_EQUALS(fun->nAttributes(), 6);
+    TS_ASSERT_EQUALS(fun->nAttributes(), 7);
     fun->applyTies();
     TS_ASSERT_DELTA(fun->getParameter("B20"), 1.0, 1e-10);
     TS_ASSERT_DELTA(fun->getParameter("B22"), 2.0, 1e-10);
@@ -519,8 +560,28 @@ public:
     TS_ASSERT_EQUALS(tie->asString(), "B64=-21*B60");
   }
 
-  void test_CrystalFieldPeaksBaseImpl() {
-    Mantid::CurveFitting::Functions::CrystalFieldPeaksBaseImpl fun;
+  void test_external_hamiltonian() {
+    CrystalFieldPeaks fun;
+    FunctionDomainGeneral domain;
+    FunctionValues values;
+    fun.setParameter("B20", 0.37737);
+    fun.setParameter("B22", 3.9770);
+    fun.setParameter("B40", -0.031787);
+    fun.setParameter("B42", -0.11611);
+    fun.setParameter("B44", -0.12544);
+    fun.setAttributeValue("ModifyHamiltonian", "CrystalFieldPeaksTest_NewHamiltonian");
+    fun.setAttributeValue("Ion", "Ce");
+    fun.setAttributeValue("Temperature", 44.0);
+    fun.setAttributeValue("ToleranceIntensity", 0.001 * c_mbsr);
+    fun.function(domain, values);
+
+    TS_ASSERT_EQUALS(values.size(), 6);
+    TS_ASSERT_DELTA(values[0], 0.0, 0.01);
+    TS_ASSERT_DELTA(values[1], 29.33, 0.01);
+    TS_ASSERT_DELTA(values[2], 44.34, 0.01);
+    TS_ASSERT_DELTA(values[3], 2.75 * c_mbsr, 0.001 * c_mbsr);
+    TS_ASSERT_DELTA(values[4], 0.72 * c_mbsr, 0.001 * c_mbsr);
+    TS_ASSERT_DELTA(values[5], 0.43 * c_mbsr, 0.001 * c_mbsr);
   }
 
 private:

@@ -1,10 +1,14 @@
-#include "MantidCurveFitting/Functions/CrystalElectricField.h"
 #include "MantidCurveFitting/Functions/CrystalFieldPeaksBase.h"
+#include "MantidAPI/Algorithm.h"
+#include "MantidAPI/AlgorithmFactory.h"
+#include "MantidCurveFitting/Functions/CrystalElectricField.h"
 #include "MantidKernel/Exception.h"
 
 #include <functional>
 #include <map>
 #include <cctype>
+
+#include <iostream>
 
 namespace Mantid {
 namespace CurveFitting {
@@ -278,6 +282,7 @@ CrystalFieldPeaksBase::CrystalFieldPeaksBase()
   declareAttribute("ToleranceEnergy", Attribute(1.0e-10));
   declareAttribute("ToleranceIntensity", Attribute(1.0e-1));
   declareAttribute("MaxPeakCount", Attribute(0));
+  declareAttribute("ModifyHamiltonian", Attribute(""));
 
   declareParameter("BmolX", 0.0, "The x-component of the molecular field.");
   declareParameter("BmolY", 0.0, "The y-component of the molecular field.");
@@ -434,7 +439,10 @@ void CrystalFieldPeaksBase::calculateEigenSystem(DoubleFortranVector &en,
   bkq(6, 5) = ComplexType(B65, IB65);
   bkq(6, 6) = ComplexType(B66, IB66);
 
-  calculateEigensystem(en, wf, ham, hz, nre, bmol, bext, bkq);
+  calculateHamiltonian(ham, hz, nre, bmol, bext, bkq);
+  modifyHamiltonian(ham);
+  diagonalise(ham, en, wf);
+
   // MaxPeakCount is a read-only "mutable" attribute.
   const_cast<CrystalFieldPeaksBase *>(this)
       ->setAttributeValue("MaxPeakCount", static_cast<int>(en.size()));
@@ -452,6 +460,25 @@ void CrystalFieldPeaksBase::setAttribute(const std::string &name,
     symmIter->second(*this);
   }
   IFunction::setAttribute(name, attr);
+}
+
+void CrystalFieldPeaksBase::modifyHamiltonian(ComplexFortranMatrix &ham) const {
+  auto algName = getAttribute("ModifyHamiltonian").asString();
+  if (algName.empty()) return;
+  auto alg = API::AlgorithmFactory::Instance().create(algName, -1);
+  alg->setChild(true);
+  alg->initialize();
+  alg->setProperty("InputHamiltonian", ham.packToStdVector());
+  alg->execute();
+
+  std::vector<double> packed = alg->getProperty("OutputHamiltonian");
+  auto nHam = static_cast<size_t>(sqrt(static_cast<double>(packed.size() / 2)));
+  if (2 * nHam * nHam != packed.size()) {
+    throw std::runtime_error(
+        "Cannot unpack vector into aHamiltonian matrix: size mismatch.");
+  }
+  ham.resize(nHam, nHam);
+  ham.unpackFromStdVector(packed);
 }
 
 std::string CrystalFieldPeaksBaseImpl::name() const {
