@@ -138,6 +138,7 @@ signals:
   void customBoolChanged(const QString &key, bool value);
 
 protected slots:
+
   void setModelFitFunction();
   void setModelStartX(double startX);
   void setModelEndX(double startX);

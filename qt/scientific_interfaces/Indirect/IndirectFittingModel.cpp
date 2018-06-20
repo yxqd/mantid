@@ -385,6 +385,11 @@ void IndirectFittingModel::setFittingData(PrivateFittingData &&fittingData) {
   m_fittingData = std::move(fittingData.m_data);
 }
 
+void IndirectFittingModel::setSpectra(const std::string &spectra,
+                                      std::size_t dataIndex) {
+  setSpectra(DiscontinuousSpectra<std::size_t>(spectra), dataIndex);
+}
+
 void IndirectFittingModel::setSpectra(Spectra &&spectra,
                                       std::size_t dataIndex) {
   m_fittingData[dataIndex]->setSpectra(std::forward<Spectra>(spectra));
@@ -425,6 +430,11 @@ void IndirectFittingModel::addWorkspace(const std::string &workspaceName) {
       workspaceName);
   addWorkspace(workspace,
                std::make_pair(0u, workspace->getNumberHistograms() - 1));
+}
+
+void IndirectFittingModel::addWorkspace(const std::string &workspaceName,
+                                        const std::string &spectra) {
+  addWorkspace(workspaceName, DiscontinuousSpectra<std::size_t>(spectra));
 }
 
 void IndirectFittingModel::addWorkspace(const std::string &workspaceName,
