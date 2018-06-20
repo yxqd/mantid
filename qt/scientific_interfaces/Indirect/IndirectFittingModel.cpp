@@ -136,7 +136,7 @@ void addInputDataToSimultaneousFit(IAlgorithm_sptr fitAlgorithm,
                                    MatrixWorkspace_sptr workspace,
                                    std::size_t spectrum,
                                    const std::pair<double, double> &xRange,
-                                   const std::vector<double> excludeRegions,
+                                   const std::vector<double> &excludeRegions,
                                    const std::string &suffix) {
   fitAlgorithm->setProperty("InputWorkspace" + suffix, workspace);
   fitAlgorithm->setProperty("StartX" + suffix, xRange.first);

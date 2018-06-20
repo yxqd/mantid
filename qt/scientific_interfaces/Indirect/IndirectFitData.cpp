@@ -71,7 +71,7 @@ struct NumberOfSpectra : boost::static_visitor<std::size_t> {
 };
 
 struct SpectraToString : boost::static_visitor<std::string> {
-  SpectraToString(const std::string &rangeDelimiter = "-")
+  explicit SpectraToString(const std::string &rangeDelimiter = "-")
       : m_rangeDelimiter(rangeDelimiter) {}
 
   std::string
@@ -107,7 +107,7 @@ struct CombineSpectra : boost::static_visitor<Spectra> {
 };
 
 struct GetSpectrum : boost::static_visitor<std::size_t> {
-  GetSpectrum(std::size_t index) : m_index(index) {}
+  explicit GetSpectrum(std::size_t index) : m_index(index) {}
 
   std::size_t
   operator()(const std::pair<std::size_t, std::size_t> &spectra) const {

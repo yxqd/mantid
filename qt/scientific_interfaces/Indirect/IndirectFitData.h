@@ -24,7 +24,7 @@ std::vector<T> vectorFromString(const std::string &listString) {
 
 template <typename T> struct DiscontinuousSpectra {
 public:
-  DiscontinuousSpectra(const std::string &str)
+  explicit DiscontinuousSpectra(const std::string &str)
       : m_str(str), m_vec(vectorFromString<T>(str)) {}
   DiscontinuousSpectra(const DiscontinuousSpectra &vec)
       : m_str(vec.m_str), m_vec(vec.m_vec) {}
@@ -43,9 +43,9 @@ public:
     return *this;
   }
 
-  const bool empty() const { return m_vec.empty(); }
-  const std::size_t size() const { return m_vec.size(); }
-  const std::string &getString() const { return m_str; }
+  bool empty() const { return m_vec.empty(); }
+  std::size_t size() const { return m_vec.size(); }
+  std::string &getString() const { return m_str; }
   typename std::vector<T>::iterator begin() { return m_vec.begin(); }
   typename std::vector<T>::iterator end() { return m_vec.end(); }
   typename std::vector<T>::const_iterator begin() const {
@@ -63,7 +63,7 @@ using Spectra = boost::variant<DiscontinuousSpectra<std::size_t>,
                                std::pair<std::size_t, std::size_t>>;
 
 template <typename F> struct ApplySpectra : boost::static_visitor<> {
-  ApplySpectra(F &&functor) : m_functor(functor) {}
+  explicit ApplySpectra(F &&functor) : m_functor(functor) {}
 
   void operator()(const std::pair<std::size_t, std::size_t> &spectra) const {
     for (auto spectrum = spectra.first; spectrum <= spectra.second; ++spectrum)
