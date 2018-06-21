@@ -936,12 +936,14 @@ def _gather_returns(func_name, lhs, algm_obj, ignore_regex=None, inout=False):
                     value_str = prop.valueAsStr
                     retvals[name] = _api.AnalysisDataService[value_str]
                 except KeyError:
-                    if not prop.isOptional() and prop.direction == _kernel.Direction.InOut:
+                    if not (hasattr(prop, 'isOptional') and prop.isOptional()) and prop.direction == _kernel.Direction.InOut:
                         raise RuntimeError("Mandatory InOut workspace property '%s' on "
                                            "algorithm '%s' has not been set correctly. " % (name,  algm_obj.name()))
         elif _is_function_property(prop):
+            print ("isFuncProp")
             retvals[name] = FunctionWrapper.wrap(prop.value)
         else:
+            print ("isProp")
             if hasattr(prop, 'value'):
                 retvals[name] = prop.value
             else:
@@ -956,6 +958,7 @@ def _gather_returns(func_name, lhs, algm_obj, ignore_regex=None, inout=False):
     number_of_returned_values = len(retvals)
     number_of_values_on_lhs = lhs[0]
 
+    print(prop.name, prop, algm_obj.name(), prop.value)
     # If we have more than one value but not the same number of values throw
     if number_of_values_on_lhs > 1 and number_of_returned_values != number_of_values_on_lhs:
         # There is a discrepancy in the number are unpacking variables

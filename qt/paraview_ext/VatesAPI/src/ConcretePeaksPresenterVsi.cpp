@@ -158,8 +158,8 @@ double ConcretePeaksPresenterVsi::getMaxRadius(
  */
 void ConcretePeaksPresenterVsi::sortPeaksWorkspace(
     const std::string &byColumnName, const bool ascending) {
-  Mantid::API::IPeaksWorkspace_sptr peaksWS =
-      boost::const_pointer_cast<Mantid::API::IPeaksWorkspace>(
+  Mantid::DataObjects::PeaksWorkspace_sptr peaksWS =
+      boost::const_pointer_cast<Mantid::DataObjects::PeaksWorkspace>(
           this->m_peaksWorkspace);
 
   // Sort the Peaks in-place.
