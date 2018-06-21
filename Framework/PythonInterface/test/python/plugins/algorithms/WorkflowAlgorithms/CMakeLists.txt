@@ -45,6 +45,7 @@ set ( TEST_PY_FILES
   ReflectometryILLPolarizationCorTest.py
   ReflectometryILLPreprocessTest.py
   ReflectometryILLSumForegroundTest.py
+  ReflectometryILLWaterRunTest.py
   ResNorm2Test.py
   SANSDarkRunBackgroundCorrectionTest.py
   SANSFitShiftScaleTest.py
