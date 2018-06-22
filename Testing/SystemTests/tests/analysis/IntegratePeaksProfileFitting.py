@@ -9,7 +9,7 @@ class IntegratePeaksProfileFittingTest(stresstesting.MantidStressTest):
 
     def runTest(self):
         LoadMD(Filename='MANDI_5921_ProfileFitting.nxs', LoadHistory=False, OutputWorkspace='profile_fitting_test_md')
-        LoadNexus(Filename='MANDI_5921_ProfileFitting.integrate', OutputWorkspace='peaks_ws')
+        LoadIsawPeaks(Filename='MANDI_5921_ProfileFitting.integrate', OutputWorkspace='peaks_ws')
         IntegratePeaksProfileFitting(OutputPeaksWorkspace='peaks_ws_out', OutputParamsWorkspace='params_ws', 
                                      InputWorkspace='profile_fitting_test_md', PeaksWorkspace='peaks_ws', 
                                      RunNumber=5921, UBFile='/SNS/MANDI/shared/ProfileFitting/demo_5921.mat',
