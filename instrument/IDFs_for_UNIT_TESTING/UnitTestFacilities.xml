@@ -5,6 +5,13 @@
 
   <livedata listener="MockLiveListener"/>
 
+  <instrument name="MINIMANDI">
+    <technique>Test Neutron Diffraction</technique>
+    <livedata>
+      <connection name="default" address="127.0.0.1:0" listener="MockLiveListener" />
+    </livedata>
+  </instrument>
+
   <instrument name="MINITOPAZ">
     <technique>Test Neutron Diffraction</technique>
     <livedata>
