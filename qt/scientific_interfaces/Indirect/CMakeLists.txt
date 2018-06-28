@@ -59,6 +59,10 @@ set ( SRC_FILES
 	JumpFitModel.cpp
 	MSDFit.cpp
 	MSDFitModel.cpp
+	QENSFunctionBrowser.cpp
+	QENSFunctionBrowserPresenter.cpp
+	QENSFunctionModel.cpp
+	QENSIndexedFunctionModel.cpp
 	Quasi.cpp
 	ResNorm.cpp
 	Stretch.cpp
@@ -130,6 +134,11 @@ set ( INC_FILES
 	JumpFitModel.h
 	MSDFit.h
 	MSDFitModel.h
+	QENSFunctionBrowser.h
+	QENSFunctionBrowserPresenter.h
+	QENSFunctionBrowserSubscriber.h
+	QENSFunctionModel.h
+	QENSIndexedFunctionModel.h
 	Quasi.h
 	ResNorm.h
 	Stretch.h
@@ -187,6 +196,8 @@ set ( MOC_FILES
     JumpFitDataTablePresenter.h
     LazyAsyncRunner.h
     MSDFit.h
+	QENSFunctionBrowser.h
+    QENSFunctionBrowserPresenter.h
     Quasi.h
     ResNorm.h
     Stretch.h
