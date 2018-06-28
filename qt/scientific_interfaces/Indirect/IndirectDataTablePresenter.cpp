@@ -26,8 +26,8 @@ const QString MASK_LIST =
 
 class ExcludeRegionDelegate : public QItemDelegate {
 public:
-  QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option,
-                        const QModelIndex &index) const override {
+  QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &,
+                        const QModelIndex &) const override {
     QLineEdit *lineEdit = new QLineEdit(parent);
     lineEdit->setValidator(
         new QRegExpValidator(QRegExp(Regexes::MASK_LIST), parent));
@@ -81,8 +81,13 @@ pairsToSpectra(const std::vector<std::pair<std::size_t, std::size_t>> &pairs) {
   if (pairs.empty())
     return boost::none;
   else if (pairs.size() == 1)
-    return pairs[0];
-  return DiscontinuousSpectra<std::size_t>(pairsToString(pairs));
+    return boost::optional<Spectra>(pairs[0]);
+  return boost::optional<Spectra>(
+      DiscontinuousSpectra<std::size_t>(pairsToString(pairs)));
+}
+
+QVariant getVariant(std::size_t i) {
+  return QVariant::fromValue<qulonglong>(i);
 }
 } // namespace
 
@@ -472,7 +477,7 @@ void IndirectDataTablePresenter::setExcludeRegion(const QString &exclude) {
 void IndirectDataTablePresenter::setColumnValues(int column,
                                                  const QString &value) {
   MantidQt::API::SignalBlocker<QObject> blocker(m_dataTable);
-  for (auto i = 0u; i < m_dataTable->rowCount(); ++i)
+  for (int i = 0; i < m_dataTable->rowCount(); ++i)
     m_dataTable->item(i, column)->setText(value);
 }
 
@@ -489,7 +494,7 @@ void IndirectDataTablePresenter::addTableEntry(std::size_t dataIndex,
                                                std::size_t spectrum) {
   const auto row = m_dataTable->rowCount();
   addTableEntry(dataIndex, spectrum, row);
-  m_dataTable->item(row, 0)->setData(Qt::UserRole, dataIndex);
+  m_dataTable->item(row, 0)->setData(Qt::UserRole, getVariant(dataIndex));
 }
 
 void IndirectDataTablePresenter::addTableEntry(std::size_t dataIndex,
@@ -562,7 +567,7 @@ void IndirectDataTablePresenter::updateDataPositionsInCells(std::size_t from,
   for (auto i = from; i < to; ++i) {
     const auto nextPosition = getNextPosition(i);
     for (auto row = m_dataPositions[i]; row < nextPosition; ++row)
-      m_dataTable->item(row, 0)->setData(Qt::UserRole, i);
+      m_dataTable->item(row, 0)->setData(Qt::UserRole, getVariant(i));
   }
 }
 

@@ -60,12 +60,11 @@ void IndirectFitAnalysisTab::setup() {
   connect(m_dataPresenter.get(),
           SIGNAL(endXChanged(double, std::size_t, std::size_t)), this,
           SLOT(tableEndXChanged(double, std::size_t, std::size_t)));
-  connect(
-      m_dataPresenter.get(),
-      SIGNAL(
-          excludeRegionChanged(const std::string &, std::size_t, std::size_t)),
-      this,
-      SLOT(tableExcludeChanged(const std::string &, std::size_t, std::size_t)));
+  connect(m_dataPresenter.get(),
+          SIGNAL(excludeRegionChanged(const std::string &, std::size_t,
+                                      std::size_t)),
+          this, SLOT(tableExcludeChanged(const std::string &, std::size_t,
+                                         std::size_t)));
   connect(m_dataPresenter.get(), SIGNAL(singleResolutionLoaded()), this,
           SLOT(setModelFitFunction()));
 
@@ -390,7 +389,7 @@ void IndirectFitAnalysisTab::tableEndXChanged(double endX,
   }
 }
 
-void IndirectFitAnalysisTab::tableExcludeChanged(const std::string &exclude,
+void IndirectFitAnalysisTab::tableExcludeChanged(const std::string &,
                                                  std::size_t dataIndex,
                                                  std::size_t spectrum) {
   if (isRangeCurrentlySelected(dataIndex, spectrum))

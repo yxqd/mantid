@@ -104,17 +104,6 @@ bool equivalentFunctions(IFunction_const_sptr func1,
   return false;
 }
 
-std::vector<double>
-excludeRegionsStringToVector(const std::string &excludeRegions) {
-  std::vector<std::string> regionStrings;
-  boost::split(regionStrings, excludeRegions, boost::is_any_of(",-"));
-  std::vector<double> regions;
-  std::transform(
-      regionStrings.begin(), regionStrings.end(), std::back_inserter(regions),
-      [](const std::string &str) { return boost::lexical_cast<double>(str); });
-  return regions;
-}
-
 std::ostringstream &addInputString(IndirectFitData *fitData,
                                    std::ostringstream &stream) {
   const auto &name = fitData->workspace()->getName();
@@ -270,6 +259,9 @@ namespace IDA {
 
 PrivateFittingData::PrivateFittingData() : m_data() {}
 
+PrivateFittingData::PrivateFittingData(PrivateFittingData &&privateData)
+    : m_data(std::move(privateData.m_data)) {}
+
 PrivateFittingData::PrivateFittingData(
     std::vector<std::unique_ptr<IndirectFitData>> &&data)
     : m_data(std::move(data)) {}
@@ -354,12 +346,12 @@ bool IndirectFittingModel::hasZeroSpectra(std::size_t dataIndex) const {
 
 boost::optional<std::string> IndirectFittingModel::isInvalidFunction() const {
   if (!m_activeFunction)
-    return "No fit function has been defined";
+    return std::string("No fit function has been defined");
 
   const auto composite =
       boost::dynamic_pointer_cast<CompositeFunction>(m_activeFunction);
   if (composite && (composite->nFunctions() == 0 || composite->nParams() == 0))
-    return "No fitting functions have been defined.";
+    return std::string("No fitting functions have been defined.");
   return boost::none;
 }
 
@@ -538,7 +530,7 @@ void IndirectFittingModel::addOutput(WorkspaceGroup_sptr resultGroup,
     addOutput(m_fitOutput.get(), resultGroup, parameterTable, resultWorkspace,
               fitDataBegin, fitDataEnd);
   else
-    m_fitOutput = std::make_unique<IndirectFitOutput>(
+    m_fitOutput = Mantid::Kernel::make_unique<IndirectFitOutput>(
         createFitOutput(resultGroup, parameterTable, resultWorkspace,
                         fitDataBegin, fitDataEnd));
   m_previousModelSelected = isPreviousModelSelected();
@@ -553,8 +545,9 @@ void IndirectFittingModel::addOutput(WorkspaceGroup_sptr resultGroup,
     addOutput(m_fitOutput.get(), resultGroup, parameterTable, resultWorkspace,
               fitData, spectrum);
   else
-    m_fitOutput = std::make_unique<IndirectFitOutput>(createFitOutput(
-        resultGroup, parameterTable, resultWorkspace, fitData, spectrum));
+    m_fitOutput =
+        Mantid::Kernel::make_unique<IndirectFitOutput>(createFitOutput(
+            resultGroup, parameterTable, resultWorkspace, fitData, spectrum));
   m_previousModelSelected = isPreviousModelSelected();
 }
 
