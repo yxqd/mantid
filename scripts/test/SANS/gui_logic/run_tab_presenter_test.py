@@ -466,6 +466,23 @@ class RunTabPresenterTest(unittest.TestCase):
         presenter._masking_table_presenter.on_update_rows.assert_called_once_with()
         presenter._beam_centre_presenter.on_update_rows.assert_called_once_with()
 
+    def test_on_load_button_click_creates_state_object(self):
+        batch_file_path, user_file_path, presenter, _ = self._get_files_and_mock_presenter(BATCH_FILE_TEST_CONTENT_1)
+        presenter.get_states = mock.MagicMock()
+
+        presenter.on_load_clicked()
+
+        presenter.get_states.assert_called_once_with()
+
+    @mock.patch('sans.gui_logic.presenter.run_tab_presenter.load_workspaces_from_states')
+    def test_on_load_button_clicked_calls_load_data_model(self, load_workspaces_from_states_mock):
+        batch_file_path, user_file_path, presenter, _ = self._get_files_and_mock_presenter(BATCH_FILE_TEST_CONTENT_1)
+        presenter.get_states = mock.MagicMock()
+
+        presenter.on_load_clicked()
+
+        load_workspaces_from_states_mock.assert_called_once_with(presenter.get_states.return_value, presenter)
+
     @staticmethod
     def _clear_property_manager_data_service():
         for element in PropertyManagerDataService.getObjectNames():

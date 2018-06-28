@@ -1034,5 +1034,7 @@ class SANSFileInformationFactory(object):
         elif is_added_histogram(full_file_name) or is_added_event(full_file_name):
             file_information = SANSFileInformationISISAdded(full_file_name)
         else:
+            import pydevd
+            pydevd.settrace('localhost', port=5434, stdoutToServer=True, stderrToServer=True)
             raise NotImplementedError("The file type you have provided is not implemented yet.")
         return file_information

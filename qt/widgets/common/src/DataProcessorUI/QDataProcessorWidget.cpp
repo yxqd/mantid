@@ -528,6 +528,17 @@ std::set<int> QDataProcessorWidget::getSelectedParents() const {
 }
 
 /**
+Get the indices of the highlighted items that have invalid parent
+@returns :: a vector containing the highlighted item numbers
+*/
+std::vector<int> QDataProcessorWidget::getSelectedParentsVector() const {
+  std::set<int> parents_set;
+  parents_set = QDataProcessorWidget::getSelectedParents();
+  std::vector<int> parents(parents.begin(), parents.end());
+  return parents;
+}
+
+/**
 Get the name of the workspace that the user wishes to open as a table
 @returns The name of the workspace to open
 */

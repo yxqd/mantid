@@ -95,7 +95,7 @@ QGroupBox::title {
       <item>
        <widget class="QStackedWidget" name="main_stacked_widget">
         <property name="currentIndex">
-         <number>1</number>
+         <number>0</number>
         </property>
         <widget class="QWidget" name="run_page">
          <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -214,6 +214,13 @@ QGroupBox::title {
                <widget class="QPushButton" name="process_button">
                 <property name="text">
                  <string>Process</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="5">
+               <widget class="QPushButton" name="load_button">
+                <property name="text">
+                 <string>Load</string>
                 </property>
                </widget>
               </item>

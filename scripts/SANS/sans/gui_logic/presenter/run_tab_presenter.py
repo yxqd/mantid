@@ -33,7 +33,9 @@ from sans.gui_logic.models.diagnostics_page_model import run_integral, create_st
 from sans.sans_batch import SANSCentreFinder
 from sans.gui_logic.models.create_state import create_states
 from ui.sans_isis.work_handler import WorkHandler
+from ui.sans_isis.work_handler_2 import WorkHandler2
 from sans.common.file_information import SANSFileInformationFactory
+from sans.gui_logic.models.load_workspaces_from_states import load_workspaces_from_states, load_workspaces
 
 try:
     import mantidplot
@@ -60,6 +62,9 @@ class RunTabPresenter(object):
 
         def on_processed_clicked(self):
             self._presenter.on_processed_clicked()
+
+        def on_load_clicked(self):
+            self._presenter.on_load_clicked()
 
         def on_processing_finished(self):
             self._presenter.on_processing_finished()
@@ -324,6 +329,27 @@ class RunTabPresenter(object):
 
     def on_manage_directories(self):
         self._view.show_directory_manager()
+
+    def on_load_clicked(self):
+        try:
+            self._view.disable_buttons()
+            states = self.get_states()
+            if not states:
+                raise RuntimeError(
+                    "There seems to have been an issue with setting the states. Make sure that a user file"
+                    " has been loaded")
+            self.work_handler = WorkHandler2()
+            self.work_handler.process(self.on_load_finished, self.on_load_error, load_workspaces, states)
+        except Exception as e:
+            self._view.enable_buttons()
+            self.sans_logger.error("Process halted due to: {}".format(str(e)))
+            self.display_warning_box('Warning', 'Process halted', str(e))
+
+    def on_load_finished(self, result):
+        self._view.enable_buttons()
+
+    def on_load_error(self, error):
+        self._view.enable_buttons()
 
     def on_mask_file_add(self):
         """

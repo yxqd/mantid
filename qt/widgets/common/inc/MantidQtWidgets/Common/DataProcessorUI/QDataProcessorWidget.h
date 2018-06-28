@@ -128,6 +128,7 @@ public:
   // Accessor methods
   std::map<int, std::set<int>> getSelectedChildren() const override;
   std::set<int> getSelectedParents() const override;
+  std::vector<int> getSelectedParentsVector() const override;
   QString getProcessInstrument() const override;
   QString getWorkspaceToOpen() const override;
   QString getClipboard() const override;

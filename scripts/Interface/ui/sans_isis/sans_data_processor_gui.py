@@ -98,6 +98,10 @@ class SANSDataProcessorGui(QtGui.QMainWindow, ui_sans_data_processor_window.Ui_S
             pass
 
         @abstractmethod
+        def on_load_clicked(self):
+            pass
+
+        @abstractmethod
         def on_processing_finished(self):
             pass
 
@@ -239,6 +243,8 @@ class SANSDataProcessorGui(QtGui.QMainWindow, ui_sans_data_processor_window.Ui_S
 
         self.process_button.clicked.connect(self._on_python_process)
 
+        self.load_button.clicked.connect(self._load_clicked)
+
         self.help_button.clicked.connect(self._on_help_button_clicked)
 
         # --------------------------------------------------------------------------------------------------------------
@@ -372,6 +378,12 @@ class SANSDataProcessorGui(QtGui.QMainWindow, ui_sans_data_processor_window.Ui_S
         Process runs
         """
         self._call_settings_listeners(lambda listener: listener.on_processed_clicked())
+
+    def _load_clicked(self):
+        """
+        Process runs
+        """
+        self._call_settings_listeners(lambda listener: listener.on_load_clicked())
 
     def _processing_finished(self):
         """
