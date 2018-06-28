@@ -327,12 +327,12 @@ void DiffractionFocussing2::exec() {
         communicator().send(0, tag, &Yout[0], size);
         communicator().send(0, tag, &Eout[0], size);
         communicator().send(0, tag, &groupWgt[0], size);
-        Parallel::gather(communicator(), groupSize, 0);
         const auto detIdSet = outSpec.getDetectorIDs();
         std::vector<detid_t> detIds(detIdSet.begin(), detIdSet.end());
         auto size = static_cast<int>(detIds.size());
         communicator().send(0, tag, size);
         communicator().send(0, tag, detIds.data(), size);
+        Parallel::gather(communicator(), groupSize, 0);
       }
     }
 

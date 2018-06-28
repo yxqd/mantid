@@ -7,6 +7,7 @@ from mantid.kernel import Direction, IntArrayProperty, StringArrayProperty, Stri
 import sys
 
 try:
+    raise ImportError
     from plotly import tools as toolsly
     from plotly.offline import plot
     import plotly.graph_objs as go
