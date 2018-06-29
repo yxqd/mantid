@@ -315,11 +315,13 @@ void ProjectRecovery::projectSavingThreadWrapper() {
   try {
     projectSavingThread();
   } catch (std::exception const &e) {
-    std::string preamble("Project recovery has stopped. Please report"
-                         " this to the development team.\nException:\n");
+    std::string preamble("Project recovery has stopped. This is not related to the work"
+						" or processing you are currently doing. Please report"
+                         " this to the development team. Exception: ");
     g_log.warning(preamble + e.what());
   } catch (...) {
-    g_log.warning("Project recovery has stopped. Please report"
+    g_log.warning("Project recovery has stopped. This is not related to the work"
+				  " or processing you are currently doing. Please report"
                   " this to the development team.");
   }
 }
@@ -397,8 +399,8 @@ void ProjectRecovery::saveWsHistories(const Poco::Path &historyDestFolder) {
   using Mantid::Kernel::DataServiceHidden;
   using Mantid::Kernel::DataServiceSort;
 
-  const auto wsHandles =
-      ads.getObjectNames(DataServiceSort::Unsorted, DataServiceHidden::Include);
+  // We take a copy of the shared pointers, so they cannot be deleted underneath us
+  const auto wsHandles = ads.getObjects();
 
   if (wsHandles.empty()) {
     return;
@@ -418,19 +420,28 @@ void ProjectRecovery::saveWsHistories(const Poco::Path &historyDestFolder) {
   alg->setLogging(false);
 
   for (const auto &ws : wsHandles) {
-    std::string filename = ws;
+    std::string filename = ws->getName();
+	assert(filename.size() != 0);
     filename.append(".py");
 
     Poco::Path destFilename = historyDestFolder;
     destFilename.append(filename);
 
     alg->initialize();
-	alg->setProperty("AppendTimestamp", true);
-    alg->setPropertyValue("InputWorkspace", ws);
-    alg->setPropertyValue("Filename", destFilename.toString());
+	alg->setRethrows(true);
     alg->setPropertyValue("StartTimestamp", startTime);
-
-    alg->execute();
+    alg->setPropertyValue("Filename", destFilename.toString());
+	alg->setProperty("AppendTimestamp", true);
+	alg->setProperty("InputWorkspace", ws);
+    
+	try {
+		alg->execute();
+	}
+	catch (std::invalid_argument &) {
+		// Name has changed underneath us.
+		// Attempt to continue taking the best snapshot possible in the circumstances
+		int foo = 8;
+	}
   }
 }
 
