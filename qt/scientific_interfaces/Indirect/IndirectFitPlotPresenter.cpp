@@ -211,13 +211,14 @@ void IndirectFitPlotPresenter::updateDataSelection() {
     m_view->appendToDataSelection(m_model->getFitDataName(i));
   setActiveIndex(0);
   updateAvailableSpectra();
+  emit selectedFitDataChanged(0);
 }
 
 void IndirectFitPlotPresenter::updateAvailableSpectra() {
   if (m_model->getWorkspace()) {
     m_view->enableSpectrumSelection();
-    const auto spectra = m_model->getSpectra();
-    boost::apply_visitor(UpdateAvailableSpectra(m_view), spectra);
+    auto updateSpectra = UpdateAvailableSpectra(m_view);
+    m_model->getSpectra().apply_visitor(updateSpectra);
     setActiveSpectrum(m_view->getSelectedSpectrum());
   } else
     m_view->disableSpectrumSelection();

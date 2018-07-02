@@ -186,6 +186,26 @@ ITableWorkspace_sptr transposeFitTable(ITableWorkspace_sptr table,
   }
   return transposed;
 }
+
+std::vector<std::size_t>
+createDatasetGrouping(const std::vector<MatrixWorkspace_sptr> &workspaces) {
+  std::vector<std::size_t> grouping;
+  grouping.emplace_back(0);
+  for (auto i = 1u; i < workspaces.size(); ++i) {
+    if (workspaces[i] != workspaces[i - 1])
+      grouping.emplace_back(i);
+  }
+  grouping.emplace_back(workspaces.size());
+  return grouping;
+}
+
+WorkspaceGroup_sptr
+createGroup(const std::vector<MatrixWorkspace_sptr> &workspaces) {
+  WorkspaceGroup_sptr group(new WorkspaceGroup);
+  for (auto &&workspace : workspaces)
+    group->addWorkspace(workspace);
+  return group;
+}
 } // namespace
 
 namespace Mantid {
@@ -256,9 +276,9 @@ void QENSFitSimultaneous::initConcrete() {
                   "Convolution are output convolved\n"
                   "with corresponding resolution");
 
-  declareProperty(make_unique<WorkspaceProperty<>>("OutputWorkspace", "",
-                                                   Direction::Output),
-                  "The output result workspace");
+  declareProperty(make_unique<WorkspaceProperty<WorkspaceGroup>>(
+                      "OutputWorkspace", "", Direction::Output),
+                  "The output result workspace(s)");
   declareProperty(make_unique<WorkspaceProperty<ITableWorkspace>>(
                       "OutputParameterWorkspace", "", Direction::Output,
                       PropertyMode::Optional),
@@ -312,7 +332,8 @@ void QENSFitSimultaneous::execConcrete() {
   const auto parameterWs = processParameterTable(
       transposeFitTable(fitResult.first, singleDomainFunction));
   const auto groupWs = makeGroup(fitResult.second);
-  const auto resultWs = processIndirectFitParameters(parameterWs);
+  const auto resultWs = processIndirectFitParameters(
+      parameterWs, createDatasetGrouping(workspaces));
   copyLogs(resultWs, workspaces);
 
   const bool doExtractMembers = getProperty("ExtractMembers");
@@ -320,7 +341,8 @@ void QENSFitSimultaneous::execConcrete() {
     extractMembers(groupWs, workspaces, outputBaseName + "_Members");
 
   addAdditionalLogs(resultWs);
-  copyLogs(resultWs, groupWs);
+  copyLogs(boost::dynamic_pointer_cast<MatrixWorkspace>(resultWs->getItem(0)),
+           groupWs);
 
   setProperty("OutputWorkspace", resultWs);
   setProperty("OutputParameterWorkspace", parameterWs);
@@ -364,28 +386,40 @@ QENSFitSimultaneous::performFit(
   return {fit->getProperty("OutputParameters"), outputWS};
 }
 
-MatrixWorkspace_sptr QENSFitSimultaneous::processIndirectFitParameters(
-    ITableWorkspace_sptr parameterWorkspace) {
+WorkspaceGroup_sptr QENSFitSimultaneous::processIndirectFitParameters(
+    ITableWorkspace_sptr parameterWorkspace,
+    const std::vector<std::size_t> &grouping) {
   auto pifp =
       createChildAlgorithm("ProcessIndirectFitParameters", 0.91, 0.95, true);
   pifp->setProperty("InputWorkspace", parameterWorkspace);
   pifp->setProperty("ColumnX", "axis-1");
   pifp->setProperty("XAxisUnit", "MomentumTransfer");
   pifp->setProperty("ParameterNames", getFitParameterNames());
-  pifp->setProperty("OutputWorkspace", "__Result");
-  pifp->executeAsChildAlg();
-  return pifp->getProperty("OutputWorkspace");
+
+  std::vector<MatrixWorkspace_sptr> results;
+  results.reserve(grouping.size() - 1);
+  for (auto i = 0u; i < grouping.size() - 1; ++i) {
+    pifp->setProperty("StartRowIndex", static_cast<int>(grouping[i]));
+    pifp->setProperty("EndRowIndex", static_cast<int>(grouping[i + 1]) - 1);
+    pifp->setProperty("OutputWorkspace", "__Result");
+    pifp->executeAsChildAlg();
+    results.push_back(pifp->getProperty("OutputWorkspace"));
+  }
+  return createGroup(results);
 }
 
 void QENSFitSimultaneous::copyLogs(
-    MatrixWorkspace_sptr resultWorkspace,
+    WorkspaceGroup_sptr resultWorkspace,
     const std::vector<MatrixWorkspace_sptr> &workspaces) {
   auto logCopier = createChildAlgorithm("CopyLogs", -1.0, -1.0, false);
-  logCopier->setProperty("OutputWorkspace", resultWorkspace);
-
-  for (const auto &workspace : workspaces) {
-    logCopier->setProperty("InputWorkspace", workspace);
-    logCopier->executeAsChildAlg();
+  for (auto &&workspace : *resultWorkspace) {
+    logCopier->setProperty(
+        "OutputWorkspace",
+        boost::dynamic_pointer_cast<MatrixWorkspace>(workspace));
+    for (const auto &workspace : workspaces) {
+      logCopier->setProperty("InputWorkspace", workspace);
+      logCopier->executeAsChildAlg();
+    }
   }
 }
 
@@ -421,8 +455,12 @@ void QENSFitSimultaneous::extractMembers(
     AnalysisDataService::Instance().remove(workspaceName);
 }
 
-void QENSFitSimultaneous::addAdditionalLogs(
-    MatrixWorkspace_sptr resultWorkspace) {
+void QENSFitSimultaneous::addAdditionalLogs(API::WorkspaceGroup_sptr group) {
+  for (auto &&workspace : *group)
+    addAdditionalLogs(workspace);
+}
+
+void QENSFitSimultaneous::addAdditionalLogs(Workspace_sptr resultWorkspace) {
   auto logAdder = createChildAlgorithm("AddSampleLog", -1.0, -1.0, false);
   logAdder->setProperty("Workspace", resultWorkspace);
 

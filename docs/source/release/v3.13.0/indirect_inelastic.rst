@@ -15,6 +15,9 @@ Data Reduction Interfaces
 -------------------------
 
 - Added 'Sum Files' checkbox to ISIS Calibration, to sum a specified range of input files on load.
+- Detector grouping in ISISEnergyTransfer:  added custom grouping method to allow specific spectra or ranges, and
+  the 'groups' method now includes all spectra including remainder.
+
 
 Algorithms
 ----------
@@ -39,6 +42,15 @@ Improved
 
 Data Analysis Interfaces
 ------------------------
+
+New
+###
+
+- The MSDFit, IqtFit and ConvFit interfaces now allow selection of discontinuous spectra ranges and masking energy
+  ranges.
+- The JumpFit interface now allows masking of energy ranges.
+- The QENS Fitting interfaces can now be provided multiple data-sets as input -- these data-sets can be viewed
+  individually within the interface (plot, fit result, etc.)
 
 Bugfixes
 ########
