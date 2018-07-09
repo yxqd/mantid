@@ -1766,6 +1766,7 @@ int getNumberOfRows();
 void clearTable();
 void skipProcessing();
 void settingsChanged();
+std::vector<int> getSelectedParentsVector() const;
 
 signals:
 void runPythonCode(const QString &);
