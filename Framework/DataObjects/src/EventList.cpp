@@ -1272,7 +1272,7 @@ MantidVec &EventList::dataX() {
 /** Deprecated, use x() instead. Returns a const reference to the x data.
  *  @return a reference to the X (bin) vector. */
 const MantidVec &EventList::dataX() const { return m_histogram.dataX(); }
-const MantidVec &EventList::dataX(const int) const {
+const MantidVec &EventList::dataXTS(const int) const {
   return m_histogram.dataX();
 }
 
@@ -1288,7 +1288,7 @@ Kernel::cow_ptr<HistogramData::HistogramX> EventList::ptrX() const {
 MantidVec &EventList::dataDx() { return m_histogram.dataDx(); }
 /// Deprecated, use dx() instead.
 const MantidVec &EventList::dataDx() const { return m_histogram.dataDx(); }
-const MantidVec &EventList::dataDx(const int) const {
+const MantidVec &EventList::dataDxTS(const int) const {
   return m_histogram.dataDx();
 }
 /// Deprecated, use dx() instead.
@@ -1464,7 +1464,7 @@ const MantidVec &EventList::dataE() const {
  *
  * @return reference to the Y vector.
  */
-const MantidVec &EventList::dataY(const int thread) const {
+const MantidVec &EventList::dataYTS(const int thread) const {
   if (!mru)
     throw std::runtime_error(
         "'EventList::dataY()' called with no MRU set. This is not allowed.");
@@ -1479,7 +1479,7 @@ const MantidVec &EventList::dataY(const int thread) const {
  *
  * @return reference to the E vector.
  */
-const MantidVec &EventList::dataE(const int thread) const {
+const MantidVec &EventList::dataETS(const int thread) const {
   if (!mru)
     throw std::runtime_error(
         "'EventList::dataE()' called with no MRU set. This is not allowed.");

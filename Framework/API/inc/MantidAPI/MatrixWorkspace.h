@@ -341,25 +341,25 @@ public:
   /// the specified X array
   /// @param index :: workspace index to retrieve.
   const MantidVec &readXTS(std::size_t const index, int const thread) const {
-    return getSpectrum(index).dataX(thread);
+    return getSpectrum(index).dataXTS(thread);
   }
   /// Deprecated, use y() instead. Returns a read-only (i.e. const) reference to
   /// the specified Y array
   /// @param index :: workspace index to retrieve.
   const MantidVec &readYTS(std::size_t const index, int const thread) const {
-    return getSpectrum(index).dataY(thread);
+    return getSpectrum(index).dataYTS(thread);
   }
   /// Deprecated, use e() instead. Returns a read-only (i.e. const) reference to
   /// the specified E array
   /// @param index :: workspace index to retrieve.
   const MantidVec &readETS(std::size_t const index, int const thread) const {
-    return getSpectrum(index).dataE(thread);
+    return getSpectrum(index).dataETS(thread);
   }
   /// Deprecated, use dx() instead. Returns a read-only (i.e. const) reference
   /// to the specified X error array
   /// @param index :: workspace index to retrieve.
   const MantidVec &readDxTS(size_t const index, int const thread) const {
-    return getSpectrum(index).dataDx(thread);
+    return getSpectrum(index).dataDxTS(thread);
   }
 
   /// Deprecated, use mutableX() instead. Returns the x data

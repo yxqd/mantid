@@ -94,7 +94,6 @@ public:
    *to be dropped.
    */
   T *insert(T *item) {
-    std::lock_guard<std::mutex> _lock(m_mutex);
     auto p = this->il.push_front(item);
 
     if (!p.second) {
@@ -123,7 +122,6 @@ public:
   //---------------------------------------------------------------------------------------------
   /// Delete all the T's pointed to by the list, and empty the list itself
   void clear() {
-    std::lock_guard<std::mutex> _lock(m_mutex);
     for (auto it = this->il.begin(); it != this->il.end(); ++it) {
       delete (*it);
     }
@@ -136,8 +134,6 @@ public:
    * the MRU.
    */
   void deleteIndex(const uintptr_t index) {
-    std::lock_guard<std::mutex> _lock(m_mutex);
-
     auto it = il.template get<1>().find(index);
     if (it != il.template get<1>().end()) {
       delete (*it);
@@ -155,8 +151,6 @@ public:
    *  @return The object found, or NULL if not found.
    */
   T *find(const uintptr_t index) const {
-    std::lock_guard<std::mutex> _lock(m_mutex);
-
     auto it = il.template get<1>().find(index);
     if (it == il.template get<1>().end()) {
       return nullptr;
@@ -170,9 +164,6 @@ private:
   MRUList(MRUList &);
   /// Private, unimplemented copy assignment operator
   MRUList &operator=(MRUList &);
-
-  /// Mutex for modifying the MRU list
-  mutable std::mutex m_mutex;
 };
 
 } // namespace Kernel

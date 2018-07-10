@@ -65,13 +65,13 @@ public:
   virtual void setX(const Kernel::cow_ptr<HistogramData::HistogramX> &X) = 0;
   virtual MantidVec &dataX() = 0;
   virtual const MantidVec &dataX() const = 0;
-  virtual const MantidVec &dataX(const int) const {return dataX();}
+  virtual const MantidVec &dataXTS(const int) const { return dataX(); }
   virtual const MantidVec &readX() const = 0;
   virtual Kernel::cow_ptr<HistogramData::HistogramX> ptrX() const = 0;
 
   virtual MantidVec &dataDx() = 0;
   virtual const MantidVec &dataDx() const = 0;
-  virtual const MantidVec &dataDx(const int) const {return dataDx();};
+  virtual const MantidVec &dataDxTS(const int) const { return dataDx(); };
   virtual const MantidVec &readDx() const = 0;
 
   virtual void clearData() = 0;
@@ -80,9 +80,9 @@ public:
   virtual MantidVec &dataE() = 0;
 
   virtual const MantidVec &dataY() const = 0;
-  virtual const MantidVec &dataY(const int) const {return dataY();}
+  virtual const MantidVec &dataYTS(const int) const { return dataY(); }
   virtual const MantidVec &dataE() const = 0;
-  virtual const MantidVec &dataE(const int) const  {return dataE();}
+  virtual const MantidVec &dataETS(const int) const { return dataE(); }
   virtual const MantidVec &readY() const;
   virtual const MantidVec &readE() const;
 
