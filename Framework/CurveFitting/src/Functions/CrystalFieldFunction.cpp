@@ -56,45 +56,6 @@ const boost::regex ION_ATTR_REGEX(ION_PREFIX + "([0-9]+)\\.(.+)");
 const boost::regex
     PHYS_PROP_ATTR_REGEX("((ion[0-9]+\\.)?(cv|chi|mh|mt))\\.(.+)");
 
-/// Define the source function for CrystalFieldFunction.
-/// Its function() method is not needed.
-class Peaks : public CrystalFieldPeaksBase, public API::IFunctionGeneral {
-public:
-  Peaks() : CrystalFieldPeaksBase() {}
-  std::string name() const override { return "Peaks"; }
-  size_t getNumberDomainColumns() const override {
-    throw Exception::NotImplementedError(
-        "This method is intentionally not implemented.");
-  }
-  size_t getNumberValuesPerArgument() const override {
-    throw Exception::NotImplementedError(
-        "This method is intentionally not implemented.");
-  }
-  void functionGeneral(const API::FunctionDomainGeneral &,
-                       API::FunctionValues &) const override {
-    throw Exception::NotImplementedError(
-        "This method is intentionally not implemented.");
-  }
-  std::vector<size_t> m_IntensityScalingIdx;
-  std::vector<size_t> m_PPLambdaIdxChild;
-  std::vector<size_t> m_PPLambdaIdxSelf;
-  /// Declare the intensity scaling parameters: one per spectrum.
-  void declareIntensityScaling(size_t nSpec) {
-    m_IntensityScalingIdx.clear();
-    m_PPLambdaIdxChild.resize(nSpec, -1);
-    m_PPLambdaIdxSelf.resize(nSpec, -1);
-    for (size_t i = 0; i < nSpec; ++i) {
-      auto si = std::to_string(i);
-      try { // If parameter has already been declared, don't declare it.
-        declareParameter("IntensityScaling" + si, 1.0,
-                         "Intensity scaling factor for spectrum " + si);
-      } catch (std::invalid_argument &) {
-      }
-      m_IntensityScalingIdx.push_back(parameterIndex("IntensityScaling" + si));
-    }
-  }
-};
-
 } // namespace
 
 /// Constructor

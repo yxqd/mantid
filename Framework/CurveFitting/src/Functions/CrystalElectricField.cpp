@@ -527,23 +527,18 @@ double exp_(double z) {
 // calculates all transition intensities for
 // a polycrystalline sample (powder)
 //------------------------------------------
-void intcalc(double r0, double gj, double z, const DoubleFortranMatrix &jt2,
+void intcalc(double factor, double z, const DoubleFortranMatrix &jt2,
              const DoubleFortranVector &e, DoubleFortranMatrix &inten, int dim,
              double temp) {
-  // Original code from FOCUS calculated integrated intensity in barn
-  // auto constant = 4.0 * pi * pow(0.5 * r0 * gj, 2);
-  // ISIS normalised data is in milibarn/steradian - need to multiply
-  // by 1000 / 4 / PI
-  auto constant = pow(0.5 * r0 * gj, 2) * 1000.;
   if (temp == 0.0) {
     temp = 1.0;
   }
   // convert temperature to meV
   temp /= c_fmevkelvin;
 
-  for (int i = 1; i <= dim; ++i) { // do 10 i=1,dim
-    auto coeff = exp_(-e(i) / temp) / z * constant;
-    for (int k = 1; k <= dim; ++k) { // do 20 k=1,dim
+  for (int i = 1; i <= dim; ++i) {
+    auto coeff = exp_(-e(i) / temp) / z * factor;
+    for (int k = 1; k <= dim; ++k) {
       inten(i, k) = coeff * jt2(i, k);
     }
   }
@@ -551,9 +546,8 @@ void intcalc(double r0, double gj, double z, const DoubleFortranMatrix &jt2,
 //-------------------------------------
 // calculation of the occupation factor
 //-------------------------------------
-double c_occupation_factor(const DoubleFortranVector &energy, double dimj,
-                           double temp) {
-  int dim = static_cast<int>(dimj);
+double calcOccupationFactor(const DoubleFortranVector &energy, double temp) {
+  int dim = energy.len();
   double occupation_factor = 0.0;
   if (temp == 0.0) {
     temp = 1.0;
@@ -965,13 +959,18 @@ void calculateIntensities(int nre, const DoubleFortranVector &energies,
   matcalc(wavefunctions, dim, jx2mat, jy2mat, jz2mat, jt2mat);
 
   // calculates the sum over all occupation_factor
-  auto occupation_factor = c_occupation_factor(energies, dimj, temperature);
+  auto occupation_factor = calcOccupationFactor(energies, temperature);
 
   // calculates the transition intensities for a powdered sample
   auto r0 = c_r0();
   auto gj = (nre > 0) ? ggj[nre - 1] : 2.;
+  // Original code from FOCUS calculated integrated intensity in barn
+  // auto constant = 4.0 * pi * pow(0.5 * r0 * gj, 2);
+  // ISIS normalised data is in milibarn/steradian - need to multiply
+  // by 1000 / 4 / PI
+  auto constant = pow(0.5 * r0 * gj, 2) * 1000.;
   DoubleFortranMatrix mat(1, dim, 1, dim);
-  intcalc(r0, gj, occupation_factor, jt2mat, energies, mat, dim, temperature);
+  intcalc(constant, occupation_factor, jt2mat, energies, mat, dim, temperature);
 
   deg_on(energies, mat, degeneration, e_energies, i_energies, de);
 }
