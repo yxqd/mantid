@@ -335,6 +335,33 @@ public:
     return getSpectrum(index).dataDx();
   }
 
+  // Methods for getting read-only access to the data.
+  // Just passes through to the virtual dataX/Y/E function (const version)
+  /// Deprecated, use x() instead. Returns a read-only (i.e. const) reference to
+  /// the specified X array
+  /// @param index :: workspace index to retrieve.
+  const MantidVec &readXTS(std::size_t const index, int const thread) const {
+    return getSpectrum(index).dataX(thread);
+  }
+  /// Deprecated, use y() instead. Returns a read-only (i.e. const) reference to
+  /// the specified Y array
+  /// @param index :: workspace index to retrieve.
+  const MantidVec &readYTS(std::size_t const index, int const thread) const {
+    return getSpectrum(index).dataY(thread);
+  }
+  /// Deprecated, use e() instead. Returns a read-only (i.e. const) reference to
+  /// the specified E array
+  /// @param index :: workspace index to retrieve.
+  const MantidVec &readETS(std::size_t const index, int const thread) const {
+    return getSpectrum(index).dataE(thread);
+  }
+  /// Deprecated, use dx() instead. Returns a read-only (i.e. const) reference
+  /// to the specified X error array
+  /// @param index :: workspace index to retrieve.
+  const MantidVec &readDxTS(size_t const index, int const thread) const {
+    return getSpectrum(index).dataDx(thread);
+  }
+
   /// Deprecated, use mutableX() instead. Returns the x data
   virtual MantidVec &dataX(const std::size_t index) {
     invalidateCommonBinsFlag();

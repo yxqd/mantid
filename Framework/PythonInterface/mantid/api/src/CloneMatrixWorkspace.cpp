@@ -39,7 +39,7 @@ PyArrayObject *cloneArray(MatrixWorkspace &workspace, DataField field,
 
   // Find out which function we need to call to access the data
   using ArrayAccessFn =
-      const MantidVec &(MatrixWorkspace::*)(const size_t) const;
+      const MantidVec &(MatrixWorkspace::*)(const size_t, const int)const;
   ArrayAccessFn dataAccesor;
   /**
    * Can do better than this with a templated object that knows how to access
@@ -47,16 +47,16 @@ PyArrayObject *cloneArray(MatrixWorkspace &workspace, DataField field,
    */
   if (field == XValues) {
     stride = workspace.readX(0).size();
-    dataAccesor = &MatrixWorkspace::readX;
+    dataAccesor = &MatrixWorkspace::readXTS;
   } else if (field == DxValues) {
     stride = workspace.readDx(0).size();
-    dataAccesor = &MatrixWorkspace::readDx;
+    dataAccesor = &MatrixWorkspace::readDxTS;
   } else {
     stride = workspace.blocksize();
     if (field == YValues)
-      dataAccesor = &MatrixWorkspace::readY;
+      dataAccesor = &MatrixWorkspace::readYTS;
     else
-      dataAccesor = &MatrixWorkspace::readE;
+      dataAccesor = &MatrixWorkspace::readETS;
   }
   npy_intp arrayDims[2] = {numHist, stride};
   PyArrayObject *nparray = reinterpret_cast<PyArrayObject *>(
@@ -69,7 +69,8 @@ PyArrayObject *cloneArray(MatrixWorkspace &workspace, DataField field,
 
   PARALLEL_FOR_IF(threadSafe(workspace))
   for (npy_intp i = 0; i < numHist; ++i) {
-    const MantidVec &src = (workspace.*(dataAccesor))(start + i);
+    int thread = PARALLEL_THREAD_NUMBER;
+    const MantidVec &src = (workspace.*(dataAccesor))(start + i, thread);
     std::copy(src.begin(), src.end(), std::next(dest, i * stride));
   }
   return nparray;

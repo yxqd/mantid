@@ -186,11 +186,13 @@ public:
   void setX(const Kernel::cow_ptr<HistogramData::HistogramX> &X) override;
   MantidVec &dataX() override;
   const MantidVec &dataX() const override;
+  const MantidVec &dataX(const int thread) const override;
   const MantidVec &readX() const override;
   Kernel::cow_ptr<HistogramData::HistogramX> ptrX() const override;
 
   MantidVec &dataDx() override;
   const MantidVec &dataDx() const override;
+  const MantidVec &dataDx(const int thread) const override;
   const MantidVec &readDx() const override;
 
   /// Deprecated, use mutableY() instead. Disallowed data accessors - can't
@@ -210,9 +212,12 @@ public:
   /// Deprecated, use y() instead. Return a read-only Y histogram view of an
   /// event list
   const MantidVec &dataY() const override;
+  const MantidVec &dataY(const int thread) const override;
+
   /// Deprecated, use e() instead. Return a read-only E histogram view of an
   /// event list
   const MantidVec &dataE() const override;
+  const MantidVec &dataE(const int thread) const override;
 
   MantidVec *makeDataY() const;
   MantidVec *makeDataE() const;
@@ -356,6 +361,10 @@ public:
   const HistogramData::HistogramE &e() const override;
   Kernel::cow_ptr<HistogramData::HistogramY> sharedY() const override;
   Kernel::cow_ptr<HistogramData::HistogramE> sharedE() const override;
+  Kernel::cow_ptr<HistogramData::HistogramY>
+  sharedY(const int thread) const override;
+  Kernel::cow_ptr<HistogramData::HistogramE>
+  sharedE(const int thread) const override;
 
   void generateCountsHistogramPulseTime(
       const double &xMin, const double &xMax, MantidVec &Y,

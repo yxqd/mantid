@@ -1272,6 +1272,9 @@ MantidVec &EventList::dataX() {
 /** Deprecated, use x() instead. Returns a const reference to the x data.
  *  @return a reference to the X (bin) vector. */
 const MantidVec &EventList::dataX() const { return m_histogram.dataX(); }
+const MantidVec &EventList::dataX(const int) const {
+  return m_histogram.dataX();
+}
 
 /// Deprecated, use x() instead. Returns the x data const
 const MantidVec &EventList::readX() const { return m_histogram.readX(); }
@@ -1285,6 +1288,9 @@ Kernel::cow_ptr<HistogramData::HistogramX> EventList::ptrX() const {
 MantidVec &EventList::dataDx() { return m_histogram.dataDx(); }
 /// Deprecated, use dx() instead.
 const MantidVec &EventList::dataDx() const { return m_histogram.dataDx(); }
+const MantidVec &EventList::dataDx(const int) const {
+  return m_histogram.dataDx();
+}
 /// Deprecated, use dx() instead.
 const MantidVec &EventList::readDx() const { return m_histogram.readDx(); }
 
@@ -1363,10 +1369,13 @@ const HistogramData::HistogramE &EventList::e() const {
 
   return *sharedE();
 }
-Kernel::cow_ptr<HistogramData::HistogramY> EventList::sharedY() const {
-  // This is the thread number from which this function was called.
-  int thread = PARALLEL_THREAD_NUMBER;
 
+Kernel::cow_ptr<HistogramData::HistogramY> EventList::sharedY() const {
+  return this->sharedY(PARALLEL_THREAD_NUMBER);
+}
+
+Kernel::cow_ptr<HistogramData::HistogramY>
+EventList::sharedY(const int thread) const {
   Kernel::cow_ptr<HistogramData::HistogramY> yData(nullptr);
 
   // Is the data in the mrulist?
@@ -1394,9 +1403,11 @@ Kernel::cow_ptr<HistogramData::HistogramY> EventList::sharedY() const {
   return yData;
 }
 Kernel::cow_ptr<HistogramData::HistogramE> EventList::sharedE() const {
-  // This is the thread number from which this function was called.
-  int thread = PARALLEL_THREAD_NUMBER;
+  return sharedE(PARALLEL_THREAD_NUMBER);
+}
 
+Kernel::cow_ptr<HistogramData::HistogramE>
+EventList::sharedE(const int thread) const {
   Kernel::cow_ptr<HistogramData::HistogramE> eData(nullptr);
 
   // Is the data in the mrulist?
@@ -1446,6 +1457,36 @@ const MantidVec &EventList::dataE() const {
   // WARNING: The E data of sharedE() is stored in MRU, returning reference fine
   // as long as it stays there.
   return sharedE()->rawData();
+}
+
+/** Look in the MRU to see if the Y histogram has been generated before.
+ * If so, return that. If not, calculate, cache and return it.
+ *
+ * @return reference to the Y vector.
+ */
+const MantidVec &EventList::dataY(const int thread) const {
+  if (!mru)
+    throw std::runtime_error(
+        "'EventList::dataY()' called with no MRU set. This is not allowed.");
+
+  // WARNING: The Y data of sharedY() is stored in MRU, returning reference fine
+  // as long as it stays there.
+  return sharedY(thread)->rawData();
+}
+
+/** Look in the MRU to see if the E histogram has been generated before.
+ * If so, return that. If not, calculate, cache and return it.
+ *
+ * @return reference to the E vector.
+ */
+const MantidVec &EventList::dataE(const int thread) const {
+  if (!mru)
+    throw std::runtime_error(
+        "'EventList::dataE()' called with no MRU set. This is not allowed.");
+
+  // WARNING: The E data of sharedE() is stored in MRU, returning reference fine
+  // as long as it stays there.
+  return sharedE(thread)->rawData();
 }
 
 // --------------------------------------------------------------------------
