@@ -8,51 +8,10 @@ EventWorkspaceMRU::~EventWorkspaceMRU() {
   // Make sure you free up the memory in the MRUs
   {
     Poco::ScopedWriteRWLock _lock(m_changeMruListsMutexY);
-    for (auto &data : m_bufferedDataY) {
-      if (data) {
-        data->clear();
-        delete data;
-      }
-    }
+    m_bufferedDataY.clear();
   }
   Poco::ScopedWriteRWLock _lock2(m_changeMruListsMutexE);
-  for (auto &data : m_bufferedDataE) {
-    if (data) {
-      data->clear();
-      delete data;
-    }
-  }
-}
-
-//---------------------------------------------------------------------------
-/** This function makes sure that there are enough data
- * buffers (MRU's) for E for the number of threads requested.
- * @param thread_num :: thread number that wants a MRU buffer
- */
-void EventWorkspaceMRU::ensureEnoughBuffersE(size_t thread_num) const {
-  Poco::ScopedWriteRWLock _lock(m_changeMruListsMutexE);
-  if (m_bufferedDataE.size() <= thread_num) {
-    m_bufferedDataE.resize(thread_num + 1, nullptr);
-    for (auto &data : m_bufferedDataE) {
-      if (!data)
-        data = new mru_listE(50); // Create a MRU list with this many entries.
-    }
-  }
-}
-//---------------------------------------------------------------------------
-/** This function makes sure that there are enough data
- * buffers (MRU's) for Y for the number of threads requested.
- * @param thread_num :: thread number that wants a MRU buffer
- */
-void EventWorkspaceMRU::ensureEnoughBuffersY(size_t thread_num) const {
-  Poco::ScopedWriteRWLock _lock(m_changeMruListsMutexY);
-  if (m_bufferedDataY.size() <= thread_num) {
-    m_bufferedDataY.resize(thread_num + 1, nullptr);
-    for (auto &data : m_bufferedDataY) {
-      if (!data)
-        data = new mru_listY(50); // Create a MRU list with this many entries.
-    }
-  }
+  m_bufferedDataE.clear();
 }
 
 //---------------------------------------------------------------------------
@@ -61,19 +20,10 @@ void EventWorkspaceMRU::clear() {
   {
     // Make sure you free up the memory in the MRUs
     Poco::ScopedWriteRWLock _lock(m_changeMruListsMutexY);
-    for (auto &data : m_bufferedDataY) {
-      if (data) {
-        data->clear();
-      }
-    }
+    m_bufferedDataY.clear();
   }
-
   Poco::ScopedWriteRWLock _lock(m_changeMruListsMutexE);
-  for (auto &data : m_bufferedDataE) {
-    if (data) {
-      data->clear();
-    }
-  }
+  m_bufferedDataE.clear();
 }
 
 //---------------------------------------------------------------------------
@@ -84,10 +34,10 @@ void EventWorkspaceMRU::clear() {
  * @return pointer to the TypeWithMarker that has the data; NULL if not found.
  */
 Kernel::cow_ptr<HistogramData::HistogramY>
-EventWorkspaceMRU::findY(size_t thread_num, const EventList *index) {
+EventWorkspaceMRU::findY(const EventList *index) {
   Poco::ScopedReadRWLock _lock(m_changeMruListsMutexY);
-  auto result = m_bufferedDataY[thread_num]->find(
-      reinterpret_cast<const std::uintptr_t>(index));
+  auto result =
+      m_bufferedDataY.find(reinterpret_cast<const std::uintptr_t>(index));
   if (result)
     return result->m_data;
   return YType(nullptr);
@@ -100,10 +50,10 @@ EventWorkspaceMRU::findY(size_t thread_num, const EventList *index) {
  * @return pointer to the TypeWithMarker that has the data; NULL if not found.
  */
 Kernel::cow_ptr<HistogramData::HistogramE>
-EventWorkspaceMRU::findE(size_t thread_num, const EventList *index) {
+EventWorkspaceMRU::findE(const EventList *index) {
   Poco::ScopedReadRWLock _lock(m_changeMruListsMutexE);
-  auto result = m_bufferedDataE[thread_num]->find(
-      reinterpret_cast<const std::uintptr_t>(index));
+  auto result =
+      m_bufferedDataE.find(reinterpret_cast<const std::uintptr_t>(index));
   if (result)
     return result->m_data;
   return EType(nullptr);
@@ -115,13 +65,12 @@ EventWorkspaceMRU::findE(size_t thread_num, const EventList *index) {
  * @param data :: the new data
  * @param index :: index of the data to insert
  */
-void EventWorkspaceMRU::insertY(size_t thread_num, YType data,
-                                const EventList *index) {
+void EventWorkspaceMRU::insertY(YType data, const EventList *index) {
   Poco::ScopedReadRWLock _lock(m_changeMruListsMutexY);
   auto yWithMarker =
       new TypeWithMarker<YType>(reinterpret_cast<const std::uintptr_t>(index));
   yWithMarker->m_data = std::move(data);
-  auto oldData = m_bufferedDataY[thread_num]->insert(yWithMarker);
+  auto oldData = m_bufferedDataY.insert(yWithMarker);
   // And clear up the memory of the old one, if it is dropping out.
   delete oldData;
 }
@@ -132,13 +81,12 @@ void EventWorkspaceMRU::insertY(size_t thread_num, YType data,
  * @param data :: the new data
  * @param index :: index of the data to insert
  */
-void EventWorkspaceMRU::insertE(size_t thread_num, EType data,
-                                const EventList *index) {
+void EventWorkspaceMRU::insertE(EType data, const EventList *index) {
   Poco::ScopedReadRWLock _lock(m_changeMruListsMutexE);
   auto eWithMarker =
       new TypeWithMarker<EType>(reinterpret_cast<const std::uintptr_t>(index));
   eWithMarker->m_data = std::move(data);
-  auto oldData = m_bufferedDataE[thread_num]->insert(eWithMarker);
+  auto oldData = m_bufferedDataE.insert(eWithMarker);
   // And clear up the memory of the old one, if it is dropping out.
   delete oldData;
 }
@@ -150,26 +98,14 @@ void EventWorkspaceMRU::insertE(size_t thread_num, EType data,
 void EventWorkspaceMRU::deleteIndex(const EventList *index) {
   {
     Poco::ScopedReadRWLock _lock1(m_changeMruListsMutexE);
-    for (auto &data : m_bufferedDataE) {
-      if (data) {
-        data->deleteIndex(reinterpret_cast<const std::uintptr_t>(index));
-      }
-    }
+    m_bufferedDataE.deleteIndex(reinterpret_cast<const std::uintptr_t>(index));
   }
   Poco::ScopedReadRWLock _lock2(m_changeMruListsMutexY);
-  for (auto &data : m_bufferedDataY) {
-    if (data) {
-      data->deleteIndex(reinterpret_cast<const std::uintptr_t>(index));
-    }
-  }
+  m_bufferedDataY.deleteIndex(reinterpret_cast<const std::uintptr_t>(index));
 }
 
 size_t EventWorkspaceMRU::MRUSize() const {
-  if (m_bufferedDataY.empty()) {
-    return 0;
-  } else {
-    return this->m_bufferedDataY.front()->size();
-  }
+  return this->m_bufferedDataY.size();
 }
 
 } // namespace Mantid

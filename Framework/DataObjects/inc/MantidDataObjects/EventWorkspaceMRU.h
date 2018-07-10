@@ -86,15 +86,12 @@ public:
 
   ~EventWorkspaceMRU();
 
-  void ensureEnoughBuffersY(size_t thread_num) const;
-  void ensureEnoughBuffersE(size_t thread_num) const;
-
   void clear();
 
-  YType findY(size_t thread_num, const EventList *index);
-  EType findE(size_t thread_num, const EventList *index);
-  void insertY(size_t thread_num, YType data, const EventList *index);
-  void insertE(size_t thread_num, EType data, const EventList *index);
+  YType findY(const EventList *index);
+  EType findE(const EventList *index);
+  void insertY(YType data, const EventList *index);
+  void insertE(EType data, const EventList *index);
 
   void deleteIndex(const EventList *index);
 
@@ -105,10 +102,10 @@ public:
 
 protected:
   /// The most-recently-used list of dataY histograms
-  mutable std::vector<mru_listY *> m_bufferedDataY;
+  mutable mru_listY m_bufferedDataY;
 
   /// The most-recently-used list of dataE histograms
-  mutable std::vector<mru_listE *> m_bufferedDataE;
+  mutable mru_listE m_bufferedDataE;
 
   /// Mutex when adding entries in the MRU list
   mutable Poco::RWLock m_changeMruListsMutexE;

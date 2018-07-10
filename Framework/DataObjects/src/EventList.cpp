@@ -1364,15 +1364,11 @@ const HistogramData::HistogramE &EventList::e() const {
   return *sharedE();
 }
 Kernel::cow_ptr<HistogramData::HistogramY> EventList::sharedY() const {
-  // This is the thread number from which this function was called.
-  int thread = PARALLEL_THREAD_NUMBER;
-
   Kernel::cow_ptr<HistogramData::HistogramY> yData(nullptr);
 
   // Is the data in the mrulist?
   if (mru) {
-    mru->ensureEnoughBuffersY(thread);
-    yData = mru->findY(thread, this);
+    yData = mru->findY(this);
   }
 
   if (!yData) {
@@ -1385,24 +1381,20 @@ Kernel::cow_ptr<HistogramData::HistogramY> EventList::sharedY() const {
 
     // Lets save it in the MRU
     if (mru) {
-      mru->insertY(thread, yData, this);
+      mru->insertY(yData, this);
       auto eData = Kernel::make_cow<HistogramData::HistogramE>(std::move(E));
-      mru->ensureEnoughBuffersE(thread);
-      mru->insertE(thread, eData, this);
+      mru->insertE(eData, this);
     }
   }
   return yData;
 }
 Kernel::cow_ptr<HistogramData::HistogramE> EventList::sharedE() const {
   // This is the thread number from which this function was called.
-  int thread = PARALLEL_THREAD_NUMBER;
-
   Kernel::cow_ptr<HistogramData::HistogramE> eData(nullptr);
 
   // Is the data in the mrulist?
   if (mru) {
-    mru->ensureEnoughBuffersE(thread);
-    eData = mru->findE(thread, this);
+    eData = mru->findE(this);
   }
 
   if (!eData) {
@@ -1414,7 +1406,7 @@ Kernel::cow_ptr<HistogramData::HistogramE> EventList::sharedE() const {
 
     // Lets save it in the MRU
     if (mru)
-      mru->insertE(thread, eData, this);
+      mru->insertE(eData, this);
   }
   return eData;
 }
