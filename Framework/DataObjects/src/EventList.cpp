@@ -1376,6 +1376,14 @@ Kernel::cow_ptr<HistogramData::HistogramY> EventList::sharedY() const {
 
 Kernel::cow_ptr<HistogramData::HistogramY>
 EventList::sharedY(const int thread) const {
+
+  int t2 = PARALLEL_THREAD_NUMBER;
+  if (thread != t2) {
+    PARALLEL_CRITICAL(out) {
+      std::cout << "Thread Number Mismatch?: " << thread << " " << t2
+                << std::endl;
+    }
+  }
   Kernel::cow_ptr<HistogramData::HistogramY> yData(nullptr);
 
   // Is the data in the mrulist?
