@@ -492,23 +492,6 @@ double matjz2(const ComplexFortranMatrix &ev, int i, int k, int dim) {
   return std::norm(matjz(ev, i, k, dim));
 }
 
-//---------------------------------------------------------------
-// calculates all transition matrix elements for a single crystal
-// and a polycrystalline sample (powder)
-//---------------------------------------------------------------
-void matcalc(const ComplexFortranMatrix &ev, int dim, DoubleFortranMatrix &jx2,
-             DoubleFortranMatrix &jy2, DoubleFortranMatrix &jz2,
-             DoubleFortranMatrix &jt2) {
-  for (int i = 1; i <= dim; ++i) {   // do 10 i=1,dim
-    for (int k = 1; k <= dim; ++k) { // do 20 k=1,dim
-      jx2(i, k) = matjx2(ev, i, k, dim);
-      jy2(i, k) = matjy2(ev, i, k, dim);
-      jz2(i, k) = matjz2(ev, i, k, dim);
-      jt2(i, k) = 2.0 / 3 * (jx2(i, k) + jy2(i, k) + jz2(i, k));
-    }
-  }
-}
-
 //------------------------------------------------------------
 // make sure that no underflow and overflow appears within exp
 //------------------------------------------------------------
@@ -609,6 +592,24 @@ void zeeman(ComplexFortranMatrix &hamiltonian, const int nre,
 #endif
 
 } // anonymous namespace
+
+//---------------------------------------------------------------
+// calculates all transition matrix elements for a single crystal
+// and a polycrystalline sample (powder)
+//---------------------------------------------------------------
+void calcTransitionMatrices(const ComplexFortranMatrix &ev, int dim,
+                            DoubleFortranMatrix &jx2, DoubleFortranMatrix &jy2,
+                            DoubleFortranMatrix &jz2,
+                            DoubleFortranMatrix &jt2) {
+  for (int i = 1; i <= dim; ++i) {   // do 10 i=1,dim
+    for (int k = 1; k <= dim; ++k) { // do 20 k=1,dim
+      jx2(i, k) = matjx2(ev, i, k, dim);
+      jy2(i, k) = matjy2(ev, i, k, dim);
+      jz2(i, k) = matjz2(ev, i, k, dim);
+      jt2(i, k) = 2.0 / 3 * (jx2(i, k) + jy2(i, k) + jz2(i, k));
+    }
+  }
+}
 
 //---------------------------------------
 // Calculation of the eigenvalues/vectors
@@ -956,7 +957,7 @@ void calculateIntensities(int nre, const DoubleFortranVector &energies,
   DoubleFortranMatrix jy2mat(1, dim, 1, dim);
   DoubleFortranMatrix jz2mat(1, dim, 1, dim);
   DoubleFortranMatrix jt2mat(1, dim, 1, dim);
-  matcalc(wavefunctions, dim, jx2mat, jy2mat, jz2mat, jt2mat);
+  calcTransitionMatrices(wavefunctions, dim, jx2mat, jy2mat, jz2mat, jt2mat);
 
   // calculates the sum over all occupation_factor
   auto occupation_factor = calcOccupationFactor(energies, temperature);

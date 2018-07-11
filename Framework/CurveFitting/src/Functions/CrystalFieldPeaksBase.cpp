@@ -273,6 +273,16 @@ const std::map<std::string, std::function<void(API::IFunction &)>> SYMMETRY_MAP{
 
 } // anonymous namespace
 
+std::string CrystalFieldPeaksBaseImpl::name() const {
+  return "CrystalFieldPeaksBaseImpl";
+}
+
+void CrystalFieldPeaksBaseImpl::function(const API::FunctionDomain &,
+                                         API::FunctionValues &) const {
+  throw Kernel::Exception::NotImplementedError(
+      "Method is intentionally not implemented.");
+}
+
 /// Constructor
 CrystalFieldPeaksBase::CrystalFieldPeaksBase()
     : API::ParamFunction(), m_defaultDomainSize(0) {
@@ -440,7 +450,6 @@ void CrystalFieldPeaksBase::calculateEigenSystem(DoubleFortranVector &en,
   bkq(6, 6) = ComplexType(B66, IB66);
 
   calculateHamiltonian(ham, hz, nre, bmol, bext, bkq);
-  modifyHamiltonian(ham);
   diagonalise(ham, en, wf);
 
   // MaxPeakCount is a read-only "mutable" attribute.
@@ -475,20 +484,28 @@ void CrystalFieldPeaksBase::modifyHamiltonian(ComplexFortranMatrix &ham) const {
   auto nHam = static_cast<size_t>(sqrt(static_cast<double>(packed.size() / 2)));
   if (2 * nHam * nHam != packed.size()) {
     throw std::runtime_error(
-        "Cannot unpack vector into aHamiltonian matrix: size mismatch.");
+        "Cannot unpack vector into a Hamiltonian matrix: size mismatch.");
   }
   ham.resize(nHam, nHam);
   ham.unpackFromStdVector(packed);
 }
 
-std::string CrystalFieldPeaksBaseImpl::name() const {
-  return "CrystalFieldPeaksBaseImpl";
-}
+void CrystalFieldPeaksBase::calculateEnergiesTransitions(
+    DoubleFortranVector &en, DoubleFortranMatrix &trans) const {
 
-void CrystalFieldPeaksBaseImpl::function(const API::FunctionDomain &,
-                                         API::FunctionValues &) const {
-  throw Kernel::Exception::NotImplementedError(
-      "Method is intentionally not implemented.");
+  ComplexFortranMatrix ham, hz, wf;
+  int nre = 0;
+  calculateEigenSystem(en, wf, ham, hz, nre);
+
+  int dim = static_cast<int>(en.size());
+  DoubleFortranMatrix jx2mat(1, dim, 1, dim);
+  DoubleFortranMatrix jy2mat(1, dim, 1, dim);
+  DoubleFortranMatrix jz2mat(1, dim, 1, dim);
+  calcTransitionMatrices(wf, dim, jx2mat, jy2mat, jz2mat, trans);
+
+  modifyHamiltonian(ham);
+
+  diagonalise(ham, en, wf);
 }
 
 } // namespace Functions

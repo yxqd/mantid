@@ -560,7 +560,7 @@ public:
     TS_ASSERT_EQUALS(tie->asString(), "B64=-21*B60");
   }
 
-  void test_external_hamiltonian() {
+  void xtest_external_hamiltonian() {
     CrystalFieldPeaks fun;
     FunctionDomainGeneral domain;
     FunctionValues values;

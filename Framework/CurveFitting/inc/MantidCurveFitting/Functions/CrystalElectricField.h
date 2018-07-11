@@ -68,6 +68,11 @@ calculateMagneticMomentMatrix(const ComplexFortranMatrix &ev,
                               const std::vector<double> &Hdir, const int nre,
                               ComplexFortranMatrix &mumat);
 
+void MANTID_CURVEFITTING_DLL
+calcTransitionMatrices(const ComplexFortranMatrix &ev, int dim,
+                       DoubleFortranMatrix &jx2, DoubleFortranMatrix &jy2,
+                       DoubleFortranMatrix &jz2, DoubleFortranMatrix &jt2);
+
 } // namespace Functions
 } // namespace CurveFitting
 } // namespace Mantid

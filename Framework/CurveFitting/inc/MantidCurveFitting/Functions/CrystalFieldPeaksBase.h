@@ -50,6 +50,8 @@ public:
     ComplexFortranMatrix ham, hz;
     calculateEigenSystem(en, wf, ham, hz, nre);
   }
+  void calculateEnergiesTransitions(DoubleFortranVector &en,
+                                    DoubleFortranMatrix &trans) const;
 
 protected:
   /// Store the default domain size after first
