@@ -616,7 +616,7 @@ void calcTransitionMatrices(const ComplexFortranMatrix &ev, int dim,
 //---------------------------------------
 void diagonalise(const ComplexFortranMatrix &hamiltonian,
                  DoubleFortranVector &eigenvalues,
-                 ComplexFortranMatrix &eigenvectors) {
+                 ComplexFortranMatrix &eigenvectors, DoubleFortranMatrix *trans) {
   // Diagonalisation of the hamiltonian
   auto dim = hamiltonian.len1();
   eigenvalues.allocate(1, dim);
@@ -630,6 +630,9 @@ void diagonalise(const ComplexFortranMatrix &hamiltonian,
   // Eigenvectors are in columns. Sort the columns
   // to match the sorted eigenvalues.
   eigenvectors.sortColumns(sortedIndices);
+  if (trans) {
+    trans->sortRowsAndColumns(sortedIndices);
+  }
 
   // Shift the lowest energy level to 0
   auto indexMin = static_cast<int>(eigenvalues.indexOfMinElement() + 1);
@@ -973,6 +976,19 @@ void calculateIntensities(int nre, const DoubleFortranVector &energies,
   DoubleFortranMatrix mat(1, dim, 1, dim);
   intcalc(constant, occupation_factor, jt2mat, energies, mat, dim, temperature);
 
+  deg_on(energies, mat, degeneration, e_energies, i_energies, de);
+}
+
+void calculateIntensities(const DoubleFortranVector &energies,
+                          const DoubleFortranMatrix &trans,
+                          double temperature, double de,
+                          IntFortranVector &degeneration,
+                          DoubleFortranVector &e_energies,
+                          DoubleFortranMatrix &i_energies) {
+  int dim = static_cast<int>(energies.size());
+  auto occupation_factor = calcOccupationFactor(energies, temperature);
+  DoubleFortranMatrix mat(1, dim, 1, dim);
+  intcalc(1.0, occupation_factor, trans, energies, mat, dim, temperature);
   deg_on(energies, mat, degeneration, e_energies, i_energies, de);
 }
 

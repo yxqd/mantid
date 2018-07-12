@@ -181,6 +181,14 @@ public:
   /// Calculate the eigensystem of a symmetric matrix
   void eigenSystem(GSLVector &eigenValues, GSLMatrix &eigenVectors);
   Tr<GSLMatrix> tr() { return Tr<GSLMatrix>(*this); }
+  /// Pack the matrix into a single std vector of doubles (for passing in and
+  /// out of algorithms)
+  std::vector<double> packToStdVector() const;
+  /// Unpack an std vector into this matrix. Matrix size must match the size
+  /// of the vector
+  void unpackFromStdVector(const std::vector<double> &v);
+  /// Sort the rows and columns according to the given index transformation
+  void sortRowsAndColumns(std::vector<size_t> const &indices);
 
 protected:
   /// Create a new matrix and move the data to it.

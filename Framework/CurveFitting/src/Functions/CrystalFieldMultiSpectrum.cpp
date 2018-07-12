@@ -224,7 +224,7 @@ void CrystalFieldMultiSpectrum::buildTargetFunction() const {
   ComplexFortranMatrix hz;
   int nre = 0;
   auto &peakCalculator = dynamic_cast<Peaks &>(*m_source);
-  peakCalculator.calculateEigenSystem(en, wf, ham, hz, nre);
+  peakCalculator.calculateEigenSystem(nre, en, wf, ham, hz);
   ham += hz;
 
   // Get the temperatures from the attribute
@@ -421,7 +421,7 @@ void CrystalFieldMultiSpectrum::updateTargetFunction() const {
   ComplexFortranMatrix hz;
   int nre = 0;
   auto &peakCalculator = dynamic_cast<Peaks &>(*m_source);
-  peakCalculator.calculateEigenSystem(en, wf, ham, hz, nre);
+  peakCalculator.calculateEigenSystem(nre, en, wf, ham, hz);
   ham += hz;
 
   auto &fun = dynamic_cast<MultiDomainFunction &>(*m_target);

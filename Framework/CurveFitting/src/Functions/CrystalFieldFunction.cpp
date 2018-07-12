@@ -698,8 +698,8 @@ void CrystalFieldFunction::buildSingleSiteMultiSpectrum() const {
   ComplexFortranMatrix hamiltonianZeeman;
   int nre = 0;
   auto &peakCalculator = dynamic_cast<CrystalFieldPeaksBase &>(*m_source);
-  peakCalculator.calculateEigenSystem(energies, waveFunctions, hamiltonian,
-                                      hamiltonianZeeman, nre);
+  peakCalculator.calculateEigenSystem(nre, energies, waveFunctions, hamiltonian,
+                                      hamiltonianZeeman);
   hamiltonian += hamiltonianZeeman;
 
   const auto nSpec = nSpectra();
@@ -799,8 +799,8 @@ void CrystalFieldFunction::buildMultiSiteMultiSpectrum() const {
     int nre = 0;
     auto &peakCalculator = dynamic_cast<CrystalFieldPeaksBase &>(
         *compSource.getFunction(ionIndex));
-    peakCalculator.calculateEigenSystem(energies, waveFunctions, hamiltonian,
-                                        hamiltonianZeeman, nre);
+    peakCalculator.calculateEigenSystem(nre, energies, waveFunctions, hamiltonian,
+                                        hamiltonianZeeman);
     hamiltonian += hamiltonianZeeman;
 
     auto &temperatures = m_control.temperatures();
@@ -1044,8 +1044,8 @@ void CrystalFieldFunction::updateSingleSiteMultiSpectrum() const {
   ComplexFortranMatrix hamiltonianZeeman;
   int nre = 0;
   auto &peakCalculator = dynamic_cast<CrystalFieldPeaksBase &>(*m_source);
-  peakCalculator.calculateEigenSystem(energies, waveFunctions, hamiltonian,
-                                      hamiltonianZeeman, nre);
+  peakCalculator.calculateEigenSystem(nre, energies, waveFunctions, hamiltonian,
+                                      hamiltonianZeeman);
   hamiltonian += hamiltonianZeeman;
   size_t iFirst = hasBackground() ? 1 : 0;
 
@@ -1099,8 +1099,8 @@ void CrystalFieldFunction::updateMultiSiteMultiSpectrum() const {
     int nre = 0;
     auto &peakCalculator = dynamic_cast<CrystalFieldPeaksBase &>(
         *compSource.getFunction(ionIndex));
-    peakCalculator.calculateEigenSystem(energies, waveFunctions, hamiltonian,
-                                        hamiltonianZeeman, nre);
+    peakCalculator.calculateEigenSystem(nre, energies, waveFunctions, hamiltonian,
+                                        hamiltonianZeeman);
     hamiltonian += hamiltonianZeeman;
     size_t iFirst = ionIndex == 0 && hasBackground() ? 1 : 0;
 

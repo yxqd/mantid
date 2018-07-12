@@ -35,17 +35,25 @@ void CrystalFieldPeaks::functionGeneral(const API::FunctionDomainGeneral &,
 
   DoubleFortranVector en;
   ComplexFortranMatrix wf;
+  DoubleFortranMatrix trans;
   int nre = 0;
-  calculateEigenSystem(en, wf, nre);
+  calculateEigenSystem(nre, en, wf, &trans);
 
   auto temperature = getAttribute("Temperature").asDouble();
+  const double de = getAttribute("ToleranceEnergy").asDouble();
+  const double di = getAttribute("ToleranceIntensity").asDouble();
+
   IntFortranVector degeneration;
   DoubleFortranVector eEnergies;
   DoubleFortranMatrix iEnergies;
-  const double de = getAttribute("ToleranceEnergy").asDouble();
-  const double di = getAttribute("ToleranceIntensity").asDouble();
-  calculateIntensities(nre, en, wf, temperature, de, degeneration, eEnergies,
-                       iEnergies);
+
+  if (trans.len1() != en.len()) {
+    calculateIntensities(nre, en, wf, temperature, de, degeneration, eEnergies,
+                         iEnergies);
+  } else {
+    calculateIntensities(en, trans, temperature, de, degeneration, eEnergies,
+                         iEnergies);
+  }
 
   DoubleFortranVector eExcitations;
   DoubleFortranVector iExcitations;

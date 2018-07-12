@@ -146,7 +146,7 @@ void CrystalFieldMagnetisation::function1D(double *out, const double *xValues,
     DoubleFortranVector en;
     ComplexFortranMatrix wf;
     ComplexFortranMatrix hz;
-    calculateEigenSystem(en, wf, m_ham, hz, m_nre);
+    calculateEigenSystem(m_nre, en, wf, m_ham, hz);
     m_ham += hz;
   }
   CrystalFieldMagnetisationBase::function1D(out, xValues, nData);

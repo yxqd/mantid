@@ -42,23 +42,21 @@ public:
   void setAttribute(const std::string &name, const Attribute &) override;
 
   /// Calculate the crystal field eigensystem
-  void calculateEigenSystem(DoubleFortranVector &en, ComplexFortranMatrix &wf,
-                            ComplexFortranMatrix &ham, ComplexFortranMatrix &hz,
-                            int &nre) const;
-  inline void calculateEigenSystem(DoubleFortranVector &en,
-                                   ComplexFortranMatrix &wf, int &nre) const {
+  void calculateEigenSystem(int &nre, DoubleFortranVector &en,
+                            ComplexFortranMatrix &wf, ComplexFortranMatrix &ham,
+                            ComplexFortranMatrix &hz, DoubleFortranMatrix *trans=nullptr) const;
+  inline void calculateEigenSystem(int &nre, DoubleFortranVector &en,
+                                   ComplexFortranMatrix &wf, DoubleFortranMatrix *trans=nullptr) const {
     ComplexFortranMatrix ham, hz;
-    calculateEigenSystem(en, wf, ham, hz, nre);
+    calculateEigenSystem(nre, en, wf, ham, hz, trans);
   }
-  void calculateEnergiesTransitions(DoubleFortranVector &en,
-                                    DoubleFortranMatrix &trans) const;
 
 protected:
   /// Store the default domain size after first
   /// function evaluation
   mutable size_t m_defaultDomainSize;
 private:
-  void modifyHamiltonian(ComplexFortranMatrix &ham) const;
+  void modifyHamiltonian(ComplexFortranMatrix &ham, DoubleFortranMatrix *trans) const;
 };
 
 class MANTID_CURVEFITTING_DLL CrystalFieldPeaksBaseImpl

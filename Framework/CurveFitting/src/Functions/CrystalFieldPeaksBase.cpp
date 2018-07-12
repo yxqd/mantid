@@ -335,16 +335,18 @@ CrystalFieldPeaksBase::CrystalFieldPeaksBase()
 }
 
 /// Calculate the crystal field eigensystem
+/// @param nre :: Output ion code.
 /// @param en :: Output eigenvalues.
 /// @param wf :: Output eigenvectors.
 /// @param ham :: Output crystal field hamiltonian (without external field)
 /// @param hz :: Output Zeeman hamiltonian (external field term)
-/// @param nre :: Output ion code.
-void CrystalFieldPeaksBase::calculateEigenSystem(DoubleFortranVector &en,
+void CrystalFieldPeaksBase::calculateEigenSystem(int &nre,
+                                                 DoubleFortranVector &en,
                                                  ComplexFortranMatrix &wf,
                                                  ComplexFortranMatrix &ham,
                                                  ComplexFortranMatrix &hz,
-                                                 int &nre) const {
+                                                 DoubleFortranMatrix *trans
+                                                 ) const {
 
   auto ion = getAttribute("Ion").asString();
   if (ion.empty()) {
@@ -450,7 +452,13 @@ void CrystalFieldPeaksBase::calculateEigenSystem(DoubleFortranVector &en,
   bkq(6, 6) = ComplexType(B66, IB66);
 
   calculateHamiltonian(ham, hz, nre, bmol, bext, bkq);
-  diagonalise(ham, en, wf);
+  if (!getAttribute("ModifyHamiltonian").isEmpty())
+  {
+    modifyHamiltonian(ham, trans);
+    diagonalise(ham, en, wf, trans);
+  } else {
+    diagonalise(ham, en, wf);
+  }
 
   // MaxPeakCount is a read-only "mutable" attribute.
   const_cast<CrystalFieldPeaksBase *>(this)
@@ -471,7 +479,7 @@ void CrystalFieldPeaksBase::setAttribute(const std::string &name,
   IFunction::setAttribute(name, attr);
 }
 
-void CrystalFieldPeaksBase::modifyHamiltonian(ComplexFortranMatrix &ham) const {
+void CrystalFieldPeaksBase::modifyHamiltonian(ComplexFortranMatrix &ham, DoubleFortranMatrix *trans) const {
   auto algName = getAttribute("ModifyHamiltonian").asString();
   if (algName.empty()) return;
   auto alg = API::AlgorithmFactory::Instance().create(algName, -1);
@@ -488,24 +496,21 @@ void CrystalFieldPeaksBase::modifyHamiltonian(ComplexFortranMatrix &ham) const {
   }
   ham.resize(nHam, nHam);
   ham.unpackFromStdVector(packed);
-}
 
-void CrystalFieldPeaksBase::calculateEnergiesTransitions(
-    DoubleFortranVector &en, DoubleFortranMatrix &trans) const {
-
-  ComplexFortranMatrix ham, hz, wf;
-  int nre = 0;
-  calculateEigenSystem(en, wf, ham, hz, nre);
-
-  int dim = static_cast<int>(en.size());
-  DoubleFortranMatrix jx2mat(1, dim, 1, dim);
-  DoubleFortranMatrix jy2mat(1, dim, 1, dim);
-  DoubleFortranMatrix jz2mat(1, dim, 1, dim);
-  calcTransitionMatrices(wf, dim, jx2mat, jy2mat, jz2mat, trans);
-
-  modifyHamiltonian(ham);
-
-  diagonalise(ham, en, wf);
+  if (trans) {
+    packed = alg->getProperty("OutputTransitions");
+    auto nTrans = static_cast<size_t>(sqrt(static_cast<double>(packed.size())));
+    if (nTrans != nHam) {
+      throw std::runtime_error(
+          "Error in OutputTransitions: doesn't match OutputHamiltonian in size.");
+    }
+    if (nTrans * nTrans != packed.size()) {
+      throw std::runtime_error(
+          "Cannot unpack vector into a transitions matrix: size mismatch.");
+    }
+    trans->resize(nHam, nHam);
+    trans->unpackFromStdVector(packed);
+  }
 }
 
 } // namespace Functions

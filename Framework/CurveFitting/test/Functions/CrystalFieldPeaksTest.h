@@ -31,6 +31,7 @@ private:
   void init() override {
     declareProperty(make_unique<ArrayProperty<double>>("InputHamiltonian"));
     declareProperty(make_unique<ArrayProperty<double>>("OutputHamiltonian", Direction::Output));
+    declareProperty(make_unique<ArrayProperty<double>>("OutputTransitions", Direction::Output));
   }
   void exec() override {
     std::vector<double> packed = getProperty("InputHamiltonian");
@@ -55,6 +56,8 @@ private:
     }
 
     setProperty("OutputHamiltonian", out.packToStdVector());
+    std::vector<double> transitions(2*nHam * 2*nHam, 1.0);
+    setProperty("OutputTransitions", transitions);
   }
 };
 
@@ -148,22 +151,22 @@ public:
     peaks.setAttributeValue("Temperature", 44.0);
     peaks.setAttributeValue("ToleranceIntensity", 0.001 * c_mbsr);
     peaks.setAttributeValue("Ion", "something");
-    TS_ASSERT_THROWS(peaks.calculateEigenSystem(en, wf, nre),
+    TS_ASSERT_THROWS(peaks.calculateEigenSystem(nre, en, wf),
                      std::runtime_error);
     peaks.setAttributeValue("Ion", "S2.4");
-    TS_ASSERT_THROWS(peaks.calculateEigenSystem(en, wf, nre),
+    TS_ASSERT_THROWS(peaks.calculateEigenSystem(nre, en, wf),
                      std::runtime_error);
     peaks.setAttributeValue("Ion", "S2.5");
-    TS_ASSERT_THROWS_NOTHING(peaks.calculateEigenSystem(en, wf, nre));
+    TS_ASSERT_THROWS_NOTHING(peaks.calculateEigenSystem(nre, en, wf));
     TS_ASSERT_EQUALS(nre, -5);
     peaks.setAttributeValue("Ion", "s1");
-    TS_ASSERT_THROWS_NOTHING(peaks.calculateEigenSystem(en, wf, nre));
+    TS_ASSERT_THROWS_NOTHING(peaks.calculateEigenSystem(nre, en, wf));
     TS_ASSERT_EQUALS(nre, -2);
     peaks.setAttributeValue("Ion", "j1.5");
-    TS_ASSERT_THROWS_NOTHING(peaks.calculateEigenSystem(en, wf, nre));
+    TS_ASSERT_THROWS_NOTHING(peaks.calculateEigenSystem(nre, en, wf));
     TS_ASSERT_EQUALS(nre, -3);
     peaks.setAttributeValue("Ion", "J2");
-    TS_ASSERT_THROWS_NOTHING(peaks.calculateEigenSystem(en, wf, nre));
+    TS_ASSERT_THROWS_NOTHING(peaks.calculateEigenSystem(nre, en, wf));
     TS_ASSERT_EQUALS(nre, -4);
   }
 
@@ -560,7 +563,7 @@ public:
     TS_ASSERT_EQUALS(tie->asString(), "B64=-21*B60");
   }
 
-  void xtest_external_hamiltonian() {
+  void test_external_hamiltonian() {
     CrystalFieldPeaks fun;
     FunctionDomainGeneral domain;
     FunctionValues values;
@@ -575,13 +578,13 @@ public:
     fun.setAttributeValue("ToleranceIntensity", 0.001 * c_mbsr);
     fun.function(domain, values);
 
-    TS_ASSERT_EQUALS(values.size(), 6);
-    TS_ASSERT_DELTA(values[0], 0.0, 0.01);
-    TS_ASSERT_DELTA(values[1], 29.33, 0.01);
-    TS_ASSERT_DELTA(values[2], 44.34, 0.01);
-    TS_ASSERT_DELTA(values[3], 2.75 * c_mbsr, 0.001 * c_mbsr);
-    TS_ASSERT_DELTA(values[4], 0.72 * c_mbsr, 0.001 * c_mbsr);
-    TS_ASSERT_DELTA(values[5], 0.43 * c_mbsr, 0.001 * c_mbsr);
+    TS_ASSERT_EQUALS(values.size(), 22);
+    TS_ASSERT_DELTA(values[0], 36.39, 0.01);
+    TS_ASSERT_DELTA(values[1],  0.00, 0.01);
+    TS_ASSERT_DELTA(values[2], 22.61, 0.01);
+    TS_ASSERT_DELTA(values[11], 2.86, 0.01);
+    TS_ASSERT_DELTA(values[12], 1.00, 0.01);
+    TS_ASSERT_DELTA(values[13], 0.96, 0.01);
   }
 
 private:

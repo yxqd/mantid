@@ -23,7 +23,7 @@ void MANTID_CURVEFITTING_DLL calculateHamiltonian(
 
 void MANTID_CURVEFITTING_DLL diagonalise(
     const ComplexFortranMatrix &hamiltonian, DoubleFortranVector &eigenvalues,
-    ComplexFortranMatrix &eigenvectors);
+    ComplexFortranMatrix &eigenvectors, DoubleFortranMatrix *trans=nullptr);
 
 inline void MANTID_CURVEFITTING_DLL
 calculateEigensystem(DoubleFortranVector &eigenvalues,
@@ -47,6 +47,14 @@ calculateZeemanEigensystem(DoubleFortranVector &eigenvalues,
 void MANTID_CURVEFITTING_DLL
 calculateIntensities(int nre, const DoubleFortranVector &energies,
                      const ComplexFortranMatrix &wavefunctions,
+                     double temperature, double de,
+                     IntFortranVector &degeneration,
+                     DoubleFortranVector &e_energies,
+                     DoubleFortranMatrix &i_energies);
+
+void MANTID_CURVEFITTING_DLL
+calculateIntensities(const DoubleFortranVector &energies,
+                     const DoubleFortranMatrix &trans,
                      double temperature, double de,
                      IntFortranVector &degeneration,
                      DoubleFortranVector &e_energies,

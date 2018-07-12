@@ -187,7 +187,7 @@ void CrystalFieldSusceptibility::setEigensystem(const DoubleFortranVector &en,
 void CrystalFieldSusceptibility::function1D(double *out, const double *xValues,
                                             const size_t nData) const {
   if (!m_setDirect) {
-    calculateEigenSystem(m_en, m_wf, m_nre);
+    calculateEigenSystem(m_nre, m_en, m_wf);
   }
   CrystalFieldSusceptibilityBase::function1D(out, xValues, nData);
 }

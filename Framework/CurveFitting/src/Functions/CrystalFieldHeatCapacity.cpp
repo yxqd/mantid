@@ -78,7 +78,7 @@ void CrystalFieldHeatCapacity::function1D(double *out, const double *xValues,
   if (!m_setDirect) {
     ComplexFortranMatrix wf;
     int nre = 0;
-    calculateEigenSystem(m_en, wf, nre);
+    calculateEigenSystem(nre, m_en, wf);
   }
   CrystalFieldHeatCapacityBase::function1D(out, xValues, nData);
 }

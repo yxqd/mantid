@@ -345,5 +345,40 @@ GSLMatrix GSLMatrix::move() {
   return GSLMatrix(std::move(m_data), size1(), size2());
 }
 
+/// Pack the matrix into a single std vector of doubles (for passing in and
+/// out of algorithms)
+std::vector<double> GSLMatrix::packToStdVector() const {
+  return m_data;
+}
+
+/// Unpack an std vector into this matrix. Matrix size must match the size
+/// of the vector
+void GSLMatrix::unpackFromStdVector(const std::vector<double> &v) {
+  if (v.size() != m_data.size()) {
+    throw std::runtime_error(
+        "Cannot unpack vector into GSLMatrix: size mismatch.");
+  }
+  m_data = v;
+  m_view = gsl_matrix_view_array(m_data.data(), size1(), size2());
+}
+
+/// Sort the rows and columns according to the given index transformation.
+/// The matrix muhst be square.
+void GSLMatrix::sortRowsAndColumns(std::vector<size_t> const &indices) {
+  if (size1() != indices.size()) {
+    throw std::runtime_error("Cannot sort rows and columns: index vector has wrong size.");
+  }
+  if (size1() != size2()) {
+    throw std::runtime_error("Cannot sort rows and columns: GSLMatrix isn't square.");
+  }
+  GSLMatrix old = *this;
+  for(size_t row = 0; row < size1(); ++row) {
+    for(size_t col = 0; col < size2(); ++col) {
+
+    }
+  }
+}
+
+
 } // namespace CurveFitting
 } // namespace Mantid
