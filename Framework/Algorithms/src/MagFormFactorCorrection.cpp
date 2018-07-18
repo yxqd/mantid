@@ -1,13 +1,18 @@
 #include "MantidAlgorithms/MagFormFactorCorrection.h"
-#include "MantidKernel/MagneticIon.h"
+#include "MantidAPI/AnalysisDataService.h"
+#include "MantidAPI/Axis.h"
+#include "MantidAPI/MatrixWorkspace.h"
+#include "MantidDataObjects/TableWorkspace.h"
+#include "MantidDataObjects/Workspace2D.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidKernel/ListValidator.h"
+#include "MantidKernel/MagneticIon.h"
 #include "MantidKernel/Unit.h"
 #include "MantidKernel/UnitFactory.h"
-#include "MantidAPI/Axis.h"
-#include "MantidAPI/AnalysisDataService.h"
-#include "MantidAPI/MatrixWorkspace.h"
-#include "MantidAPI/WorkspaceFactory.h"
 
+using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 using namespace Mantid::PhysicalConstants;
 
 namespace Mantid {
@@ -88,8 +93,18 @@ void MagFormFactorCorrection::exec() {
     FF.push_back(ion.analyticalFormFactor(Qval * Qval));
   }
   if (!ffwsStr.empty()) {
-    MatrixWorkspace_sptr ffws = API::WorkspaceFactory::Instance().create(
-        "Workspace2D", 1, Qvals.size(), FF.size());
+	  std::size_t nx = Qvals.size();
+	  std::size_t ny = FF.size();
+	  MatrixWorkspace_sptr ffws;
+	  if (nx == ny) {
+		  ffws = create<Workspace2D>(1, Histogram(Points(nx)));
+	  }
+	  else if (nx == ny + 1) {
+		  ffws = create<Workspace2D>(1, Histogram(BinEdges(nx)));
+	  }
+	  else {
+		  throw std::invalid_argument("X,Y bin sizes do not match");
+	  }
     ffws->mutableX(0).assign(Qvals.begin(), Qvals.end());
     ffws->mutableY(0).assign(FF.begin(), FF.end());
     ffws->getAxis(0)->unit() =

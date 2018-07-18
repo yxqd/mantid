@@ -2,17 +2,21 @@
 #include "MantidAPI/EqualBinSizesValidator.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/TextAxis.h"
-#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAlgorithms/MaxEnt/MaxentEntropyNegativeValues.h"
 #include "MantidAlgorithms/MaxEnt/MaxentEntropyPositiveValues.h"
 #include "MantidAlgorithms/MaxEnt/MaxentSpaceComplex.h"
 #include "MantidAlgorithms/MaxEnt/MaxentSpaceReal.h"
 #include "MantidAlgorithms/MaxEnt/MaxentTransformFourier.h"
+#include "MantidDataObjects/TableWorkspace.h"
+#include "MantidDataObjects/Workspace2D.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidHistogramData/LinearGenerator.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/UnitFactory.h"
 #include "MantidKernel/VectorHelper.h"
+
 #include <gsl/gsl_linalg.h>
 #include <algorithm>
 #include <numeric>
@@ -20,6 +24,8 @@
 namespace Mantid {
 namespace Algorithms {
 
+using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 using Mantid::HistogramData::LinearGenerator;
 using Mantid::HistogramData::Points;
 
@@ -335,15 +341,26 @@ void MaxEnt::exec() {
 
   nSpec = complexData ? nSpec / 2 : nSpec;
   outImageWS =
-      WorkspaceFactory::Instance().create(inWS, 2 * nSpec, npoints, npoints);
+      create<MatrixWorkspace>(*inWS, 2 * nSpec, Histogram(Points(npoints)));
   for (size_t i = 0; i < outImageWS->getNumberHistograms(); ++i)
     outImageWS->getSpectrum(i).setDetectorID(static_cast<detid_t>(i + 1));
-  outDataWS =
-      WorkspaceFactory::Instance().create(inWS, 2 * nSpec, npointsX, npoints);
+
+  std::size_t nx = npointsX;
+  std::size_t ny = npoints;
+  if (nx == ny) {
+	  outDataWS = create<MatrixWorkspace>(*inWS, 2*nSpec, Histogram(Points(nx)));
+  }
+  else if (nx == ny + 1) {
+	  outDataWS = create<MatrixWorkspace>(*inWS, 2*nSpec, Histogram(BinEdges(nx)));
+  }
+  else {
+	  throw std::invalid_argument("X,Y bin sizes do not match");
+  }
+
   for (size_t i = 0; i < outDataWS->getNumberHistograms(); ++i)
     outDataWS->getSpectrum(i).setDetectorID(static_cast<detid_t>(i + 1));
-  outEvolChi = WorkspaceFactory::Instance().create(inWS, nSpec, nIter, nIter);
-  outEvolTest = WorkspaceFactory::Instance().create(inWS, nSpec, nIter, nIter);
+  outEvolChi = create<MatrixWorkspace>(*inWS, nSpec, Histogram(Points(nIter)));
+  outEvolTest = create<MatrixWorkspace>(*inWS, nSpec, Histogram(Points(nIter)));
 
   npoints = complexImage ? npoints * 2 : npoints;
   std::vector<size_t> iterationCounts;
