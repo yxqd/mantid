@@ -4,9 +4,12 @@
 #include "MantidAlgorithms/Integration.h"
 #include "MantidAPI/NumericAxis.h"
 #include "MantidAPI/TextAxis.h"
-#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/RebinnedOutput.h"
+#include "MantidDataObjects/TableWorkspace.h"
+#include "MantidDataObjects/Workspace2D.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/VectorHelper.h"
@@ -23,6 +26,7 @@ DECLARE_ALGORITHM(Integration)
 using namespace Kernel;
 using namespace API;
 using namespace DataObjects;
+using namespace HistogramData;
 
 /** Initialisation method.
  *
@@ -150,9 +154,9 @@ void Integration::exec() {
   }
 
   // Create the 2D workspace (with 1 bin) for the output
-  MatrixWorkspace_sptr outputWorkspace =
-      API::WorkspaceFactory::Instance().create(
-          localworkspace, maxWsIndex - minWsIndex + 1, 2, 1);
+  MatrixWorkspace_sptr outputWorkspace = create<MatrixWorkspace>(
+      *localworkspace, maxWsIndex - minWsIndex + 1, Histogram(BinEdges(2)));
+
   auto rebinned_input =
       boost::dynamic_pointer_cast<const RebinnedOutput>(localworkspace);
   auto rebinned_output =
