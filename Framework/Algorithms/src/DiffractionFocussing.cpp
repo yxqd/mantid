@@ -2,7 +2,8 @@
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/MatrixWorkspace.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidKernel/Unit.h"
 #include "MantidIndexing/IndexInfo.h"
 
@@ -23,6 +24,7 @@ DiffractionFocussing::DiffractionFocussing()
 }
 
 using namespace Kernel;
+using namespace HistogramData;
 using API::WorkspaceProperty;
 using API::MatrixWorkspace_sptr;
 using API::MatrixWorkspace;
@@ -128,8 +130,8 @@ void DiffractionFocussing::exec() {
   // Create a new workspace that's the right size for the meaningful spectra and
   // copy them in
   int64_t newSize = tmpW->blocksize();
-  API::MatrixWorkspace_sptr outputW = API::WorkspaceFactory::Instance().create(
-      tmpW, resultIndeces.size(), newSize + 1, newSize);
+  API::MatrixWorkspace_sptr outputW = DataObjects::create<API::MatrixWorkspace>(
+      *tmpW, resultIndeces.size(), Histogram(BinEdges(newSize + 1)));
 
   std::vector<Indexing::SpectrumNumber> specNums;
   const auto &tmpIndices = tmpW->indexInfo();
