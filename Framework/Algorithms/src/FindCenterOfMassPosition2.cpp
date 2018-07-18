@@ -1,17 +1,20 @@
 #include "MantidAlgorithms/FindCenterOfMassPosition2.h"
 #include "MantidAPI/HistogramValidator.h"
 #include "MantidAPI/ITableWorkspace.h"
-#include "MantidAPI/TableRow.h"
 #include "MantidAPI/SpectrumInfo.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidAPI/TableRow.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
-#include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/EventList.h"
+#include "MantidDataObjects/EventWorkspace.h"
+#include "MantidDataObjects/TableWorkspace.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidKernel/ArrayProperty.h"
-#include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/BoundedValidator.h"
+#include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/PhysicalConstants.h"
+
+#include "MantidAPI/WorkspaceFactory.h"
 
 namespace Mantid {
 namespace Algorithms {
@@ -108,6 +111,8 @@ void FindCenterOfMassPosition2::exec() {
     inputWS = algo->getProperty("OutputWorkspace");
     WorkspaceFactory::Instance().initializeFromParent(*inputWSWvl, *inputWS,
                                                       false);
+	//inputWS = create<MatrixWorkspace>(*inputWSWvl);
+
   } else {
     // Sum up all the wavelength bins
     IAlgorithm_sptr childAlg = createChildAlgorithm("Integration");
@@ -253,7 +258,7 @@ void FindCenterOfMassPosition2::exec() {
     setPropertyValue("OutputWorkspace", output);
 
     Mantid::API::ITableWorkspace_sptr m_result =
-        Mantid::API::WorkspaceFactory::Instance().createTable("TableWorkspace");
+        boost::make_shared<TableWorkspace>();
     m_result->addColumn("str", "Name");
     m_result->addColumn("double", "Value");
 

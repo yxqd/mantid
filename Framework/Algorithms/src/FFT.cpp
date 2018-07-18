@@ -4,7 +4,8 @@
 #include "MantidAlgorithms/FFT.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/TextAxis.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/EnabledWhenProperty.h"
 #include "MantidKernel/EqualBinsChecker.h"
@@ -30,6 +31,8 @@ DECLARE_ALGORITHM(FFT)
 
 using namespace Kernel;
 using namespace API;
+using namespace DataObjects;
+using namespace HistogramData;
 
 /// Initialisation method. Declares properties to be used in algorithm.
 void FFT::init() {
@@ -104,7 +107,7 @@ void FFT::exec() {
     addPositiveOnly = true;
   }
 
-  m_outWS = WorkspaceFactory::Instance().create(m_inWS, nOut, nPoints, nPoints);
+  m_outWS = create<MatrixWorkspace>(*m_inWS, nOut, Histogram(Points(nPoints)));
   for (int i = 0; i < nOut; ++i)
     m_outWS->getSpectrum(i).setDetectorID(static_cast<detid_t>(i + 1));
 

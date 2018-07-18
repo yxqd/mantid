@@ -5,14 +5,14 @@
 #include "MantidAPI/FuncMinimizerFactory.h"
 #include "MantidAPI/FunctionFactory.h"
 #include "MantidAPI/TableRow.h"
-#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAlgorithms/FitPeak.h"
+#include "MantidDataObjects/TableWorkspace.h"
 #include "MantidDataObjects/Workspace2D.h"
+#include "MantidIndexing/GlobalSpectrumIndex.h"
+#include "MantidIndexing/IndexInfo.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/StartsWithValidator.h"
 #include "MantidKernel/VectorHelper.h"
-#include "MantidIndexing/IndexInfo.h"
-#include "MantidIndexing/GlobalSpectrumIndex.h"
 
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/ListValidator.h"
@@ -283,7 +283,7 @@ void FindPeaks::processAlgorithmProperties() {
 /** Generate a table workspace for output peak parameters
   */
 void FindPeaks::generateOutputPeakParameterTable() {
-  m_outPeakTableWS = WorkspaceFactory::Instance().createTable("TableWorkspace");
+  m_outPeakTableWS = boost::make_shared<TableWorkspace>();
   m_outPeakTableWS->addColumn("int", "spectrum");
 
   if (m_rawPeaksTable) {

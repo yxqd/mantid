@@ -10,12 +10,13 @@
 #include "MantidAPI/FunctionProperty.h"
 #include "MantidAPI/MultiDomainFunction.h"
 #include "MantidAPI/TableRow.h"
-#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceProperty.h"
 #include "MantidAlgorithms/FindPeakBackground.h"
 #include "MantidDataObjects/TableWorkspace.h"
 #include "MantidDataObjects/Workspace2D.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidHistogramData/EstimatePolynomial.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidHistogramData/HistogramIterator.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/BoundedValidator.h"
@@ -30,6 +31,7 @@
 using namespace Mantid;
 using namespace Mantid::API;
 using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 using namespace Mantid::Kernel;
 using Mantid::HistogramData::Histogram;
 using namespace std;
@@ -1740,8 +1742,16 @@ FitPeaks::createMatrixWorkspace(const std::vector<double> &vec_x,
   size_t size = vec_x.size();
   size_t ysize = vec_y.size();
 
-  MatrixWorkspace_sptr matrix_ws =
-      WorkspaceFactory::Instance().create("Workspace2D", 1, size, ysize);
+  MatrixWorkspace_sptr matrix_ws;
+  if (size == ysize) {
+	  matrix_ws = create<Workspace2D>(1, Histogram(Points(size)));
+  }
+  else if (size == ysize + 1) {
+	  matrix_ws = create<Workspace2D>(1, Histogram(BinEdges(size)));
+  }
+  else {
+	  throw std::invalid_argument("X,Y bin sizes do not match");
+  }
 
   auto &dataX = matrix_ws->mutableX(0);
   auto &dataY = matrix_ws->mutableY(0);
@@ -1759,8 +1769,9 @@ void FitPeaks::generateOutputPeakPositionWS() {
   // create output workspace for peak positions: can be partial spectra to input
   // workspace
   size_t num_hist = m_stopWorkspaceIndex - m_startWorkspaceIndex + 1;
-  m_outputPeakPositionWorkspace = WorkspaceFactory::Instance().create(
-      "Workspace2D", num_hist, m_numPeaksToFit, m_numPeaksToFit);
+  m_outputPeakPositionWorkspace =
+      create<Workspace2D>(num_hist, Histogram(Points(m_numPeaksToFit)));
+
   // set default
   for (size_t wi = 0; wi < num_hist; ++wi) {
     // TODO - Parallization OpenMP
@@ -1783,8 +1794,7 @@ void FitPeaks::generateFittedParametersValueWorkspace() {
   m_rawPeaksTable = getProperty("RawPeakParameters");
 
   // create
-  m_fittedParamTable =
-      WorkspaceFactory::Instance().createTable("TableWorkspace");
+  m_fittedParamTable = boost::make_shared<TableWorkspace>();
   // add columns
   m_fittedParamTable->addColumn("int", "wsindex");
   m_fittedParamTable->addColumn("int", "peakindex");
@@ -1838,7 +1848,7 @@ void FitPeaks::generateCalculatedPeaksWS() {
   }
 
   // create
-  m_fittedPeakWS = API::WorkspaceFactory::Instance().create(m_inputMatrixWS);
+  m_fittedPeakWS = create<MatrixWorkspace>(*m_inputMatrixWS);
   for (size_t iws = 0; iws < m_fittedPeakWS->getNumberHistograms(); ++iws) {
     auto out_vecx = m_fittedPeakWS->histogram(iws).x();
     auto in_vecx = m_inputMatrixWS->histogram(iws).x();

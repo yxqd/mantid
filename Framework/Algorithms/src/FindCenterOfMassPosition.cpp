@@ -3,7 +3,7 @@
 #include "MantidAPI/ITableWorkspace.h"
 #include "MantidAPI/TableRow.h"
 #include "MantidAPI/SpectrumInfo.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/TableWorkspace.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidKernel/ArrayProperty.h"
@@ -21,6 +21,7 @@ DECLARE_ALGORITHM(FindCenterOfMassPosition)
 using namespace Kernel;
 using namespace API;
 using namespace Geometry;
+using namespace DataObjects;
 
 void FindCenterOfMassPosition::init() {
   auto wsValidator = boost::make_shared<CompositeValidator>();
@@ -208,8 +209,7 @@ void FindCenterOfMassPosition::exec() {
     // Set the name of the new workspace
     setPropertyValue("OutputWorkspace", output);
 
-    Mantid::API::ITableWorkspace_sptr m_result =
-        Mantid::API::WorkspaceFactory::Instance().createTable("TableWorkspace");
+    Mantid::API::ITableWorkspace_sptr m_result = boost::make_shared<TableWorkspace>();
     m_result->addColumn("str", "Name");
     m_result->addColumn("double", "Value");
 

@@ -4,7 +4,9 @@
 #include "MantidAlgorithms/FFTSmooth.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/TextAxis.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/Workspace2D.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidKernel/Exception.h"
 
 #include "MantidKernel/BoundedValidator.h"
@@ -18,6 +20,8 @@ DECLARE_ALGORITHM(FFTSmooth)
 
 using namespace Kernel;
 using namespace API;
+using namespace DataObjects;
+using namespace HistogramData;
 
 /// Initialisation method. Declares properties to be used in algorithm.
 void FFTSmooth::init() {
@@ -52,8 +56,18 @@ void FFTSmooth::exec() {
   // Symmetrize the input spectrum
   int dn = static_cast<int>(m_inWS->y(0).size());
 
-  API::MatrixWorkspace_sptr symmWS = API::WorkspaceFactory::Instance().create(
-      "Workspace2D", 1, m_inWS->x(0).size() + dn, m_inWS->y(0).size() + dn);
+  std::size_t nx = m_inWS->x(0).size() + dn;
+  std::size_t ny = m_inWS->y(0).size() + dn;
+  API::MatrixWorkspace_sptr symmWS;
+  if (nx == ny) {
+	  symmWS = create<Workspace2D>(1, Histogram(Points(nx)));
+  }
+  else if (nx == ny + 1) {
+	  symmWS = create<Workspace2D>(1, Histogram(BinEdges(nx)));
+  }
+  else {
+	  throw std::invalid_argument("X,Y bin sizes do not match");
+  }
 
   double dx = (m_inWS->x(spec).back() - m_inWS->x(spec).front()) /
               static_cast<double>(m_inWS->x(spec).size() - 1);
@@ -115,8 +129,18 @@ void FFTSmooth::exec() {
   API::MatrixWorkspace_sptr tmpWS = fft->getProperty("OutputWorkspace");
 
   // Create output
-  API::MatrixWorkspace_sptr outWS = API::WorkspaceFactory::Instance().create(
-      m_inWS, 1, m_inWS->x(0).size(), m_inWS->y(0).size());
+  std::size_t sizex = m_inWS->x(0).size();
+  std::size_t sizey = m_inWS->y(0).size();
+  API::MatrixWorkspace_sptr outWS;
+  if (sizex == sizey) {
+	  outWS = create<MatrixWorkspace>(*m_inWS, 1, Histogram(Points(sizex)));
+  }
+  else if (sizex == sizey + 1) {
+	  outWS = create<MatrixWorkspace>(*m_inWS, 1, Histogram(BinEdges(sizex)));
+  }
+  else {
+	  throw std::invalid_argument("X,Y bin sizes do not match");
+  }
 
   dn = static_cast<int>(tmpWS->blocksize()) / 2;
 
@@ -138,8 +162,16 @@ void FFTSmooth::truncate(int n) {
   if (ny == 0)
     ny = 1;
   int nx = m_unfilteredWS->isHistogramData() ? ny + 1 : ny;
-  m_filteredWS =
-      API::WorkspaceFactory::Instance().create(m_unfilteredWS, 2, nx, ny);
+
+  if (nx == ny) {
+	  m_filteredWS = create<MatrixWorkspace>(*m_unfilteredWS, 2, Histogram(Points(nx)));
+  }
+  else if (nx == ny + 1) {
+	  m_filteredWS = create<MatrixWorkspace>(*m_unfilteredWS, 2, Histogram(BinEdges(nx)));
+  }
+  else {
+	  throw std::invalid_argument("X,Y bin sizes do not match");
+  }
 
   auto &Yr = m_unfilteredWS->y(0);
   auto &Yi = m_unfilteredWS->y(1);
@@ -172,8 +204,15 @@ void FFTSmooth::zero(int n) {
   if (ny == 0)
     ny = 1;
 
-  m_filteredWS =
-      API::WorkspaceFactory::Instance().create(m_unfilteredWS, 2, mx, my);
+  if (mx == my) {
+	  m_filteredWS = create<MatrixWorkspace>(*m_unfilteredWS, 2, Histogram(Points(mx)));
+  }
+  else if (mx == my + 1) {
+	  m_filteredWS = create<MatrixWorkspace>(*m_unfilteredWS, 2, Histogram(BinEdges(mx)));
+  }
+  else {
+	  throw std::invalid_argument("X,Y bin sizes do not match");
+  }
 
   m_filteredWS->setSharedX(0, m_unfilteredWS->sharedX(0));
   m_filteredWS->setSharedX(1, m_unfilteredWS->sharedX(0));

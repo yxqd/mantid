@@ -4,19 +4,21 @@
 #include "MantidAlgorithms/FitPeak.h"
 #include "MantidAPI/CompositeFunction.h"
 #include "MantidAPI/CostFunctionFactory.h"
-#include "MantidAPI/FunctionProperty.h"
-#include "MantidAPI/FunctionFactory.h"
 #include "MantidAPI/FuncMinimizerFactory.h"
+#include "MantidAPI/FunctionFactory.h"
+#include "MantidAPI/FunctionProperty.h"
 #include "MantidAPI/MatrixWorkspace.h"
-#include "MantidAPI/WorkspaceFactory.h"
-#include "MantidAPI/WorkspaceProperty.h"
 #include "MantidAPI/TableRow.h"
-#include "MantidKernel/ListValidator.h"
-#include "MantidKernel/IValidator.h"
-#include "MantidKernel/StartsWithValidator.h"
+#include "MantidAPI/WorkspaceProperty.h"
 #include "MantidDataObjects/TableWorkspace.h"
+#include "MantidDataObjects/Workspace2D.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/BoundedValidator.h"
+#include "MantidKernel/IValidator.h"
+#include "MantidKernel/ListValidator.h"
+#include "MantidKernel/StartsWithValidator.h"
 
 #include "MantidAPI/MultiDomainFunction.h"
 
@@ -26,6 +28,7 @@
 using namespace Mantid;
 using namespace Mantid::API;
 using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 using namespace Mantid::Kernel;
 using Mantid::HistogramData::HistogramX;
 
@@ -350,8 +353,17 @@ API::MatrixWorkspace_sptr FitOneSinglePeak::genFitWindowWS() {
   size_t ishift = i_maxFitX + 1;
   if (ishift >= vecY.size())
     ysize = vecY.size() - i_minFitX;
-  MatrixWorkspace_sptr purePeakWS =
-      WorkspaceFactory::Instance().create("Workspace2D", 1, size, ysize);
+
+  MatrixWorkspace_sptr purePeakWS;
+  if (size == ysize) {
+	  purePeakWS = create<Workspace2D>(1, Histogram(Points(size)));
+  }
+  else if (size == ysize + 1) {
+	  purePeakWS = create<Workspace2D>(1, Histogram(BinEdges(size)));
+  }
+  else {
+	  throw std::invalid_argument("X,Y bin sizes do not match");
+  }
 
   auto &vecX = m_dataWS->x(m_wsIndex);
   auto &vecE = m_dataWS->e(m_wsIndex);
@@ -1505,8 +1517,16 @@ void FitPeak::setupOutput(
   size_t sizex = vecoutx.size();
   size_t sizey = vecoutx.size();
 
-  MatrixWorkspace_sptr outws = boost::dynamic_pointer_cast<MatrixWorkspace>(
-      WorkspaceFactory::Instance().create("Workspace2D", nspec, sizex, sizey));
+  MatrixWorkspace_sptr outws;
+  if (sizex == sizey) {
+	  outws = create<Workspace2D>(nspec, Histogram(Points(sizex)));
+  }
+  else if (sizex == sizey + 1) {
+	  outws = create<Workspace2D>(nspec, Histogram(BinEdges(sizex)));
+  }
+  else {
+	  throw std::invalid_argument("X,Y bin sizes do not match");
+  }
 
   // Calculate again
   FunctionDomain1DVector domain(vecoutx);

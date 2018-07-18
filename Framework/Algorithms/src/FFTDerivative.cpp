@@ -1,6 +1,7 @@
 #include "MantidAlgorithms/FFTDerivative.h"
 #include "MantidAPI/MatrixWorkspace.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidKernel/BoundedValidator.h"
 
 #include <algorithm>
@@ -17,6 +18,8 @@ DECLARE_ALGORITHM(FFTDerivative)
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
+using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 
 void FFTDerivative::init() {
   declareProperty(
@@ -46,10 +49,12 @@ void FFTDerivative::execComplexFFT() {
   // Workspace for holding a copy of a spectrum. Each spectrum is symmetrized to
   // minimize
   // possible edge effects.
+  //MatrixWorkspace_sptr copyWS =
+  //    boost::dynamic_pointer_cast<Mantid::API::MatrixWorkspace>(
+  //        Mantid::API::WorkspaceFactory::Instance().create(inWS, 1, nx + ny,
+  //                                                         ny + ny));
   MatrixWorkspace_sptr copyWS =
-      boost::dynamic_pointer_cast<Mantid::API::MatrixWorkspace>(
-          Mantid::API::WorkspaceFactory::Instance().create(inWS, 1, nx + ny,
-                                                           ny + ny));
+      create<MatrixWorkspace>(*inWS, 1, Histogram(Points(nx + ny)));
 
   for (size_t spec = 0; spec < n; ++spec) {
     symmetriseSpectrum(inWS->histogram(spec), copyWS->mutableX(0),
@@ -86,10 +91,8 @@ void FFTDerivative::execComplexFFT() {
       transWS = toHisto->getProperty("OutputWorkspace");
     }
 
-    if (!outWS) {
-      outWS = boost::dynamic_pointer_cast<Mantid::API::MatrixWorkspace>(
-          Mantid::API::WorkspaceFactory::Instance().create(inWS));
-    }
+    if (!outWS)
+      outWS = create<MatrixWorkspace>(*inWS);
 
     // Save the upper half of the inverse transform for output
     size_t m2 = transWS->y(0).size() / 2;
