@@ -1,11 +1,11 @@
 #include "MantidAlgorithms/ApplyDetailedBalance.h"
 #include "MantidAPI/Run.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidKernel/CompositeValidator.h"
+#include "MantidKernel/ListValidator.h"
 #include "MantidKernel/PhysicalConstants.h"
 #include "MantidKernel/PropertyWithValue.h"
-#include "MantidKernel/ListValidator.h"
 #include "MantidKernel/TimeSeriesProperty.h"
 
 #include "boost/lexical_cast.hpp"
@@ -14,6 +14,7 @@
 using std::string;
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
+using namespace Mantid::DataObjects;
 
 namespace Mantid {
 namespace Algorithms {
@@ -51,7 +52,7 @@ void ApplyDetailedBalance::exec() {
   // If input and output workspaces are not the same, create a new workspace for
   // the output
   if (outputWS != inputWS) {
-    outputWS = API::WorkspaceFactory::Instance().create(inputWS);
+    outputWS = create<MatrixWorkspace>(*inputWS);
   }
 
   std::string Tstring = getProperty("Temperature");

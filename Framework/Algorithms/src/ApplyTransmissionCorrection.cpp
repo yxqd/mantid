@@ -1,12 +1,14 @@
 #include "MantidAlgorithms/ApplyTransmissionCorrection.h"
 #include "MantidAPI/HistogramValidator.h"
 #include "MantidAPI/SpectrumInfo.h"
-#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceOpOverloads.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidGeometry/IDetector.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/CompositeValidator.h"
+
+using namespace Mantid::DataObjects;
 
 namespace Mantid {
 namespace Algorithms {
@@ -84,7 +86,7 @@ void ApplyTransmissionCorrection::exec() {
   Progress progress(this, 0.0, 1.0, numHists);
 
   // Create a Workspace2D to match the intput workspace
-  MatrixWorkspace_sptr corrWS = WorkspaceFactory::Instance().create(inputWS);
+  MatrixWorkspace_sptr corrWS = create<MatrixWorkspace>(*inputWS);
 
   const auto &spectrumInfo = inputWS->spectrumInfo();
 
