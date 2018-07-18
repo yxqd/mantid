@@ -5,13 +5,15 @@
 #include "MantidAPI/CommonBinsValidator.h"
 #include "MantidAPI/HistogramValidator.h"
 #include "MantidAPI/SpectrumInfo.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidAPI/WorkspaceOpOverloads.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/ListValidator.h"
+#include "MantidHistogramData/Histogram.h"
+#include "MantidDataObjects/WorkspaceSingleValue.h"
 
 namespace Mantid {
 namespace Algorithms {
@@ -21,6 +23,8 @@ DECLARE_ALGORITHM(CalculateTransmissionBeamSpreader)
 
 using namespace Kernel;
 using namespace API;
+using namespace DataObjects;
+using namespace HistogramData;
 using std::size_t;
 
 void CalculateTransmissionBeamSpreader::init() {
@@ -157,7 +161,7 @@ void CalculateTransmissionBeamSpreader::exec() {
 
   // Beam spreader transmission
   MatrixWorkspace_sptr spreader_trans =
-      WorkspaceFactory::Instance().create("WorkspaceSingleValue", 1, 1, 1);
+	  create<WorkspaceSingleValue>(1, Histogram(Points(1)));
   spreader_trans->setYUnit("");
   spreader_trans->setDistribution(true);
   spreader_trans->mutableX(0)[0] = 0.0;

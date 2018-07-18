@@ -4,8 +4,9 @@
 #include "MantidAPI/Run.h"
 #include "MantidAPI/SpectraAxisValidator.h"
 #include "MantidAPI/SpectrumInfo.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidGeometry/Instrument.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/ListValidator.h"
@@ -24,6 +25,8 @@ DECLARE_ALGORITHM(ConvertSpectrumAxis)
 using namespace Kernel;
 using namespace API;
 using namespace Geometry;
+using namespace DataObjects;
+using namespace HistogramData;
 
 namespace {
 constexpr double rad2deg = 180. / M_PI;
@@ -145,8 +148,19 @@ void ConvertSpectrumAxis::exec() {
   }
   // Create the output workspace. Can't re-use the input one because we'll be
   // re-ordering the spectra.
-  MatrixWorkspace_sptr outputWS = WorkspaceFactory::Instance().create(
-      inputWS, indexMap.size(), nxBins, nBins);
+  std::size_t nx = nxBins;
+  std::size_t ny = nBins;
+  MatrixWorkspace_sptr outputWS;
+  if (nx == ny) {
+	  outputWS = create<MatrixWorkspace>(*inputWS, indexMap.size(), Histogram(Points(nx)));
+  }
+  else if (nx == ny + 1) {
+	  outputWS = create<MatrixWorkspace>(*inputWS, indexMap.size(), Histogram(BinEdges(nx)));
+  }
+  else {
+	  throw std::invalid_argument("X,Y bin sizes do not match");
+  }
+
   // Now set up a new, numeric axis holding the theta values corresponding to
   // each spectrum
   auto const newAxis = new NumericAxis(indexMap.size());

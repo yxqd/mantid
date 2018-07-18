@@ -2,10 +2,11 @@
 #include "MantidAPI/InstrumentValidator.h"
 #include "MantidAPI/Sample.h"
 #include "MantidAPI/SpectrumInfo.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidAPI/HistoWorkspace.h"
 #include "MantidAPI/WorkspaceGroup.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
 #include "MantidDataObjects/EventWorkspace.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/Material.h"
@@ -20,6 +21,7 @@ DECLARE_ALGORITHM(CalculateCarpenterSampleCorrection) // Register the class
 
 using namespace Kernel;
 using namespace API;
+using namespace DataObjects;
 using Mantid::DataObjects::EventWorkspace;
 using Mantid::DataObjects::EventWorkspace_sptr;
 using Mantid::HistogramData::HistogramY;
@@ -424,8 +426,8 @@ void CalculateCarpenterSampleCorrection::calculate_ms_correction(
 
 MatrixWorkspace_sptr CalculateCarpenterSampleCorrection::createOutputWorkspace(
     const MatrixWorkspace_sptr &inputWksp, const std::string ylabel) const {
-  MatrixWorkspace_sptr outputWS =
-      WorkspaceFactory::Instance().create(inputWksp);
+
+  MatrixWorkspace_sptr outputWS = create<HistoWorkspace>(*inputWksp);
   // The algorithm computes the signal values at bin centres so they should
   // be treated as a distribution
   outputWS->setDistribution(true);

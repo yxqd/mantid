@@ -5,7 +5,7 @@
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/Run.h"
 #include "MantidAPI/TableRow.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/TableWorkspace.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/PhysicalConstants.h"
 
@@ -16,6 +16,7 @@ namespace Mantid {
 namespace Algorithms {
 
 using namespace Kernel;
+using namespace DataObjects;
 
 // Register the class into the algorithm factory
 DECLARE_ALGORITHM(CalMuonDeadTime)
@@ -87,8 +88,7 @@ void CalMuonDeadTime::exec() {
 
   // Do the initial setup of the ouput table-workspace
 
-  API::ITableWorkspace_sptr outTable =
-      API::WorkspaceFactory::Instance().createTable("TableWorkspace");
+  API::ITableWorkspace_sptr outTable = boost::make_shared<TableWorkspace>();
   outTable->addColumn("int", "spectrum");
   outTable->addColumn("double", "dead-time");
 

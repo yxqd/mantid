@@ -13,10 +13,14 @@
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/NumericAxis.h"
 #include "MantidAPI/Run.h"
-#include "MantidAPI/WorkspaceFactory.h"
 
 #include "MantidDataObjects/Workspace2D.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
 #include <numeric>
+
+using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 
 namespace Mantid {
 namespace Algorithms {
@@ -615,9 +619,7 @@ void CalculateCountRate::checkAndInitVisWorkspace() {
   int numXBins = getProperty("XResolution");
   std::string RangeUnits = getProperty("RangeUnits");
 
-  m_visWs = boost::dynamic_pointer_cast<DataObjects::Workspace2D>(
-      API::WorkspaceFactory::Instance().create("Workspace2D", numTBins,
-                                               numXBins + 1, numXBins));
+  m_visWs = create<Workspace2D>(numTBins, Histogram(BinEdges(numXBins + 1)));
   m_visWs->setTitle(visWSName);
 
   double Xmax = m_XRangeMax;

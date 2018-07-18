@@ -1,7 +1,8 @@
 #include "MantidAlgorithms/CalculateZscore.h"
 
 #include "MantidAPI/MatrixWorkspace.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidAPI/WorkspaceProperty.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidKernel/ArrayProperty.h"
@@ -13,6 +14,7 @@ using namespace Mantid;
 using namespace Mantid::API;
 using namespace Mantid::Kernel;
 using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 using namespace std;
 
 namespace Mantid {
@@ -59,10 +61,16 @@ void CalculateZscore::exec() {
   }
   size_t sizex = inpWS->x(0).size();
   size_t sizey = inpWS->y(0).size();
-
-  Workspace2D_sptr outWS = boost::dynamic_pointer_cast<Workspace2D>(
-      WorkspaceFactory::Instance().create("Workspace2D", numspec, sizex,
-                                          sizey));
+  Workspace2D_sptr outWS;
+  if (sizex == sizey) {
+	  outWS = create<Workspace2D>(numspec, Histogram(Points(sizex)));
+  }
+  else if (sizex == sizey + 1) {
+	  outWS = create<Workspace2D>(numspec, Histogram(BinEdges(sizex)));
+  }
+  else {
+	  throw std::invalid_argument("X,Y bin sizes do not match");
+  }
 
   Progress progress(this, 0.0, 1.0, numspec);
 

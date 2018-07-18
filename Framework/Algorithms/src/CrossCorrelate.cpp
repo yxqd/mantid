@@ -3,8 +3,9 @@
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/CrossCorrelate.h"
 #include "MantidAPI/RawCountValidator.h"
-#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/CompositeValidator.h"
 #include "MantidKernel/VectorHelper.h"
@@ -21,6 +22,8 @@ DECLARE_ALGORITHM(CrossCorrelate)
 
 using namespace Kernel;
 using namespace API;
+using namespace DataObjects;
+using namespace HistogramData;
 
 /// Initialisation method.
 void CrossCorrelate::init() {
@@ -139,7 +142,7 @@ void CrossCorrelate::exec() {
     throw std::runtime_error("Range is not valid");
 
   MatrixWorkspace_sptr out =
-      WorkspaceFactory::Instance().create(inputWS, nspecs, npoints, npoints);
+      create<MatrixWorkspace>(*inputWS, nspecs, Histogram(Points(npoints)));
 
   // Calculate the mean value of the reference spectrum and associated error
   // squared

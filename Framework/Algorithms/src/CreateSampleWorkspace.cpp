@@ -5,7 +5,6 @@
 #include "MantidAPI/FunctionDomain1D.h"
 #include "MantidAPI/FunctionProperty.h"
 #include "MantidAPI/Run.h"
-#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/ScanningWorkspaceBuilder.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidDataObjects/EventWorkspace.h"
