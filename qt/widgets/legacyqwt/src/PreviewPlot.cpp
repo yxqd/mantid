@@ -122,6 +122,8 @@ PreviewPlot::PreviewPlot(QWidget *parent, bool init)
 
   connect(this, SIGNAL(needToReplot()), this, SLOT(replot()));
   connect(this, SIGNAL(needToHardReplot()), this, SLOT(hardReplot()));
+  connect(this, SIGNAL(workspaceRemoved(MatrixWorkspace_sptr)), this,
+	      SLOT(removeWorkspace(MatrixWorkspace_sptr)), Qt::QueuedConnection);
 }
 
 /**
@@ -569,18 +571,23 @@ void PreviewPlot::hardReplot() {
  * @param pNf Poco notification
  */
 void PreviewPlot::handleRemoveEvent(WorkspacePreDeleteNotification_ptr pNf) {
-  MatrixWorkspace_sptr ws =
-      boost::dynamic_pointer_cast<MatrixWorkspace>(pNf->object());
+	// emit a queued signal to the queued slot
+	MatrixWorkspace_sptr ws =
+		boost::dynamic_pointer_cast<MatrixWorkspace>(pNf->object());
 
-  // Ignore non matrix worksapces
-  if (!ws)
-    return;
-
-  // Remove the workspace
-  removeSpectrum(ws);
-
-  emit needToReplot();
+	// Ignore non matrix worksapces
+	if (ws)
+		emit workspaceRemoved(ws);
 }
+
+void PreviewPlot::removeWorkspace(MatrixWorkspace_sptr ws) {
+	// Remove the workspace on the main GUI thread
+	removeSpectrum(ws);
+
+	emit needToReplot();
+}
+
+
 
 /**
  * Handle a workspace being modified in ADS.
