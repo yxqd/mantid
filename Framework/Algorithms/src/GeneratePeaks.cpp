@@ -1,17 +1,16 @@
 #include "MantidAlgorithms/GeneratePeaks.h"
-#include "MantidAPI/WorkspaceProperty.h"
-#include "MantidAPI/WorkspaceFactory.h"
-#include "MantidAPI/FunctionFactory.h"
-#include "MantidAPI/IBackgroundFunction.h"
-#include "MantidKernel/ListValidator.h"
 #include "MantidAPI/Column.h"
 #include "MantidAPI/FunctionDomain1D.h"
+#include "MantidAPI/FunctionFactory.h"
 #include "MantidAPI/FunctionValues.h"
-#include "MantidKernel/ArrayProperty.h"
-#include "MantidKernel/RebinParamsValidator.h"
+#include "MantidAPI/IBackgroundFunction.h"
 #include "MantidAPI/SpectraAxis.h"
+#include "MantidAPI/WorkspaceProperty.h"
 #include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidIndexing/IndexInfo.h"
+#include "MantidKernel/ArrayProperty.h"
+#include "MantidKernel/ListValidator.h"
+#include "MantidKernel/RebinParamsValidator.h"
 #include "MantidTypes/SpectrumDefinition.h"
 
 #include <boost/algorithm/string/split.hpp>
@@ -695,9 +694,21 @@ API::MatrixWorkspace_sptr GeneratePeaks::createOutputWorkspace() {
           << "Both binning parameters and input workspace are given. "
           << "Using input worksapce to generate output workspace!\n";
 
-    outputWS = API::WorkspaceFactory::Instance().create(
-        inputWS, inputWS->getNumberHistograms(), inputWS->x(0).size(),
-        inputWS->y(0).size());
+	std::size_t sizex = inputWS->x(0).size();
+	std::size_t sizey = inputWS->y(0).size();
+	auto nspec = inputWS->getNumberHistograms();
+	if (sizex == sizey) {
+		outputWS = create<MatrixWorkspace>(*inputWS, nspec, Histogram(Points(sizex)));
+	}
+	else if (sizex == sizey + 1) {
+		outputWS = create<MatrixWorkspace>(*inputWS, nspec, Histogram(BinEdges(sizex)));
+	}
+	else {
+		throw std::invalid_argument("X,Y bin sizes do not match");
+	}
+    //outputWS = API::WorkspaceFactory::Instance().create(
+    //    inputWS, inputWS->getNumberHistograms(), inputWS->x(0).size(),
+    //    inputWS->y(0).size());
 
     // Only copy the X-values from spectra with peaks specified in the table
     // workspace.

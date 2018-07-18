@@ -3,24 +3,27 @@
 #include "MantidAPI/HistoWorkspace.h"
 #include "MantidAPI/Run.h"
 #include "MantidAPI/SpectrumInfo.h"
-#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidDataObjects/TableWorkspace.h"
 #include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidDataObjects/Workspace2D.h"
 #include "MantidGeometry/IComponent.h"
 #include "MantidGeometry/Instrument.h"
-#include "MantidKernel/BoundedValidator.h"
-#include "MantidKernel/FilteredTimeSeriesProperty.h"
-#include "MantidKernel/EnabledWhenProperty.h"
-#include "MantidKernel/UnitFactory.h"
-#include "MantidKernel/Unit.h"
-#include "MantidKernel/VectorHelper.h"
 #include "MantidIndexing/Extract.h"
 #include "MantidIndexing/IndexInfo.h"
+#include "MantidKernel/BoundedValidator.h"
+#include "MantidKernel/EnabledWhenProperty.h"
+#include "MantidKernel/FilteredTimeSeriesProperty.h"
+#include "MantidKernel/Unit.h"
+#include "MantidKernel/UnitFactory.h"
+#include "MantidKernel/VectorHelper.h"
 
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <string>
+
+using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 
 namespace Mantid {
 namespace Algorithms {
@@ -377,8 +380,8 @@ void GetAllEi::exec() {
   std::sort(peaks.begin(), peaks.end());
 
   // finalize output
-  auto result_ws = API::WorkspaceFactory::Instance().create("Workspace2D", 1,
-                                                            nPeaks, nPeaks);
+  API::MatrixWorkspace_sptr result_ws =
+      create<Workspace2D>(1, Histogram(Points(nPeaks)));
 
   HistogramX peaks_positions(peaks.size());
   std::transform(peaks.cbegin(), peaks.cend(), peaks_positions.begin(),

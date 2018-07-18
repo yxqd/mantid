@@ -1,17 +1,22 @@
 #include "MantidAlgorithms/GenerateEventsFilter.h"
-#include "MantidKernel/ListValidator.h"
 #include "MantidAPI/Run.h"
 #include "MantidAPI/TableRow.h"
-#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceProperty.h"
-#include "MantidKernel/VisibleWhenProperty.h"
+#include "MantidDataObjects/TableWorkspace.h"
+#include "MantidDataObjects/Workspace2D.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidKernel/ArrayProperty.h"
+#include "MantidKernel/ListValidator.h"
+#include "MantidKernel/VisibleWhenProperty.h"
 
 #include <boost/math/special_functions/round.hpp>
 
 using namespace Mantid;
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
+using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 using Types::Core::DateAndTime;
 using Types::Core::time_duration;
 
@@ -222,8 +227,7 @@ void GenerateEventsFilter::processInOutWorkspaces() {
     // Using default
     title = "Splitters";
   }
-  m_filterInfoWS =
-      API::WorkspaceFactory::Instance().createTable("TableWorkspace");
+  m_filterInfoWS = boost::make_shared<TableWorkspace>();
   m_filterInfoWS->setTitle(title);
   m_filterInfoWS->addColumn("int", "workspacegroup");
   m_filterInfoWS->addColumn("str", "title");
@@ -1747,9 +1751,8 @@ void GenerateEventsFilter::generateSplittersInMatrixWorkspace() {
   if (sizex - sizey != 1) {
     throw runtime_error("Logic error on splitter vectors' size. ");
   }
+  m_filterWS = create<Workspace2D>(1, Histogram(BinEdges(sizex)));
 
-  m_filterWS =
-      API::WorkspaceFactory::Instance().create("Workspace2D", 1, sizex, sizey);
   auto &dataX = m_filterWS->mutableX(0);
   for (size_t i = 0; i < sizex; ++i) {
     // x is in the unit as second
@@ -1783,8 +1786,8 @@ void GenerateEventsFilter::generateSplittersInMatrixWorkspaceParallel() {
   size_t sizex = numtimes;
   size_t sizey = numtimes - 1;
 
-  m_filterWS =
-      API::WorkspaceFactory::Instance().create("Workspace2D", 1, sizex, sizey);
+  m_filterWS = create<Workspace2D>(1, Histogram(BinEdges(sizex)));
+
   auto &dataX = m_filterWS->mutableX(0);
   auto &dataY = m_filterWS->mutableY(0);
 
