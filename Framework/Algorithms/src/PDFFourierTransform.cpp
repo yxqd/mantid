@@ -4,13 +4,17 @@
 #include "MantidAPI/Sample.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceUnitValidator.h"
+#include "MantidDataObjects/Workspace2D.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
+#include "MantidHistogramData/LinearGenerator.h"
 #include "MantidKernel/BoundedValidator.h"
-#include "MantidKernel/Material.h"
 #include "MantidKernel/ListValidator.h"
+#include "MantidKernel/Material.h"
 #include "MantidKernel/PhysicalConstants.h"
 #include "MantidKernel/Unit.h"
 #include "MantidKernel/UnitFactory.h"
-#include "MantidHistogramData/LinearGenerator.h"
+
 
 #include <cmath>
 #include <sstream>
@@ -19,6 +23,7 @@ namespace Mantid {
 namespace Algorithms {
 
 using std::string;
+using namespace DataObjects;
 using namespace HistogramData;
 
 // Register the algorithm into the AlgorithmFactory
@@ -324,7 +329,9 @@ void PDFFourierTransform::exec() {
 
   // create the output workspace
   API::MatrixWorkspace_sptr outputWS =
-      WorkspaceFactory::Instance().create("Workspace2D", 1, sizer, sizer);
+      create<Workspace2D>(1, Histogram(Points(sizer)));
+
+  // WorkspaceFactory::Instance().create("Workspace2D", 1, sizer, sizer);
   outputWS->getAxis(0)->unit() = UnitFactory::Instance().create("Label");
   Unit_sptr unit = outputWS->getAxis(0)->unit();
   boost::shared_ptr<Units::Label> label =

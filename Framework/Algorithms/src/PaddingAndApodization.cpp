@@ -7,7 +7,10 @@
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/Workspace_fwd.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/TableWorkspace.h"
+#include "MantidDataObjects/Workspace2D.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/ListValidator.h"
@@ -21,6 +24,8 @@ namespace Mantid {
 namespace Algorithms {
 
 using namespace Kernel;
+using namespace DataObjects;
+using namespace HistogramData;
 using API::Progress;
 using std::size_t;
 
@@ -66,7 +71,7 @@ void PaddingAndApodization::exec() {
   // Create output workspace with same dimensions as input
   API::MatrixWorkspace_sptr outputWS = getProperty("OutputWorkspace");
   if (inputWS != outputWS) {
-    outputWS = API::WorkspaceFactory::Instance().create(inputWS);
+    outputWS = create<API::MatrixWorkspace>(*inputWS);
   }
 
   // Share the X values
