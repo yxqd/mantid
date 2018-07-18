@@ -4,11 +4,11 @@
 #include "MantidAlgorithms/ExtractFFTSpectrum.h"
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/MatrixWorkspace.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/MultiThreaded.h"
 #include "MantidKernel/Unit.h"
 #include "MantidKernel/UnitFactory.h"
-#include "MantidKernel/BoundedValidator.h"
 
 namespace Mantid {
 namespace Algorithms {
@@ -18,6 +18,7 @@ DECLARE_ALGORITHM(ExtractFFTSpectrum)
 
 using namespace Kernel;
 using namespace API;
+using namespace DataObjects;
 
 void ExtractFFTSpectrum::init() {
   declareProperty(
@@ -41,7 +42,7 @@ void ExtractFFTSpectrum::exec() {
   MatrixWorkspace_sptr inputImagWS = getProperty("InputImagWorkspace");
   const int fftPart = getProperty("FFTPart");
   const int numHists = static_cast<int>(inputWS->getNumberHistograms());
-  MatrixWorkspace_sptr outputWS = WorkspaceFactory::Instance().create(inputWS);
+  MatrixWorkspace_sptr outputWS = create<MatrixWorkspace>(*inputWS);
 
   Progress prog(this, 0.0, 1.0, numHists);
 

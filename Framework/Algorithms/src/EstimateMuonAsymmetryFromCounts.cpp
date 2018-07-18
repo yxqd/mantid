@@ -8,7 +8,7 @@
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/Run.h"
 #include "MantidAPI/Workspace_fwd.h"
-#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
 
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/PhysicalConstants.h"
@@ -16,6 +16,8 @@
 #include <cmath>
 #include <numeric>
 #include <vector>
+
+using namespace Mantid::DataObjects;
 
 namespace Mantid {
 namespace Algorithms {
@@ -111,11 +113,10 @@ void EstimateMuonAsymmetryFromCounts::exec() {
   // Create output workspace with same dimensions as input
   API::MatrixWorkspace_sptr outputWS = getProperty("OutputWorkspace");
   if (inputWS != outputWS) {
-    outputWS = API::WorkspaceFactory::Instance().create(inputWS);
+    outputWS = create<API::MatrixWorkspace>(*inputWS);
   }
   bool extraData = getProperty("OutputUnNormData");
-  API::MatrixWorkspace_sptr unnormWS =
-      API::WorkspaceFactory::Instance().create(outputWS);
+  API::MatrixWorkspace_sptr unnormWS = create<API::MatrixWorkspace>(*outputWS);
   double startX = getProperty("StartX");
   double endX = getProperty("EndX");
   const Mantid::API::Run &run = inputWS->run();
