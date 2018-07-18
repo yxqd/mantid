@@ -2,13 +2,14 @@
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/FrameworkManager.h"
 #include "MantidAPI/SpectrumInfo.h"
-#include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceOpOverloads.h"
 #include "MantidAPI/WorkspaceProperty.h"
 #include "MantidDataObjects/EventList.h"
 #include "MantidDataObjects/EventWorkspace.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidDataObjects/WorkspaceSingleValue.h"
 #include "MantidGeometry/Instrument/ParameterMap.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidKernel/Timer.h"
 #include "MantidKernel/Unit.h"
 
@@ -18,6 +19,7 @@ using namespace Mantid::Geometry;
 using namespace Mantid::API;
 using namespace Mantid::Kernel;
 using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 using std::size_t;
 
 namespace Mantid {
@@ -99,7 +101,7 @@ bool BinaryOperation::handleSpecialDivideMinus() {
     } else if (this->name() == "Minus") {
       // x - workspace = x + (workspace * -1)
       MatrixWorkspace_sptr minusOne =
-          WorkspaceFactory::Instance().create("WorkspaceSingleValue", 1, 1, 1);
+          create<WorkspaceSingleValue>(1, Histogram(Points(1)));
       minusOne->dataY(0)[0] = -1.0;
       minusOne->dataE(0)[0] = 0.0;
 
@@ -236,7 +238,7 @@ void BinaryOperation::exec() {
       //          )))
       //            AnalysisDataService::Instance().remove(getPropertyValue(outputPropName()
       //            ));
-      m_out = WorkspaceFactory::Instance().create(m_lhs);
+      m_out = create<MatrixWorkspace>(*m_lhs);
     }
   }
 
