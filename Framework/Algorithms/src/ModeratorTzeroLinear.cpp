@@ -11,7 +11,6 @@
 #include "MantidKernel/PhysicalConstants.h"
 #include "MantidKernel/UnitFactory.h"
 
-
 #include <boost/lexical_cast.hpp>
 
 namespace Mantid {

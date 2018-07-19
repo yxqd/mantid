@@ -172,7 +172,7 @@ void CalMuonDetectorPhases::fitWorkspace(const API::MatrixWorkspace_sptr &ws,
                                      [](double value) { return value == 0.; });
     if (emptySpectrum) {
       g_log.warning("Spectrum " + std::to_string(wsIndex) + " is empty");
-	  TableWorkspace_sptr tab = boost::make_shared<TableWorkspace>();
+      TableWorkspace_sptr tab = boost::make_shared<TableWorkspace>();
       tab->addColumn("str", "Name");
       tab->addColumn("double", "Value");
       tab->addColumn("double", "Error");
@@ -223,8 +223,7 @@ void CalMuonDetectorPhases::fitWorkspace(const API::MatrixWorkspace_sptr &ws,
 * @param spectrumNumber :: [input] Spectrum number
 */
 void CalMuonDetectorPhases::extractDetectorInfo(
-    API::ITableWorkspace &paramTab,
-    API::ITableWorkspace &resultsTab,
+    API::ITableWorkspace &paramTab, API::ITableWorkspace &resultsTab,
     const Indexing::SpectrumNumber spectrumNumber) {
 
   double asym = paramTab.Double(0, 1);

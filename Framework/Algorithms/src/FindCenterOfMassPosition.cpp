@@ -209,7 +209,8 @@ void FindCenterOfMassPosition::exec() {
     // Set the name of the new workspace
     setPropertyValue("OutputWorkspace", output);
 
-    Mantid::API::ITableWorkspace_sptr m_result = boost::make_shared<TableWorkspace>();
+    Mantid::API::ITableWorkspace_sptr m_result =
+        boost::make_shared<TableWorkspace>();
     m_result->addColumn("str", "Name");
     m_result->addColumn("double", "Value");
 

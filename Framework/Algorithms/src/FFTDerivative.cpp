@@ -49,7 +49,7 @@ void FFTDerivative::execComplexFFT() {
   // Workspace for holding a copy of a spectrum. Each spectrum is symmetrized to
   // minimize
   // possible edge effects.
-  //MatrixWorkspace_sptr copyWS =
+  // MatrixWorkspace_sptr copyWS =
   //    boost::dynamic_pointer_cast<Mantid::API::MatrixWorkspace>(
   //        Mantid::API::WorkspaceFactory::Instance().create(inWS, 1, nx + ny,
   //                                                         ny + ny));

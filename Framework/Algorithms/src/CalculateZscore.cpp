@@ -63,13 +63,11 @@ void CalculateZscore::exec() {
   size_t sizey = inpWS->y(0).size();
   Workspace2D_sptr outWS;
   if (sizex == sizey) {
-	  outWS = create<Workspace2D>(numspec, Histogram(Points(sizex)));
-  }
-  else if (sizex == sizey + 1) {
-	  outWS = create<Workspace2D>(numspec, Histogram(BinEdges(sizex)));
-  }
-  else {
-	  throw std::invalid_argument("X,Y bin sizes do not match");
+    outWS = create<Workspace2D>(numspec, Histogram(Points(sizex)));
+  } else if (sizex == sizey + 1) {
+    outWS = create<Workspace2D>(numspec, Histogram(BinEdges(sizex)));
+  } else {
+    throw std::invalid_argument("X,Y bin sizes do not match");
   }
 
   Progress progress(this, 0.0, 1.0, numspec);

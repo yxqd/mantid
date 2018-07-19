@@ -13,7 +13,6 @@
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/UnitFactory.h"
 
-
 #include <boost/lexical_cast.hpp>
 
 namespace Mantid {

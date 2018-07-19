@@ -91,7 +91,7 @@ void MaxMin::exec() {
   // Create the 1D workspace for the output
   MatrixWorkspace_sptr outputWorkspace = create<API::MatrixWorkspace>(
       *localworkspace, MaxSpec - MinSpec + 1, Histogram(BinEdges(2)));
-  //API::WorkspaceFactory::Instance().create(localworkspace,
+  // API::WorkspaceFactory::Instance().create(localworkspace,
   //                                         MaxSpec - MinSpec + 1, 2, 1);
 
   Progress progress(this, 0.0, 1.0, (MaxSpec - MinSpec + 1));

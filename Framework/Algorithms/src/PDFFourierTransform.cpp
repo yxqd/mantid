@@ -15,7 +15,6 @@
 #include "MantidKernel/Unit.h"
 #include "MantidKernel/UnitFactory.h"
 
-
 #include <cmath>
 #include <sstream>
 

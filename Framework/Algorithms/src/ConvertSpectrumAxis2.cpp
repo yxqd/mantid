@@ -227,17 +227,17 @@ MatrixWorkspace_sptr ConvertSpectrumAxis2::createOutputWorkspace(
   NumericAxis *newAxis = nullptr;
   if (m_toOrder) {
     // Can not re-use the input one because the spectra are re-ordered.
-	  std::size_t nx = inputWS->x(0).size();
-	  std::size_t ny = inputWS->y(0).size();
-	  if (nx == ny) {
-		  outputWorkspace = create<MatrixWorkspace>(*inputWS, m_indexMap.size(), Histogram(Points(nx)));
-	  }
-	  else if (nx == ny + 1) {
-		  outputWorkspace = create<MatrixWorkspace>(*inputWS, m_indexMap.size(), Histogram(BinEdges(nx)));
-	  }
-	  else {
-		  throw std::invalid_argument("X,Y bin sizes do not match");
-	  }
+    std::size_t nx = inputWS->x(0).size();
+    std::size_t ny = inputWS->y(0).size();
+    if (nx == ny) {
+      outputWorkspace = create<MatrixWorkspace>(*inputWS, m_indexMap.size(),
+                                                Histogram(Points(nx)));
+    } else if (nx == ny + 1) {
+      outputWorkspace = create<MatrixWorkspace>(*inputWS, m_indexMap.size(),
+                                                Histogram(BinEdges(nx)));
+    } else {
+      throw std::invalid_argument("X,Y bin sizes do not match");
+    }
 
     std::vector<double> axis;
     axis.reserve(m_indexMap.size());

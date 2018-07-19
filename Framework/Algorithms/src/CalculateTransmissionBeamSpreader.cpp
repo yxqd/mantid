@@ -161,7 +161,7 @@ void CalculateTransmissionBeamSpreader::exec() {
 
   // Beam spreader transmission
   MatrixWorkspace_sptr spreader_trans =
-	  create<WorkspaceSingleValue>(1, Histogram(Points(1)));
+      create<WorkspaceSingleValue>(1, Histogram(Points(1)));
   spreader_trans->setYUnit("");
   spreader_trans->setDistribution(true);
   spreader_trans->mutableX(0)[0] = 0.0;

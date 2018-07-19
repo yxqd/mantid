@@ -1746,13 +1746,11 @@ FitPeaks::createMatrixWorkspace(const std::vector<double> &vec_x,
 
   MatrixWorkspace_sptr matrix_ws;
   if (size == ysize) {
-	  matrix_ws = create<Workspace2D>(1, Histogram(Points(size)));
-  }
-  else if (size == ysize + 1) {
-	  matrix_ws = create<Workspace2D>(1, Histogram(BinEdges(size)));
-  }
-  else {
-	  throw std::invalid_argument("X,Y bin sizes do not match");
+    matrix_ws = create<Workspace2D>(1, Histogram(Points(size)));
+  } else if (size == ysize + 1) {
+    matrix_ws = create<Workspace2D>(1, Histogram(BinEdges(size)));
+  } else {
+    throw std::invalid_argument("X,Y bin sizes do not match");
   }
 
   auto &dataX = matrix_ws->mutableX(0);

@@ -348,13 +348,13 @@ void MaxEnt::exec() {
   std::size_t nx = npointsX;
   std::size_t ny = npoints;
   if (nx == ny) {
-	  outDataWS = create<MatrixWorkspace>(*inWS, 2*nSpec, Histogram(Points(nx)));
-  }
-  else if (nx == ny + 1) {
-	  outDataWS = create<MatrixWorkspace>(*inWS, 2*nSpec, Histogram(BinEdges(nx)));
-  }
-  else {
-	  throw std::invalid_argument("X,Y bin sizes do not match");
+    outDataWS =
+        create<MatrixWorkspace>(*inWS, 2 * nSpec, Histogram(Points(nx)));
+  } else if (nx == ny + 1) {
+    outDataWS =
+        create<MatrixWorkspace>(*inWS, 2 * nSpec, Histogram(BinEdges(nx)));
+  } else {
+    throw std::invalid_argument("X,Y bin sizes do not match");
   }
 
   for (size_t i = 0; i < outDataWS->getNumberHistograms(); ++i)

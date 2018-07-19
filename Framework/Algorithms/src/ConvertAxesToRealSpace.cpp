@@ -99,7 +99,7 @@ void ConvertAxesToRealSpace::exec() {
   MatrixWorkspace_sptr outputWs = create<MatrixWorkspace>(
       *inputWs, axisVector[1].bins, Histogram(Points(axisVector[0].bins)));
 
-  //WorkspaceFactory::Instance().create(inputWs, axisVector[1].bins,
+  // WorkspaceFactory::Instance().create(inputWs, axisVector[1].bins,
   //                                    axisVector[0].bins, axisVector[0].bins);
 
   // first integrate the data

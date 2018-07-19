@@ -747,14 +747,12 @@ void PlotAsymmetryByLogValue::calcIntAsymmetry(MatrixWorkspace_sptr ws_red,
     std::size_t ny = ws_red->y(0).size();
     MatrixWorkspace_sptr tmpWS;
     if (nx == ny) {
-		tmpWS = create<MatrixWorkspace>(*ws_red, 1, Histogram(Points(nx)));
-	}
-	else if (nx == ny + 1) {
-		tmpWS = create<MatrixWorkspace>(*ws_red, 1, Histogram(BinEdges(nx)));
-	}
-	else {
-		throw std::invalid_argument("X,Y bin sizes do not match");
-	}
+      tmpWS = create<MatrixWorkspace>(*ws_red, 1, Histogram(Points(nx)));
+    } else if (nx == ny + 1) {
+      tmpWS = create<MatrixWorkspace>(*ws_red, 1, Histogram(BinEdges(nx)));
+    } else {
+      throw std::invalid_argument("X,Y bin sizes do not match");
+    }
 
     for (size_t i = 0; i < tmpWS->y(0).size(); i++) {
       double FNORM = ws_green->y(0)[i] + ws_red->y(0)[i];

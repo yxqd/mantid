@@ -93,18 +93,16 @@ void MagFormFactorCorrection::exec() {
     FF.push_back(ion.analyticalFormFactor(Qval * Qval));
   }
   if (!ffwsStr.empty()) {
-	  std::size_t nx = Qvals.size();
-	  std::size_t ny = FF.size();
-	  MatrixWorkspace_sptr ffws;
-	  if (nx == ny) {
-		  ffws = create<Workspace2D>(1, Histogram(Points(nx)));
-	  }
-	  else if (nx == ny + 1) {
-		  ffws = create<Workspace2D>(1, Histogram(BinEdges(nx)));
-	  }
-	  else {
-		  throw std::invalid_argument("X,Y bin sizes do not match");
-	  }
+    std::size_t nx = Qvals.size();
+    std::size_t ny = FF.size();
+    MatrixWorkspace_sptr ffws;
+    if (nx == ny) {
+      ffws = create<Workspace2D>(1, Histogram(Points(nx)));
+    } else if (nx == ny + 1) {
+      ffws = create<Workspace2D>(1, Histogram(BinEdges(nx)));
+    } else {
+      throw std::invalid_argument("X,Y bin sizes do not match");
+    }
     ffws->mutableX(0).assign(Qvals.begin(), Qvals.end());
     ffws->mutableY(0).assign(FF.begin(), FF.end());
     ffws->getAxis(0)->unit() =

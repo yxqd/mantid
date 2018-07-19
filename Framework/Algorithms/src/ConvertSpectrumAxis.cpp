@@ -152,13 +152,13 @@ void ConvertSpectrumAxis::exec() {
   std::size_t ny = nBins;
   MatrixWorkspace_sptr outputWS;
   if (nx == ny) {
-	  outputWS = create<MatrixWorkspace>(*inputWS, indexMap.size(), Histogram(Points(nx)));
-  }
-  else if (nx == ny + 1) {
-	  outputWS = create<MatrixWorkspace>(*inputWS, indexMap.size(), Histogram(BinEdges(nx)));
-  }
-  else {
-	  throw std::invalid_argument("X,Y bin sizes do not match");
+    outputWS = create<MatrixWorkspace>(*inputWS, indexMap.size(),
+                                       Histogram(Points(nx)));
+  } else if (nx == ny + 1) {
+    outputWS = create<MatrixWorkspace>(*inputWS, indexMap.size(),
+                                       Histogram(BinEdges(nx)));
+  } else {
+    throw std::invalid_argument("X,Y bin sizes do not match");
   }
 
   // Now set up a new, numeric axis holding the theta values corresponding to

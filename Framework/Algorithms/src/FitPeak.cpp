@@ -356,13 +356,11 @@ API::MatrixWorkspace_sptr FitOneSinglePeak::genFitWindowWS() {
 
   MatrixWorkspace_sptr purePeakWS;
   if (size == ysize) {
-	  purePeakWS = create<Workspace2D>(1, Histogram(Points(size)));
-  }
-  else if (size == ysize + 1) {
-	  purePeakWS = create<Workspace2D>(1, Histogram(BinEdges(size)));
-  }
-  else {
-	  throw std::invalid_argument("X,Y bin sizes do not match");
+    purePeakWS = create<Workspace2D>(1, Histogram(Points(size)));
+  } else if (size == ysize + 1) {
+    purePeakWS = create<Workspace2D>(1, Histogram(BinEdges(size)));
+  } else {
+    throw std::invalid_argument("X,Y bin sizes do not match");
   }
 
   auto &vecX = m_dataWS->x(m_wsIndex);
@@ -1519,13 +1517,11 @@ void FitPeak::setupOutput(
 
   MatrixWorkspace_sptr outws;
   if (sizex == sizey) {
-	  outws = create<Workspace2D>(nspec, Histogram(Points(sizex)));
-  }
-  else if (sizex == sizey + 1) {
-	  outws = create<Workspace2D>(nspec, Histogram(BinEdges(sizex)));
-  }
-  else {
-	  throw std::invalid_argument("X,Y bin sizes do not match");
+    outws = create<Workspace2D>(nspec, Histogram(Points(sizex)));
+  } else if (sizex == sizey + 1) {
+    outws = create<Workspace2D>(nspec, Histogram(BinEdges(sizex)));
+  } else {
+    throw std::invalid_argument("X,Y bin sizes do not match");
   }
 
   // Calculate again

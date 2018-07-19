@@ -9,8 +9,6 @@
 #include "MantidHistogramData/Histogram.h"
 #include "MantidKernel/BoundedValidator.h"
 
-
-
 namespace Mantid {
 namespace Algorithms {
 
