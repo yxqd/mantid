@@ -24,6 +24,8 @@
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/StartsWithValidator.h"
 
+#include "MantidAPI/WorkspaceFactory.h"
+
 #include "boost/algorithm/string.hpp"
 #include "boost/algorithm/string/trim.hpp"
 #include <limits>
@@ -1848,7 +1850,7 @@ void FitPeaks::generateCalculatedPeaksWS() {
   }
 
   // create
-  m_fittedPeakWS = create<MatrixWorkspace>(*m_inputMatrixWS);
+  m_fittedPeakWS = create<Workspace2D>(*m_inputMatrixWS);
   for (size_t iws = 0; iws < m_fittedPeakWS->getNumberHistograms(); ++iws) {
     auto out_vecx = m_fittedPeakWS->histogram(iws).x();
     auto in_vecx = m_inputMatrixWS->histogram(iws).x();
