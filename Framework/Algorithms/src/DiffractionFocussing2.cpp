@@ -6,11 +6,11 @@
 #include "MantidAPI/RawCountValidator.h"
 #include "MantidAPI/SpectraAxis.h"
 #include "MantidAPI/SpectrumInfo.h"
-#include "MantidDataObjects/WorkspaceCreation.h"
-#include "MantidHistogramData/Histogram.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidDataObjects/GroupingWorkspace.h"
+#include "MantidDataObjects/Workspace2D.h"
 #include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
 #include "MantidHistogramData/LogarithmicGenerator.h"
 #include "MantidIndexing/Group.h"
 #include "MantidIndexing/IndexInfo.h"
@@ -165,7 +165,7 @@ void DiffractionFocussing2::exec() {
   if (nPoints <= 0) {
     throw std::runtime_error("No points found in the data range.");
   }
-  API::MatrixWorkspace_sptr out = DataObjects::create<API::MatrixWorkspace>(
+  API::MatrixWorkspace_sptr out = DataObjects::create<DataObjects::Workspace2D>(
       *m_matrixInputW, m_validGroups.size(), Histogram(BinEdges(nPoints + 1)));
   // Caching containers that are either only read from or unused. Initialize
   // them once.

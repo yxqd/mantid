@@ -6,12 +6,15 @@
 #include "MantidAPI/WorkspaceProperty.h"
 #include "MantidDataObjects/EventList.h"
 #include "MantidDataObjects/EventWorkspace.h"
+#include "MantidDataObjects/Workspace2D.h"
 #include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidDataObjects/WorkspaceSingleValue.h"
 #include "MantidGeometry/Instrument/ParameterMap.h"
 #include "MantidHistogramData/Histogram.h"
 #include "MantidKernel/Timer.h"
 #include "MantidKernel/Unit.h"
+
+#include "MantidAPI/WorkspaceFactory.h"
 
 #include <boost/make_shared.hpp>
 
@@ -238,7 +241,16 @@ void BinaryOperation::exec() {
       //          )))
       //            AnalysisDataService::Instance().remove(getPropertyValue(outputPropName()
       //            ));
-      m_out = create<MatrixWorkspace>(*m_lhs);
+	  
+		//m_out = WorkspaceFactory::Instance().create(m_lhs);
+	  if (m_lhs->id() == "EventWorkspace") {
+		  m_out = create<Workspace2D>(*m_lhs);
+	  }
+	  else {
+		  m_out = create<MatrixWorkspace>(*m_lhs);
+	  }
+
+
     }
   }
 

@@ -3,6 +3,7 @@
 //----------------------------------------------------------------------
 #include "MantidAlgorithms/ConvertToMatrixWorkspace.h"
 #include "MantidDataObjects/EventWorkspace.h"
+#include "MantidDataObjects/Workspace2D.h"
 #include "MantidDataObjects/WorkspaceCreation.h"
 
 namespace Mantid {
@@ -45,7 +46,7 @@ void ConvertToMatrixWorkspace::exec() {
 
     // Create the output workspace. This will copy many aspects fron the input
     // one.
-    outputWorkspace = create<MatrixWorkspace>(*inputWorkspace);
+    outputWorkspace = create<Workspace2D>(*inputWorkspace);
 
     // ...but not the data, so do that here.
     PARALLEL_FOR_IF(Kernel::threadSafe(*inputWorkspace, *outputWorkspace))
