@@ -242,7 +242,6 @@ void BinaryOperation::exec() {
       //            AnalysisDataService::Instance().remove(getPropertyValue(outputPropName()
       //            ));
 
-      // m_out = WorkspaceFactory::Instance().create(m_lhs);
       if (m_lhs->id() == "EventWorkspace") {
         m_out = create<Workspace2D>(*m_lhs);
       } else {
