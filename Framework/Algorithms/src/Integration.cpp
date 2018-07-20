@@ -157,9 +157,9 @@ void Integration::exec() {
 
   // Create the 2D workspace (with 1 bin) for the output
   MatrixWorkspace_sptr outputWorkspace =
-	  API::WorkspaceFactory::Instance().create(
-		  localworkspace, maxWsIndex - minWsIndex + 1, 2, 1);
-  //MatrixWorkspace_sptr outputWorkspace = create<Workspace2D>(
+      API::WorkspaceFactory::Instance().create(
+          localworkspace, maxWsIndex - minWsIndex + 1, 2, 1);
+  // MatrixWorkspace_sptr outputWorkspace = create<Workspace2D>(
   //    *localworkspace, maxWsIndex - minWsIndex + 1, Histogram(BinEdges(2)));
 
   auto rebinned_input =
