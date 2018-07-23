@@ -760,7 +760,7 @@ API::MatrixWorkspace_sptr ConvertUnits::removeUnphysicalBins(
     // range
     result = create<MatrixWorkspace>(*workspace, numSpec,
                                      Histogram(BinEdges(maxBins)));
-	result->setDistribution(1);
+    result->setDistribution(1);
     // Next, loop again copying in the correct range for each spectrum
     for (int64_t j = 0; j < int64_t(numSpec); ++j) {
       auto edges = workspace->binEdges(j);
