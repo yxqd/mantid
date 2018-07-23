@@ -93,12 +93,11 @@ void MaxMin::exec() {
   if (localworkspace->id() == "EventWorkspace") {
     outputWorkspace = create<DataObjects::Workspace2D>(
         *localworkspace, MaxSpec - MinSpec + 1, Histogram(BinEdges(2)));
-  }
-  else {
+  } else {
     outputWorkspace = create<API::MatrixWorkspace>(
         *localworkspace, MaxSpec - MinSpec + 1, Histogram(BinEdges(2)));
   }
-  //MatrixWorkspace_sptr outputWorkspace = create<API::MatrixWorkspace>(
+  // MatrixWorkspace_sptr outputWorkspace = create<API::MatrixWorkspace>(
   //    *localworkspace, MaxSpec - MinSpec + 1, Histogram(BinEdges(2)));
   // API::WorkspaceFactory::Instance().create(localworkspace,
   //                                         MaxSpec - MinSpec + 1, 2, 1);

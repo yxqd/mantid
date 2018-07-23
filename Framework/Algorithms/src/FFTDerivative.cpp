@@ -55,13 +55,11 @@ void FFTDerivative::execComplexFFT() {
   //                                                         ny + ny));
   MatrixWorkspace_sptr copyWS;
   if (nx == ny) {
-	  copyWS = create<MatrixWorkspace>(*inWS, 1, Histogram(Points(nx+ny)));
-  }
-  else if (nx == ny + 1) {
-	  copyWS = create<MatrixWorkspace>(*inWS, 1, Histogram(BinEdges(nx+ny)));
-  }
-  else {
-	  throw std::invalid_argument("X,Y bin sizes do not match");
+    copyWS = create<MatrixWorkspace>(*inWS, 1, Histogram(Points(nx + ny)));
+  } else if (nx == ny + 1) {
+    copyWS = create<MatrixWorkspace>(*inWS, 1, Histogram(BinEdges(nx + ny)));
+  } else {
+    throw std::invalid_argument("X,Y bin sizes do not match");
   }
 
   for (size_t spec = 0; spec < n; ++spec) {

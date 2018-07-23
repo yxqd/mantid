@@ -114,7 +114,8 @@ void FFT::exec() {
     m_outWS =
         create<MatrixWorkspace>(*m_inWS, nOut, Histogram(Points(nPoints)));
   }
-  //m_outWS = create<MatrixWorkspace>(*m_inWS, nOut, Histogram(Points(nPoints)));
+  // m_outWS = create<MatrixWorkspace>(*m_inWS, nOut,
+  // Histogram(Points(nPoints)));
 
   for (int i = 0; i < nOut; ++i)
     m_outWS->getSpectrum(i).setDetectorID(static_cast<detid_t>(i + 1));
