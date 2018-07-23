@@ -53,9 +53,8 @@ void CorrectToFile::exec() {
   if (outputWS != toCorrect) {
 
     if (toCorrect->id() == "EventWorkspace") {
-        outputWS = create<Workspace2D>(*toCorrect);
-      }
-    else {
+      outputWS = create<Workspace2D>(*toCorrect);
+    } else {
       outputWS = create<MatrixWorkspace>(*toCorrect);
     }
     // outputWS = create<MatrixWorkspace>(*toCorrect);
