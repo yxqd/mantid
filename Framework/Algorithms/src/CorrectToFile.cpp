@@ -2,6 +2,7 @@
 #include "MantidAPI/Axis.h"
 #include "MantidAPI/FileProperty.h"
 #include "MantidAPI/MatrixWorkspace.h"
+#include "MantidDataObjects/Workspace2D.h"
 #include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidKernel/ListValidator.h"
 #include "MantidKernel/Unit.h"
@@ -50,7 +51,14 @@ void CorrectToFile::exec() {
   // Only create the output workspace if it's not the same as the input one
   MatrixWorkspace_sptr outputWS = getProperty("OutputWorkspace");
   if (outputWS != toCorrect) {
-    outputWS = create<MatrixWorkspace>(*toCorrect);
+
+    if (toCorrect->id() == "EventWorkspace") {
+        outputWS = create<Workspace2D>(*toCorrect);
+      }
+    else {
+      outputWS = create<MatrixWorkspace>(*toCorrect);
+    }
+    // outputWS = create<MatrixWorkspace>(*toCorrect);
   }
   const std::string operation = getProperty("WorkspaceOperation");
 
