@@ -1784,7 +1784,6 @@ void GenerateEventsFilter::generateSplittersInMatrixWorkspaceParallel() {
   ++numtimes;
 
   size_t sizex = numtimes;
-  size_t sizey = numtimes - 1;
 
   m_filterWS = create<Workspace2D>(1, Histogram(BinEdges(sizex)));
 
