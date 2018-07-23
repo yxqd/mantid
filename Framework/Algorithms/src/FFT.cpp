@@ -4,6 +4,7 @@
 #include "MantidAlgorithms/FFT.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/TextAxis.h"
+#include "MantidDataObjects/Workspace2D.h"
 #include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidHistogramData/Histogram.h"
 #include "MantidKernel/BoundedValidator.h"
@@ -107,7 +108,14 @@ void FFT::exec() {
     addPositiveOnly = true;
   }
 
-  m_outWS = create<MatrixWorkspace>(*m_inWS, nOut, Histogram(Points(nPoints)));
+  if (m_inWS->id() == "EventWorkspace") {
+    m_outWS = create<Workspace2D>(*m_inWS, nOut, Histogram(Points(nPoints)));
+  } else {
+    m_outWS =
+        create<MatrixWorkspace>(*m_inWS, nOut, Histogram(Points(nPoints)));
+  }
+  //m_outWS = create<MatrixWorkspace>(*m_inWS, nOut, Histogram(Points(nPoints)));
+
   for (int i = 0; i < nOut; ++i)
     m_outWS->getSpectrum(i).setDetectorID(static_cast<detid_t>(i + 1));
 
