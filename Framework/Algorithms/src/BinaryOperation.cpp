@@ -14,8 +14,6 @@
 #include "MantidKernel/Timer.h"
 #include "MantidKernel/Unit.h"
 
-#include "MantidAPI/WorkspaceFactory.h"
-
 #include <boost/make_shared.hpp>
 
 using namespace Mantid::Geometry;

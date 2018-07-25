@@ -3,6 +3,12 @@
 
 #include <cxxtest/TestSuite.h>
 
+#include "MantidAPI/ITableWorkspace.h"
+#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidDataObjects/TableWorkspace.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
+#include "MantidHistogramData/Histogram.h"
+
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/AnalysisDataService.h"
 #include "MantidAPI/FrameworkManager.h"
@@ -18,11 +24,14 @@
 #include "MantidTestHelpers/ComponentCreationHelper.h"
 #include "MantidTestHelpers/WorkspaceCreationHelper.h"
 
+#include <type_traits>
+
 using namespace Mantid;
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
 using namespace Mantid::MuonAlgorithmHelper;
-// using Mantid::Types::Core::DateAndTime;
+using namespace Mantid::DataObjects;
+using namespace Mantid::HistogramData;
 
 namespace {
 
@@ -136,6 +145,94 @@ public:
   MuonAlgorithmHelperTest() {
     FrameworkManager::Instance(); // So that framework is initialized
   }
+
+  /////////////////////////////////
+
+  void test_single_value_workspace() {
+    // BinaryOperation.cpp
+    auto ws1 =
+        WorkspaceFactory::Instance().create("WorkspaceSingleValue", 1, 1, 1);
+
+    auto ws2 = create<WorkspaceSingleValue>(1, Histogram(Points(1)));
+  }
+
+  void test_2() {
+    // CalculateCountRate.cpp
+    int numTBins = 10;
+    int numXBins = 5;
+    auto ws1 = WorkspaceFactory::Instance().create("Workspace2D", numTBins,
+                                                   numXBins + 1, numXBins);
+
+    auto ws2 = create<Workspace2D>(numTBins, Histogram(BinEdges(numXBins + 1)));
+  }
+
+  void test_3() {
+    // setup the test workspace
+    auto wksp = WorkspaceCreationHelper::createEventWorkspaceWithFullInstrument(
+        1, 1, false);
+
+    MatrixWorkspace_sptr outputWS1 = create<HistoWorkspace>(*wksp);
+
+    MatrixWorkspace_sptr outputWS2 = WorkspaceFactory::Instance().create(wksp);
+  }
+
+  void test_factory_vs_create() {
+    // setup the test workspace
+    auto wksp = WorkspaceCreationHelper::createEventWorkspaceWithFullInstrument(
+        1, 1, false);
+
+    MatrixWorkspace_sptr outputWS1 = create<MatrixWorkspace>(*wksp);
+
+    MatrixWorkspace_sptr outputWS2 = create<Workspace2D>(*wksp);
+
+    MatrixWorkspace_sptr outputWS3 = WorkspaceFactory::Instance().create(wksp);
+
+    bool isBase = false;
+    if (std::is_base_of<API::HistoWorkspace, API::MatrixWorkspace>::value)
+	{
+      isBase = true;
+    };
+  }
+
+  void test_4() {
+
+    auto tab1 = API::WorkspaceFactory::Instance().createTable("TableWorkspace");
+
+    auto tab2 = boost::make_shared<TableWorkspace>();
+  }
+
+  void test_5() {
+    auto wksp = WorkspaceCreationHelper::createEventWorkspaceWithFullInstrument(
+        1, 1, false);
+
+    auto workspace = create<MatrixWorkspace>(*wksp, 1, Histogram(BinEdges(10)));
+
+    /*  auto workspace2= create<MatrixWorkspace>(*wksp, 1, Histogram();*/
+  }
+
+  void test_6() {
+
+    auto ws1 = WorkspaceFactory::Instance().create("Workspace2D", 1, 10, 9);
+
+    auto ws2 = WorkspaceFactory::Instance().create("Workspace2D", 1, 9, 9);
+
+    // Will crash
+    // auto ws3 = WorkspaceFactory::Instance().create("Workspace2D", 1,
+    //	  10, 1);
+
+    // Proposed modification when binning is ambiguous
+    std::size_t nx = 1;
+    std::size_t ny = 1;
+    if (nx == ny) {
+      auto ws = create<MatrixWorkspace>(*ws1, 1, Histogram(Points(nx)));
+    } else if (nx == ny + 1) {
+      auto ws = create<MatrixWorkspace>(*ws1, 1, Histogram(BinEdges(nx)));
+    } else {
+      throw std::invalid_argument("X,Y bin sizes do not match");
+    }
+  }
+
+  /////////////////////////////////
 
   void test_findConsecutiveRuns() {
     std::vector<int> testVec{1, 2, 3, 5, 6, 8, 10, 11, 12, 13, 14};
@@ -290,6 +387,7 @@ public:
   }
 
   void test_generateWorkspaceName_noPeriods() {
+
     Mantid::Muon::DatasetParams params;
     params.instrument = "MUSR";
     params.runs = {15192, 15190, 15189};
@@ -298,9 +396,11 @@ public:
     params.plotType = Mantid::Muon::PlotType::Counts;
     params.periods = "";
     params.version = 2;
+
     const std::string wsName = generateWorkspaceName(params);
-    const std::string expected =
+	const std::string expected =
         "MUSR00015189-90, 15192; Group; fwd; Counts; #2";
+
     TS_ASSERT_EQUALS(expected, wsName);
   }
 
