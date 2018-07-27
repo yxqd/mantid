@@ -89,6 +89,18 @@ class QAppThreadCall(QObject):
         self._exc_info = None
 
 
+class ThreadAwareCanvasQT(FigureCanvasQTAgg):
+    def __init__(self, figure):
+        print('Making our own canvas')
+        FigureCanvasQTAgg.__init__(self, figure)
+        self.wrap_methods()
+
+    def wrap_methods(self):
+        for attribute in dir(self):
+            if hasattr(getattr(self, attribute), '__call__') and '__' not in attribute:
+                setattr(self, attribute, QAppThreadCall(getattr(self, attribute), attribute))
+
+
 class MainWindow(QMainWindow):
     activated = Signal()
     closing = Signal()
@@ -303,7 +315,7 @@ def new_figure_manager_given_figure(num, figure):
     """
     Create a new figure manager instance for the given figure.
     """
-    canvas = FigureCanvasQTAgg(figure)
+    canvas = ThreadAwareCanvasQT(figure)
     manager = FigureManagerWorkbench(canvas, num)
     return manager
 
