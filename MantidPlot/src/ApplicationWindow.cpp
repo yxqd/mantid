@@ -91,6 +91,7 @@
 #include "PlotWizard.h"
 #include "PolynomFitDialog.h"
 #include "PolynomialFit.h"
+#include "Process.h"
 #include "ProjectRecovery.h"
 #include "ProjectSerialiser.h"
 #include "QwtErrorPlotCurve.h"
@@ -338,7 +339,7 @@ void ApplicationWindow::init(bool factorySettings, const QStringList &args) {
   setAttribute(Qt::WA_DeleteOnClose);
 
 #ifdef SHARED_MENUBAR
-  m_sharedMenuBar = new QMenuBar(NULL);
+  m_sharedMenuBar = new QMenuBar(nullptr);
   m_sharedMenuBar->setNativeMenuBar(true);
 #endif
   setWindowTitle(tr("MantidPlot - untitled")); // Mantid
@@ -892,7 +893,7 @@ void ApplicationWindow::initGlobalConstants() {
 
 QMenuBar *ApplicationWindow::myMenuBar() {
 #ifdef SHARED_MENUBAR
-  return m_sharedMenuBar == NULL ? menuBar() : m_sharedMenuBar;
+  return m_sharedMenuBar == nullptr ? menuBar() : m_sharedMenuBar;
 #else
   return menuBar();
 #endif
@@ -9771,10 +9772,12 @@ void ApplicationWindow::closeEvent(QCloseEvent *ce) {
     }
   }
 
-  // Stop background saving thread, so it doesn't try to use a destroyed
-  // resource
-  m_projectRecovery.stopProjectSaving();
-  m_projectRecovery.clearAllCheckpoints();
+  if (m_projectRecoveryRunOnStart) {
+    // Stop background saving thread, so it doesn't try to use a destroyed
+    // resource
+    m_projectRecovery.stopProjectSaving();
+    m_projectRecovery.clearAllCheckpoints();
+  }
 
   // Close the remaining MDI windows. The Python API is required to be active
   // when the MDI window destructor is called so that those references can be
@@ -15961,6 +15964,8 @@ void ApplicationWindow::customMultilayerToolButtons(MultiLayer *w) {
     return;
   }
 
+  btnMultiPeakPick->setEnabled(w->layers() == 1);
+
   Graph *g = w->activeGraph();
   if (g) {
     PlotToolInterface *tool = g->activeTool();
@@ -16637,8 +16642,21 @@ void ApplicationWindow::onAboutToStart() {
   // Make sure we see all of the startup messages
   resultsLog->scrollToTop();
 
-  // Kick off project recovery
-  checkForProjectRecovery();
+  // Kick off project recovery iff we are able to determine if we are the only
+  // instance currently running
+  try {
+    if (!Process::isAnotherInstanceRunning()) {
+      g_log.debug("Starting project autosaving.");
+      checkForProjectRecovery();
+    } else {
+      g_log.debug("Another MantidPlot process is running. Project recovery is "
+                  "disabled.");
+    }
+  } catch (std::runtime_error &exc) {
+    g_log.warning("Unable to determine if other MantidPlot processes are "
+                  "running. Project recovery is disabled. Error msg: " +
+                  std::string(exc.what()));
+  }
 }
 
 /**
@@ -16768,12 +16786,33 @@ bool ApplicationWindow::saveProjectRecovery(std::string destination) {
   return projectWriter.save(QString::fromStdString(destination));
 }
 
+/**
+  * Checks for any recovery checkpoint and starts project
+  * saving if one doesn't exist. If one does, it prompts
+  * the user whether they would like to recover
+  */
 void ApplicationWindow::checkForProjectRecovery() {
+  m_projectRecoveryRunOnStart = true;
   if (!m_projectRecovery.checkForRecovery()) {
     m_projectRecovery.startProjectSaving();
     return;
   }
 
   // Recovery file present
-  m_projectRecovery.attemptRecovery();
+  try {
+    m_projectRecovery.attemptRecovery();
+  } catch (std::exception &e) {
+    std::string err{
+        "Project Recovery failed to recover this checkpoint. Details: "};
+    err.append(e.what());
+    g_log.error(err);
+    QMessageBox::information(this, "Could Not Recover",
+                             "We could not fully recover your work.\nMantid "
+                             "will continue to run normally now.",
+                             "OK");
+
+    // Restart project recovery manually
+    m_projectRecovery.clearAllCheckpoints();
+    m_projectRecovery.startProjectSaving();
+  }
 }
