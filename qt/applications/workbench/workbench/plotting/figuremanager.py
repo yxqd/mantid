@@ -21,7 +21,7 @@ import matplotlib
 from matplotlib.backend_bases import FigureManagerBase
 from matplotlib.backends.backend_qt5agg import (FigureCanvasQTAgg, backend_version, draw_if_interactive, show)  # noqa
 from matplotlib._pylab_helpers import Gcf
-from qtpy.QtCore import Qt, QEvent, QObject, Signal
+from qtpy.QtCore import Qt, QEvent, QObject, Signal, pyqtBoundSignal
 from qtpy.QtWidgets import QApplication, QLabel, QMainWindow
 from six import text_type
 
@@ -31,10 +31,35 @@ from .toolbar import WorkbenchNavigationToolbar
 from .qappthreadcall import QAppThreadCall
 
 
-class MainWindow(QMainWindow):
+def wrap_methods(cls):
+    attributes = [a for a in dir(cls) if hasattr(getattr(cls, a), '__call__')]
+    attributes = [a for a in attributes if not a.startswith('_')]
+    attributes = [a for a in attributes if not isinstance(getattr(cls, a), pyqtBoundSignal)]
+
+    for attribute in attributes:
+        setattr(cls, attribute, QAppThreadCall(getattr(cls, attribute)))
+
+
+class ThreadAwareToolbar(WorkbenchNavigationToolbar):
+    def __init__(self, canvas, parent, coordinates=True):
+        WorkbenchNavigationToolbar.__init__(self, canvas, parent, coordinates)
+        wrap_methods(self)
+
+
+class ThreadAwareCanvasQT(FigureCanvasQTAgg):
+    def __init__(self, figure):
+        FigureCanvasQTAgg.__init__(self, figure)
+        wrap_methods(self)
+
+
+class ThreadAwareMainWindow(QMainWindow):
     activated = Signal()
     closing = Signal()
     visibility_changed = Signal()
+
+    def __init__(self):
+        QMainWindow.__init__(self)
+        wrap_methods(self)
 
     def event(self, event):
         if event.type() == QEvent.WindowActivate:
@@ -87,7 +112,7 @@ class FigureManagerWorkbench(FigureManagerBase, QObject):
         self.fig_visibility_changed = QAppThreadCall(self.fig_visibility_changed_orig)
 
         self.canvas = canvas
-        self.window = MainWindow()
+        self.window = ThreadAwareMainWindow()
         self.window.activated.connect(self._window_activated)
         self.window.closing.connect(canvas.close_event)
         self.window.closing.connect(self._widgetclosed)
@@ -170,7 +195,7 @@ class FigureManagerWorkbench(FigureManagerBase, QObject):
             # line is run, leading to a useless AttributeError.
 
     def _get_toolbar(self, canvas, parent):
-            return WorkbenchNavigationToolbar(canvas, parent, False)
+            return ThreadAwareToolbar(canvas, parent, False)
 
     def resize(self, width, height):
         'set the canvas size in pixels'
@@ -290,7 +315,7 @@ def new_figure_manager_given_figure(num, figure):
     """
     Create a new figure manager instance for the given figure.
     """
-    canvas = FigureCanvasQTAgg(figure)
+    canvas = ThreadAwareCanvasQT(figure)
     manager = FigureManagerWorkbench(canvas, num)
     return manager
 
