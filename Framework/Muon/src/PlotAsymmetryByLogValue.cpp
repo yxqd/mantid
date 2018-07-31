@@ -9,7 +9,7 @@
 #include "MantidAPI/TableRow.h"
 #include "MantidAPI/TextAxis.h"
 #include "MantidAPI/WorkspaceGroup.h"
-#include "MantidAlgorithms/PlotAsymmetryByLogValue.h"
+#include "MantidMuon/PlotAsymmetryByLogValue.h"
 #include "MantidDataObjects/TableWorkspace.h"
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidDataObjects/WorkspaceCreation.h"
