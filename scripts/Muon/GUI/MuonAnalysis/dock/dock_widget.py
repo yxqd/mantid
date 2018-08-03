@@ -4,6 +4,7 @@ from PyQt4 import QtGui
 
 from Muon.GUI.Common.dummy.dummy_widget import DummyWidget
 from Muon.GUI.Common.dummy_label.dummy_label_widget import DummyLabelWidget
+from Muon.GUI.Common.dummy_create.dummy_create_widget import DummyCreateWidget
 from Muon.GUI.Common.dock.dock_view import DockView
 
 
@@ -18,7 +19,7 @@ class DockWidget(QtGui.QWidget):
     populates it
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, reporter=None):
         super(DockWidget, self).__init__(parent)
         self.dockWidget = QtGui.QWidget()
 
@@ -35,6 +36,9 @@ class DockWidget(QtGui.QWidget):
         self.dock_view.addDock(self.btn2.widget, "third")
         self.btn2.setButtonConnection(self.handleButton)
 
+        self.create = DummyCreateWidget(self,reporter)
+        self.dock_view.addDock(self.create.widget, "create")
+ 
         self.dock_view.makeTabs()
         self.dock_view.keepDocksOpen()
 

@@ -13,9 +13,15 @@ class ThreadModel(QThread):
     """
     exceptionSignal = QtCore.pyqtSignal(object)
 
-    def __init__(self, model):
+    def __init__(self, model, reporter = None):
         QThread.__init__(self)
         self.model = model
+        self.reporter = reporter
+
+    def report(self):
+        if self.reporter is not None:
+            output = self.model.report()
+            self.reporter.report(output)
 
     def __del__(self):
         self.wait()
@@ -23,6 +29,7 @@ class ThreadModel(QThread):
     def run(self):
         self.user_cancel = False
         try:
+            self.report()
             self.model.execute()
             self.model.output()
         except KeyboardInterrupt:

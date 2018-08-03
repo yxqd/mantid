@@ -8,6 +8,7 @@ import PyQt4.QtCore as QtCore
 
 from Muon.GUI.Common.dummy_label.dummy_label_widget import DummyLabelWidget
 from Muon.GUI.MuonAnalysis.dock.dock_widget import DockWidget
+from Muon.GUI.Common.reporter import Reporter
 
 
 class MuonAnalysis2Gui(QtGui.QMainWindow):
@@ -15,8 +16,17 @@ class MuonAnalysis2Gui(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MuonAnalysis2Gui, self).__init__(parent)
 
+        # open a reporter
+        reporter = Reporter("MuonAnalysis2.py")
+        if reporter.exists():
+            # to do: add an else for auto load here
+            ex = QtGui.QWidget()
+            error = "Failed to read checkpoint file"
+            QtGui.QMessageBox.warning(ex, "Muon Analysis version 2", str(error))
+            reporter.clear()
+        
         loadWidget = DummyLabelWidget("Load dummy", self)
-        self.dockWidget = DockWidget(self)
+        self.dockWidget = DockWidget(self,reporter)
 
         helpWidget = DummyLabelWidget("Help dummy", self)
 

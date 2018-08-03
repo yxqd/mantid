@@ -28,6 +28,11 @@ def addDoubleToTable(table,value,row):
     return numberWidget
 
 
+def addStringToTable(table,value,row):
+    numberWidget = QtGui.QTableWidgetItem(value)
+    table.setItem(row,1, numberWidget)
+    return numberWidget
+
 def addCheckBoxToTable(table,state,row):
     box = QtGui.QTableWidgetItem()
     box.setFlags(QtCore.Qt.ItemIsUserCheckable |QtCore.Qt.ItemIsEnabled)
