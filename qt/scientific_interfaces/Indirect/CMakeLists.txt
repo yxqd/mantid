@@ -10,7 +10,10 @@ set ( SRC_FILES
 	ConvFitDataTablePresenter.cpp
 	ConvFitModel.cpp
 	DensityOfStates.cpp
-        Elwin.cpp
+	Elwin.cpp
+	FunctionBrowser.cpp
+	FunctionBrowserPresenter.cpp
+	FunctionProperties.cpp
 	ILLEnergyTransfer.cpp
 	ISISCalibration.cpp
 	ISISDiagnostics.cpp
@@ -59,6 +62,7 @@ set ( SRC_FILES
 	JumpFitModel.cpp
 	MSDFit.cpp
 	MSDFitModel.cpp
+	MultiDomainFunctionModel.cpp
 	Quasi.cpp
 	ResNorm.cpp
 	Stretch.cpp
@@ -79,8 +83,14 @@ set ( INC_FILES
 	ConvFitModel.h
 	CorrectionsTab.h
 	DensityOfStates.h
-        Elwin.h
+	Elwin.h
+	FunctionBrowser.h
+	FunctionBrowserPresenter.h
+	FunctionBrowserSubscriber.h
+	FunctionProperties.h
 	IAddWorkspaceDialog.h
+	IFunctionBrowser.h
+	IFunctionModel.h
 	ILLEnergyTransfer.h
 	ISISCalibration.h
 	ISISDiagnostics.h
@@ -130,6 +140,7 @@ set ( INC_FILES
 	JumpFitModel.h
 	MSDFit.h
 	MSDFitModel.h
+	MultiDomainFunctionModel.h
 	Quasi.h
 	ResNorm.h
 	Stretch.h
@@ -147,6 +158,7 @@ set ( MOC_FILES
     CorrectionsTab.h
     DensityOfStates.h
     Elwin.h
+    FunctionBrowser.h
     ILLEnergyTransfer.h
     IndirectAddWorkspaceDialog.h
     IndirectBayes.h
