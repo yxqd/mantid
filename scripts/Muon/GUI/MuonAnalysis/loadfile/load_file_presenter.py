@@ -1,16 +1,9 @@
 from __future__ import (absolute_import, division, print_function)
 
-import sys
-
 from Muon.GUI.Common import thread_model
 import Muon.GUI.Common.muon_file_utils as fileUtils
 
-def filter_for_extensions(extensions):
-    str_list = ["*." + str(ext) for ext in extensions]
-    return "Files (" + ", ".join(str_list) + ")"
-
-
-# TODO : If files > 3, display "..." in the edit and change the tooltip to suggest to use the copy button
+import copy
 
 class BrowseFileWidgetPresenter(object):
 
@@ -36,12 +29,11 @@ class BrowseFileWidgetPresenter(object):
         return thread_model.ThreadModel(self._model)
 
     def get_filenames_from_user(self):
-        file_filter = filter_for_extensions(["nxs"])
+        file_filter = fileUtils.filter_for_extensions(["nxs"])
         directory = ""
         filenames = self._view.show_file_browser_and_return_selection(file_filter, [directory],
                                                                       multiple_files=self._multiple_files)
         filenames = self.validate_filenames_selection(filenames)
-        print("Validate : ", self.validate_filenames_selection(filenames))
         return filenames
 
     def validate_filenames_selection(self, filenames):
@@ -51,18 +43,21 @@ class BrowseFileWidgetPresenter(object):
 
     def on_browse_button_clicked(self, threaded=True):
         filenames = self.get_filenames_from_user()
-        print("Loading started")
         if not self._multiple_files and len(filenames) > 1:
-            raise ValueError("Multiple files selected in single file mode")
+            self._view.warning_popup("Multiple files selected in single file mode")
+            self._view.reset_edit_to_cached_value()
+            return
         if filenames:
             self.handle_load_thread_start(filenames)
 
     def handle_load_thread_start(self, filenames):
         # if self._load_thread:
         #     return
-        print("Load thread started, Model : ", self._model.loaded_filenames)
+        print("Load thread started")
         self._view.notify_loading_started()
         self.disable_loading()
+        if len(filenames) > 10:
+            self._view.show_progress_bar()
         # self._load_thread = self.create_load_thread()
         # self._load_thread.threadWrapperSetUp(self.disable_loading, self.handle_load_thread_finished)
         # self._load_thread.loadData(filenames)
@@ -72,14 +67,12 @@ class BrowseFileWidgetPresenter(object):
                                              self.handle_load_thread_exception)
 
     def handle_load_thread_progress(self, prog):
-        print("Progress : ", prog)
+        self._view.set_progress_bar(prog)
 
     def handle_load_thread_exception(self, **kwargs):
-        print("Exception : ", kwargs)
         self._view.warning_popup("")
 
     def handle_load_thread_finished(self):
-        print("FINISHED : ")
         self._model.add_thread_data()
         self._model.thread_manager.clear()
         # print("Load thread finished : ", self._load_thread.currentThreadId(), " Model : ", self._model.loaded_filenames)
@@ -89,9 +82,8 @@ class BrowseFileWidgetPresenter(object):
         self.on_loading_finished()
 
     def on_loading_finished(self):
-        print("on_loading_finished")
         file_list = self._model.loaded_filenames
-        print(file_list)
+        self._view.remove_progress_bar()
         self.set_file_edit(file_list)
         self._view.notify_loading_finished()
         self.enable_loading()
@@ -128,10 +120,11 @@ class BrowseFileWidgetPresenter(object):
 
     def set_file_edit(self, file_list):
         display_text = len(file_list) > 10
+        file_list = sorted(copy.copy(file_list))
         self._view.set_file_edit(";".join(file_list), display_text)
 
     def handle_file_changed_by_user(self):
-        print("User has updated files! Model : ", self._model.loaded_filenames)
+        print("User has updated files!")
         user_input = self._view.get_file_edit_text()
         filenames = fileUtils.parse_user_input_to_files(user_input, [".nxs"])
         filenames = fileUtils.remove_duplicated_files_from_list(filenames)

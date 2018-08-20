@@ -396,9 +396,10 @@ class LoadRunWidgetPresenterMultipleFileTest(unittest.TestCase):
             side_effect=iter(zip(filenames, workspaces, runs)))
 
     def assert_model_contains_correct_loaded_data(self):
-        self.assertEqual(self.presenter._model.filenames, self.filenames)
-        self.assertEqual(self.presenter._model.workspaces, self.workspaces)
-        self.assertEqual(self.presenter._model.runs, self.runs)
+        # use sorted due to threads finishing at different times
+        self.assertEqual(sorted(self.presenter._model.filenames), sorted(self.filenames))
+        self.assertEqual(sorted(self.presenter._model.workspaces), sorted(self.workspaces))
+        self.assertEqual(sorted(self.presenter._model.runs), sorted(self.runs))
 
     def assert_interface_contains_correct_runs_and_files(self):
         self.assertEqual(self.load_file_view.get_file_edit_text(), ";".join(self.filenames))

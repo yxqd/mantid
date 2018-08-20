@@ -5,6 +5,10 @@ import os
 allowed_instruments = ["EMU", "MUSR", "CHRONUS", "HIFI"]
 allowed_extensions =["nxs"]
 
+def filter_for_extensions(extensions):
+    str_list = ["*." + str(ext) for ext in extensions]
+    return "Files (" + ", ".join(str_list) + ")"
+
 def get_instrument_directory(instrument):
     """
     If instrument is supported, returns the directory name on the ISIS network

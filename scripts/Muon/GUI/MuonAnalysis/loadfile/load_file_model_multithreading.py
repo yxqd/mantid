@@ -60,11 +60,14 @@ class BrowseFileWidgetModel(object):
 
     def add_thread_data(self):
         print("ADDING THREAD DATA : ")
+        # If data already loaded in model, remove it in favour of the most recent load
         for res in self.thread_manager.results["results"]:
+            if self._loaded_data_store.contains(run = res[2]):
+                self._loaded_data_store.remove_data(run = res[2], workspace = res[1], filename=res[0])
             self._loaded_data_store.add_data(run=res[2], workspace=res[1], filename=res[0])
 
     def load_workspace_from_filename(self, filename):
-        print("Loading file : ", filename)
+        #print("Loading file : ", filename)
         try:
             workspace = mantid.Load(Filename=filename)
             run = int(workspace[0].getRunNumber())
@@ -74,17 +77,15 @@ class BrowseFileWidgetModel(object):
 
     def load_with_multithreading(self, filenames, callback_finished, callback_progress, callback_exception):
         self.load_func = thread_manager.threading_decorator(self.load_workspace_from_filename)
-        n_threads = min(2, len(filenames))
+        n_threads = min(4, len(filenames))
         self.thread_manager = thread_manager.WorkerManager(fn = self.load_workspace_from_filename, num_threads=n_threads,
                                                            callback_on_progress_update=callback_progress,
                                                            callback_on_thread_exception=callback_exception,
                                                            callback_on_threads_complete=callback_finished,
                                                            filename=filenames)
-        print("STARTING MULTI THREADING")
         self.thread_manager.start()
 
     def exception_message_for_failed_files(self, failed_file_list):
-        print("Exception in execute!")
         return "Could not load the following files : \n - " + "\n - ".join(failed_file_list)
 
 
@@ -92,7 +93,6 @@ class BrowseFileWidgetModel(object):
         self._loaded_data_store.clear()
 
     def add_directories_to_config_service(self, file_list):
-        print(file_list)
         dirs = [os.path.dirname(filename) for filename in file_list]
         dirs = [filename if os.path.isdir(filename) else "" for filename in dirs]
         dirs = list(set(dirs))

@@ -4,13 +4,29 @@ import sys
 import time
 
 import unittest
-
 if sys.version_info.major == 3:
     from unittest import mock
 else:
     import mock
 
 from Muon.GUI.Common.threading_manager import *
+
+
+def test_function(lst):
+    return 2 * lst
+
+
+def test_function_raises_on_n(lst, raise_on=0):
+    if lst == raise_on:
+        raise ValueError
+    else:
+        return 2 * lst
+
+
+def cancel_test_function(lst):
+    # add a delay to allow for cancellation of threads during evaluation
+    time.sleep(1)
+    return 2 * lst
 
 
 class ThreadingManagerFreeFunctionTest(unittest.TestCase):
@@ -117,49 +133,6 @@ class ThreadingManagerWorkerTest(unittest.TestCase):
         self.assertEqual(worker_error.call_count, 1)
 
 
-# def test_function(progress_callback, lst):
-#     """Accepts single list and multiplies by 2"""
-#     results = []
-#     for item in lst:
-#         results += [2 * item]
-#         progress_callback.emit(100 / len(lst))
-#     return results
-
-def test_function(lst):
-    """Accepts single list and multiplies by 2"""
-    return 2 * lst
-
-# def test_function_raises_on_n(progress_callback, lst, raise_on=0):
-#     """Accepts single list and multiplies by 2, raising if the input equals the given value"""
-#     results = []
-#     for i, item in enumerate(lst):
-#         if item == raise_on:
-#             raise ValueError
-#         results += [2 * item]
-#         progress_callback.emit(100 / len(lst))
-#     return results
-
-def test_function_raises_on_n(lst, raise_on=0):
-    """Accepts single list and multiplies by 2, raising if the input equals the given value"""
-    if lst == raise_on:
-        raise ValueError
-    else:
-        return 2 * lst
-
-# def cancel_test_function(progress_callback, lst):
-#     """Accepts single list and multiplies by 2"""
-#     results = []
-#     for item in lst:
-#         time.sleep(1)
-#         results += [2 * item]
-#         progress_callback.emit(100 / len(lst))
-#     return results
-
-def cancel_test_function(lst):
-    """Accepts single list and multiplies by 2"""
-    time.sleep(1)
-    return 2 * lst
-
 class ThreadingManagerWorkerManagerTest(unittest.TestCase):
     class Runner:
         QT_APP = QtWidgets.QApplication([])
@@ -233,11 +206,12 @@ class ThreadingManagerWorkerManagerTest(unittest.TestCase):
 
         self.assertEqual(manager._failed_results['lst'], [1, 5])
 
-    def test_that_once_started_manager_cannot_be_started_again_until_threads_are_cleared(self):
+    def test_that_once_started_manager_cannot_be_started_again_while_threads_are_running(self):
         num_threads = 4
         manager = WorkerManager(test_function, num_threads, lst=[1, 2, 3, 4])
 
         manager.start()
+        manager.is_running = mock.Mock(return_value=True)
         self.Runner(manager)
 
         self.assertRaises(RuntimeError, manager.start)
@@ -327,35 +301,3 @@ class ThreadingManagerCancelWorkerManagerTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
-
-    # def func(x, y):
-    #     return x * y
-    # def callback(x):
-    #     print("Progress = ", x)
-    # wrapped_func = threading_decorator(func)
-    # print(wrapped_func(progress_callback=callback, x=[1, 2, 3], y=[3, 3, 4]))
-
-    # import time
-    #
-    # class Runner:
-    #     QT_APP = QtWidgets.QApplication([])
-    #
-    #     def __init__(self, thread):
-    #         self._thread = thread
-    #         self._thread.finished.connect(self.finished)
-    #         self.QT_APP.exec_()
-    #
-    #     def finished(self):
-    #         self.QT_APP.processEvents()
-    #         self.QT_APP.exit(0)
-    #
-    # def test_fn(x, y):
-    #     time.sleep(1)
-    #     return x / y
-    #
-    # func = threading_decorator(test_fn)
-    # manager = WorkerManager(func, 4, x=[10, 10, 10, 10, 10], y=[1, 2, 3, 4, 5])
-    # manager.start()
-    # Runner(manager)
-    #
-    # print(manager.results)

@@ -65,7 +65,7 @@ class MuonLoadData:
 
     # TODO : unit test this
     def contains(self, **kwargs):
-        n_matches = self.contains_n(kwargs)
+        n_matches = self.contains_n(**kwargs)
         if n_matches > 0:
             return True
         else:

@@ -25,7 +25,7 @@ class BrowseFileWidgetView(QtWidgets.QWidget):
         # To ensure at most one warning window open
 
         self._warning_window = None
-
+        self.progress_bar = None
 
     def setupUi(self, BrowseFileWidget):
         BrowseFileWidget.setObjectName("BrowseFileWidget")
@@ -66,6 +66,7 @@ class BrowseFileWidgetView(QtWidgets.QWidget):
         self.copyButton.setObjectName("copyButton")
 
         self.horizontalLayout.addWidget(self.copyButton)
+        self.setLayout(self.horizontalLayout)
 
     def on_browse_clicked(self, slot):
         self.browseButton.clicked.connect(slot)
@@ -134,7 +135,7 @@ class BrowseFileWidgetView(QtWidgets.QWidget):
         self._cached_text = ""
 
     def reset_edit_to_cached_value(self):
-        print("Reset to cache : ",self._cached_text )
+        print("Reset to cache : ", self._cached_text)
         tmp = self._cached_text
         self.set_file_edit(tmp)
         self._cached_text = tmp
@@ -151,3 +152,25 @@ class BrowseFileWidgetView(QtWidgets.QWidget):
         self._warning_window = QtWidgets.QMessageBox.warning(self, "Error", str(message))
 
         mutex.unlock()
+
+    # def show_progress_bar(self, show=False):
+    #     if show:
+    #         self.insert_widget_into_layout()
+    #     else:
+    #         self.remove_widget_from_layout()
+
+    def show_progress_bar(self):
+        self.progress_bar = QtWidgets.QProgressBar(self)
+        self.horizontalLayout.addWidget(self.progress_bar)
+        self.setLayout(self.horizontalLayout)
+
+    def remove_progress_bar(self):
+        if self.progress_bar:
+            self.horizontalLayout.removeWidget(self.progress_bar)
+            self.progress_bar.deleteLater()
+            self.progress_bar = None
+            self.setLayout(self.horizontalLayout)
+
+    def set_progress_bar(self, progress):
+        if self.progress_bar:
+            self.progress_bar.setValue(progress)
