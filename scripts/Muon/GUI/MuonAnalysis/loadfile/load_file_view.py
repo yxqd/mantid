@@ -1,9 +1,7 @@
 from __future__ import (absolute_import, division, print_function)
 
-from qtpy import QtCore, QtGui, QtWidgets
+from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtCore import Signal
-
-from Muon.GUI.Common.message_box import *
 
 
 class BrowseFileWidgetView(QtWidgets.QWidget):
@@ -14,65 +12,71 @@ class BrowseFileWidgetView(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
         super(BrowseFileWidgetView, self).__init__(parent)
-        self.setupUi(self)
 
-        self.copyButton.clicked.connect(self.copy_line_edit_to_clipboard)
+        self.horizontal_layout = None
+        self.browse_button = None
+        self.file_path_edit = None
+        self.copy_button = None
+
+        self.setup_interface_layout()
+
+        self.copy_button.clicked.connect(self.copy_line_edit_to_clipboard)
 
         self._store_edit_text = False
         self._stored_edit_text = ""
         self._cached_text = ""
 
-        # To ensure at most one warning window open
-
-        self._warning_window = None
+        # progress tracking if many files being loaded
         self.progress_bar = None
 
-    def setupUi(self, BrowseFileWidget):
-        BrowseFileWidget.setObjectName("BrowseFileWidget")
-        BrowseFileWidget.resize(462, 45)
+    def setup_interface_layout(self):
+        self.setObjectName("BrowseFileWidget")
+        self.resize(462, 45)
 
-        self.horizontalLayout = QtWidgets.QHBoxLayout(self)
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.browseButton = QtWidgets.QPushButton(BrowseFileWidget)
+        self.browse_button = QtWidgets.QPushButton(self)
 
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.browseButton.sizePolicy().hasHeightForWidth())
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.browse_button.sizePolicy().hasHeightForWidth())
 
-        self.browseButton.setSizePolicy(sizePolicy)
-        self.browseButton.setMinimumSize(QtCore.QSize(100, 25))
-        self.browseButton.setObjectName("browseButton")
-        self.browseButton.setText("Browse")
-        self.horizontalLayout.addWidget(self.browseButton)
-        self.filePathEdit = QtWidgets.QLineEdit(BrowseFileWidget)
+        self.browse_button.setSizePolicy(size_policy)
+        self.browse_button.setMinimumSize(QtCore.QSize(100, 25))
+        self.browse_button.setObjectName("browseButton")
+        self.browse_button.setText("Browse")
 
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.filePathEdit.sizePolicy().hasHeightForWidth())
+        self.file_path_edit = QtWidgets.QLineEdit(self)
 
-        self.filePathEdit.setSizePolicy(sizePolicy)
-        self.filePathEdit.setMinimumSize(QtCore.QSize(0, 25))
-        self.filePathEdit.setToolTip("")
-        self.filePathEdit.setObjectName("filePathEdit")
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.file_path_edit.sizePolicy().hasHeightForWidth())
 
-        self.horizontalLayout.addWidget(self.filePathEdit)
-        self.copyButton = QtWidgets.QToolButton(BrowseFileWidget)
-        self.copyButton.setMinimumSize(QtCore.QSize(25, 25))
-        self.copyButton.setToolTip("Copy current files to clipboard")
-        self.copyButton.setText("...")
-        self.copyButton.setIcon(QtGui.QIcon(":/copy.png"))
-        self.copyButton.setObjectName("copyButton")
+        self.file_path_edit.setSizePolicy(size_policy)
+        self.file_path_edit.setMinimumSize(QtCore.QSize(0, 25))
+        self.file_path_edit.setToolTip("")
+        self.file_path_edit.setObjectName("filePathEdit")
 
-        self.horizontalLayout.addWidget(self.copyButton)
-        self.setLayout(self.horizontalLayout)
+        self.copy_button = QtWidgets.QToolButton(self)
+        self.copy_button.setMinimumSize(QtCore.QSize(25, 25))
+        self.copy_button.setToolTip("Copy current files to clipboard")
+        self.copy_button.setText("...")
+        self.copy_button.setIcon(QtGui.QIcon(":/copy.png"))
+        self.copy_button.setObjectName("copyButton")
+
+        self.horizontal_layout = QtWidgets.QHBoxLayout(self)
+        self.horizontal_layout.setObjectName("horizontalLayout")
+        self.horizontal_layout.addWidget(self.browse_button)
+        self.horizontal_layout.addWidget(self.file_path_edit)
+        self.horizontal_layout.addWidget(self.copy_button)
+
+        self.setLayout(self.horizontal_layout)
 
     def on_browse_clicked(self, slot):
-        self.browseButton.clicked.connect(slot)
+        self.browse_button.clicked.connect(slot)
 
     def on_file_edit_changed(self, slot):
-        self.filePathEdit.returnPressed.connect(slot)
+        self.file_path_edit.returnPressed.connect(slot)
 
     def copy_line_edit_to_clipboard(self):
         cb = QtWidgets.QApplication.clipboard()
@@ -107,26 +111,26 @@ class BrowseFileWidgetView(QtWidgets.QWidget):
         self.dataChanged.emit()
 
     def disable_load_buttons(self):
-        self.browseButton.setEnabled(False)
-        self.filePathEdit.setEnabled(False)
+        self.browse_button.setEnabled(False)
+        self.file_path_edit.setEnabled(False)
 
     def enable_load_buttons(self):
-        self.browseButton.setEnabled(True)
-        self.filePathEdit.setEnabled(True)
+        self.browse_button.setEnabled(True)
+        self.file_path_edit.setEnabled(True)
 
     def get_file_edit_text(self):
         if self._store_edit_text:
             return self._stored_edit_text
         else:
-            return self.filePathEdit.text()
+            return self.file_path_edit.text()
 
     def set_file_edit(self, text, store=False):
         if store:
             self._store_edit_text = True
             self._stored_edit_text = text
-            self.filePathEdit.setText("(... more than 10 files, use copy button)")
+            self.file_path_edit.setText("(... more than 10 files, use copy button)")
         else:
-            self.filePathEdit.setText(text)
+            self.file_path_edit.setText(text)
         self._cached_text = self.get_file_edit_text()
 
     def clear(self):
@@ -141,35 +145,20 @@ class BrowseFileWidgetView(QtWidgets.QWidget):
         self._cached_text = tmp
 
     def warning_popup(self, message):
-        mutex = QtCore.QMutex()
-        mutex.lock()
-        print("WARNING POPUP")
-        try:
-            self._warning_window.done(1)
-        except:
-            pass
-        self._warning_window = None
-        self._warning_window = QtWidgets.QMessageBox.warning(self, "Error", str(message))
-
-        mutex.unlock()
-
-    # def show_progress_bar(self, show=False):
-    #     if show:
-    #         self.insert_widget_into_layout()
-    #     else:
-    #         self.remove_widget_from_layout()
+        # TODO : fix this to limit the number of warnings
+        QtWidgets.QMessageBox.warning(self, "Error", str(message))
 
     def show_progress_bar(self):
         self.progress_bar = QtWidgets.QProgressBar(self)
-        self.horizontalLayout.addWidget(self.progress_bar)
-        self.setLayout(self.horizontalLayout)
+        self.horizontal_layout.addWidget(self.progress_bar)
+        self.setLayout(self.horizontal_layout)
 
     def remove_progress_bar(self):
         if self.progress_bar:
-            self.horizontalLayout.removeWidget(self.progress_bar)
+            self.horizontal_layout.removeWidget(self.progress_bar)
             self.progress_bar.deleteLater()
             self.progress_bar = None
-            self.setLayout(self.horizontalLayout)
+            self.setLayout(self.horizontal_layout)
 
     def set_progress_bar(self, progress):
         if self.progress_bar:

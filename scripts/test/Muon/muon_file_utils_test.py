@@ -7,6 +7,7 @@ if sys.version_info.major == 3:
 else:
     import mock
 
+
 class RunStringUtilsListToStringTest(unittest.TestCase):
 
     def test_parse_user_input_to_files_returns_file_correctly(self):
@@ -45,11 +46,32 @@ class RunStringUtilsListToStringTest(unittest.TestCase):
                                             "\\dir1\\dir4\\file2.nxs"])
 
     def test_that_get_current_run_filename_throws_if_autosave_file_not_found(self):
-        utils.check_file_exists = mock.Mock(return_value = False)
+        utils.check_file_exists = mock.Mock(return_value=False)
 
         self.assertRaises(ValueError, utils.get_current_run_filename("EMU"))
 
+class MuonFileUtilsTest(unittest.TestCase):
 
+    def test_fill_digits(self):
+        num1 = 1234
+        num2_vals = [1,10, 100, 1000]
+        expected_output = [1231, 1210, 1100, 1000]
+        for i, num2 in enumerate(num2_vals):
+            self.assertEqual(utils.fill_digits(num1, num2), expected_output[i])
+
+    def test_fill_digits_works_on_strings(self):
+        num1 = "1234"
+        num2_vals = ["1", "10", "100", "1000"]
+        expected_output = [1231, 1210, 1100, 1000]
+        for i, num2 in enumerate(num2_vals):
+            self.assertEqual(utils.fill_digits(num1, num2), expected_output[i])
+
+    def test_fill_digits_(self):
+        num1 = 1234
+        num2_vals = [10000]
+        expected_output = [2]
+        for i, num2 in enumerate(num2_vals):
+            self.assertEqual(utils.fill_digits(num1, num2), expected_output[i])
 
 if __name__ == '__main__':
     unittest.main(buffer=False, verbosity=2)

@@ -4,6 +4,7 @@ import sys
 import time
 
 import unittest
+
 if sys.version_info.major == 3:
     from unittest import mock
 else:
