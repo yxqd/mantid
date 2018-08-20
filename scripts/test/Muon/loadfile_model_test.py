@@ -1,6 +1,6 @@
 import sys
 
-from Muon.GUI.MuonAnalysis.loadfile.load_file_model import BrowseFileWidgetModel
+from Muon.GUI.MuonAnalysis.loadfile.load_file_model_multithreading import BrowseFileWidgetModel
 from Muon.GUI.Common.muon_load_data import MuonLoadData
 
 import unittest

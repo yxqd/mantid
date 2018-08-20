@@ -1,6 +1,11 @@
 import Muon.GUI.Common.muon_file_utils as utils
 import unittest
+import sys
 
+if sys.version_info.major == 3:
+    from unittest import mock
+else:
+    import mock
 
 class RunStringUtilsListToStringTest(unittest.TestCase):
 
@@ -38,6 +43,12 @@ class RunStringUtilsListToStringTest(unittest.TestCase):
         unique_file_list = utils.remove_duplicated_files_from_list(file_list)
         self.assertEqual(unique_file_list, ["\\dir1\\dir2\\file1.nxs",
                                             "\\dir1\\dir4\\file2.nxs"])
+
+    def test_that_get_current_run_filename_throws_if_autosave_file_not_found(self):
+        utils.check_file_exists = mock.Mock(return_value = False)
+
+        self.assertRaises(ValueError, utils.get_current_run_filename("EMU"))
+
 
 
 if __name__ == '__main__':

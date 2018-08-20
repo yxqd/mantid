@@ -58,20 +58,34 @@ class BrowseFileWidgetPresenter(object):
             self.handle_load_thread_start(filenames)
 
     def handle_load_thread_start(self, filenames):
-        if self._load_thread:
-            return
+        # if self._load_thread:
+        #     return
         print("Load thread started, Model : ", self._model.loaded_filenames)
         self._view.notify_loading_started()
-        self._load_thread = self.create_load_thread()
-        self._load_thread.threadWrapperSetUp(self.disable_loading, self.handle_load_thread_finished)
-        self._load_thread.loadData(filenames)
-        self._load_thread.start()
+        self.disable_loading()
+        # self._load_thread = self.create_load_thread()
+        # self._load_thread.threadWrapperSetUp(self.disable_loading, self.handle_load_thread_finished)
+        # self._load_thread.loadData(filenames)
+        # self._load_thread.start()
+        self._model.load_with_multithreading(filenames, self.handle_load_thread_finished,
+                                             self.handle_load_thread_progress,
+                                             self.handle_load_thread_exception)
+
+    def handle_load_thread_progress(self, prog):
+        print("Progress : ", prog)
+
+    def handle_load_thread_exception(self, **kwargs):
+        print("Exception : ", kwargs)
+        self._view.warning_popup("")
 
     def handle_load_thread_finished(self):
-        print("Load thread finished : ", self._load_thread.currentThreadId(), " Model : ", self._model.loaded_filenames)
-        self._load_thread.threadWrapperTearDown(self.disable_loading, self.handle_load_thread_finished)
-        self._load_thread.deleteLater()
-        self._load_thread = None
+        print("FINISHED : ")
+        self._model.add_thread_data()
+        self._model.thread_manager.clear()
+        # print("Load thread finished : ", self._load_thread.currentThreadId(), " Model : ", self._model.loaded_filenames)
+        # self._load_thread.threadWrapperTearDown(self.disable_loading, self.handle_load_thread_finished)
+        # self._load_thread.deleteLater()
+        # self._load_thread = None
         self.on_loading_finished()
 
     def on_loading_finished(self):
@@ -133,4 +147,5 @@ class BrowseFileWidgetPresenter(object):
 
     # used by parent widget
     def update_view_from_model(self, file_list):
+        print("file update_view_from_model")
         self.set_file_edit(file_list)

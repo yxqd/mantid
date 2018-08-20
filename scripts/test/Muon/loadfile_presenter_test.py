@@ -10,7 +10,7 @@ else:
 
 from Muon.GUI.MuonAnalysis.loadfile.load_file_view import BrowseFileWidgetView
 from Muon.GUI.MuonAnalysis.loadfile.load_file_presenter import BrowseFileWidgetPresenter
-from Muon.GUI.MuonAnalysis.loadfile.load_file_model import BrowseFileWidgetModel
+from Muon.GUI.MuonAnalysis.loadfile.load_file_model_multithreading import BrowseFileWidgetModel
 
 from Muon.GUI.Common.muon_load_data import MuonLoadData
 
@@ -61,7 +61,7 @@ class LoadFileWidgetPresenterTest(unittest.TestCase):
             if thread:
                 self._thread = thread
                 self._thread.finished.connect(self.finished)
-                if self._thread.isRunning():
+                if self._thread.is_running():
                     self.QT_APP.exec_()
 
         def finished(self):
@@ -158,7 +158,7 @@ class LoadFileWidgetPresenterTest(unittest.TestCase):
         muon_run = 1234
 
         model = BrowseFileWidgetModel(MuonLoadData())
-        model.load_workspace_from_filename = mock.Mock(return_value=(muon_workspace, muon_run))
+        model.load_workspace_from_filename = mock.Mock(return_value=(muon_file, muon_workspace, muon_run))
         self.mock_view.show_file_browser_and_return_selection = mock.Mock(return_value=[muon_file])
         self.mock_view.set_file_edit = mock.Mock()
         presenter = BrowseFileWidgetPresenter(self.mock_view, model)
@@ -166,7 +166,7 @@ class LoadFileWidgetPresenterTest(unittest.TestCase):
 
         presenter.on_browse_button_clicked()
         # presenter._load_thread.wait()
-        runner = self.Runner(presenter._load_thread)
+        runner = self.Runner(presenter._model.thread_manager)
 
         self.assertEqual(model.loaded_filenames, [muon_file])
         self.assertEqual(model.loaded_workspaces, [muon_workspace])
@@ -180,7 +180,7 @@ class LoadFileWidgetPresenterTest(unittest.TestCase):
         muon_run = 1234
 
         model = BrowseFileWidgetModel(MuonLoadData())
-        model.load_workspace_from_filename = mock.Mock(return_value=(muon_workspace, muon_run))
+        model.load_workspace_from_filename = mock.Mock(return_value=(muon_file, muon_workspace, muon_run))
         # self.mock_view.show_file_browser_and_return_selection = mock.Mock(return_value=[muon_file])
         self.mock_view.set_file_edit = mock.Mock()
         self.mock_view.get_file_edit_text = mock.Mock(return_value=muon_file)
@@ -188,7 +188,7 @@ class LoadFileWidgetPresenterTest(unittest.TestCase):
         presenter.enable_multiple_files(False)
 
         presenter.handle_file_changed_by_user()
-        runner = self.Runner(presenter._load_thread)
+        runner = self.Runner(presenter._model.thread_manager)
 
         self.assertEqual(model.loaded_filenames, [muon_file])
         self.assertEqual(model.loaded_workspaces, [muon_workspace])
@@ -198,11 +198,11 @@ class LoadFileWidgetPresenterTest(unittest.TestCase):
 
     def test_multiple_files_from_browse_loaded_into_model_in_multiple_file_mode(self):
         muon_files = ["C:/dir1/file1.nxs", "C:/dir2/file2.nxs", "C:/dir3/file3.nxs"]
-        muon_workspace = [1, 2, 3, 4]
-        muon_run = 1234
+        muon_workspace = [ [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]]
+        muon_run = [1234,1235,1236]
 
         model = BrowseFileWidgetModel(MuonLoadData())
-        model.load_workspace_from_filename = mock.Mock(return_value=(muon_workspace, muon_run))
+        model.load_workspace_from_filename = mock.Mock(side_effect=iter(zip(muon_files, muon_workspace, muon_run)))
         self.mock_view.show_file_browser_and_return_selection = mock.Mock(return_value=muon_files)
         self.mock_view.set_file_edit = mock.Mock()
         presenter = BrowseFileWidgetPresenter(self.mock_view, model)
@@ -210,11 +210,11 @@ class LoadFileWidgetPresenterTest(unittest.TestCase):
 
         presenter.on_browse_button_clicked()
         # presenter._load_thread.wait()
-        runner = self.Runner(presenter._load_thread)
+        runner = self.Runner(presenter._model.thread_manager)
 
         self.assertEqual(model.loaded_filenames, muon_files)
-        self.assertEqual(model.loaded_workspaces, [muon_workspace, muon_workspace, muon_workspace])
-        self.assertEqual(model.loaded_runs, [muon_run, muon_run, muon_run])
+        self.assertEqual(model.loaded_workspaces, muon_workspace)
+        self.assertEqual(model.loaded_runs, muon_run)
 
         self.mock_view.set_file_edit.assert_called_once_with("C:/dir1/file1.nxs;C:/dir2/file2.nxs;C:/dir3/file3.nxs",
                                                              mock.ANY)
@@ -252,22 +252,22 @@ class LoadFileWidgetPresenterTest(unittest.TestCase):
     def test_that_cannot_load_same_file_twice_from_same_browse(self):
         muon_files = ["C:/dir1/file1.nxs", "C:/dir2/file1.nxs", "C:/dir2/file2.nxs"]
         muon_files_unique = ["C:/dir1/file1.nxs", "C:/dir2/file2.nxs"]
-        muon_workspace = [1, 2, 3, 4]
-        muon_run = 1234
+        muon_workspace = [[1, 2, 3, 4], [1,2,3,4]]
+        muon_run = [1234,1235]
 
         model = BrowseFileWidgetModel(MuonLoadData())
-        model.load_workspace_from_filename = mock.Mock(return_value=(muon_workspace, muon_run))
+        model.load_workspace_from_filename = mock.Mock(side_effect=iter(zip(muon_files_unique,muon_workspace, muon_run)))
         self.mock_view.show_file_browser_and_return_selection = mock.Mock(return_value=muon_files)
         self.mock_view.set_file_edit = mock.Mock()
         presenter = BrowseFileWidgetPresenter(self.mock_view, model)
         presenter.enable_multiple_files(True)
 
         presenter.on_browse_button_clicked()
-        runner = self.Runner(presenter._load_thread)
+        runner = self.Runner(presenter._model.thread_manager)
 
         self.assertEqual(model.loaded_filenames, muon_files_unique)
-        self.assertEqual(model.loaded_workspaces, [muon_workspace, muon_workspace])
-        self.assertEqual(model.loaded_runs, [muon_run, muon_run])
+        self.assertEqual(model.loaded_workspaces, muon_workspace)
+        self.assertEqual(model.loaded_runs, muon_run)
 
         self.mock_view.set_file_edit.assert_called_once_with("C:/dir1/file1.nxs;C:/dir2/file2.nxs",
                                                              mock.ANY)
@@ -276,11 +276,11 @@ class LoadFileWidgetPresenterTest(unittest.TestCase):
         user_input = "C:/dir1/file1.nxs;C:/dir2/file1.nxs;C:/dir2/file2.nxs"
         muon_files = ["C:/dir1/file1.nxs", "C:/dir2/file1.nxs", "C:/dir2/file2.nxs"]
         muon_files_unique = ["C:/dir1/file1.nxs", "C:/dir2/file2.nxs"]
-        muon_workspace = [1, 2, 3, 4]
-        muon_run = 1234
+        muon_workspace = [[1, 2, 3, 4],[1,2,3,4]]
+        muon_run = [1234, 1235]
 
         model = BrowseFileWidgetModel(MuonLoadData())
-        model.load_workspace_from_filename = mock.Mock(return_value=(muon_workspace, muon_run))
+        model.load_workspace_from_filename = mock.Mock(side_effect=iter(zip(muon_files_unique,muon_workspace, muon_run)))
         self.mock_view.show_file_browser_and_return_selection = mock.Mock(return_value=muon_files)
         self.mock_view.set_file_edit = mock.Mock()
         self.mock_view.get_file_edit_text = mock.Mock(return_value=user_input)
@@ -288,27 +288,28 @@ class LoadFileWidgetPresenterTest(unittest.TestCase):
         presenter.enable_multiple_files(True)
 
         presenter.handle_file_changed_by_user()
-        runner = self.Runner(presenter._load_thread)
+        runner = self.Runner(presenter._model.thread_manager)
 
         self.assertEqual(model.loaded_filenames, muon_files_unique)
-        self.assertEqual(model.loaded_workspaces, [muon_workspace, muon_workspace])
-        self.assertEqual(model.loaded_runs, [muon_run, muon_run])
+        self.assertEqual(model.loaded_workspaces, muon_workspace)
+        self.assertEqual(model.loaded_runs, muon_run)
 
         self.mock_view.set_file_edit.assert_called_once_with("C:/dir1/file1.nxs;C:/dir2/file2.nxs",
                                                              mock.ANY)
 
     def test_that_view_reverts_to_previous_text_if_users_supplies_invalid_text(self):
+        muon_files = ["file1.nxs","file2.nxs"]
         muon_workspace = [1, 2, 3, 4]
         muon_run = 1234
         model = BrowseFileWidgetModel(MuonLoadData())
-        model.load_workspace_from_filename = mock.Mock(return_value=(muon_workspace, muon_run))
+        model.load_workspace_from_filename = mock.Mock(return_value=("file.nxs" ,muon_workspace, muon_run))
         self.mock_view.set_file_edit = mock.Mock()
         self.mock_view.reset_edit_to_cached_value = mock.Mock()
         presenter = BrowseFileWidgetPresenter(self.mock_view, model)
         presenter.enable_multiple_files(True)
 
         presenter.handle_file_changed_by_user()
-        runner = self.Runner(presenter._load_thread)
+        runner = self.Runner(presenter._model.thread_manager)
 
         invalid_user_input = ["some random text", "1+1=2", "..."]
         call_count = self.mock_view.reset_edit_to_cached_value.call_count
@@ -316,7 +317,7 @@ class LoadFileWidgetPresenterTest(unittest.TestCase):
             call_count += 1
             self.mock_view.get_file_edit_text = mock.Mock(return_value=invalid_text)
             presenter.handle_file_changed_by_user()
-            self.Runner(presenter._load_thread)
+            self.Runner(presenter._model.thread_manager)
             self.assertEqual(self.mock_view.reset_edit_to_cached_value.call_count, call_count)
 
     def test_that_model_and_interface_revert_to_previous_values_if_load_fails_from_browse(self):
@@ -330,19 +331,19 @@ class LoadFileWidgetPresenterTest(unittest.TestCase):
         view = BrowseFileWidgetView()
 
         view.show_file_browser_and_return_selection = mock.Mock(return_value=[muon_file])
-        model.load_workspace_from_filename = mock.Mock(return_value=([1], 1234))
+        model.load_workspace_from_filename = mock.Mock(return_value=(muon_file, [1], 1234))
 
         presenter = BrowseFileWidgetPresenter(view, model)
         presenter.enable_multiple_files(False)
         presenter.on_browse_button_clicked()
-        self.Runner(presenter._load_thread)
+        self.Runner(presenter._model.thread_manager)
 
         self.assertEqual(model.loaded_filenames, [muon_file])
 
         model.load_workspace_from_filename = mock.Mock(side_effect=load_failure)
 
         presenter.on_browse_button_clicked()
-        self.Runner(presenter._load_thread)
+        self.Runner(presenter._model.thread_manager)
 
         self.assertEqual(model.loaded_filenames, [muon_file])
         self.assertEqual(model.loaded_workspaces, [[1]])
@@ -361,12 +362,12 @@ class LoadFileWidgetPresenterTest(unittest.TestCase):
         view = BrowseFileWidgetView()
 
         view.show_file_browser_and_return_selection = mock.Mock(return_value=[muon_file])
-        model.load_workspace_from_filename = mock.Mock(return_value=([1], 1234))
+        model.load_workspace_from_filename = mock.Mock(return_value=(muon_file, [1], 1234))
 
         presenter = BrowseFileWidgetPresenter(view, model)
         presenter.enable_multiple_files(False)
         presenter.on_browse_button_clicked()
-        self.Runner(presenter._load_thread)
+        self.Runner(presenter._model.thread_manager)
 
         self.assertEqual(model.loaded_filenames, [muon_file])
 
@@ -374,7 +375,7 @@ class LoadFileWidgetPresenterTest(unittest.TestCase):
         view.set_file_edit("C:\dir2\EMU000123.nxs")
 
         presenter.handle_file_changed_by_user()
-        self.Runner(presenter._load_thread)
+        self.Runner(presenter._model.thread_manager)
 
         self.assertEqual(model.loaded_filenames, [muon_file])
         self.assertEqual(model.loaded_workspaces, [[1]])
@@ -391,7 +392,7 @@ class LoadFileWidgetPresenterMultipleFileModeTest(unittest.TestCase):
             if thread:
                 self._thread = thread
                 self._thread.finished.connect(self.finished)
-                if self._thread.isRunning():
+                if self._thread.is_running():
                     self.QT_APP.exec_()
 
         def finished(self):
@@ -411,7 +412,7 @@ class LoadFileWidgetPresenterMultipleFileModeTest(unittest.TestCase):
     def mock_loading_multiple_files_from_browse(self, runs, workspaces, filenames):
         self.view.show_file_browser_and_return_selection = mock.Mock(
             return_value=filenames)
-        self.model.load_workspace_from_filename = mock.Mock(side_effect=zip(workspaces, runs))
+        self.model.load_workspace_from_filename = mock.Mock(side_effect=zip(filenames, workspaces, runs))
 
     # ------------------------------------------------------------------------------------------------------------------
     # TESTS : Multiple runs can be selected via browse and entered explicitly using the ";" separator
@@ -423,7 +424,7 @@ class LoadFileWidgetPresenterMultipleFileModeTest(unittest.TestCase):
                                                      ["C:/dir1/file1.nxs", "C:/dir2/file2.nxs"])
 
         self.presenter.on_browse_button_clicked()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.assertEqual(self.model.loaded_filenames, ["C:/dir1/file1.nxs", "C:/dir2/file2.nxs"])
         self.assertEqual(self.model.loaded_workspaces, [[1], [2]])
@@ -433,11 +434,12 @@ class LoadFileWidgetPresenterMultipleFileModeTest(unittest.TestCase):
 
     def test_that_loading_two_files_from_user_input_sets_model_and_interface_correctly(self):
         self.presenter.enable_multiple_files(True)
-        self.model.load_workspace_from_filename = mock.Mock(side_effect=zip([[1], [2]], [1234, 1235]))
+        self.model.load_workspace_from_filename = mock.Mock(
+            side_effect=zip(["C:/dir1/file1.nxs", "C:/dir2/file2.nxs"],[[1], [2]], [1234, 1235]))
         self.view.set_file_edit("C:/dir1/file1.nxs;C:/dir2/file2.nxs")
 
         self.presenter.handle_file_changed_by_user()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.assertEqual(self.model.loaded_filenames, ["C:/dir1/file1.nxs", "C:/dir2/file2.nxs"])
         self.assertEqual(self.model.loaded_workspaces, [[1], [2]])
@@ -450,15 +452,15 @@ class LoadFileWidgetPresenterMultipleFileModeTest(unittest.TestCase):
 
         files = ["C:/dir1/file1.nxs", "C:/dir2/file2.nxs", "C:/dir2/file3.nxs"]
         self.view.show_file_browser_and_return_selection = mock.Mock(return_value=files)
-        load_return_values = [([1], 1234 + i) for i, filename in enumerate(files)]
+        load_return_values = [(filename, [1], 1234 + i) for i, filename in enumerate(files)]
         self.model.load_workspace_from_filename = mock.Mock(
             side_effect=iter(IteratorWithException(load_return_values, [1])))
 
         self.presenter.on_browse_button_clicked()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
-        self.assertEqual(self.model.loaded_filenames, ["C:/dir1/file1.nxs", "C:/dir2/file3.nxs"])
         self.assertEqual(self.model.loaded_runs, [1234, 1236])
+        self.assertEqual(self.model.loaded_filenames, ["C:/dir1/file1.nxs", "C:/dir2/file3.nxs"])
         self.assertEqual(self.view.get_file_edit_text(), "C:/dir1/file1.nxs;C:/dir2/file3.nxs")
 
 

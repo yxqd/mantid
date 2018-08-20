@@ -18,6 +18,8 @@ def get_instrument_directory(instrument):
     else:
         return None
 
+def check_file_exists(file):
+    return os.path.isfile(file)
 
 def get_current_run_filename(instrument):
     """
@@ -31,6 +33,8 @@ def get_current_run_filename(instrument):
 
     autosave_file = "\\\\" + instrument_directory + "\\data\\autosave.run"
     autosave_points_to = ""
+    if not check_file_exists(autosave_file):
+        raise ValueError("Cannot find file : "+autosave_file)
     with open(autosave_file, 'r') as f:
         for line in f:
             if len(line.split('.')) == 2:

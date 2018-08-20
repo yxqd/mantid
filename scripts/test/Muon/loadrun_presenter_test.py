@@ -1,11 +1,12 @@
 import sys
 import os
 
-from Muon.GUI.MuonAnalysis.loadrun.load_run_model import LoadRunWidgetModel
+from Muon.GUI.MuonAnalysis.loadrun.load_run_model_multithreading import LoadRunWidgetModel
 from Muon.GUI.MuonAnalysis.loadrun.load_run_view import LoadRunWidgetView
 from Muon.GUI.MuonAnalysis.loadrun.load_run_presenter import LoadRunWidgetPresenter
 
 from Muon.GUI.Common.muon_load_data import MuonLoadData
+import Muon.GUI.Common.muon_file_utils as fileUtils
 
 import unittest
 
@@ -25,7 +26,7 @@ class LoadRunWidgetPresenterTest(unittest.TestCase):
             if thread:
                 self._thread = thread
                 self._thread.finished.connect(self.finished)
-                if self._thread.isRunning():
+                if self._thread.is_running():
                     self.QT_APP.exec_()
 
         def finished(self):
@@ -63,7 +64,7 @@ class LoadRunWidgetPresenterTest(unittest.TestCase):
         self.mock_loading_via_user_input_run([1, 2, 3], "EMU00001234.nxs", 1234)
 
         self.presenter.handle_run_changed_by_user()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.assertEqual(self.presenter.filenames, ["EMU00001234.nxs"])
         self.assertEqual(self.presenter.runs, [1234])
@@ -75,7 +76,7 @@ class LoadRunWidgetPresenterTest(unittest.TestCase):
         self.view.set_run_edit_text("1234,1235,1236")
 
         self.presenter.handle_run_changed_by_user()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.view.warning_popup.assert_called_once()
 
@@ -85,13 +86,13 @@ class LoadRunWidgetPresenterTest(unittest.TestCase):
         # Load some data
         self.mock_loading_via_user_input_run([1], "1234.nxs", 1234)
         self.presenter.handle_run_changed_by_user()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.view.warning_popup = mock.Mock()
         self.view.set_run_edit_text("1234,1235,1236")
 
         self.presenter.handle_run_changed_by_user()
-        self.Runner(self.presenter._load_thread)
+        #self.Runner(self.presenter._model.thread_manager)
 
         self.assertEqual(self.presenter.filenames, ["1234.nxs"])
         self.assertEqual(self.presenter.runs, [1234])
@@ -106,7 +107,7 @@ class LoadRunWidgetIncrementDecrementSingleFileModeTest(unittest.TestCase):
             if thread:
                 self._thread = thread
                 self._thread.finished.connect(self.finished)
-                if self._thread.isRunning():
+                if self._thread.is_running():
                     self.QT_APP.exec_()
 
         def finished(self):
@@ -127,7 +128,7 @@ class LoadRunWidgetIncrementDecrementSingleFileModeTest(unittest.TestCase):
         self.view.set_run_edit_text(str(self._loaded_run))
         self.view.warning_popup = mock.Mock()
         self.presenter.handle_run_changed_by_user()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
     def assert_model_has_not_changed(self):
         self.assertEqual(self.model.loaded_workspaces, [self._loaded_workspace])
@@ -148,21 +149,21 @@ class LoadRunWidgetIncrementDecrementSingleFileModeTest(unittest.TestCase):
         new_filename = "EMU00001233.nxs"
 
         self.presenter.handle_decrement_run()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.model.load_workspace_from_filename.assert_called_once()
-        filename, _ = self.model.load_workspace_from_filename.call_args
-        self.assertEqual(os.path.basename(filename[0]), new_filename)
+        filename = self.model.load_workspace_from_filename.call_args[1]['filename']
+        self.assertEqual(os.path.basename(filename), new_filename)
 
     def test_that_increment_run_attempts_to_load_the_correct_run(self):
         new_filename = "EMU00001235.nxs"
 
         self.presenter.handle_increment_run()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.model.load_workspace_from_filename.assert_called_once()
-        filename, _ = self.model.load_workspace_from_filename.call_args
-        self.assertEqual(os.path.basename(filename[0]), new_filename)
+        filename = self.model.load_workspace_from_filename.call_args[1]['filename']
+        self.assertEqual(os.path.basename(filename), new_filename)
 
     def test_that_decrement_run_loads_the_data_correctly_by_overwriting_previous_run(self):
         new_run = self._loaded_run - 1
@@ -170,7 +171,7 @@ class LoadRunWidgetIncrementDecrementSingleFileModeTest(unittest.TestCase):
         self.model.load_workspace_from_filename = mock.Mock(return_value=([1], new_filename, new_run))
 
         self.presenter.handle_decrement_run()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.assertEqual(self.presenter.filenames, [new_filename])
         self.assertEqual(self.presenter.runs, [new_run])
@@ -184,7 +185,7 @@ class LoadRunWidgetIncrementDecrementSingleFileModeTest(unittest.TestCase):
         self.model.load_workspace_from_filename = mock.Mock(return_value=([1], new_filename, new_run))
 
         self.presenter.handle_increment_run()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.assertEqual(self.presenter.filenames, [new_filename])
         self.assertEqual(self.presenter.runs, [new_run])
@@ -196,7 +197,7 @@ class LoadRunWidgetIncrementDecrementSingleFileModeTest(unittest.TestCase):
         self.model.load_workspace_from_filename = mock.Mock(side_effect=self.load_failure)
 
         self.presenter.handle_decrement_run()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.assert_model_has_not_changed()
         self.assert_view_has_not_changed()
@@ -205,7 +206,7 @@ class LoadRunWidgetIncrementDecrementSingleFileModeTest(unittest.TestCase):
         self.model.load_workspace_from_filename = mock.Mock(side_effect=self.load_failure)
 
         self.presenter.handle_increment_run()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.assert_model_has_not_changed()
         self.assert_view_has_not_changed()
@@ -214,7 +215,7 @@ class LoadRunWidgetIncrementDecrementSingleFileModeTest(unittest.TestCase):
         self.model.load_workspace_from_filename = mock.Mock(side_effect=self.load_failure)
 
         self.presenter.handle_decrement_run()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.view.warning_popup.assert_called_once()
 
@@ -222,7 +223,7 @@ class LoadRunWidgetIncrementDecrementSingleFileModeTest(unittest.TestCase):
         self.model.load_workspace_from_filename = mock.Mock(side_effect=self.load_failure)
 
         self.presenter.handle_increment_run()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.view.warning_popup.assert_called_once()
 
@@ -247,7 +248,7 @@ class LoadRunWidgetLoadCurrentRunTest(unittest.TestCase):
             if thread:
                 self._thread = thread
                 self._thread.finished.connect(self.finished)
-                if self._thread.isRunning():
+                if self._thread.is_running():
                     self.QT_APP.exec_()
 
         def finished(self):
@@ -267,13 +268,15 @@ class LoadRunWidgetLoadCurrentRunTest(unittest.TestCase):
         self.view.disable_load_buttons = mock.Mock()
         self.view.enable_load_buttons = mock.Mock()
 
+        fileUtils.get_current_run_filename = mock.Mock(return_value="EMU0001234.nxs")
+
     # ------------------------------------------------------------------------------------------------------------------
     # TESTS
     # ------------------------------------------------------------------------------------------------------------------
 
     def test_load_current_run_loads_run_into_model(self):
         self.presenter.handle_load_current_run()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.assertEqual(self.presenter.filenames, ["currentRun.nxs"])
         self.assertEqual(self.presenter.runs, [1234])
@@ -283,14 +286,14 @@ class LoadRunWidgetLoadCurrentRunTest(unittest.TestCase):
 
     def test_load_current_run_correctly_displays_run_if_load_successful(self):
         self.presenter.handle_load_current_run()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
         self.assertEqual(self.view.get_run_edit_text(), "1234")
 
     def test_load_current_run_displays_error_message_if_fails_to_load(self):
         self.model.load_workspace_from_filename = mock.Mock(side_effect=self.load_failure)
 
         self.presenter.handle_load_current_run()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.view.warning_popup.assert_called_once()
         self.view.disable_load_buttons.assert_not_called()
@@ -300,11 +303,11 @@ class LoadRunWidgetLoadCurrentRunTest(unittest.TestCase):
         self.model.load_workspace_from_filename = mock.Mock(return_value=([1], "1234.nxs", 1234))
         self.view.set_run_edit_text("1234")
         self.presenter.handle_run_changed_by_user()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.model.load_workspace_from_filename = mock.Mock(side_effect=self.load_failure)
         self.presenter.handle_load_current_run()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.assertEqual(self.presenter.filenames, ["1234.nxs"])
         self.assertEqual(self.presenter.runs, [1234])
@@ -315,11 +318,11 @@ class LoadRunWidgetLoadCurrentRunTest(unittest.TestCase):
         self.model.load_workspace_from_filename = mock.Mock(return_value=([1], "1234.nxs", 1234))
         self.view.set_run_edit_text("1234")
         self.presenter.handle_run_changed_by_user()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.model.load_workspace_from_filename = mock.Mock(return_value=([2], "9999.nxs", 9999))
         self.presenter.handle_load_current_run()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.assertEqual(self.view.get_run_edit_text(), "9999")
         self.assertEqual(self.presenter.filenames, ["9999.nxs"])
@@ -331,10 +334,10 @@ class LoadRunWidgetLoadCurrentRunTest(unittest.TestCase):
         self.model.load_workspace_from_filename = mock.Mock(return_value=([1], "1234.nxs", 1234))
         self.view.set_run_edit_text("1234")
         self.presenter.handle_load_current_run()
-        self.Runner(self.presenter._load_thread)
+        self.Runner(self.presenter._model.thread_manager)
 
         self.presenter.handle_increment_run()
-        self.Runner(self.presenter._load_thread)
+        #self.Runner(self.presenter._model.thread_manager)
 
         self.assertEqual(self.view.warning_popup.call_count, 1)
         self.view.disable_load_buttons.assert_not_called()

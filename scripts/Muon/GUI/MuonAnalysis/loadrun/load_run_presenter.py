@@ -4,6 +4,7 @@ from Muon.GUI.Common import thread_model
 import Muon.GUI.Common.run_string_utils as runUtils
 import Muon.GUI.Common.muon_file_utils as fileUtils
 
+import copy
 
 class LoadRunWidgetPresenter(object):
 
@@ -60,16 +61,32 @@ class LoadRunWidgetPresenter(object):
 
     def handle_load_thread_start(self, filenames):
         self._view.notify_loading_started()
+        self.disable_loading()
+        #self._load_thread = self.create_load_thread()
+        #self._load_thread.threadWrapperSetUp(self.disable_loading, self.handle_load_thread_finished)
+        #self._load_thread.loadData(filenames)
+        #self._load_thread.start()
+        self._model.load_with_multithreading(filenames, self.handle_load_thread_finished,
+                                             self.handle_load_thread_progress,
+                                             self.handle_load_thread_exception)
 
-        self._load_thread = self.create_load_thread()
-        self._load_thread.threadWrapperSetUp(self.disable_loading, self.handle_load_thread_finished)
-        self._load_thread.loadData(filenames)
-        self._load_thread.start()
+
+    def handle_load_thread_progress(self, prog):
+        print("Progress : ", prog)
+
+    def handle_load_thread_exception(self, **kwargs):
+        print("Exception : ", kwargs)
+        self._view.warning_popup("")
+
 
     def handle_load_thread_finished(self):
-        self._load_thread.threadWrapperTearDown(self.disable_loading, self.handle_load_thread_finished)
-        self._load_thread.deleteLater()
-        self._load_thread = None
+        print("FINISHED : ", self._model.thread_manager.results)
+        self._model.add_thread_data()
+        self._model.thread_manager.clear()
+
+        #self._load_thread.threadWrapperTearDown(self.disable_loading, self.handle_load_thread_finished)
+        #self._load_thread.deleteLater()
+        #self._load_thread = None
 
         # If in single file mode, remove the previous run
         if not self._load_multiple_runs and len(self._model.get_run_list()) > 1:
@@ -83,23 +100,34 @@ class LoadRunWidgetPresenter(object):
 
     def handle_load_current_run(self):
 
-        current_run_file = fileUtils.get_current_run_filename(self.get_current_instrument())
+        try:
+            current_run_file = fileUtils.get_current_run_filename(self.get_current_instrument())
+        except ValueError as e:
+            self._view.warning_popup(e.args[0])
+            return
+
         if current_run_file == "":
             self._view.warning_popup("Cannot find directory for current instrument : " + self._instrument)
             return
 
         self._view.notify_loading_started()
+        self.disable_loading()
 
-        self._load_thread = self.create_load_thread()
-        self._load_thread.threadWrapperSetUp(self.disable_loading, self.handle_load_thread_finished_current_run)
-        self._load_thread.loadData([current_run_file])
-        self._load_thread.start()
+        # self._load_thread = self.create_load_thread()
+        # self._load_thread.threadWrapperSetUp(self.disable_loading, self.handle_load_thread_finished_current_run)
+        # self._load_thread.loadData([current_run_file])
+        # self._load_thread.start()
+        self._model.load_with_multithreading([current_run_file], self.handle_load_thread_finished_current_run,
+                                             self.handle_load_thread_progress,
+                                             self.handle_load_thread_exception)
 
     def handle_load_thread_finished_current_run(self):
 
-        self._load_thread.threadWrapperTearDown(self.disable_loading, self.handle_load_thread_finished_current_run)
-        self._load_thread.deleteLater()
-        self._load_thread = None
+        # self._load_thread.threadWrapperTearDown(self.disable_loading, self.handle_load_thread_finished_current_run)
+        # self._load_thread.deleteLater()
+        # self._load_thread = None
+        self._model.add_thread_data()
+        self._model.thread_manager.clear()
 
         # If in single file mode, remove the previous run
         if not self._load_multiple_runs and len(self._model.get_run_list()) > 1:
@@ -151,7 +179,7 @@ class LoadRunWidgetPresenter(object):
         return self._model.loaded_runs
 
     def get_incremented_run_list(self):
-        run_list = self.get_loaded_runs()
+        run_list = copy.copy(self.runs)
         if run_list is None or len(run_list) == 0:
             return []
         if len(run_list) == 1:
@@ -161,7 +189,7 @@ class LoadRunWidgetPresenter(object):
         return run_list
 
     def get_decremented_run_list(self):
-        run_list = self.get_loaded_runs()
+        run_list = copy.copy(self.runs)
         if run_list is None or len(run_list) == 0:
             return []
         if len(run_list) == 1:
@@ -199,4 +227,5 @@ class LoadRunWidgetPresenter(object):
 
     # used by parent widget
     def update_view_from_model(self, run_list):
+        print("run update_view_from_model")
         self.set_run_edit_from_list(run_list)

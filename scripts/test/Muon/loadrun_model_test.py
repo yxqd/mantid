@@ -1,6 +1,6 @@
 import sys
 
-from Muon.GUI.MuonAnalysis.loadrun.load_run_model import LoadRunWidgetModel
+from Muon.GUI.MuonAnalysis.loadrun.load_run_model_multithreading import LoadRunWidgetModel
 from Muon.GUI.Common.muon_load_data import MuonLoadData
 
 import unittest

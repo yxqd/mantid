@@ -51,12 +51,12 @@ class LoadWidgetPresenter(object):
         self.load_file_widget.enable_multiple_files(enabled)
 
     def handle_file_widget_data_changed(self):
-        print("handle_file_widget_data_changed")
+        print("handle_file_widget_data_changed : ", self._model.runs)
         self.load_run_widget.update_view_from_model(self._model.runs)
         self.load_file_widget.update_view_from_model(self._model.filenames)
 
     def handle_run_widget_data_changed(self):
-        print("handle_run_widget_data_changed")
+        print("handle_run_widget_data_changed", self._model.runs)
         self.load_run_widget.update_view_from_model(self._model.runs)
         self.load_file_widget.update_view_from_model(self._model.filenames)
 

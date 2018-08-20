@@ -15,11 +15,11 @@ from __future__ import (absolute_import, division, print_function)
 
 from qtpy import QtGui, QtCore, QtWidgets
 from mantid.simpleapi import *
-from Muon.GUI.MuonAnalysis.loadfile.load_file_model import BrowseFileWidgetModel
+from Muon.GUI.MuonAnalysis.loadfile.load_file_model_multithreading import BrowseFileWidgetModel
 from Muon.GUI.MuonAnalysis.loadfile.load_file_view import BrowseFileWidgetView
 from Muon.GUI.MuonAnalysis.loadfile.load_file_presenter import BrowseFileWidgetPresenter
 
-from Muon.GUI.MuonAnalysis.loadrun.load_run_model import LoadRunWidgetModel
+from Muon.GUI.MuonAnalysis.loadrun.load_run_model_multithreading import LoadRunWidgetModel
 from Muon.GUI.MuonAnalysis.loadrun.load_run_view import LoadRunWidgetView
 from Muon.GUI.MuonAnalysis.loadrun.load_run_presenter import LoadRunWidgetPresenter
 
@@ -35,13 +35,14 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     # ui = BrowseFileWidgetPresenter(BrowseFileWidgetView(), BrowseFileWidgetModel(MuonLoadData()))
-    ui = LoadRunWidgetPresenter(LoadRunWidgetView(), LoadRunWidgetModel(MuonLoadData()))
+    # ui = LoadRunWidgetPresenter(LoadRunWidgetView(), LoadRunWidgetModel(MuonLoadData()))
 
     data = MuonLoadData()
     load_file_view = BrowseFileWidgetView()
     load_run_view = LoadRunWidgetView()
 
-    ui = LoadWidgetPresenter(LoadWidgetView(load_file_view=load_file_view, load_run_view=load_run_view), LoadWidgetModel(data))
+    ui = LoadWidgetPresenter(LoadWidgetView(load_file_view=load_file_view, load_run_view=load_run_view),
+                             LoadWidgetModel(data))
     ui.set_load_file_widget(BrowseFileWidgetPresenter(load_file_view, BrowseFileWidgetModel(data)))
     ui.set_load_run_widget(LoadRunWidgetPresenter(load_run_view, LoadRunWidgetModel(data)))
 
