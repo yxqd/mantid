@@ -1,5 +1,4 @@
 #include "MantidAPI/IFunction.h"
-#include "MantidAPI/MatrixWorkspace.h"
 
 #include <boost/optional.hpp>
 
@@ -7,7 +6,7 @@
 
 namespace Mantid {
 namespace API {
-class CompositeFunction;
+class MatrixWorkspace;
 } // namespace API
 } // namespace Mantid
 
@@ -21,7 +20,7 @@ struct BoundaryConstraint {
 
 struct ParameterValue {
   explicit ParameterValue(double val) : value(val), error() {}
-  ParameterValue(double value, double error) : value(value), error(error) {}
+  ParameterValue(double val, double err) : value(val), error(err) {}
   double value;
   boost::optional<double> error;
 };
@@ -31,8 +30,11 @@ public:
   FunctionProperties();
 
   bool isTied(std::string const &parameterName) const;
+  bool isFixed(std::string const &parameterName) const;
   bool isConstrained(std::string const &parameterName) const;
   std::string const &getTie(std::string const &parameterName) const;
+  std::string getTieOr(std::string const &parameterName,
+                       std::string const &defaultValue) const;
   boost::optional<double>
   getParameterLowerBound(std::string const &parameterName) const;
   boost::optional<double>
@@ -56,38 +58,41 @@ public:
   void removeConstraintIf(Predicate const &predicate);
 
 protected:
+  void fixParameterTo(std::string const &parameterName, double value);
   template <typename Predicate>
   typename std::vector<std::pair<std::string, BoundaryConstraint>>::iterator
   findConstraintIf(Predicate const &predicate) const;
   typename std::vector<std::pair<std::string, BoundaryConstraint>>::iterator
   findConstraintOf(std::string const &parameterName) const;
 
+  std::unordered_set<std::string> m_fixed;
   std::unordered_map<std::string, std::string> m_ties;
   std::vector<std::pair<std::string, BoundaryConstraint>> m_constraints;
 };
 
 class LocalFunctionProperties : public FunctionProperties {
 public:
-  explicit LocalFunctionProperties(Mantid::API::MatrixWorkspace_const_sptr ws,
-                                   std::size_t wsIndex);
+  explicit LocalFunctionProperties(
+      boost::shared_ptr<Mantid::API::MatrixWorkspace const> ws,
+      std::size_t wsIndex);
 
   template <typename F> void forEachParameter(F const &functor) const;
   template <typename F> void forEachAttribute(F const &functor) const;
 
-  Mantid::API::MatrixWorkspace_const_sptr getWorkspace() const;
+  boost::shared_ptr<Mantid::API::MatrixWorkspace const> getWorkspace() const;
   std::size_t getWorkspaceIndex() const;
   Mantid::API::IFunction::Attribute const &
   getAttribute(std::string const &name) const;
   double getParameterValue(std::string const &parameterName) const;
   boost::optional<double>
   getParameterError(std::string const &parameterName) const;
-  void fixParameter(std::string const &parameterName);
   void setParameterValue(std::string const &parameterName, double value);
   void setParameter(std::string const &parameterName,
                     ParameterValue const &value);
   void setAttribute(std::string const &name,
                     Mantid::API::IFunction::Attribute const &attribute);
   void resizeVectorAttribute(std::string const &name, std::size_t size);
+  void fixParameter(std::string const &parameterName);
 
 private:
   ParameterValue const &getParameter(std::string const &parameterName) const;
@@ -96,7 +101,7 @@ private:
   std::unordered_map<std::string, ParameterValue> m_parameters;
   std::unordered_map<std::string, Mantid::API::IFunction::Attribute>
       m_attributes;
-  Mantid::API::MatrixWorkspace_const_sptr m_workspace;
+  boost::shared_ptr<Mantid::API::MatrixWorkspace const> m_workspace;
   std::size_t m_workspaceIndex;
 };
 

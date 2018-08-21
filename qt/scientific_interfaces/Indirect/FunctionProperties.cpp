@@ -1,5 +1,7 @@
 #include "FunctionProperties.h"
 
+#include "MantidAPI/MatrixWorkspace.h"
+
 namespace {
 Mantid::API::IFunction::Attribute
 getResizedVectorAttribute(Mantid::API::IFunction::Attribute const &attribute,
@@ -26,6 +28,10 @@ bool FunctionProperties::isTied(std::string const &parameterName) const {
   return m_ties.end() != tieIt && !tieIt->second.empty();
 }
 
+bool FunctionProperties::isFixed(std::string const &parameterName) const {
+  return m_fixed.end() != m_fixed.find(parameterName);
+}
+
 bool FunctionProperties::isConstrained(std::string const &parameterName) const {
   return m_constraints.end() != findConstraintOf(parameterName);
 }
@@ -36,6 +42,15 @@ FunctionProperties::getTie(std::string const &parameterName) const {
   if (m_ties.end() != tieIt)
     return tieIt->second;
   throw std::runtime_error("No tie present for " + parameterName);
+}
+
+std::string
+FunctionProperties::getTieOr(std::string const &parameterName,
+                             std::string const &defaultValue) const {
+  auto const tieIt = m_ties.find(parameterName);
+  if (m_ties.end() != tieIt)
+    return tieIt->second;
+  return defaultValue;
 }
 
 boost::optional<double> FunctionProperties::getParameterLowerBound(
@@ -61,9 +76,16 @@ void FunctionProperties::tie(std::string const &parameterName,
 
 void FunctionProperties::removeTie(std::string const &parameterName) {
   m_ties.erase(parameterName);
+  m_fixed.erase(parameterName);
 }
 
 void FunctionProperties::clearTies() { m_ties.clear(); }
+
+void FunctionProperties::fixParameterTo(std::string const &parameterName,
+                                        double value) {
+  m_ties[parameterName] = std::to_string(value);
+  m_fixed.insert(parameterName);
+}
 
 void FunctionProperties::setConstraint(std::string const &parameterName,
                                        double lowerBound, double upperBound) {
@@ -155,10 +177,6 @@ boost::optional<double> LocalFunctionProperties::getParameterError(
   return getParameter(parameterName).error;
 }
 
-void LocalFunctionProperties::fixParameter(std::string const &parameterName) {
-  m_ties[parameterName] = std::to_string(m_parameters.at(parameterName).value);
-}
-
 void LocalFunctionProperties::setParameterValue(
     std::string const &parameterName, double value) {
   getParameter(parameterName).value = value;
@@ -182,6 +200,11 @@ void LocalFunctionProperties::resizeVectorAttribute(std::string const &name,
     m_attributes[name] = getResizedVectorAttribute(attributeIt->second, size);
   else
     m_attributes[name] = createVectorAttribute(size);
+}
+
+void LocalFunctionProperties::fixParameter(std::string const &parameterName) {
+  FunctionProperties::fixParameterTo(parameterName,
+                                     getParameter(parameterName).value);
 }
 
 ParameterValue const &
