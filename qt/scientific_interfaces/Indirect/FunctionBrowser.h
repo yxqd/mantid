@@ -12,7 +12,7 @@
 #include <boost/optional.hpp>
 
 /* Forward declarations */
-
+template <typename PropertyManager> class QtAbstractEditorFactory;
 class QtTreePropertyBrowser;
 class QtGroupPropertyManager;
 class QtDoublePropertyManager;
@@ -204,16 +204,18 @@ protected slots:
   void vectorSizeAttributeChanged(QtProperty *);
   void tieChanged(QtProperty *);
 
-  /// Called when button in local parameter editor was clicked
-  void parameterButtonClicked(QtProperty *);
+  void connectEditorCloseToBrowser(QtAbstractEditorFactoryBase *editor);
 
 private:
   void createBrowser();
-  void createBrowser(QStringList &&options);
+  virtual std::unique_ptr<QtTreePropertyBrowser> createNewBrowser();
   void createManagers();
   void createEditorFactories();
   void connectManagerSignals();
   void createActions();
+
+  virtual std::unique_ptr<QtAbstractEditorFactory<ParameterPropertyManager>>
+  getParameterEditorFactory();
 
   /// Add a function property
   AProperty addFunctionProperty(QtProperty *parent, QString const &funName);

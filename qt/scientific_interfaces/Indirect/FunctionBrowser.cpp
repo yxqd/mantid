@@ -24,8 +24,6 @@
 #include <QMessageBox>
 
 namespace {
-const char *globalOptionName = "Global";
-
 template <typename T, typename PropertyManager>
 std::vector<T> getVectorFromProperty(QtProperty *prop,
                                      PropertyManager *manager) const {
@@ -51,7 +49,8 @@ void FunctionBrowser::subscribe(FunctionBrowserSubscriber *subscriber) {
 }
 
 void FunctionBrowser::createBrowser() {
-  createBrowser({globalOptionName});
+  m_browser = createNewBrowser().release();
+
   createManagers();
   createEditorFactories();
 
@@ -69,8 +68,8 @@ void FunctionBrowser::createBrowser() {
   m_browser->setFocusPolicy(Qt::StrongFocus);
 }
 
-void FunctionBrowser::createBrowser(QStringList &&options) {
-  m_browser = new QtTreePropertyBrowser(nullptr, options);
+std::unique_ptr<QtTreePropertyBrowser> FunctionBrowser::createNewBrowser() {
+  return Mantid::Kernel::make_unique<QtTreePropertyBrowser>(nullptr);
 }
 
 /**
@@ -100,19 +99,6 @@ void FunctionBrowser::createManagers() {
 void FunctionBrowser::createEditorFactories() {
   QtSpinBoxFactory *spinBoxFactory = new QtSpinBoxFactory(this);
   DoubleEditorFactory *doubleEditorFactory = new DoubleEditorFactory(this);
-  ParameterEditorFactory *paramEditorFactory = new ParameterEditorFactory(this);
-
-  QtAbstractEditorFactory<ParameterPropertyManager> *parameterEditorFactory(
-      nullptr);
-
-  auto buttonFactory = new DoubleDialogEditorFactory(this);
-  auto compositeFactory =
-      new CompositeEditorFactory<ParameterPropertyManager>(this, buttonFactory);
-  compositeFactory->setSecondaryFactory(globalOptionName, paramEditorFactory);
-  parameterEditorFactory = compositeFactory;
-  connect(buttonFactory, SIGNAL(buttonClicked(QtProperty *)), this,
-          SLOT(parameterButtonClicked(QtProperty *)));
-  connect(buttonFactory, SIGNAL(closeEditor()), m_browser, SLOT(closeEditor()));
 
   QtLineEditFactory *lineEditFactory = new QtLineEditFactory(this);
   QtCheckBoxFactory *checkBoxFactory = new QtCheckBoxFactory(this);
@@ -124,7 +110,8 @@ void FunctionBrowser::createEditorFactories() {
       new WorkspaceEditorFactory(this);
 
   // assign factories to property managers
-  m_browser->setFactoryForManager(m_parameterManager, parameterEditorFactory);
+  m_browser->setFactoryForManager(m_parameterManager,
+                                  getParameterEditorFactory().release());
   m_browser->setFactoryForManager(m_attributeStringManager, lineEditFactory);
   m_browser->setFactoryForManager(m_attributeDoubleManager,
                                   doubleEditorFactory);
@@ -215,6 +202,11 @@ void FunctionBrowser::createActions() {
   m_actionRemoveConstraint = new QAction("Remove", this);
   connect(m_actionRemoveConstraint, SIGNAL(triggered()), this,
           SLOT(removeConstraint()));
+}
+
+std::unique_ptr<QtAbstractEditorFactory<ParameterPropertyManager>>
+FunctionBrowser::getParameterEditorFactory() {
+  return Mantid::Kernel::make_unique<ParameterEditorFactory>(this);
 }
 
 void FunctionBrowser::setParameterValue(std::string const &name, double value) {
@@ -1186,8 +1178,9 @@ void FunctionBrowser::tieChanged(QtProperty *prop) {
                              m_tieManager->value(prop).toStdString());
 }
 
-void FunctionBrowser::parameterButtonClicked(QtProperty *prop) {
-  m_subscriber->editParameter(getParameterName(prop).toStdString());
+void FunctionBrowser::connectEditorCloseToBrowser(
+    QtAbstractEditorFactoryBase *editor) {
+  connect(editor, SIGNAL(closeEditor()), m_browser, SLOT(closeEditor()));
 }
 
 } // namespace MantidWidgets
