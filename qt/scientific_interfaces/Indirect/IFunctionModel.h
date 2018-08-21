@@ -29,6 +29,7 @@ public:
   virtual std::size_t
   numberOfFunctionsAt(std::vector<std::size_t> const &position) const = 0;
   virtual bool isParameterTied(std::string const &name) const = 0;
+  virtual bool isParameterFixed(std::string const &name) const = 0;
   virtual bool isParameterConstrained(std::string const &name) const = 0;
   virtual std::string getLocalFunctionString() const = 0;
   virtual void setFunction(std::string const &functionString) = 0;
