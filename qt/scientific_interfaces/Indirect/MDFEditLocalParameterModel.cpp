@@ -1,5 +1,6 @@
 #include "MDFEditLocalParameterModel.h"
 #include "MDFLogValueFinder.h"
+#include "MultiDomainFunctionModel.h"
 
 #include "MantidKernel/Statistics.h"
 

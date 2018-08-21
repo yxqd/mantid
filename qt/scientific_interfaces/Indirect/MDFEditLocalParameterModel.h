@@ -2,7 +2,12 @@
 #define MDFEDITLOCALPARAMETERMODEL_H_
 
 #include "MDFLogValueFinder.h"
-#include "MultiDomainFunctionModel.h"
+
+namespace MantidQt {
+namespace MantidWidgets {
+class MultiDomainFunctionModel;
+}
+} // namespace MantidQt
 
 namespace MantidQt {
 namespace CustomInterfaces {
