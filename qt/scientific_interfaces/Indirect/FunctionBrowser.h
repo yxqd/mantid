@@ -3,7 +3,6 @@
 
 #include "MantidQtWidgets/Common/DllOption.h"
 
-#include "FunctionBrowserSubscriber.h"
 #include "IFunctionBrowser.h"
 
 #include <QHash>
@@ -43,6 +42,8 @@ class ParameterTie;
 
 namespace MantidQt {
 namespace MantidWidgets {
+
+class FunctionBrowserSubscriber;
 
 class EXPORT_OPT_MANTIDQT_COMMON FunctionBrowser : public QWidget,
                                                    public IFunctionBrowser {

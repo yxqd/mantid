@@ -1,4 +1,5 @@
 #include "FunctionBrowser.h"
+#include "FunctionBrowserSubscriber.h"
 
 #include "MantidAPI/Expression.h"
 
