@@ -11,6 +11,7 @@
 #include <boost/lexical_cast.hpp>
 
 namespace {
+
 using MantidQt::MantidWidgets::MultiDomainFunctionModel;
 using MantidQt::MantidWidgets::ParameterValue;
 using Mantid::Kernel::Math::StatisticType;
