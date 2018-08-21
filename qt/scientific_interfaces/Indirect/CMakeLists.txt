@@ -60,9 +60,15 @@ set ( SRC_FILES
 	JumpFitDataPresenter.cpp
 	JumpFitDataTablePresenter.cpp
 	JumpFitModel.cpp
+	MDFEditLocalParameterDialog.cpp
+	MDFEditLocalParameterModel.cpp
+	MDFEditLocalParameterPresenter.cpp
+	MDFLogValueFinder.cpp
 	MSDFit.cpp
 	MSDFitModel.cpp
 	MultiDomainFunctionModel.cpp
+	MultiDomainFunctionBrowser.cpp
+	MultiDomainFunctionBrowserPresenter.cpp
 	Quasi.cpp
 	ResNorm.cpp
 	Stretch.cpp
@@ -83,7 +89,7 @@ set ( INC_FILES
 	ConvFitModel.h
 	CorrectionsTab.h
 	DensityOfStates.h
-	Elwin.h
+        Elwin.h
 	FunctionBrowser.h
 	FunctionBrowserPresenter.h
 	FunctionBrowserSubscriber.h
@@ -138,8 +144,15 @@ set ( INC_FILES
 	JumpFitDataTablePresenter.h
 	LazyAsyncRunner.h
 	JumpFitModel.h
+	MDFEditLocalParameterDialog.h
+	MDFEditLocalParameterModel.h
+	MDFEditLocalParameterPresenter.h
 	MSDFit.h
 	MSDFitModel.h
+	MDFLogValueFinder.h
+	MultiDomainFunctionBrowser.h
+	MultiDomainFunctionBrowserPresenter.h
+	MultiDomainFunctionBrowserSubscriber.h
 	MultiDomainFunctionModel.h
 	Quasi.h
 	ResNorm.h
@@ -198,6 +211,8 @@ set ( MOC_FILES
     JumpFitDataTablePresenter.h
     LazyAsyncRunner.h
     MSDFit.h
+    MDFEditLocalParameterDialog.h
+    MultiDomainFunctionBrowser.h
     Quasi.h
     ResNorm.h
     Stretch.h
