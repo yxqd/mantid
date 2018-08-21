@@ -4,9 +4,9 @@ import sys
 import time
 import unittest
 
-if sys.version_info.major == 3:
+try:
     from unittest import mock
-else:
+except ImportError:
     import mock
 
 from qtpy import QtWidgets, QtCore

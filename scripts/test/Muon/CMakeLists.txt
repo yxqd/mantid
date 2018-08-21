@@ -7,6 +7,7 @@ set ( TEST_PY_FILES
    FFTModel_test.py
    MaxEntPresenter_test.py
    MaxEntModel_test.py
+   threading_manager_test.py
    transformWidget_test.py
 )
 
