@@ -45,6 +45,17 @@ MultiDomainFunctionBrowser::getParameterEditorFactory() {
   return std::move(compositeFactory);
 }
 
+MultiDomainFunctionBrowser::AProperty
+MultiDomainFunctionBrowser::addParameterProperty(QtProperty *prop,
+                                                 QtProperty *parent,
+                                                 QString const &name,
+                                                 QString const &description,
+                                                 double value) {
+  prop->setOption(globalOptionName, false);
+  return FunctionBrowser::addParameterProperty(prop, parent, name, description,
+                                               value);
+}
+
 void MultiDomainFunctionBrowser::globalChanged(QtProperty *,
                                                QString const &parameter,
                                                bool global) {

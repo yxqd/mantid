@@ -23,9 +23,13 @@ protected slots:
   void parameterButtonClicked(QtProperty *);
 
 private:
-  virtual std::unique_ptr<QtTreePropertyBrowser> createNewBrowser() override;
+  std::unique_ptr<QtTreePropertyBrowser> createNewBrowser() override;
   std::unique_ptr<QtAbstractEditorFactory<ParameterPropertyManager>>
   getParameterEditorFactory() override;
+  AProperty addParameterProperty(QtProperty *prop, QtProperty *parent,
+                                 QString const &name,
+                                 QString const &description,
+                                 double value) override;
 
   MultiDomainFunctionBrowserSubscriber *m_multiDomainSubscriber;
 };

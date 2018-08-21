@@ -12,6 +12,7 @@
 
 /* Forward declarations */
 template <typename PropertyManager> class QtAbstractEditorFactory;
+class QtAbstractEditorFactoryBase;
 class QtTreePropertyBrowser;
 class QtGroupPropertyManager;
 class QtDoublePropertyManager;
@@ -206,6 +207,10 @@ protected slots:
   void tieChanged(QtProperty *);
 
   void connectEditorCloseToBrowser(QtAbstractEditorFactoryBase *editor);
+  virtual AProperty addParameterProperty(QtProperty *prop, QtProperty *parent,
+                                         QString const &name,
+                                         QString const &description,
+                                         double value);
 
 private:
   void createBrowser();

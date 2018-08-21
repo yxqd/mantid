@@ -690,19 +690,20 @@ FunctionBrowser::addFunctionProperty(QtProperty *parent,
 FunctionBrowser::AProperty FunctionBrowser::addParameterProperty(
     QtProperty *parent, QString const &paramName, QString const &paramDesc,
     double paramValue) {
-  // check that parent is a function property
-  if (!parent || dynamic_cast<QtAbstractPropertyManager *>(m_functionManager) !=
-                     parent->propertyManager())
+  if (!isFunction(parent))
     throw std::runtime_error("Unexpected error in FunctionBrowser [3]");
+  return addParameterProperty(m_parameterManager->addProperty(paramName),
+                              parent, paramName, paramDesc, paramValue);
+}
 
-  auto const prop = m_parameterManager->addProperty(paramName);
+FunctionBrowser::AProperty FunctionBrowser::addParameterProperty(
+    QtProperty *prop, QtProperty *parent, QString const &name,
+    QString const &description, double value) {
   m_parameterManager->blockSignals(true);
   m_parameterManager->setDecimals(prop, 6);
-  m_parameterManager->setValue(prop, paramValue);
-  m_parameterManager->setDescription(prop, paramDesc.toStdString());
-  m_parameterManager->blockSignals(false);
-  prop->setOption(globalOptionName, false);
-  m_parameterNameToProperty[getIndex(parent) + paramName] = prop;
+  m_parameterManager->setValue(prop, value);
+  m_parameterManager->setDescription(prop, description.toStdString());
+  m_parameterNameToProperty[getIndex(parent) + name] = prop;
   return addProperty(parent, prop);
 }
 
