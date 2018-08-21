@@ -20,10 +20,9 @@ public:
   virtual boost::shared_ptr<Mantid::API::IFunction> getFitFunction() const;
 
   std::size_t numberOfParameters() const override;
+  std::size_t numberOfDomains() const;
   std::string parameterName(std::size_t index) const override;
   double parameterValue(std::string const &parameter) const override;
-  std::vector<double>
-  getAllLocalParameterValues(std::string const &parameter) const;
   boost::optional<double>
   parameterError(std::string const &parameter) const override;
   boost::optional<std::string>
@@ -37,24 +36,27 @@ public:
   Mantid::API::IFunction::Attribute
   getAttribute(std::string const &name) override;
 
+  Mantid::API::MatrixWorkspace_sptr getWorkspace() const;
+  std::string getWorkspaceName() const;
+  std::size_t getWorkspaceIndex() const;
+
   bool isComposite(std::vector<std::size_t> const &position) const override;
   std::size_t
   numberOfFunctionsAt(std::vector<std::size_t> const &position) const override;
 
   bool isParameterTied(std::string const &name) const override;
+  bool isParameterFixed(std::string const &name) const override;
   bool isParameterConstrained(std::string const &name) const override;
 
   virtual std::string getLocalFunctionString() const override;
   std::size_t numberOfLocalParameters() const;
+  std::size_t getActiveDomain() const;
   void setActiveDomain(std::size_t domain);
 
   void setFunction(std::string const &functionString) override;
   std::size_t addFunction(std::string const &name,
                           std::vector<std::size_t> const &position) override;
   void removeFunction(std::vector<std::size_t> const &position) override;
-
-  void setParameterValue(std::size_t domain, std::string const &name,
-                         ParameterValue const &value);
 
   void setStringAttribute(std::string const &name,
                           std::string const &value) override;
@@ -118,6 +120,9 @@ public:
   void removeLocalConstraints(std::string const &parameterName) override;
 
 protected:
+  void setParameterValue(std::size_t domain, std::string const &name,
+                         ParameterValue const &value);
+
   void fixParameterInDomain(std::string const &parameterName,
                             std::size_t domain);
   void unfixParameterInDomain(std::string const &parameterName,

@@ -219,6 +219,10 @@ std::size_t MultiDomainFunctionModel::numberOfParameters() const {
   return m_function->nParams();
 }
 
+std::size_t MultiDomainFunctionModel::numberOfDomains() const {
+  return m_localFunctionProperties.size();
+}
+
 std::string MultiDomainFunctionModel::parameterName(std::size_t index) const {
   return m_function->parameterName(index);
 }
@@ -226,15 +230,6 @@ std::string MultiDomainFunctionModel::parameterName(std::size_t index) const {
 double
 MultiDomainFunctionModel::parameterValue(std::string const &parameter) const {
   return m_localFunctionProperties[m_activeDomain].getParameterValue(parameter);
-}
-
-std::vector<double> MultiDomainFunctionModel::getAllLocalParameterValues(
-    std::string const &parameter) const {
-  std::vector<double> values;
-  values.reserve(m_localFunctionProperties.size());
-  for (auto const &functionProperties : m_localFunctionProperties)
-    values.emplace_back(functionProperties.getParameterValue(parameter));
-  return values;
 }
 
 boost::optional<double>
@@ -270,6 +265,19 @@ MultiDomainFunctionModel::getAttribute(std::string const &name) {
   m_localFunctionProperties[m_activeDomain].getAttribute(name);
 }
 
+Mantid::API::MatrixWorkspace_sptr
+MultiDomainFunctionModel::getWorkspace() const {
+  m_localFunctionProperties[m_activeDomain].getWorkspace();
+}
+
+std::string MultiDomainFunctionModel::getWorkspaceName() const {
+  return getWorkspace()->getName();
+}
+
+std::size_t MultiDomainFunctionModel::getWorkspaceIndex() const {
+  m_localFunctionProperties[m_activeDomain].getWorkspaceIndex();
+}
+
 bool MultiDomainFunctionModel::isComposite(
     std::vector<std::size_t> const &position) const {
   return nullptr != boost::dynamic_pointer_cast<CompositeFunction>(
@@ -289,6 +297,10 @@ bool MultiDomainFunctionModel::isParameterTied(std::string const &name) const {
   return m_localFunctionProperties[m_activeDomain].isTied(name);
 }
 
+bool MultiDomainFunctionModel::isParameterFixed(std::string const &name) const {
+  return m_localFunctionProperties[m_activeDomain].isFixed(name);
+}
+
 bool MultiDomainFunctionModel::isParameterConstrained(
     std::string const &name) const {
   return m_localFunctionProperties[m_activeDomain].isConstrained(name);
@@ -305,6 +317,10 @@ MultiDomainFunctionModel::getLocalFunction(std::size_t domain) const {
 
 std::size_t MultiDomainFunctionModel::numberOfLocalParameters() const {
   return m_function->nParams();
+}
+
+std::size_t MultiDomainFunctionModel::getActiveDomain() const {
+  return m_activeDomain;
 }
 
 void MultiDomainFunctionModel::setActiveDomain(std::size_t domain) {
