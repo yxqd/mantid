@@ -13,7 +13,7 @@ public:
   EditLocalParameterPresenter(EditLocalParameterModel model,
                               QWidget *dialogParent);
 
-  bool executeDialog(MantidWidgets::MultiDomainFunctionModel &functionModel);
+  bool executeDialog(MantidWidgets::MultiDomainFunctionModel &modelToUpdate);
 
   void setParameters(double value) override;
   void setFixed(bool fixed) override;

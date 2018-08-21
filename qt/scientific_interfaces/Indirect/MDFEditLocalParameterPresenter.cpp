@@ -89,9 +89,9 @@ EditLocalParameterPresenter::EditLocalParameterPresenter(
 }
 
 bool EditLocalParameterPresenter::executeDialog(
-    MantidWidgets::MultiDomainFunctionModel &functionModel) {
+    MantidWidgets::MultiDomainFunctionModel &modelToUpdate) {
   if (m_dialog.exec() == QDialog::Accepted) {
-    m_model.updateFunctionModel(functionModel);
+    m_model.updateFunctionModel(modelToUpdate);
     return true;
   }
   return false;
