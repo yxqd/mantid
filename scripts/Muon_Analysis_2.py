@@ -6,6 +6,7 @@ import sys
 import PyQt4.QtGui as QtGui
 import PyQt4.QtCore as QtCore
 
+from Muon.GUI.Common.basic_load.basic_load_widget import BasicLoadWidget
 from Muon.GUI.Common.dummy_label.dummy_label_widget import DummyLabelWidget
 from Muon.GUI.MuonAnalysis.dock.dock_widget import DockWidget
 
@@ -17,7 +18,7 @@ class MuonAnalysis2Gui(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MuonAnalysis2Gui, self).__init__(parent)
 
-        loadWidget = DummyLabelWidget("Load dummy", self)
+        loadWidget = BasicLoadWidget("EMU", self)
         self.dockWidget = DockWidget(self)
 
         helpWidget = DummyLabelWidget("Help dummy", self)
