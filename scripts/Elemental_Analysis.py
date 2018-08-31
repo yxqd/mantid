@@ -30,6 +30,21 @@ import mantid.simpleapi as mantid
 class ElementalAnalysisGui(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(ElementalAnalysisGui, self).__init__(parent)
+        mantid.LoadAscii("~/Sundials/ral02695.rooth2010.dat", OutputWorkspace="D1N10")
+        mantid.LoadAscii("~/Sundials/ral02695.rooth3010.dat", OutputWorkspace="D2N10")
+        mantid.LoadAscii("~/Sundials/ral02695.rooth4010.dat", OutputWorkspace="D3N10")
+        mantid.LoadAscii("~/Sundials/ral02695.rooth5010.dat", OutputWorkspace="D4N10")
+
+        mantid.LoadAscii("~/Sundials/ral02695.rooth2020.dat", OutputWorkspace="D1N20")
+        mantid.LoadAscii("~/Sundials/ral02695.rooth3020.dat", OutputWorkspace="D2N20")
+        mantid.LoadAscii("~/Sundials/ral02695.rooth4020.dat", OutputWorkspace="D3N20")
+        mantid.LoadAscii("~/Sundials/ral02695.rooth5020.dat", OutputWorkspace="D4N20")
+
+        mantid.LoadAscii("~/Sundials/ral02695.rooth2099.dat", OutputWorkspace="D1N99")
+        mantid.LoadAscii("~/Sundials/ral02695.rooth3099.dat", OutputWorkspace="D2N99")
+        mantid.LoadAscii("~/Sundials/ral02695.rooth4099.dat", OutputWorkspace="D3N99")
+        mantid.LoadAscii("~/Sundials/ral02695.rooth5099.dat", OutputWorkspace="D4N99")
+
         self.menu = self.menuBar()
         self.menu.addAction("File")
         edit_menu = self.menu.addMenu("Edit")
@@ -48,7 +63,7 @@ class ElementalAnalysisGui(QtGui.QMainWindow):
         self.load_widget = LoadPresenter(
             LoadView(), LoadModel(), CoLoadModel())
         self.plotting = PlotPresenter(PlotView())
-        self.plotting.view.setFixedSize(self.plotting.view.sizeHint())
+        self.plotting.view.setMinimumSize(self.plotting.view.sizeHint())
 
         self.detectors = DetectorsPresenter(DetectorsView())
         self.peaks = PeaksPresenter(PeaksView())
@@ -67,6 +82,10 @@ class ElementalAnalysisGui(QtGui.QMainWindow):
 
         self.element_widgets = {}
         self._generate_element_widgets()
+
+        for detector in [1, 2, 3, 4]:
+            names = ["D{}N{}".format(detector, x) for x in [10, 20, 99]]
+            self.plot("Detector {}".format(detector), names)
 
     def _generate_element_widgets(self):
         self.element_widgets = {}
@@ -91,6 +110,16 @@ class ElementalAnalysisGui(QtGui.QMainWindow):
         filename = str(QtGui.QFileDialog.getOpenFileName())
         if filename:
             self.ptable.set_peak_datafile(filename)
+
+    def plot(self, detector_name, workspaces):
+        subplot = self.plotting.add_subplot(detector_name)
+        self.plotting.call_plot_method(detector_name, subplot.set_title, detector_name)
+        for workspace in workspaces:
+            self.plotting.plot(detector_name, mantid.mtd[workspace])
+        for element, colour in zip(["Zn", "Cu"], ["b", "r"]):
+            data = self.ptable.element_data(element)["Primary"]
+            for peak_type in self.ptable.element_data(element)["Primary"]:
+                self.plotting.add_vline(detector_name, data[peak_type], 0, 1, color=colour)
 
     def add_plot(self):
         name = "Plot {}".format(time())
