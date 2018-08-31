@@ -26,6 +26,8 @@ from Muon.GUI.Common.load_widget.load_presenter import LoadPresenter
 
 import mantid.simpleapi as mantid
 
+import matplotlib.patches as mpatches
+
 
 class ElementalAnalysisGui(QtGui.QMainWindow):
     def __init__(self, parent=None):
@@ -86,6 +88,11 @@ class ElementalAnalysisGui(QtGui.QMainWindow):
         for detector in [1, 2, 3, 4]:
             names = ["D{}N{}".format(detector, x) for x in [10, 20, 99]]
             self.plot("Detector {}".format(detector), names)
+        labels = ["Zn"]#, "Cu"]
+        colours = ["b"]#, "r"]
+        mps = [mpatches.Patch(color=c, label=l) for c, l in zip(colours, labels)]
+        self.plotting.view.figure.legend(mps, labels, loc="top right", prop={"size": 10})
+        self.plotting.view.figure.tight_layout()
 
     def _generate_element_widgets(self):
         self.element_widgets = {}
@@ -116,10 +123,14 @@ class ElementalAnalysisGui(QtGui.QMainWindow):
         self.plotting.call_plot_method(detector_name, subplot.set_title, detector_name)
         for workspace in workspaces:
             self.plotting.plot(detector_name, mantid.mtd[workspace])
-        for element, colour in zip(["Zn", "Cu"], ["b", "r"]):
+        _min, _max= subplot.get_ylim()
+        print(_min, _max)
+        #for element, colour in zip(["Zn", "Cu"], ["b", "r"]):
+        for element, colour in zip(["Zn"], ["b"]):
             data = self.ptable.element_data(element)["Primary"]
             for peak_type in self.ptable.element_data(element)["Primary"]:
                 self.plotting.add_vline(detector_name, data[peak_type], 0, 1, color=colour)
+                #subplot.text(data[peak_type], 0.95*_max, element, fontsize=12, ha="center")
 
     def add_plot(self):
         name = "Plot {}".format(time())
