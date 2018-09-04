@@ -189,7 +189,8 @@ class ElementalAnalysisGui(QtGui.QMainWindow):
             for peak_type in self.ptable.element_data(element)["Primary"]:
                 self.plotting.add_vline(
                     detector_name, data[peak_type], 0, 1, color=colour)
-                #subplot.text(data[peak_type], 0.95*_max, element, fontsize=12, ha="center")
+        self.plotting.view._set_bounds(detector_name)
+        #subplot.text(data[peak_type], 0.95*_max, element, fontsize=12, ha="center")
 
     def select_data_file(self):
         filename = str(QtGui.QFileDialog.getOpenFileName())
