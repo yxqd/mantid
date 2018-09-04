@@ -32,20 +32,44 @@ import matplotlib.patches as mpatches
 class ElementalAnalysisGui(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(ElementalAnalysisGui, self).__init__(parent)
-        mantid.LoadAscii("~/Sundials/ral02695.rooth2010.dat", OutputWorkspace="D1N10")
-        mantid.LoadAscii("~/Sundials/ral02695.rooth3010.dat", OutputWorkspace="D2N10")
-        mantid.LoadAscii("~/Sundials/ral02695.rooth4010.dat", OutputWorkspace="D3N10")
-        mantid.LoadAscii("~/Sundials/ral02695.rooth5010.dat", OutputWorkspace="D4N10")
+        mantid.LoadAscii(
+            "~/Sundials/ral02695.rooth2010.dat",
+            OutputWorkspace="D1N10")
+        mantid.LoadAscii(
+            "~/Sundials/ral02695.rooth3010.dat",
+            OutputWorkspace="D2N10")
+        mantid.LoadAscii(
+            "~/Sundials/ral02695.rooth4010.dat",
+            OutputWorkspace="D3N10")
+        mantid.LoadAscii(
+            "~/Sundials/ral02695.rooth5010.dat",
+            OutputWorkspace="D4N10")
 
-        mantid.LoadAscii("~/Sundials/ral02695.rooth2020.dat", OutputWorkspace="D1N20")
-        mantid.LoadAscii("~/Sundials/ral02695.rooth3020.dat", OutputWorkspace="D2N20")
-        mantid.LoadAscii("~/Sundials/ral02695.rooth4020.dat", OutputWorkspace="D3N20")
-        mantid.LoadAscii("~/Sundials/ral02695.rooth5020.dat", OutputWorkspace="D4N20")
+        mantid.LoadAscii(
+            "~/Sundials/ral02695.rooth2020.dat",
+            OutputWorkspace="D1N20")
+        mantid.LoadAscii(
+            "~/Sundials/ral02695.rooth3020.dat",
+            OutputWorkspace="D2N20")
+        mantid.LoadAscii(
+            "~/Sundials/ral02695.rooth4020.dat",
+            OutputWorkspace="D3N20")
+        mantid.LoadAscii(
+            "~/Sundials/ral02695.rooth5020.dat",
+            OutputWorkspace="D4N20")
 
-        mantid.LoadAscii("~/Sundials/ral02695.rooth2099.dat", OutputWorkspace="D1N99")
-        mantid.LoadAscii("~/Sundials/ral02695.rooth3099.dat", OutputWorkspace="D2N99")
-        mantid.LoadAscii("~/Sundials/ral02695.rooth4099.dat", OutputWorkspace="D3N99")
-        mantid.LoadAscii("~/Sundials/ral02695.rooth5099.dat", OutputWorkspace="D4N99")
+        mantid.LoadAscii(
+            "~/Sundials/ral02695.rooth2099.dat",
+            OutputWorkspace="D1N99")
+        mantid.LoadAscii(
+            "~/Sundials/ral02695.rooth3099.dat",
+            OutputWorkspace="D2N99")
+        mantid.LoadAscii(
+            "~/Sundials/ral02695.rooth4099.dat",
+            OutputWorkspace="D3N99")
+        mantid.LoadAscii(
+            "~/Sundials/ral02695.rooth5099.dat",
+            OutputWorkspace="D4N99")
 
         self.menu = self.menuBar()
         self.menu.addAction("File")
@@ -68,6 +92,10 @@ class ElementalAnalysisGui(QtGui.QMainWindow):
         self.plotting.view.setMinimumSize(self.plotting.view.sizeHint())
 
         self.detectors = DetectorsPresenter(DetectorsView())
+        for checkbox in [self.detectors.view.GE1, self.detectors.view.GE2,
+                         self.detectors.view.GE3, self.detectors.view.GE4]:
+            checkbox.on_checkbox_checked(self.add_checkbox_plot)
+            checkbox.on_checkbox_unchecked(self.del_checkbox_plot)
         self.peaks = PeaksPresenter(PeaksView())
 
         self.widget_list.addWidget(self.peaks.view)
@@ -80,19 +108,32 @@ class ElementalAnalysisGui(QtGui.QMainWindow):
         self.setCentralWidget(QtGui.QWidget(self))
         self.centralWidget().setLayout(self.box)
         self.setWindowTitle("Elemental Analysis")
-        self.plotting.view.show()
 
         self.element_widgets = {}
         self._generate_element_widgets()
 
-        for detector in [1, 2, 3, 4]:
-            names = ["D{}N{}".format(detector, x) for x in [10, 20, 99]]
-            self.plot("Detector {}".format(detector), names)
-        labels = ["Zn"]#, "Cu"]
-        colours = ["b"]#, "r"]
-        mps = [mpatches.Patch(color=c, label=l) for c, l in zip(colours, labels)]
-        self.plotting.view.figure.legend(mps, labels, loc="top right", prop={"size": 10})
-        self.plotting.view.figure.tight_layout()
+        # for detector in [1, 2, 3, 4]:
+        #     names = ["D{}N{}".format(detector, x) for x in [10, 20, 99]]
+        #     self.plot("Detector {}".format(detector), names)
+        labels = ["Zn"]  # , "Cu"]
+        colours = ["b"]  # , "r"]
+        mps = [mpatches.Patch(color=c, label=l)
+               for c, l in zip(colours, labels)]
+        self.plotting.view.figure.legend(
+            mps, labels, loc="top right", prop={"size": 10})
+        # self.plotting.view.figure.tight_layout()
+
+    def add_checkbox_plot(self, checkbox):
+        detector = checkbox.name[-1]
+        names = ["D{}N{}".format(detector, x) for x in [10, 20, 99]]
+        self.plot(checkbox.name, names)
+        if self.plotting.view.isHidden():
+            self.plotting.view.show()
+
+    def del_checkbox_plot(self, checkbox):
+        self.plotting.remove_subplot(checkbox.name)
+        if not len(self.plotting.get_subplots()):
+            self.plotting.view.close()
 
     def _generate_element_widgets(self):
         self.element_widgets = {}
@@ -120,16 +161,16 @@ class ElementalAnalysisGui(QtGui.QMainWindow):
 
     def plot(self, detector_name, workspaces):
         subplot = self.plotting.add_subplot(detector_name)
-        self.plotting.call_plot_method(detector_name, subplot.set_title, detector_name)
+        self.plotting.call_plot_method(
+            detector_name, subplot.set_title, detector_name)
         for workspace in workspaces:
             self.plotting.plot(detector_name, mantid.mtd[workspace])
-        _min, _max= subplot.get_ylim()
-        print(_min, _max)
-        #for element, colour in zip(["Zn", "Cu"], ["b", "r"]):
+        # for element, colour in zip(["Zn", "Cu"], ["b", "r"]):
         for element, colour in zip(["Zn"], ["b"]):
             data = self.ptable.element_data(element)["Primary"]
             for peak_type in self.ptable.element_data(element)["Primary"]:
-                self.plotting.add_vline(detector_name, data[peak_type], 0, 1, color=colour)
+                self.plotting.add_vline(
+                    detector_name, data[peak_type], 0, 1, color=colour)
                 #subplot.text(data[peak_type], 0.95*_max, element, fontsize=12, ha="center")
 
     def add_plot(self):
