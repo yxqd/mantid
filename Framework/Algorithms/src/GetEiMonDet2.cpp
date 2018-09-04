@@ -19,9 +19,6 @@ using namespace Mantid::API;
 using namespace Mantid::Kernel;
 using namespace Mantid::PhysicalConstants;
 
-namespace Mantid {
-namespace Algorithms {
-
 namespace {
 /** A private namespace to store string constants dealing with
  *  tables returned by the FindEPP algorithm.
@@ -81,8 +78,18 @@ const static std::string PULSE_INTERVAL("pulse_interval");
 } // namespace SampleLogs
 } // anonymous namespace
 
+namespace Mantid {
+namespace Algorithms {
+
 // Register the algorithm into the algorithm factory.
 DECLARE_ALGORITHM(GetEiMonDet2)
+
+/** Construct a GetEiMonDet2 object.
+ *
+ */
+GetEiMonDet2::GetEiMonDet2() {
+  useAlgorithm("GetEiMonDet", 3);
+}
 
 /** Initialized the algorithm.
  *

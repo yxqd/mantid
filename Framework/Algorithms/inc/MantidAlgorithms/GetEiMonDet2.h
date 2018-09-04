@@ -5,6 +5,7 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAPI/Algorithm.h"
+#include "MantidAPI/DeprecatedAlgorithm.h"
 #include "MantidAPI/ITableWorkspace_fwd.h"
 #include "MantidAPI/MatrixWorkspace_fwd.h"
 
@@ -35,8 +36,12 @@ namespace Algorithms {
     File change history is stored at: <https://github.com/mantidproject/mantid>.
     Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
-class DLLExport GetEiMonDet2 : public Mantid::API::Algorithm {
+class DLLExport GetEiMonDet2 : public API::Algorithm,
+                               public API::DeprecatedAlgorithm {
 public:
+  /// Constructs a GetEiMonDet2 object
+  GetEiMonDet2();
+
   /// Initializes the algorithm
   void init() override;
 
