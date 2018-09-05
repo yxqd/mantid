@@ -15,7 +15,7 @@ class EnggCalibrateFullTest(unittest.TestCase):
         Set up dependencies for one or more of the tests below.
         """
         if not self.__class__._data_ws:
-            self.__class__._data_ws = LoadNexus("ENGINX00228061.nxs", OutputWorkspace='ENGIN-X_test_ws')
+            self.__class__._data_ws = LoadNexus("ENGINX00228061.nxs", OutputWorkspace='ENGINX_test_ws')
 
     def test_issues_with_properties(self):
         """

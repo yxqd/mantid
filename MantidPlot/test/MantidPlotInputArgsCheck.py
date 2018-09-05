@@ -25,7 +25,7 @@ X = np.append(X1, X2)
 Y = np.append(Y1, Y2)
 E = np.sqrt(Y)
 
-WorkspaceName2D = 'fake ws'
+WorkspaceName2D = 'fake_ws'
 CreateWorkspace(OutputWorkspace=WorkspaceName2D, DataX=list(X), DataY=list(Y), DataE=list(E), NSpec=2,
                 UnitX="TOF", YUnitLabel="Counts",  WorkspaceTitle="Faked data Workspace")
 

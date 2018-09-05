@@ -24,18 +24,18 @@ class EnggFocusTest(unittest.TestCase):
         """
         if not self.__class__._data_ws:
             self.__class__._data_ws = LoadNexus(Filename='ENGINX00228061.nxs',
-                                                OutputWorkspace='ENGIN-X_test_ws')
+                                                OutputWorkspace='ENGINX_test_ws')
 
         if not self.__class__._van_curves_ws:
             # Note the pre-calculated file instead of the too big vanadium run
-            # self.__class__._van_ws = LoadNexus("ENGINX00236516.nxs", OutputWorkspace='ENGIN-X_test_vanadium_ws')
+            # self.__class__._van_ws = LoadNexus("ENGINX00236516.nxs", OutputWorkspace='ENGINX_test_vanadium_ws')
             self.__class__._van_curves_ws = LoadNexus(Filename=
                                                       'ENGINX_precalculated_vanadium_run000236516_bank_curves.nxs',
-                                                      OutputWorkspace='ENGIN-X_vanadium_curves_test_ws')
+                                                      OutputWorkspace='ENGINX_vanadium_curves_test_ws')
         if not self.__class__._van_integ_tbl:
             self.__class__._van_integ_tbl = LoadNexus(Filename=
                                                       'ENGINX_precalculated_vanadium_run000236516_integration.nxs',
-                                                      OutputWorkspace='ENGIN-X_vanadium_integ_test_ws')
+                                                      OutputWorkspace='ENGINX_vanadium_integ_test_ws')
 
     def test_wrong_properties(self):
         """

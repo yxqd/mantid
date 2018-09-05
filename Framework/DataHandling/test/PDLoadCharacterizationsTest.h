@@ -1,13 +1,15 @@
 #ifndef MANTID_DATAHANDLING_LOADPDCHARACTERIZATIONSTEST_H_
 #define MANTID_DATAHANDLING_LOADPDCHARACTERIZATIONSTEST_H_
 
-#include <boost/shared_ptr.hpp>
 #include <cxxtest/TestSuite.h>
 
 #include "MantidAPI/AnalysisDataService.h"
 #include "MantidAPI/ITableWorkspace.h"
-
 #include "MantidDataHandling/PDLoadCharacterizations.h"
+
+#include "boost/algorithm/string.hpp"
+#include "boost/shared_ptr.hpp"
+
 using Mantid::API::ITableWorkspace;
 using Mantid::API::ITableWorkspace_sptr;
 
@@ -28,13 +30,15 @@ public:
 
     // run the algorithm
     alg.setPropertyValue("Filename", filename);
-    alg.setPropertyValue("OutputWorkspace", filename);
+    std::string a("-"), b("_");
+    std::string wkspname = boost::replace_all_copy(filename, "-", "_");
+    alg.setPropertyValue("OutputWorkspace", wkspname);
     TS_ASSERT(alg.execute());
     TS_ASSERT(alg.isExecuted());
 
     // test the table workspace
     wksp = boost::dynamic_pointer_cast<Mantid::API::ITableWorkspace>(
-        Mantid::API::AnalysisDataService::Instance().retrieve(filename));
+        Mantid::API::AnalysisDataService::Instance().retrieve(wkspname));
     TS_ASSERT(wksp);
   }
 

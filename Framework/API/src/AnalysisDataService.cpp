@@ -329,7 +329,7 @@ void AnalysisDataServiceImpl::shutdown() { clear(); }
 AnalysisDataServiceImpl::AnalysisDataServiceImpl()
     : Mantid::Kernel::DataService<Mantid::API::Workspace>(
           "AnalysisDataService"),
-      m_illegalChars() {}
+      m_illegalChars("[]*?- ") {}
 
 // The following is commented using /// rather than /** to stop the compiler
 // complaining

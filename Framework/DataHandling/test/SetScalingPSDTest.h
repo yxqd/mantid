@@ -156,7 +156,7 @@ private:
     LoadEmptyInstrument loader;
     loader.initialize();
     loader.setPropertyValue("Filename", mariIDF.toString());
-    const std::string outputName("test-emptyMARI");
+    const std::string outputName("test_emptyMARI");
     loader.setPropertyValue("OutputWorkspace", outputName);
     loader.execute();
     Workspace_sptr result =

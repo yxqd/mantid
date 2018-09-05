@@ -300,7 +300,7 @@ class LoadNMoldyn3Ascii(PythonAlgorithm):
                     data_y = np.append(data_y, np.array(S))
                     data_e = np.append(data_e, zero_error)
 
-            function_ws_name = base_name + '_' + func
+            function_ws_name = base_name + '_' + func.replace('-','_')
             CreateWorkspace(OutputWorkspace=function_ws_name,
                             DataX=data_x,
                             DataY=data_y,

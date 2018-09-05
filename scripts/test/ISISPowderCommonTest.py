@@ -49,7 +49,7 @@ class ISISPowderCommonTest(unittest.TestCase):
         expected_number_of_bins = cropping_value[-1] - cropping_value[0]
 
         for i in range(0, 3):
-            out_name = "crop_banks_in_tof-" + str(i)
+            out_name = "crop_banks_in_tof_" + str(i)
             cropping_value_list.append(cropping_value)
             bank_list.append(mantid.CreateSampleWorkspace(OutputWorkspace=out_name, XMin=0, XMax=1100, BinWidth=1))
 
@@ -85,7 +85,7 @@ class ISISPowderCommonTest(unittest.TestCase):
         expected_number_of_bins = x_max - x_min
 
         for i in range(0, 3):
-            out_name = "crop_banks_in_tof-" + str(i)
+            out_name = "crop_banks_in_tof_" + str(i)
             ws_list.append(mantid.CreateSampleWorkspace(OutputWorkspace=out_name, XMin=0, XMax=600, BinWidth=1))
 
         # Crop a single workspace in TOF
@@ -107,7 +107,7 @@ class ISISPowderCommonTest(unittest.TestCase):
         expected_number_of_bins = 20000  # Hard code number of expected bins for dSpacing
 
         for i in range(0, 3):
-            out_name = "crop_banks_in_dSpacing-" + str(i)
+            out_name = "crop_banks_in_dSpacing_" + str(i)
             ws_list.append(mantid.CreateSampleWorkspace(OutputWorkspace=out_name, XMin=0, XMax=20000, BinWidth=1,
                                                         XUnit="dSpacing"))
 
@@ -169,7 +169,7 @@ class ISISPowderCommonTest(unittest.TestCase):
         extracted_banks = common.extract_ws_spectra(ws_to_split=ws_to_split)
         self.assertEqual(len(extracted_banks), number_of_expected_banks)
         for i, ws in enumerate(extracted_banks):
-            expected_name = input_name + '-' + str(i + 1)
+            expected_name = input_name + '_' + str(i + 1)
             self.assertEqual(expected_name, ws.getName())
 
     def test_generate_run_numbers(self):
@@ -426,7 +426,7 @@ class ISISPowderCommonTest(unittest.TestCase):
         ws_list = []
         ws_names_list = []
 
-        ws_single_name = "remove_intermediate_ws-single"
+        ws_single_name = "remove_intermediate_ws_single"
         ws_single = mantid.CreateSampleWorkspace(OutputWorkspace=ws_single_name, NumBanks=1, BankPixelWidth=1,
                                                  XMax=10, BinWidth=1)
 
@@ -468,7 +468,7 @@ class ISISPowderCommonTest(unittest.TestCase):
     def test_spline_workspaces(self):
         ws_list = []
         for i in range(1, 4):
-            out_name = "test_spline_vanadium-" + str(i)
+            out_name = "test_spline_vanadium_" + str(i)
             ws_list.append(mantid.CreateSampleWorkspace(OutputWorkspace=out_name, NumBanks=1, BankPixelWidth=1,
                                                         XMax=100, BinWidth=1))
 

@@ -46,7 +46,7 @@ public:
     inputFile = "emu00006473.nxs";
     loaderNexusFile.setPropertyValue("Filename", inputFile);
 
-    outputSpace = "LoadMuonLogTest-nexusdatafile";
+    outputSpace = "LoadMuonLogTest_nexusdatafile";
     TS_ASSERT_THROWS(loaderNexusFile.setPropertyValue("Workspace", outputSpace),
                      std::invalid_argument)
     // Create an empty workspace and put it in the AnalysisDataService

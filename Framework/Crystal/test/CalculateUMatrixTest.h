@@ -83,7 +83,7 @@ public:
     pw->addPeak(p);
     Peak p1(inst, 1, 3.0, V3D(2, 0, 0)); // HKL=2,0,0
     Peak p2(inst, 1, 3.0, V3D(2, 2, 0)); // HKL=2,2,0
-    std::string WSName("peaks-fail");
+    std::string WSName("peaks_fail");
     AnalysisDataService::Instance().addOrReplace(WSName, pw);
     // one peak
     CalculateUMatrix alg;
@@ -194,7 +194,7 @@ private:
         ComponentCreationHelper::createCylInstrumentWithDetInGivenPositions(
             L2, theta, phi);
     inst->setName("SillyInstrument");
-    auto pw = PeaksWorkspace_sptr(new PeaksWorkspace);
+    auto pw = boost::make_shared<PeaksWorkspace>();
     pw->setInstrument(inst);
     for (int i = 0; i <= 8; i++) {
       Peak p(inst, i + 1, lambda[i], V3D(Hpeaks[i], Kpeaks[i], Lpeaks[i]));

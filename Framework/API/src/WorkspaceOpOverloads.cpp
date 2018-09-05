@@ -53,13 +53,13 @@ ResultType executeBinaryOperation(const std::string &algorithmName,
       alg->setPropertyValue("OutputWorkspace", lhs->getName());
     } else {
       alg->setAlwaysStoreInADS(false);
-      alg->setPropertyValue("OutputWorkspace", "dummy-output-name");
+      alg->setPropertyValue("OutputWorkspace", "dummy_output_name");
       alg->setProperty<LHSType>("OutputWorkspace", lhs);
     }
   } else {
     if (name.empty()) {
       alg->setAlwaysStoreInADS(false);
-      alg->setPropertyValue("OutputWorkspace", "dummy-output-name");
+      alg->setPropertyValue("OutputWorkspace", "dummy_output_name");
     } else {
       alg->setPropertyValue("OutputWorkspace", name);
     }

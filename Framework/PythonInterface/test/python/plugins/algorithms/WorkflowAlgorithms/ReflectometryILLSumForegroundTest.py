@@ -103,7 +103,7 @@ class ReflectometryILLSumForegroundTest(unittest.TestCase):
         self.assertTrue(alg.isExecuted())
         args = {
             'InputWorkspace': 'direct',
-            'OutputWorkspace': 'direct-fgd'
+            'OutputWorkspace': 'direct_fgd'
         }
         alg = create_algorithm('ReflectometryILLSumForeground', **args)
         assertRaisesNothing(self, alg.execute)
@@ -119,8 +119,8 @@ class ReflectometryILLSumForegroundTest(unittest.TestCase):
         self.assertTrue(alg.isExecuted())
         args = {
             'InputWorkspace': 'reflected',
-            'OutputWorkspace': 'reflected-fgd',
-            'DirectForegroundWorkspace': 'direct-fgd'
+            'OutputWorkspace': 'reflected_fgd',
+            'DirectForegroundWorkspace': 'direct_fgd'
         }
         alg = create_algorithm('ReflectometryILLSumForeground', **args)
         assertRaisesNothing(self, alg.execute)

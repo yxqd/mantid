@@ -598,22 +598,22 @@ PolarizationCorrectionWildes::groupOutput(const WorkspaceMap &outputs) {
   const std::string outWSName = getProperty(Prop::OUTPUT_WS);
   std::vector<std::string> names;
   if (outputs.mmWS) {
-    names.emplace_back(outWSName + "_--");
+    names.emplace_back(outWSName + "_mm");
     API::AnalysisDataService::Instance().addOrReplace(names.back(),
                                                       outputs.mmWS);
   }
   if (outputs.mpWS) {
-    names.emplace_back(outWSName + "_-+");
+    names.emplace_back(outWSName + "_mp");
     API::AnalysisDataService::Instance().addOrReplace(names.back(),
                                                       outputs.mpWS);
   }
   if (outputs.pmWS) {
-    names.emplace_back(outWSName + "_+-");
+    names.emplace_back(outWSName + "_pm");
     API::AnalysisDataService::Instance().addOrReplace(names.back(),
                                                       outputs.pmWS);
   }
   if (outputs.ppWS) {
-    names.emplace_back(outWSName + "_++");
+    names.emplace_back(outWSName + "_pp");
     API::AnalysisDataService::Instance().addOrReplace(names.back(),
                                                       outputs.ppWS);
   }

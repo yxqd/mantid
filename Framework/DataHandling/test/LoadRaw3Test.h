@@ -298,7 +298,7 @@ public:
     LoadRaw3 loader3;
     if (!loader3.isInitialized())
       loader3.initialize();
-    std::string outWS = "LoadRaw3-out2";
+    std::string outWS = "LoadRaw3_out2";
     loader3.setPropertyValue("Filename", inputFile);
     loader3.setPropertyValue("OutputWorkspace", outWS);
     loader3.setPropertyValue("SpectrumList", "0,999,1000");
@@ -1008,7 +1008,7 @@ public:
     loader12.setPropertyValue("Filename", "CSP74683.s02");
     loader12.setPropertyValue("LoadMonitors", "Include");
 
-    outputSpace = "LoadLogTest-rawdatafile_so_type";
+    outputSpace = "LoadLogTest_rawdatafile_so_type";
     loader12.setPropertyValue("OutputWorkspace", outputSpace);
 
     TS_ASSERT_THROWS_NOTHING(loader12.execute());

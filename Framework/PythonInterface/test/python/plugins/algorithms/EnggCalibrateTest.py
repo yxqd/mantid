@@ -18,17 +18,17 @@ class EnggCalibrateTest(unittest.TestCase):
         Set up dependencies for one or more of the tests below.
         """
         if not self.__class__._data_ws:
-            self.__class__._data_ws = sapi.LoadNexus("ENGINX00228061.nxs", OutputWorkspace='ENGIN-X_test_ws')
+            self.__class__._data_ws = sapi.LoadNexus("ENGINX00228061.nxs", OutputWorkspace='ENGINX_test_ws')
 
         if not self.__class__._van_curves_ws:
             # Note the pre-calculated file instead of the too big vanadium run
-            # self.__class__._van_ws = LoadNexus("ENGINX00236516.nxs", OutputWorkspace='ENGIN-X_test_vanadium_ws')
+            # self.__class__._van_ws = LoadNexus("ENGINX00236516.nxs", OutputWorkspace='ENGINX_test_vanadium_ws')
             self.__class__._van_curves_ws = sapi.LoadNexus(Filename=
                                                            'ENGINX_precalculated_vanadium_run000236516_bank_curves.nxs',
-                                                           OutputWorkspace='ENGIN-X_vanadium_curves_test_ws')
+                                                           OutputWorkspace='ENGINX_vanadium_curves_test_ws')
             self.__class__._van_integ_tbl = sapi.LoadNexus(Filename=
                                                            'ENGINX_precalculated_vanadium_run000236516_integration.nxs',
-                                                           OutputWorkspace='ENGIN-X_vanadium_integ_test_ws')
+                                                           OutputWorkspace='ENGINX_vanadium_integ_test_ws')
 
 
     def test_issues_with_properties(self):

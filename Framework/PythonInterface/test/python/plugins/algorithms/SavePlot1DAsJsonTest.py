@@ -16,7 +16,7 @@ class SavePlot1DAsJsonTest(unittest.TestCase):
     def test_save_one_curve(self):
         """ Test to Save one curve
         """
-        datawsname = "constant energy cut"
+        datawsname = "constant_energy_cut"
         E, I, err, dQ = self._createOneQCurve(datawsname)
 
         # Execute
@@ -146,6 +146,7 @@ class SavePlot1DAsJsonTest(unittest.TestCase):
             UnitX = "Momentum")
         dataws.setDx(0, dQ)
         # Add to data service
+        print("datawsname: ",datawsname)
         AnalysisDataService.addOrReplace(datawsname, dataws)
         return Q, I, err, dQ
 

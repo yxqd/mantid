@@ -409,8 +409,8 @@ class ReflectometryILLPreprocess(DataProcessorAlgorithm):
                 dbPosWS = self.getProperty(Prop.DIRECT_BEAM_POS_WS).value
             filename = flattened.pop(0)
             numor = os.path.basename(filename).split('.')[0]
-            firstWSName = self._names.withSuffix('raw-' + numor)
-            beamPosWSName = self._names.withSuffix('beamPos-' + numor)
+            firstWSName = self._names.withSuffix('raw_' + numor)
+            beamPosWSName = self._names.withSuffix('beamPos_' + numor)
             LoadILLReflectometry(Filename=filename,
                                  OutputWorkspace=firstWSName,
                                  DirectBeamPosition=dbPosWS,
@@ -425,7 +425,7 @@ class ReflectometryILLPreprocess(DataProcessorAlgorithm):
             mergedWSName = self._names.withSuffix('merged')
             for i, filename in enumerate(flattened):
                 numor = os.path.basename(filename).split('.')[0]
-                rawWSName = self._names.withSuffix('raw-' + numor)
+                rawWSName = self._names.withSuffix('raw_' + numor)
                 LoadILLReflectometry(Filename=filename,
                                      OutputWorkspace=rawWSName,
                                      DirectBeamPosition=dbPosWS,

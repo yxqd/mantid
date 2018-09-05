@@ -41,7 +41,7 @@ public:
 
     diagnostic.setProperty<Mantid::API::MatrixWorkspace_sptr>("InputWorkspace",
                                                               testWS);
-    const std::string outputName("PSDBleedMask-Test");
+    const std::string outputName("PSDBleedMask_Test");
     diagnostic.setPropertyValue("OutputWorkspace", outputName);
     // Based on test setup: Passing tubes should have a framerate 9.2 and the
     // failing tube 19.0

@@ -17,7 +17,7 @@ class AbinsAdvancedParametersTest(unittest.TestCase):
     def setUp(self):
 
         # set up input for Abins
-        self._Si2 = "Si2-sc_AbinsAdvancedParameters"
+        self._Si2 = "Si2_sc_AbinsAdvancedParameters"
         self._wrk_name = self._Si2 + "_ref"
 
         # before each test set AbinsParameters to default values

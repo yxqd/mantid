@@ -79,7 +79,7 @@ public:
     WorkspaceGroup_sptr outputWS = alg.getProperty("OutputWorkspace");
     TS_ASSERT(outputWS)
     TS_ASSERT_EQUALS(outputWS->getNumberOfEntries(), 4)
-    const std::array<std::string, 4> POL_DIRS{{"++", "+-", "-+", "--"}};
+    const std::array<std::string, 4> POL_DIRS{{"pp", "pm", "mp", "mm"}};
     for (size_t i = 0; i != 4; ++i) {
       const std::string wsName =
           m_outputWSName + std::string("_") + POL_DIRS[i];
@@ -145,7 +145,7 @@ public:
     WorkspaceGroup_sptr outputWS = alg.getProperty("OutputWorkspace");
     TS_ASSERT(outputWS)
     TS_ASSERT_EQUALS(outputWS->getNumberOfEntries(), 4)
-    const std::array<std::string, 4> POL_DIRS{{"++", "+-", "-+", "--"}};
+    const std::array<std::string, 4> POL_DIRS{{"pp", "pm", "mp", "mm"}};
     for (size_t i = 0; i != 4; ++i) {
       const auto &dir = POL_DIRS[i];
       const std::string wsName = m_outputWSName + std::string("_") + dir;

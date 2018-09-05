@@ -17,10 +17,10 @@ import numpy as np
 import h5py as h5
 
 sanslog = Logger("SANS")
-ADDED_TAG = '-add'
+ADDED_TAG = '_add'
 ADDED_EVENT_DATA_TAG = '_added_event_data'
-ADD_TAG = '-add'
-ADD_MONITORS_TAG = '-add_monitors'
+ADD_TAG = '_add'
+ADD_MONITORS_TAG = '_add_monitors'
 REG_DATA_NAME = ADD_TAG  + ADDED_EVENT_DATA_TAG + '[_1-9]*$'
 REG_DATA_MONITORS_NAME = ADD_MONITORS_TAG + ADDED_EVENT_DATA_TAG + '[_1-9]*$'
 ZERO_ERROR_DEFAULT = 1e6

@@ -49,7 +49,7 @@ public:
       localWorkspace2D_onePixel->mutableE(0)[i] = d + 2.0;
     }
 
-    AnalysisDataService::Instance().add("SAVECSVTEST-testSpace",
+    AnalysisDataService::Instance().add("SAVECSVTEST_testSpace",
                                         localWorkspace);
   }
 
@@ -62,7 +62,7 @@ public:
     if (!algToBeTested.isInitialized())
       algToBeTested.initialize();
 
-    algToBeTested.setPropertyValue("InputWorkspace", "SAVECSVTEST-testSpace");
+    algToBeTested.setPropertyValue("InputWorkspace", "SAVECSVTEST_testSpace");
 
     // Should fail because mandatory parameter has not been set
     TS_ASSERT_THROWS(algToBeTested.execute(), std::runtime_error);
@@ -110,7 +110,7 @@ public:
 
     // remove file created by this algorithm
     Poco::File(outputFile).remove();
-    AnalysisDataService::Instance().remove("SAVECSVTEST-testSpace");
+    AnalysisDataService::Instance().remove("SAVECSVTEST_testSpace");
   }
 
   void test_saving_1D_error_with_x_error() {

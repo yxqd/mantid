@@ -49,7 +49,7 @@ public:
 
   void test_exec_withInstrumentName() {
     // Name of the output workspace.
-    std::string outWSName("Grouping_2012-11-27");
+    std::string outWSName("Grouping_2012_11_27");
     CreateGroupingWorkspace alg;
     TS_ASSERT_THROWS_NOTHING(alg.initialize())
     TS_ASSERT(alg.isInitialized())

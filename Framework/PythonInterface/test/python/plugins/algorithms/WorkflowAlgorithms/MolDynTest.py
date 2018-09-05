@@ -57,7 +57,7 @@ class MolDynTest(unittest.TestCase):
 
         self.assertTrue(isinstance(moldyn_group, WorkspaceGroup))
         self.assertEqual(len(moldyn_group), 1)
-        self.assertEqual(moldyn_group[0].name(), 'NaF_DISF_Sqw-total')
+        self.assertEqual(moldyn_group[0].name(), 'NaF_DISF_Sqw_total')
 
         # Get max enery from result workspace
         x_data = moldyn_group[0].dataX(0)
@@ -75,7 +75,7 @@ class MolDynTest(unittest.TestCase):
 
         self.assertTrue(isinstance(moldyn_group, WorkspaceGroup))
         self.assertEqual(len(moldyn_group), 1)
-        self.assertEqual(moldyn_group[0].name(), 'NaF_DISF_Sqw-total')
+        self.assertEqual(moldyn_group[0].name(), 'NaF_DISF_Sqw_total')
 
         # Get max and min energy from result workspace
         x_data = moldyn_group[0].dataX(0)
@@ -104,7 +104,7 @@ class MolDynTest(unittest.TestCase):
 
         self.assertTrue(isinstance(moldyn_group, WorkspaceGroup))
         self.assertEqual(len(moldyn_group), 1)
-        self.assertEqual(moldyn_group[0].name(), 'NaF_DISF_Sqw-total')
+        self.assertEqual(moldyn_group[0].name(), 'NaF_DISF_Sqw_total')
 
 
 if __name__ == '__main__':

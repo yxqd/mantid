@@ -21,7 +21,7 @@ class LoadNMoldyn3AsciiTest(unittest.TestCase):
 
         self.assertTrue(isinstance(moldyn_group, WorkspaceGroup))
         self.assertEqual(len(moldyn_group), 1)
-        self.assertEqual(moldyn_group[0].name(), 'NaF_DISF_Fqt-total')
+        self.assertEqual(moldyn_group[0].name(), 'NaF_DISF_Fqt_total')
 
         iqt_ws = moldyn_group[0]
         self.assertTrue(isinstance(iqt_ws, MatrixWorkspace))
@@ -41,7 +41,7 @@ class LoadNMoldyn3AsciiTest(unittest.TestCase):
                                          OutputWorkspace='__LoadNMoldyn3Ascii_test')
 
         self.assertTrue(isinstance(moldyn_group, WorkspaceGroup))
-        self.assertEqual(moldyn_group[0].name(), 'NaF_DISF_Sqw-total')
+        self.assertEqual(moldyn_group[0].name(), 'NaF_DISF_Sqw_total')
 
         sqw_ws = moldyn_group[0]
         self.assertTrue(isinstance(sqw_ws, MatrixWorkspace))

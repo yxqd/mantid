@@ -182,14 +182,14 @@ public:
 
   void testGetWorkspaceInformationWithGroup() {
     auto group =
-        WorkspaceCreationHelper::createWorkspaceGroup(3, 1, 10, "ws-group");
+        WorkspaceCreationHelper::createWorkspaceGroup(3, 1, 10, "ws_group");
 
     ProjectSaveModel model({});
     auto wsInfo = model.getWorkspaceInformation();
 
     TS_ASSERT_EQUALS(wsInfo.size(), 3);
 
-    TS_ASSERT_EQUALS(wsInfo[0].name, "ws-group");
+    TS_ASSERT_EQUALS(wsInfo[0].name, "ws_group");
     TS_ASSERT_EQUALS(wsInfo[0].type, "WorkspaceGroup");
     TS_ASSERT_EQUALS(wsInfo[0].size, "0 kB");
     TS_ASSERT_EQUALS(wsInfo[0].icon_id, "mantid_wsgroup_xpm");
@@ -198,7 +198,7 @@ public:
 
     int count = 0;
     for (auto &item : wsInfo[0].subWorkspaces) {
-      TS_ASSERT_EQUALS(item.name, "ws-group_" + std::to_string(count));
+      TS_ASSERT_EQUALS(item.name, "ws_group_" + std::to_string(count));
       TS_ASSERT_EQUALS(item.type, "Workspace2D");
       TS_ASSERT_EQUALS(item.size, "0 kB");
       TS_ASSERT_EQUALS(item.icon_id, "mantid_matrix_xpm");
@@ -220,7 +220,7 @@ public:
     TS_ASSERT_EQUALS(wsInfo[2].numWindows, 0);
     TS_ASSERT_EQUALS(wsInfo[2].subWorkspaces.size(), 0);
 
-    WorkspaceCreationHelper::removeWS("ws-group");
+    WorkspaceCreationHelper::removeWS("ws_group");
   }
 
   void testGetWindowInformation() {

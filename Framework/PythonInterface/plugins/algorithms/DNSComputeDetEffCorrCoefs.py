@@ -155,7 +155,7 @@ class DNSComputeDetEffCorrCoefs(PythonAlgorithm):
         """
         result = dict.fromkeys(deterota)
         for angle in deterota:
-            wsname = datalist[angle] + "-bg"
+            wsname = datalist[angle] + "_bg"
             api.Minus(datalist[angle], bglist[angle], OutputWorkspace=wsname)
             self.toremove.append(wsname)
             if self._is_negative(wsname):
@@ -181,6 +181,7 @@ class DNSComputeDetEffCorrCoefs(PythonAlgorithm):
         result = dict.fromkeys(deterota)
         for angle in deterota:
             wsname = 'sum' + str(angle)
+            wsname = wsname.replace('-','m')
             api.Plus(datasf[angle], datansf[angle], OutputWorkspace=wsname)
             self.toremove.append(wsname)
             result[angle] = wsname
@@ -234,6 +235,7 @@ class DNSComputeDetEffCorrCoefs(PythonAlgorithm):
             results = []
             for angle in deterota:
                 wsname = outws_name + '_2theta' + str(angle)
+                wsname = wsname.replace('-','m')
                 api.Divide(total[angle], _vana_mean_, OutputWorkspace=wsname)
                 results.append(wsname)
 

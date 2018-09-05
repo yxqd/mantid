@@ -123,7 +123,7 @@ def extract_ws_spectra(ws_to_split):
     num_spectra = ws_to_split.getNumberHistograms()
     spectra_bank_list = []
     for i in range(0, num_spectra):
-        output_name = ws_to_split.getName() + "-" + str(i + 1)
+        output_name = ws_to_split.getName() + "_" + str(i + 1)
         # Have to use crop workspace as extract single spectrum struggles with the variable bin widths
         spectra_bank_list.append(mantid.CropWorkspace(InputWorkspace=ws_to_split, OutputWorkspace=output_name,
                                                       StartWorkspaceIndex=i, EndWorkspaceIndex=i))

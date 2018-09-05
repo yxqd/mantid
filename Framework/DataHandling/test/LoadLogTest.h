@@ -47,7 +47,7 @@ public:
         loader.setPropertyValue("Filename", "NIMROD00001097.log"))
     inputFile = loader.getPropertyValue("Filename");
 
-    outputSpace = "LoadLogTest-threeColumnFile";
+    outputSpace = "LoadLogTest_threeColumnFile";
     TS_ASSERT_THROWS(loader.setPropertyValue("Workspace", outputSpace),
                      std::invalid_argument)
 
@@ -98,7 +98,7 @@ public:
         loader.setPropertyValue("Filename", "HRP37129_ICPevent.txt"))
     inputFile = loader.getPropertyValue("Filename");
 
-    outputSpace = "LoadLogTest-singleLogFile";
+    outputSpace = "LoadLogTest_singleLogFile";
     TS_ASSERT_THROWS(loader.setPropertyValue("Workspace", outputSpace),
                      std::invalid_argument)
     // Create an empty workspace and put it in the AnalysisDataService
