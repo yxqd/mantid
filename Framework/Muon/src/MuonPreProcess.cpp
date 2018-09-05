@@ -8,5 +8,8 @@ namespace Muon {
 // Register the algorithm into the AlgorithmFactory
 DECLARE_ALGORITHM(MuonPreProcess)
 
+void MuonPreProcess::init() {}
+void MuonPreProcess::exec() {}
+
 } // namespace Muon
 } // namespace Mantid
