@@ -16,7 +16,10 @@ public:
   const std::string name() const override { return "MuonPreProcess"; }
   int version() const override { return (1); }
   const std::string category() const override { return "Muon\\DataHandling"; }
-  const std::string summary() const override { return "."; }
+  const std::string summary() const override {
+    return "Perform a series of common analysis pre-processing steps on Muon "
+           "data.";
+  }
   const std::vector<std::string> seeAlso() const override {
     return {"MuonProcess"};
   }
