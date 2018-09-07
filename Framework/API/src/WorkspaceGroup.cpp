@@ -192,7 +192,7 @@ Workspace_sptr WorkspaceGroup::getItem(const std::string wsName) const {
       return workspace;
   }
   throw std::out_of_range("Workspace " + wsName +
-                          " not contained in the group");
+                          " not contained in the group\n" + this->toString());
 }
 
 /** Return all workspaces in the group as one call for thread safety

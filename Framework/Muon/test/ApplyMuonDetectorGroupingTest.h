@@ -131,8 +131,8 @@ public:
     WorkspaceGroup_sptr wsGroup = boost::dynamic_pointer_cast<WorkspaceGroup>(
         AnalysisDataService::Instance().retrieve("inputGroup"));
 
-    TS_ASSERT(wsGroup->getItem("inputGroup;_Group;_test;_Counts;_#1"));
-    TS_ASSERT(wsGroup->getItem("inputGroup;_Group;_test;_Counts;_#1_Raw"));
+    TS_ASSERT(wsGroup->getItem("inputGroup;Group;test;Counts;#1"));
+    TS_ASSERT(wsGroup->getItem("inputGroup;Group;test;Counts;#1_Raw"));
   }
 
   void test_grouping_a_single_detector_does_not_change_the_data() {
@@ -147,7 +147,7 @@ public:
     WorkspaceGroup_sptr wsGroup = boost::dynamic_pointer_cast<WorkspaceGroup>(
         AnalysisDataService::Instance().retrieve("inputGroup"));
 
-    auto wsOut = wsGroup->getItem("inputGroup;_Group;_test;_Counts;_#1_Raw");
+    auto wsOut = wsGroup->getItem("inputGroup;Group;test;Counts;#1_Raw");
 
     CompareWorkspaces algCompare;
     algCompare.initialize();
@@ -171,7 +171,7 @@ public:
     WorkspaceGroup_sptr wsGroup = boost::dynamic_pointer_cast<WorkspaceGroup>(
         AnalysisDataService::Instance().retrieve("inputGroup"));
     auto wsOut = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        wsGroup->getItem("inputGroup;_Group;_test;_Counts;_#1_Raw"));
+        wsGroup->getItem("inputGroup;Group;test;Counts;#1_Raw"));
 
     TS_ASSERT_DELTA(wsOut->readX(0)[0], 0.000, 0.001);
     TS_ASSERT_DELTA(wsOut->readX(0)[4], 0.400, 0.001);
@@ -201,7 +201,7 @@ public:
         AnalysisDataService::Instance().retrieve("inputGroup"));
 
     auto wsOut = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        wsGroup->getItem("inputGroup;_Group;_test;_Asym;_#1_Raw"));
+        wsGroup->getItem("inputGroup;Group;test;Asym;#1_Raw"));
 
     // Check values against calculation by hand.
     TS_ASSERT_DELTA(wsOut->readX(0)[0], 0.000, 0.001);
@@ -232,7 +232,7 @@ public:
         AnalysisDataService::Instance().retrieve("inputGroup"));
 
     auto wsOut = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        wsGroup->getItem("inputGroup;_Group;_test;_Asym;_#1_Raw"));
+        wsGroup->getItem("inputGroup;Group;test;Asym;#1_Raw"));
 
     // Check values against calculation by hand.
     TS_ASSERT_DELTA(wsOut->readX(0)[0], 0.000, 0.001);
@@ -266,7 +266,7 @@ public:
         AnalysisDataService::Instance().retrieve("inputGroup"));
 
     auto wsOut = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        wsGroup->getItem("inputGroup;_Group;_test;_Counts;_#1_Raw"));
+        wsGroup->getItem("inputGroup;Group;test;Counts;#1_Raw"));
 
     // Check values against calculation by hand.
     TS_ASSERT_DELTA(wsOut->readX(0)[0], 0.000, 0.001);
@@ -302,7 +302,7 @@ public:
         AnalysisDataService::Instance().retrieve("inputGroup"));
 
     auto wsOut = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        wsGroup->getItem("inputGroup;_Group;_test;_Counts;_#1_Raw"));
+        wsGroup->getItem("inputGroup;Group;test;Counts;#1_Raw"));
 
     // Check values against calculation by hand.
     TS_ASSERT_DELTA(wsOut->readX(0)[0], 0.000, 0.001);
@@ -336,7 +336,7 @@ public:
         AnalysisDataService::Instance().retrieve("inputGroup"));
 
     auto wsOut = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        wsGroup->getItem("inputGroup; Group;_test;_Counts;_#1_Raw"));
+        wsGroup->getItem("inputGroup;Group;test;Counts;#1_Raw"));
 
     // Check values against calculation by hand.
     TS_ASSERT_DELTA(wsOut->readX(0)[0], 0.000, 0.001);
@@ -365,7 +365,7 @@ public:
         AnalysisDataService::Instance().retrieve("inputGroup"));
 
     auto wsOutNoRebin = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        wsGroup->getItem("inputGroup;_Group;_test;_Counts;_#1_Raw"));
+        wsGroup->getItem("inputGroup;Group;test;Counts;#1_Raw"));
 
     // Check values against calculation by hand.
     TS_ASSERT_DELTA(wsOutNoRebin->readX(0)[0], 0.000, 0.001);
@@ -373,7 +373,7 @@ public:
     TS_ASSERT_DELTA(wsOutNoRebin->readX(0)[9], 0.900, 0.001);
 
     auto wsOut = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        wsGroup->getItem("inputGroup;_Group;_test;_Counts;_#1"));
+        wsGroup->getItem("inputGroup;Group;test;Counts;#1"));
 
     // Check values against calculation by hand.
     TS_ASSERT_DELTA(wsOut->readX(0)[0], 0.000, 0.001);
@@ -400,9 +400,9 @@ public:
 
     auto name = AnalysisDataService::Instance().getObjectNames();
     TS_ASSERT(AnalysisDataService::Instance().doesExist(
-        "inputGroup;_Group;_test;_Asym;_#1_unNorm"));
+        "inputGroup;Group;test;Asym;#1_unNorm"));
     TS_ASSERT(AnalysisDataService::Instance().doesExist(
-        "inputGroup;_Group;_test;_Asym;_#1_unNorm_Raw"));
+        "inputGroup;Group;test;Asym;#1_unNorm_Raw"));
   }
 };
 

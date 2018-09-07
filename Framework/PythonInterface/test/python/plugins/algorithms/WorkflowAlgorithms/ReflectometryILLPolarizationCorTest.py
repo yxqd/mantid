@@ -28,7 +28,7 @@ class ReflectometryILLPolarizationCorTest(unittest.TestCase):
         }
         alg = create_algorithm('ReflectometryILLPolarizationCor', **args)
         assertRaisesNothing(self, alg.execute)
-        self.assertTrue(mtd.doesExist('corrected_++'))
+        self.assertTrue(mtd.doesExist('corrected_pp'))
 
 
 if __name__ == "__main__":

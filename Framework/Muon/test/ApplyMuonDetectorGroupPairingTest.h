@@ -230,8 +230,8 @@ public:
     setPairAlgorithmProperties(alg, setup.inputWSName, setup.groupWSName);
     alg.execute();
 
-    TS_ASSERT(setup.wsGroup->getItem("inputGroup; Pair; test; Asym; #1"));
-    TS_ASSERT(setup.wsGroup->getItem("inputGroup; Pair; test; Asym; #1_Raw"));
+    TS_ASSERT(setup.wsGroup->getItem("inputGroup;Pair;test;Asym;#1"));
+    TS_ASSERT(setup.wsGroup->getItem("inputGroup;Pair;test;Asym;#1_Raw"));
   }
 
   void test_workspacePairingHasCorrectAsymmetryValues() {
@@ -245,7 +245,7 @@ public:
     setPairAlgorithmProperties(alg, setup.inputWSName, setup.groupWSName);
     alg.execute();
     auto wsOut = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        setup.wsGroup->getItem("inputGroup; Pair; test; Asym; #1_Raw"));
+        setup.wsGroup->getItem("inputGroup;Pair;test;Asym;#1_Raw"));
 
     // Current behaviour is to convert bin edge x-values to bin centre x-values
     // (point data) so there is on fewer x-value now.
@@ -273,7 +273,7 @@ public:
     alg.setProperty("TimeOffset", 0.2);
     alg.execute();
     auto wsOut = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        setup.wsGroup->getItem("inputGroup; Pair; test; Asym; #1_Raw"));
+        setup.wsGroup->getItem("inputGroup;Pair;test;Asym;#1_Raw"));
 
     // Account for the bin edges to point data conversion
     double shift = 0.2 + 0.05;
@@ -308,7 +308,7 @@ public:
     alg.setProperty("SummedPeriods", "1,2");
     alg.execute();
     auto wsOut = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        setup.wsGroup->getItem("inputGroup; Pair; test; Asym; #1_Raw"));
+        setup.wsGroup->getItem("inputGroup;Pair;test;Asym;#1_Raw"));
 
     // Summation of periods occurs before asymmetry calculation
     TS_ASSERT_DELTA(wsOut->readX(0)[0], 0.050, 0.001);
@@ -338,7 +338,7 @@ public:
     alg.setProperty("SubtractedPeriods", "3");
     alg.execute();
     auto wsOut = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        setup.wsGroup->getItem("inputGroup; Pair; test; Asym; #1_Raw"));
+        setup.wsGroup->getItem("inputGroup;Pair;test;Asym;#1_Raw"));
 
     // Summation of periods occurs before asymmetry calculation
     // Subtraction of periods occurs AFTER asymmetry calculation
@@ -378,7 +378,7 @@ public:
     alg.execute();
 
     auto wsOut = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        setup.wsGroup->getItem("inputGroup; Pair; test; Asym; #1_Raw"));
+        setup.wsGroup->getItem("inputGroup;Pair;test;Asym;#1_Raw"));
 
     TS_ASSERT_DELTA(wsOut->readX(0)[0], 0.050, 0.001);
     TS_ASSERT_DELTA(wsOut->readX(0)[4], 0.450, 0.001);
@@ -408,8 +408,8 @@ public:
     MatrixWorkspace_sptr groupWS2 =
         MuonWorkspaceCreationHelper::createAsymmetryWorkspace(
             1, 10, MuonWorkspaceCreationHelper::yDataAsymmetry(1.0, 0.2));
-    const std::string groupWS1Name = "EMU000012345; Group; fwd; Counts; #1_Raw";
-    const std::string groupWS2Name = "EMU000012345; Group; bwd; Counts; #1_Raw";
+    const std::string groupWS1Name = "EMU000012345;Group;fwd;Counts;#1_Raw";
+    const std::string groupWS2Name = "EMU000012345;Group;bwd;Counts;#1_Raw";
     AnalysisDataService::Instance().addOrReplace(groupWS1Name, groupWS1);
     AnalysisDataService::Instance().addOrReplace(groupWS2Name, groupWS2);
     setup.wsGroup->add(groupWS1Name);
@@ -419,7 +419,7 @@ public:
     alg.execute();
 
     auto wsOut = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        setup.wsGroup->getItem("inputGroup; Pair; test; Asym; #1_Raw"));
+        setup.wsGroup->getItem("inputGroup;Pair;test;Asym;#1_Raw"));
 
     TS_ASSERT_DELTA(wsOut->readX(0)[0], 0.050, 0.001);
     TS_ASSERT_DELTA(wsOut->readX(0)[4], 0.450, 0.001);
@@ -450,8 +450,8 @@ public:
     MatrixWorkspace_sptr groupWS2 =
         MuonWorkspaceCreationHelper::createAsymmetryWorkspace(
             1, 10, MuonWorkspaceCreationHelper::yDataAsymmetry(1.0, 0.2));
-    const std::string groupWS1Name = "EMU000012345; Group; fwd; Counts; #1_Raw";
-    const std::string groupWS2Name = "EMU000012345; Group; bwd; Counts; #1_Raw";
+    const std::string groupWS1Name = "EMU000012345;Group;fwd;Counts;#1_Raw";
+    const std::string groupWS2Name = "EMU000012345;Group;bwd;Counts;#1_Raw";
     AnalysisDataService::Instance().addOrReplace(groupWS1Name, groupWS1);
     AnalysisDataService::Instance().addOrReplace(groupWS2Name, groupWS2);
     setup.wsGroup->add(groupWS1Name);
@@ -478,8 +478,8 @@ public:
     MatrixWorkspace_sptr groupWS2 =
         MuonWorkspaceCreationHelper::createAsymmetryWorkspace(
             1, 20, MuonWorkspaceCreationHelper::yDataAsymmetry(1.0, 0.2));
-    const std::string groupWS1Name = "EMU000012345; Group; fwd; Counts; #1_Raw";
-    const std::string groupWS2Name = "EMU000012345; Group; bwd; Counts; #1_Raw";
+    const std::string groupWS1Name = "EMU000012345;Group;fwd;Counts;#1_Raw";
+    const std::string groupWS2Name = "EMU000012345;Group;bwd;Counts;#1_Raw";
     AnalysisDataService::Instance().addOrReplace(groupWS1Name, groupWS1);
     AnalysisDataService::Instance().addOrReplace(groupWS2Name, groupWS2);
     setup.wsGroup->add(groupWS1Name);

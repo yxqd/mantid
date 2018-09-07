@@ -31,8 +31,8 @@ def _clearlatex(s):
     """Return string s with special LaTeX characters removed."""
     for c in ['%', '_', '$', '&', '\\', '^', '{', '}',]:
         s = s.replace(c, '')
+    s = s.replace('-','m')
     return s
-
 
 def _configurematplotlib(params):
     """Set matplotlib rc parameters from the params dictionary."""
@@ -432,7 +432,7 @@ def plotcuts(direction, workspaces, cuts, widths, quantity, unit, style='l', kee
                     wsStr = str(wsCount)
                 quantityStr = _clearlatex(quantity)
                 unitStr = _clearlatex(unit)
-                wsName = 'cut_{}_{}={}+-{}{}'.format(wsStr, quantityStr, cut, width, unitStr)
+                wsName = 'cut_{}_{}={}pm{}{}'.format(wsStr, quantityStr, cut, width, unitStr)
                 if keepCutWorkspaces:
                     cutWSList.append(wsName)
                 line = LineProfile(ws, cut, width, Direction=direction,

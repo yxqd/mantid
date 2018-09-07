@@ -80,16 +80,16 @@ public:
 
   void test_createTable_throws_noWorkspaces() {
     const QStringList workspaces;
-    this->setUpLogs(QStringList{"EMU00020918; Pair; long; Asym; #1",
-                                "EMU00020919; Pair; long; Asym; #1"});
+    this->setUpLogs(QStringList{"EMU00020918;Pair;long;Asym;#1",
+                                "EMU00020919;Pair;long;Asym;#1"});
     MuonAnalysisResultTableCreator creator(workspaces, m_logs, &m_logValues,
                                            false);
     TS_ASSERT_THROWS(creator.createTable(), std::runtime_error);
   }
 
   void test_createTable_throws_noLogs() {
-    const QStringList workspaces{"EMU00020918; Pair; long; Asym; #1",
-                                 "EMU00020919; Pair; long; Asym; #1"};
+    const QStringList workspaces{"EMU00020918;Pair;long;Asym;#1",
+                                 "EMU00020919;Pair;long;Asym;#1"};
 
     this->setUpLogs(workspaces);
     MuonAnalysisResultTableCreator creator(workspaces, QStringList(),
@@ -100,28 +100,24 @@ public:
   /// Two separate fits of one run each
   void test_createTable_singleFits() {
     // Set up
-    const QStringList workspaces{"EMU00020918; Pair; long; Asym; #1",
-                                 "EMU00020919; Pair; long; Asym; #1"};
+    const QStringList workspaces{"EMU00020918;Pair;long;Asym;#1",
+                                 "EMU00020919;Pair;long;Asym;#1"};
     this->setUpLogs(workspaces);
     RAII_ADS ads;
-    ads.add("EMU00020918; Pair; long; Asym; #1_Workspace",
+    ads.add("EMU00020918;Pair;long;Asym;#1_Workspace",
             getWorkspace(m_firstRun));
-    ads.add("EMU00020919; Pair; long; Asym; #1_Workspace",
+    ads.add("EMU00020919;Pair;long;Asym;#1_Workspace",
             getWorkspace(m_firstRun + 1));
-    ads.add("EMU00020918; Pair; long; Asym; #1_Parameters",
+    ads.add("EMU00020918;Pair;long;Asym;#1_Parameters",
             getParamTable(m_firstRun));
-    ads.add("EMU00020919; Pair; long; Asym; #1_Parameters",
+    ads.add("EMU00020919;Pair;long;Asym;#1_Parameters",
             getParamTable(m_firstRun + 1));
     ads.add("EMU00020918", boost::make_shared<WorkspaceGroup>());
     ads.add("EMU00020919", boost::make_shared<WorkspaceGroup>());
-    ads.addToGroup("EMU00020918",
-                   "EMU00020918; Pair; long; Asym; #1_Workspace");
-    ads.addToGroup("EMU00020918",
-                   "EMU00020918; Pair; long; Asym; #1_Parameters");
-    ads.addToGroup("EMU00020919",
-                   "EMU00020919; Pair; long; Asym; #1_Workspace");
-    ads.addToGroup("EMU00020919",
-                   "EMU00020919; Pair; long; Asym; #1_Parameters");
+    ads.addToGroup("EMU00020918", "EMU00020918;Pair;long;Asym;#1_Workspace");
+    ads.addToGroup("EMU00020918", "EMU00020918;Pair;long;Asym;#1_Parameters");
+    ads.addToGroup("EMU00020919", "EMU00020919;Pair;long;Asym;#1_Workspace");
+    ads.addToGroup("EMU00020919", "EMU00020919;Pair;long;Asym;#1_Parameters");
 
     // Test
     MuonAnalysisResultTableCreator creator(workspaces, m_logs, &m_logValues,
@@ -136,28 +132,24 @@ public:
 
   void test_createTable_singleFits_differentModels_throws() {
     // Set up
-    const QStringList workspaces{"EMU00020918; Pair; long; Asym; #1",
-                                 "EMU00020919; Pair; long; Asym; #1"};
+    const QStringList workspaces{"EMU00020918;Pair;long;Asym;#1",
+                                 "EMU00020919;Pair;long;Asym;#1"};
     this->setUpLogs(workspaces);
     RAII_ADS ads;
-    ads.add("EMU00020918; Pair; long; Asym; #1_Workspace",
+    ads.add("EMU00020918;Pair;long;Asym;#1_Workspace",
             getWorkspace(m_firstRun));
-    ads.add("EMU00020919; Pair; long; Asym; #1_Workspace",
+    ads.add("EMU00020919;Pair;long;Asym;#1_Workspace",
             getWorkspace(m_firstRun + 1));
-    ads.add("EMU00020918; Pair; long; Asym; #1_Parameters",
+    ads.add("EMU00020918;Pair;long;Asym;#1_Parameters",
             getParamTable(m_firstRun));
-    ads.add("EMU00020919; Pair; long; Asym; #1_Parameters",
+    ads.add("EMU00020919;Pair;long;Asym;#1_Parameters",
             getAlternateParamTable());
     ads.add("EMU00020918", boost::make_shared<WorkspaceGroup>());
     ads.add("EMU00020919", boost::make_shared<WorkspaceGroup>());
-    ads.addToGroup("EMU00020918",
-                   "EMU00020918; Pair; long; Asym; #1_Workspace");
-    ads.addToGroup("EMU00020918",
-                   "EMU00020918; Pair; long; Asym; #1_Parameters");
-    ads.addToGroup("EMU00020919",
-                   "EMU00020919; Pair; long; Asym; #1_Workspace");
-    ads.addToGroup("EMU00020919",
-                   "EMU00020919; Pair; long; Asym; #1_Parameters");
+    ads.addToGroup("EMU00020918", "EMU00020918;Pair;long;Asym;#1_Workspace");
+    ads.addToGroup("EMU00020918", "EMU00020918;Pair;long;Asym;#1_Parameters");
+    ads.addToGroup("EMU00020919", "EMU00020919;Pair;long;Asym;#1_Workspace");
+    ads.addToGroup("EMU00020919", "EMU00020919;Pair;long;Asym;#1_Parameters");
 
     // Test
     MuonAnalysisResultTableCreator creator(workspaces, m_logs, &m_logValues,
@@ -301,8 +293,8 @@ public:
   }
 
   void test_haveSameParameters_Yes() {
-    const QStringList workspaces{"EMU00020918; Pair; long; Asym; #1",
-                                 "EMU00020919; Pair; long; Asym; #1"};
+    const QStringList workspaces{"EMU00020918;Pair;long;Asym;#1",
+                                 "EMU00020919;Pair;long;Asym;#1"};
     this->setUpLogs(workspaces);
     TestCreator creator(workspaces, m_logs, &m_logValues);
 
@@ -316,8 +308,8 @@ public:
   }
 
   void test_haveSameParameters_No() {
-    const QStringList workspaces{"EMU00020918; Pair; long; Asym; #1",
-                                 "EMU00020919; Pair; long; Asym; #1"};
+    const QStringList workspaces{"EMU00020918;Pair;long;Asym;#1",
+                                 "EMU00020919;Pair;long;Asym;#1"};
     this->setUpLogs(workspaces);
     TestCreator creator(workspaces, m_logs, &m_logValues);
 
@@ -331,8 +323,8 @@ public:
   }
 
   void test_removeFixedParameterErrors() {
-    const QStringList workspaces{"EMU00020918; Pair; long; Asym; #1",
-                                 "EMU00020919; Pair; long; Asym; #1"};
+    const QStringList workspaces{"EMU00020918;Pair;long;Asym;#1",
+                                 "EMU00020919;Pair;long;Asym;#1"};
     this->setUpLogs(workspaces);
     TestCreator creator(workspaces, m_logs, &m_logValues);
 

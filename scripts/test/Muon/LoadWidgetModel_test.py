@@ -60,7 +60,7 @@ class LoadUtilsTest(unittest.TestCase):
             workspace = self.var_ws_name.format(detector, self.test_run)
             workspaces.append(workspace)
             mantid.CreateSampleWorkspace(OutputWorkspace=workspace).getName()
-            output.append("{}; Detector {}".format(self.test_run, detector))
+            output.append("{};_Detector_{}".format(self.test_run, detector))
         self.assertEquals(
             lutils.group_by_detector(
                 self.test_run,

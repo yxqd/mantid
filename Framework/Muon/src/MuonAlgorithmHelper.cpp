@@ -105,7 +105,7 @@ std::string getRunLabel(const std::string &instrument,
     // Only pad the first set
     zeroPadding = 0;
     if (range != ranges.back()) {
-      label << ", ";
+      label << ",";
     }
   }
 
@@ -228,7 +228,7 @@ void groupWorkspaces(const std::string &groupName,
  */
 std::string generateWorkspaceName(const Muon::DatasetParams &params) {
   std::ostringstream workspaceName;
-  const static std::string sep("; ");
+  const static std::string sep(";");
 
   // Instrument and run number
   if (params.label.empty()) {

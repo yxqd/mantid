@@ -61,12 +61,13 @@ def group_by_detector(run, workspaces):
     """ where workspaces is a tuple of form:
             (filepath, ws name)
     """
-    d_string = "{}; Detector {}"
+    d_string = "{};_Detector_{}"
     detectors = {d_string.format(run, x): [] for x in range(1, 5)}
     for workspace in workspaces:
         detector_number = get_detector_num_from_ws(workspace)
         detectors[d_string.format(run, detector_number)].append(workspace)
     for detector, workspace_list in iteritems(detectors):
+        print(str(detector))
         mantid.GroupWorkspaces(workspace_list, OutputWorkspace=str(detector))
     detector_list = sorted(list(detectors))
     group_grouped_workspaces(run, detector_list)

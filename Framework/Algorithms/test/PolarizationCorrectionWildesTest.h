@@ -161,18 +161,18 @@ public:
         for (size_t k = 0; k != nBins; ++k) {
           const double y = counts[k];
           const double expected = [y, &dir]() {
-            if (dir == "++") {
+            if (dir == "pp") {
               return y;
-            } else if (dir == "--") {
+            } else if (dir == "mm") {
               return 2. * y;
             } else {
               return 0.;
             }
           }();
           const double expectedError = [y, &dir]() {
-            if (dir == "++") {
+            if (dir == "pp") {
               return std::sqrt(y);
-            } else if (dir == "--") {
+            } else if (dir == "mm") {
               return 2. * std::sqrt(y);
             } else {
               return 0.;
@@ -225,7 +225,7 @@ public:
     WorkspaceGroup_sptr outputWS = alg.getProperty("OutputWorkspace");
     TS_ASSERT(outputWS)
     TS_ASSERT_EQUALS(outputWS->getNumberOfEntries(), 2)
-    const std::array<std::string, 2> POL_DIRS{{"++", "--"}};
+    const std::array<std::string, 2> POL_DIRS{{"pp", "mm"}};
     for (size_t i = 0; i != 2; ++i) {
       const auto &dir = POL_DIRS[i];
       const std::string wsName = m_outputWSName + std::string("_") + dir;
@@ -279,7 +279,7 @@ public:
     TS_ASSERT(outputWS)
     TS_ASSERT_EQUALS(outputWS->getNumberOfEntries(), 1)
     MatrixWorkspace_sptr ws = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        outputWS->getItem(m_outputWSName + std::string("_++")));
+        outputWS->getItem(m_outputWSName + std::string("_pp")));
     TS_ASSERT(ws)
     TS_ASSERT_EQUALS(ws->getNumberHistograms(), nHist)
     for (size_t i = 0; i != nHist; ++i) {
@@ -403,13 +403,13 @@ public:
                             ws10->e(0).front(), ws11->e(0).front()};
     const auto expectedError = error(y, e, F1, F1e, F2, F2e, P1, P1e, P2, P2e);
     MatrixWorkspace_sptr ppWS = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        outputWS->getItem(m_outputWSName + std::string("_++")));
+        outputWS->getItem(m_outputWSName + std::string("_pp")));
     MatrixWorkspace_sptr pmWS = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        outputWS->getItem(m_outputWSName + std::string("_+-")));
+        outputWS->getItem(m_outputWSName + std::string("_pm")));
     MatrixWorkspace_sptr mpWS = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        outputWS->getItem(m_outputWSName + std::string("_-+")));
+        outputWS->getItem(m_outputWSName + std::string("_mp")));
     MatrixWorkspace_sptr mmWS = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        outputWS->getItem(m_outputWSName + std::string("_--")));
+        outputWS->getItem(m_outputWSName + std::string("_mm")));
     TS_ASSERT(ppWS)
     TS_ASSERT(pmWS)
     TS_ASSERT(mpWS)
@@ -509,9 +509,9 @@ public:
     const Eigen::Vector2d e{ws00->e(0).front(), ws11->e(0).front()};
     const auto expectedError = errorWithoutAnalyzer(y, e, F1, F1e, P1, P1e);
     MatrixWorkspace_sptr ppWS = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        outputWS->getItem(m_outputWSName + std::string("_++")));
+        outputWS->getItem(m_outputWSName + std::string("_pp")));
     MatrixWorkspace_sptr mmWS = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        outputWS->getItem(m_outputWSName + std::string("_--")));
+        outputWS->getItem(m_outputWSName + std::string("_mm")));
     TS_ASSERT(ppWS)
     TS_ASSERT(mmWS)
     TS_ASSERT_EQUALS(ppWS->getNumberHistograms(), nHist)
@@ -580,7 +580,7 @@ public:
     const auto expectedError =
         std::sqrt(errorP1 * errorP1 + errorP2 * errorP2 + errorY);
     MatrixWorkspace_sptr ppWS = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        outputWS->getItem(m_outputWSName + std::string("_++")));
+        outputWS->getItem(m_outputWSName + std::string("_pp")));
     TS_ASSERT(ppWS)
     TS_ASSERT_EQUALS(ppWS->getNumberHistograms(), nHist)
     for (size_t j = 0; j != nHist; ++j) {
@@ -811,7 +811,7 @@ private:
     WorkspaceGroup_sptr outputWS = alg.getProperty("OutputWorkspace");
     TS_ASSERT(outputWS)
     TS_ASSERT_EQUALS(outputWS->getNumberOfEntries(), 4)
-    const std::array<std::string, 4> POL_DIRS{{"++", "+-", "-+", "--"}};
+    const std::array<std::string, 4> POL_DIRS{{"pp", "pm", "mp", "mm"}};
     for (size_t i = 0; i != 4; ++i) {
       const auto &dir = POL_DIRS[i];
       const std::string wsName = m_outputWSName + std::string("_") + dir;
@@ -827,22 +827,22 @@ private:
         for (size_t k = 0; k != nBins; ++k) {
           const double y = counts[k];
           const double expected = [y, &dir]() {
-            if (dir == "++") {
+            if (dir == "pp") {
               return y;
-            } else if (dir == "--") {
+            } else if (dir == "mm") {
               return 3. * y;
             } else {
               return 2. * y;
             }
           }();
           const double expectedError = [y, &dir, &missingFlipperConf]() {
-            if (dir == "++") {
+            if (dir == "pp") {
               return std::sqrt(y);
-            } else if (dir == "--") {
+            } else if (dir == "mm") {
               return 3. * std::sqrt(y);
             } else {
-              std::string conf = std::string(dir.front() == '+' ? "0" : "1") +
-                                 std::string(dir.back() == '+' ? "0" : "1");
+              std::string conf = std::string(dir.front() == 'p' ? "0" : "1") +
+                                 std::string(dir.back() == 'p' ? "0" : "1");
               if (conf != missingFlipperConf) {
                 return 2. * std::sqrt(y);
               } else {
@@ -932,13 +932,13 @@ private:
                             ws10->e(0).front(), ws11->e(0).front()};
     const auto expectedError = error(y, e, F1, F1e, F2, F2e, P1, P1e, P2, P2e);
     MatrixWorkspace_sptr ppWS = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        outputWS->getItem(m_outputWSName + std::string("_++")));
+        outputWS->getItem(m_outputWSName + std::string("_pp")));
     MatrixWorkspace_sptr pmWS = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        outputWS->getItem(m_outputWSName + std::string("_+-")));
+        outputWS->getItem(m_outputWSName + std::string("_pm")));
     MatrixWorkspace_sptr mpWS = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        outputWS->getItem(m_outputWSName + std::string("_-+")));
+        outputWS->getItem(m_outputWSName + std::string("_mp")));
     MatrixWorkspace_sptr mmWS = boost::dynamic_pointer_cast<MatrixWorkspace>(
-        outputWS->getItem(m_outputWSName + std::string("_--")));
+        outputWS->getItem(m_outputWSName + std::string("_mm")));
     TS_ASSERT(ppWS)
     TS_ASSERT(pmWS)
     TS_ASSERT(mpWS)

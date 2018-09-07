@@ -127,7 +127,7 @@ public:
               "EMU", *it));
     }
     std::string label = getRunLabel(list);
-    TS_ASSERT_EQUALS(label, "EMU00000001-3, 5-6, 8, 10-4");
+    TS_ASSERT_EQUALS(label, "EMU00000001-3,5-6,8,10-4");
   }
 
   void test_getRunLabel_wsList_nonConsecutive_wrongOrder() {
@@ -139,7 +139,7 @@ public:
               "EMU", *it));
     }
     std::string label = getRunLabel(list);
-    TS_ASSERT_EQUALS(label, "EMU00000001-3, 5-6, 8, 10-4");
+    TS_ASSERT_EQUALS(label, "EMU00000001-3,5-6,8,10-4");
   }
 
   void test_getRunLabel_noWS_singleRun() {
@@ -149,7 +149,7 @@ public:
 
   void test_getRunLabel_noWS_severalRuns() {
     const std::string label = getRunLabel("MUSR", {15189, 15190, 15192});
-    TS_ASSERT_EQUALS(label, "MUSR00015189-90, 15192");
+    TS_ASSERT_EQUALS(label, "MUSR00015189-90,15192");
   }
 
   /// Test an instrument with no IDF and a run number of zero
@@ -192,7 +192,7 @@ public:
     params.version = 2;
     const std::string wsName = generateWorkspaceName(params);
     const std::string expected =
-        "MUSR00015189-90, 15192; Group; fwd; Counts; 1+3-2+4; #2";
+        "MUSR00015189-90,15192;Group;fwd;Counts;1+3-2+4;#2";
     TS_ASSERT_EQUALS(expected, wsName);
   }
 
@@ -206,8 +206,7 @@ public:
     params.periods = "";
     params.version = 2;
     const std::string wsName = generateWorkspaceName(params);
-    const std::string expected =
-        "MUSR00015189-90, 15192; Group; fwd; Counts; #2";
+    const std::string expected = "MUSR00015189-90,15192;Group;fwd;Counts;#2";
     TS_ASSERT_EQUALS(expected, wsName);
   }
 
@@ -222,8 +221,7 @@ public:
     params.periods = "1+3-2+4";
     params.version = 2;
     const std::string wsName = generateWorkspaceName(params);
-    const std::string expected =
-        "MyLabel00123; Group; fwd; Counts; 1+3-2+4; #2";
+    const std::string expected = "MyLabel00123;Group;fwd;Counts;1+3-2+4;#2";
     TS_ASSERT_EQUALS(expected, wsName);
   }
 
@@ -390,12 +388,12 @@ public:
 
   void test_parseWorkspaceNameParsesCorrectly() {
     const std::string workspaceName =
-        "MUSR00015189-90, 15192; Group; fwd; Counts; 1+3-2+4; #2";
+        "MUSR00015189-90,15192;Group;fwd;Counts;1+3-2+4;#2";
     const std::vector<int> expectedRuns{15189, 15190, 15192};
     const auto params = parseWorkspaceName(workspaceName);
     TS_ASSERT_EQUALS(params.instrument, "MUSR");
     TS_ASSERT_EQUALS(params.runs, expectedRuns);
-    TS_ASSERT_EQUALS(params.label, "MUSR00015189-90, 15192");
+    TS_ASSERT_EQUALS(params.label, "MUSR00015189-90,15192");
     TS_ASSERT_EQUALS(params.itemType, Muon::ItemType::Group);
     TS_ASSERT_EQUALS(params.itemName, "fwd");
     TS_ASSERT_EQUALS(params.plotType, Muon::PlotType::Counts);
@@ -405,12 +403,12 @@ public:
 
   void test_parseWorkspaceName_noPeriods() {
     const std::string workspaceName =
-        "MUSR00015189-90, 15192; Group; fwd; Counts; #2";
+        "MUSR00015189-90,15192;Group;fwd;Counts;#2";
     const std::vector<int> expectedRuns{15189, 15190, 15192};
     const auto params = parseWorkspaceName(workspaceName);
     TS_ASSERT_EQUALS(params.instrument, "MUSR");
     TS_ASSERT_EQUALS(params.runs, expectedRuns);
-    TS_ASSERT_EQUALS(params.label, "MUSR00015189-90, 15192");
+    TS_ASSERT_EQUALS(params.label, "MUSR00015189-90,15192");
     TS_ASSERT_EQUALS(params.itemType, Muon::ItemType::Group);
     TS_ASSERT_EQUALS(params.itemName, "fwd");
     TS_ASSERT_EQUALS(params.plotType, Muon::PlotType::Counts);
@@ -463,10 +461,10 @@ public:
 
   void test_checkValidPair_throws_if_incorrect_name_format() {
     const std::string validWorkspaceName =
-        "MUSR00015189; Group; fwd; Counts; 1+2; #1";
+        "MUSR00015189;Group;fwd;Counts;1+2;#1";
     std::vector<std::string> invalidWorkspaceNames = {
-        "MUSR00015189; Soup; fwd; Counts; 1+2; #1",
-        "MUSR00015189; Group; fwd; Couts; 1+2; #1", "MuonGroupWorkspace"};
+        "MUSR00015189;Soup;fwd;Counts;1+2;#1",
+        "MUSR00015189;Group;fwd;Couts;1+2;#1", "MuonGroupWorkspace"};
 
     for (auto &&invalidName : invalidWorkspaceNames)
       TS_ASSERT_THROWS(checkValidPair(validWorkspaceName, invalidName),
@@ -475,27 +473,27 @@ public:
 
   void test_checkValidPair_throws_if_ItemType_Asym() {
     const std::string validWorkspaceName =
-        "EMU000015189; Group; fwd; Counts; 1+2; #1";
+        "EMU000015189;Group;fwd;Counts;1+2;#1";
     const std::string invalidWorkspaceName =
-        "EMU000015189; Group; fwd; Asym; 1+2; #1";
+        "EMU000015189;Group;fwd;Asym;1+2;#1";
     TS_ASSERT_THROWS(checkValidPair(validWorkspaceName, invalidWorkspaceName),
                      std::invalid_argument);
   }
 
   void test_checkValidPair_throws_if_different_instruments() {
     const std::string validWorkspaceName =
-        "EMU000015189; Group; fwd; Counts; 1+2; #1";
+        "EMU000015189;Group;fwd;Counts;1+2;#1";
     const std::string invalidWorkspaceName =
-        "MUSR00015189; Group; fwd; Counts; 1+2; #1";
+        "MUSR00015189;Group;fwd;Counts;1+2;#1";
     TS_ASSERT_THROWS(checkValidPair(validWorkspaceName, invalidWorkspaceName),
                      std::invalid_argument);
   }
 
   void test_checkValidPair_does_not_throw_if_same_group() {
     const std::string validWorkspaceName =
-        "EMU000015189; Group; fwd; Counts; 1+2; #1";
+        "EMU000015189;Group;fwd;Counts;1+2;#1";
     const std::string invalidWorkspaceName =
-        "EMU000015189; Group; fwd; Counts; 1+2; #1";
+        "EMU000015189;Group;fwd;Counts;1+2;#1";
     TS_ASSERT_THROWS(checkValidPair(validWorkspaceName, invalidWorkspaceName),
                      std::invalid_argument);
   }

@@ -193,7 +193,7 @@ public:
 
   void test_setAssignedFirstRun_singleWorkspace() {
     setupGroupPeriodSelections();
-    const QString wsName("MUSR00015189; Pair; long; Asym; 1; #1");
+    const QString wsName("MUSR00015189;Pair;long;Asym;1;#1");
     EXPECT_CALL(*m_dataSelector,
                 setWorkspaceDetails(QString("00015189"), QString("MUSR"),
                                     Eq(boost::optional<QString>{})))
@@ -203,7 +203,7 @@ public:
 
   void test_setAssignedFirstRun_contiguousRange() {
     setupGroupPeriodSelections();
-    const QString wsName("MUSR00015189-91; Pair; long; Asym; 1; #1");
+    const QString wsName("MUSR00015189-91;Pair;long;Asym;1;#1");
     EXPECT_CALL(*m_dataSelector,
                 setWorkspaceDetails(QString("00015189-91"), QString("MUSR"),
                                     Eq(boost::optional<QString>{})))
@@ -217,7 +217,7 @@ public:
 
   void test_setAssignedFirstRun_nonContiguousRange() {
     setupGroupPeriodSelections();
-    const QString wsName("MUSR00015189-91, 15193; Pair; long; Asym; 1; #1");
+    const QString wsName("MUSR00015189-91, 15193;Pair;long;Asym;1;#1");
     EXPECT_CALL(*m_dataSelector,
                 setWorkspaceDetails(QString("00015189-91, 15193"),
                                     QString("MUSR"),
@@ -233,7 +233,7 @@ public:
 
   void test_setAssignedFirstRun_alreadySet() {
     setupGroupPeriodSelections();
-    const QString wsName("MUSR00015189; Pair; long; Asym; 1; #1");
+    const QString wsName("MUSR00015189;Pair;long;Asym;1;#1");
     m_presenter->setAssignedFirstRun(wsName, boost::none);
     EXPECT_CALL(*m_dataSelector, setWorkspaceDetails(_, _, _)).Times(0);
     EXPECT_CALL(*m_fitBrowser, allowSequentialFits(_)).Times(0);
@@ -249,7 +249,7 @@ public:
     setupGroupPeriodSelections();
     const boost::optional<QString> currentRunPath{
         R"(\\musr\data\MUSRauto_A.tmp)"};
-    const QString wsName("MUSR00061335; Pair; long; Asym; 1; #1");
+    const QString wsName("MUSR00061335;Pair;long;Asym;1;#1");
     EXPECT_CALL(*m_dataSelector,
                 setWorkspaceDetails(QString("00061335"), QString("MUSR"),
                                     Eq(currentRunPath)))
@@ -260,7 +260,7 @@ public:
 
   void test_getAssignedFirstRun() {
     setupGroupPeriodSelections();
-    const QString wsName("MUSR00015189; Pair; long; Asym; 1; #1");
+    const QString wsName("MUSR00015189;Pair;long;Asym;1;#1");
     // m_presenter->setAssignedFirstRun(wsName, boost::none);
     localSetAssignedFirstRun(wsName, boost::none);
     TS_ASSERT_EQUALS(wsName, m_presenter->getAssignedFirstRun());
@@ -288,7 +288,7 @@ public:
         .Times(1)
         .WillOnce(Return(QStringList({"1"})));
     createFittedWorkspacesGroup("UserSelectedFitLabel",
-                                {"MUSR00015189; Group; fwd; Asym; 1; #1"});
+                                {"MUSR00015189;Group;fwd;Asym;1;#1"});
     const auto workspacesBefore =
         AnalysisDataService::Instance().getObjectNames();
     m_presenter->handleFitFinished();
@@ -311,8 +311,8 @@ public:
         .Times(1)
         .WillOnce(Return(QStringList({"1", "2"})));
     createFittedWorkspacesGroup("UserSelectedFitLabel",
-                                {"MUSR00015189; Group; fwd; Asym; 1; #1",
-                                 "MUSR00015189; Group; fwd; Asym; 2; #1"});
+                                {"MUSR00015189;Group;fwd;Asym;1;#1",
+                                 "MUSR00015189;Group;fwd;Asym;2;#1"});
     const auto workspacesBefore =
         AnalysisDataService::Instance().getObjectNames();
     m_presenter->handleFitFinished();
@@ -334,8 +334,8 @@ public:
     ON_CALL(*m_dataSelector, getPeriodSelections())
         .WillByDefault(Return(QStringList({"1"})));
     createFittedWorkspacesGroup("UserSelectedFitLabel",
-                                {"MUSR00015189-90; Group; fwd; Asym; 1; #1",
-                                 "MUSR00015189-90; Group; bwd; Asym; 1; #1"});
+                                {"MUSR00015189-90;Group;fwd;Asym;1;#1",
+                                 "MUSR00015189-90;Group;bwd;Asym;1;#1"});
     const auto workspacesBefore =
         AnalysisDataService::Instance().getObjectNames();
     m_presenter->handleFitFinished();
@@ -357,8 +357,7 @@ public:
         .WillByDefault(Return(QStringList({"1"})));
     const std::string label = "UserSelectedFitLabel";
     const std::vector<std::string> inputNames{
-        "MUSR00015189; Pair; long; Asym; 1; #1",
-        "MUSR00015190; Pair; long; Asym; 1; #1"};
+        "MUSR00015189;Pair;long;Asym;1;#1", "MUSR00015190;Pair;long;Asym;1;#1"};
     createFittedWorkspacesGroup(label, inputNames);
     m_presenter->handleFitFinished();
     checkFittedWorkspacesHandledCorrectly(label, inputNames);
@@ -385,29 +384,27 @@ public:
 
   void test_generateWorkspaceNames_CoAdd() {
     doTest_generateWorkspaceNames(IMuonFitDataSelector::FitType::CoAdd, false,
-                                  {"MUSR00015189-91; Pair; long; Asym; 1; #1"});
+                                  {"MUSR00015189-91;Pair;long;Asym;1;#1"});
   }
 
   void test_generateWorkspaceNames_CoAdd_Raw() {
-    doTest_generateWorkspaceNames(
-        IMuonFitDataSelector::FitType::CoAdd, true,
-        {"MUSR00015189-91; Pair; long; Asym; 1; #1_Raw"});
+    doTest_generateWorkspaceNames(IMuonFitDataSelector::FitType::CoAdd, true,
+                                  {"MUSR00015189-91;Pair;long;Asym;1;#1_Raw"});
   }
 
   void test_generateWorkspaceNames_Simultaneous() {
-    doTest_generateWorkspaceNames(IMuonFitDataSelector::FitType::Simultaneous,
-                                  false,
-                                  {"MUSR00015189; Pair; long; Asym; 1; #1",
-                                   "MUSR00015190; Pair; long; Asym; 1; #1",
-                                   "MUSR00015191; Pair; long; Asym; 1; #1"});
+    doTest_generateWorkspaceNames(
+        IMuonFitDataSelector::FitType::Simultaneous, false,
+        {"MUSR00015189;Pair;long;Asym;1;#1", "MUSR00015190;Pair;long;Asym;1;#1",
+         "MUSR00015191;Pair;long;Asym;1;#1"});
   }
 
   void test_generateWorkspaceNames_Simultaneous_Raw() {
-    doTest_generateWorkspaceNames(
-        IMuonFitDataSelector::FitType::Simultaneous, true,
-        {"MUSR00015189; Pair; long; Asym; 1; #1_Raw",
-         "MUSR00015190; Pair; long; Asym; 1; #1_Raw",
-         "MUSR00015191; Pair; long; Asym; 1; #1_Raw"});
+    doTest_generateWorkspaceNames(IMuonFitDataSelector::FitType::Simultaneous,
+                                  true,
+                                  {"MUSR00015189;Pair;long;Asym;1;#1_Raw",
+                                   "MUSR00015190;Pair;long;Asym;1;#1_Raw",
+                                   "MUSR00015191;Pair;long;Asym;1;#1_Raw"});
   }
 
   void test_generateWorkspaceNames_noInstrument() {
@@ -424,8 +421,7 @@ public:
   void test_createWorkspacesToFit_AlreadyExists() {
     // Put workspace into ADS under this name
     auto &ads = AnalysisDataService::Instance();
-    const std::vector<std::string> names{
-        "MUSR00015189; Pair; long; Asym; 1; #1"};
+    const std::vector<std::string> names{"MUSR00015189;Pair;long;Asym;1;#1"};
     const auto ws = WorkspaceFactory::Instance().create("Workspace2D", 1, 1, 1);
     ads.add(names[0], ws);
     m_presenter->createWorkspacesToFit(names);
@@ -440,9 +436,8 @@ public:
     ON_CALL(*m_dataSelector, getStartTime()).WillByDefault(Return(0.1));
     ON_CALL(*m_dataSelector, getEndTime()).WillByDefault(Return(9.9));
     auto &ads = AnalysisDataService::Instance();
-    const std::vector<std::string> names{
-        "MUSR00015189; Pair; long; Asym; 1; #1",
-        "MUSR00015189; Group; fwd; Asym; 1; #1"};
+    const std::vector<std::string> names{"MUSR00015189;Pair;long;Asym;1;#1",
+                                         "MUSR00015189;Group;fwd;Asym;1;#1"};
     m_presenter->createWorkspacesToFit(names);
     // Make sure workspaces have been created and grouped together
     const auto group = ads.retrieveWS<WorkspaceGroup>("MUSR00015189");
@@ -457,8 +452,8 @@ public:
     ON_CALL(*m_dataSelector, getEndTime()).WillByDefault(Return(9.9));
     auto &ads = AnalysisDataService::Instance();
     const std::vector<std::string> names{
-        "MUSR00015189; Pair; long; Asym; 1; #1_Raw",
-        "MUSR00015189; Group; fwd; Asym; 1; #1_Raw"};
+        "MUSR00015189;Pair;long;Asym;1;#1_Raw",
+        "MUSR00015189;Group;fwd;Asym;1;#1_Raw"};
     m_presenter->createWorkspacesToFit(names);
     // Make sure workspaces have been created and grouped together
     const auto group = ads.retrieveWS<WorkspaceGroup>("MUSR00015189");
@@ -471,8 +466,7 @@ public:
   void test_handleFittedWorkspaces_defaultGroupName() {
     const std::string label = "UserSelectedFitLabel";
     const std::vector<std::string> inputNames{
-        "MUSR00015189; Pair; long; Asym; 1; #1",
-        "MUSR00015190; Pair; long; Asym; 1; #1"};
+        "MUSR00015189;Pair;long;Asym;1;#1", "MUSR00015190;Pair;long;Asym;1;#1"};
     createFittedWorkspacesGroup(label, inputNames);
     const std::string baseName = "MuonSimulFit_" + label;
     m_presenter->handleFittedWorkspaces(baseName);
@@ -483,8 +477,7 @@ public:
   void test_handleFittedWorkspaces_otherGroupName() {
     const std::string label = "UserSelectedFitLabel";
     const std::vector<std::string> inputNames{
-        "MUSR00015189; Pair; long; Asym; 1; #1",
-        "MUSR00015189; Group; fwd; Asym; 1; #1"};
+        "MUSR00015189;Pair;long;Asym;1;#1", "MUSR00015189;Group;fwd;Asym;1;#1"};
     createFittedWorkspacesGroup(label, inputNames, true);
     const std::string baseName = "MuonSimulFit_" + label;
     m_presenter->handleFittedWorkspaces(baseName + "_MUSR15189", baseName);
@@ -663,8 +656,7 @@ public:
     ON_CALL(*m_dataSelector, getRuns()).WillByDefault(Return("15189"));
     ON_CALL(*m_dataSelector, getStartTime()).WillByDefault(Return(0.55));
     ON_CALL(*m_dataSelector, getEndTime()).WillByDefault(Return(10.0));
-    const QStringList expectedNames{
-        "MUSR00015189; Pair; long; Asym; 1; #1_Raw"};
+    const QStringList expectedNames{"MUSR00015189;Pair;long;Asym;1;#1_Raw"};
     EXPECT_CALL(*m_fitBrowser, setWorkspaceNames(expectedNames)).Times(1);
     EXPECT_CALL(*m_dataSelector, setDatasetNames(expectedNames)).Times(1);
     EXPECT_CALL(*m_fitBrowser, setWorkspaceName(expectedNames[0])).Times(1);
@@ -686,7 +678,7 @@ public:
 
   void test_setSelectedWorkspace() {
     setupGroupPeriodSelections();
-    const QString wsName("MUSR00015189-91; Group; fwd; Asym; 1; #6");
+    const QString wsName("MUSR00015189-91;Group;fwd;Asym;1;#6");
     const QStringList wsNameList{wsName};
 
     // Expect it will update the workspace names
@@ -708,7 +700,7 @@ public:
   }
   void test_setSelectedWorkspace_loadCurrentRun() {
     setupGroupPeriodSelections();
-    const QString wsName("MUSR00061335; Group; fwd; Asym; 1; #1");
+    const QString wsName("MUSR00061335;Group;fwd;Asym;1;#1");
     const QStringList wsNameList{wsName};
     const boost::optional<QString> currentRunPath{
         R"(\\musr\data\MUSRauto_A.tmp)"};
@@ -793,24 +785,23 @@ private:
         .WillByDefault(Return(QString("UserSelectedFitLabel")));
     const std::vector<QString> expectedNames = [&fitType]() {
       if (fitType == IMuonFitDataSelector::FitType::CoAdd) {
-        return std::vector<QString>{
-            "MUSR00015189-91; Group; fwd; Asym; 1; #1",
-            "MUSR00015189-91; Pair; long; Asym; 1; #1",
-            "MUSR00015189-91; Group; fwd; Asym; 1-2; #1",
-            "MUSR00015189-91; Pair; long; Asym; 1-2; #1"};
+        return std::vector<QString>{"MUSR00015189-91;Group;fwd;Asym;1;#1",
+                                    "MUSR00015189-91;Pair;long;Asym;1;#1",
+                                    "MUSR00015189-91;Group;fwd;Asym;1-2;#1",
+                                    "MUSR00015189-91;Pair;long;Asym;1-2;#1"};
       } else {
-        return std::vector<QString>{"MUSR00015189; Group; fwd; Asym; 1; #1",
-                                    "MUSR00015189; Pair; long; Asym; 1; #1",
-                                    "MUSR00015189; Group; fwd; Asym; 1-2; #1",
-                                    "MUSR00015189; Pair; long; Asym; 1-2; #1",
-                                    "MUSR00015190; Group; fwd; Asym; 1; #1",
-                                    "MUSR00015190; Pair; long; Asym; 1; #1",
-                                    "MUSR00015190; Group; fwd; Asym; 1-2; #1",
-                                    "MUSR00015190; Pair; long; Asym; 1-2; #1",
-                                    "MUSR00015191; Group; fwd; Asym; 1; #1",
-                                    "MUSR00015191; Pair; long; Asym; 1; #1",
-                                    "MUSR00015191; Group; fwd; Asym; 1-2; #1",
-                                    "MUSR00015191; Pair; long; Asym; 1-2; #1"};
+        return std::vector<QString>{"MUSR00015189;Group;fwd;Asym;1;#1",
+                                    "MUSR00015189;Pair;long;Asym;1;#1",
+                                    "MUSR00015189;Group;fwd;Asym;1-2;#1",
+                                    "MUSR00015189;Pair;long;Asym;1-2;#1",
+                                    "MUSR00015190;Group;fwd;Asym;1;#1",
+                                    "MUSR00015190;Pair;long;Asym;1;#1",
+                                    "MUSR00015190;Group;fwd;Asym;1-2;#1",
+                                    "MUSR00015190;Pair;long;Asym;1-2;#1",
+                                    "MUSR00015191;Group;fwd;Asym;1;#1",
+                                    "MUSR00015191;Pair;long;Asym;1;#1",
+                                    "MUSR00015191;Group;fwd;Asym;1-2;#1",
+                                    "MUSR00015191;Pair;long;Asym;1-2;#1"};
       }
     }();
     EXPECT_CALL(*m_fitBrowser,
