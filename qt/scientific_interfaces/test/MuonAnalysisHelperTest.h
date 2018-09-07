@@ -347,7 +347,7 @@ public:
   // This can happen when loading very old files in which the stored run number
   // is zero
   void test_runNumberString_zeroRunNumber() {
-    const std::string sep("; ");
+    const std::string sep(";");
     std::ostringstream wsName;
     wsName << "DEVA000" << sep;
     wsName << "Pair" << sep;
@@ -748,7 +748,7 @@ private:
 
   void doTestRunNumberString(const std::string &runs, bool multiPeriod) {
     // create workspace name
-    const std::string sep("; ");
+    const std::string sep(";");
     std::ostringstream wsName;
     wsName << "MUSR000" << runs << sep; // MUSR00012345-8
     wsName << "Pair" << sep;

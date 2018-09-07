@@ -201,15 +201,29 @@ public:
 
     TS_ASSERT_EQUALS(wsInfo.size(), 3);
 
-    TS_ASSERT_EQUALS(wsInfo[0].name, "ws_group");
-    TS_ASSERT_EQUALS(wsInfo[0].type, "WorkspaceGroup");
+    TS_ASSERT_EQUALS(wsInfo[0].name, "ws1");
+    TS_ASSERT_EQUALS(wsInfo[0].type, "Workspace2D");
     TS_ASSERT_EQUALS(wsInfo[0].size, "0 kB");
-    TS_ASSERT_EQUALS(wsInfo[0].icon_id, "mantid_wsgroup_xpm");
+    TS_ASSERT_EQUALS(wsInfo[0].icon_id, "mantid_matrix_xpm");
     TS_ASSERT_EQUALS(wsInfo[0].numWindows, 0);
-    TS_ASSERT_EQUALS(wsInfo[0].subWorkspaces.size(), 3);
+    TS_ASSERT_EQUALS(wsInfo[0].subWorkspaces.size(), 0);
+
+    TS_ASSERT_EQUALS(wsInfo[1].name, "ws2");
+    TS_ASSERT_EQUALS(wsInfo[1].type, "Workspace2D");
+    TS_ASSERT_EQUALS(wsInfo[1].size, "0 kB");
+    TS_ASSERT_EQUALS(wsInfo[1].icon_id, "mantid_matrix_xpm");
+    TS_ASSERT_EQUALS(wsInfo[1].numWindows, 0);
+    TS_ASSERT_EQUALS(wsInfo[1].subWorkspaces.size(), 0);
+
+    TS_ASSERT_EQUALS(wsInfo[2].name, "ws_group");
+    TS_ASSERT_EQUALS(wsInfo[2].type, "WorkspaceGroup");
+    TS_ASSERT_EQUALS(wsInfo[2].size, "0 kB");
+    TS_ASSERT_EQUALS(wsInfo[2].icon_id, "mantid_wsgroup_xpm");
+    TS_ASSERT_EQUALS(wsInfo[2].numWindows, 0);
+    TS_ASSERT_EQUALS(wsInfo[2].subWorkspaces.size(), 3);
 
     int count = 0;
-    for (auto &item : wsInfo[0].subWorkspaces) {
+    for (auto &item : wsInfo[2].subWorkspaces) {
       TS_ASSERT_EQUALS(item.name, "ws_group_" + std::to_string(count));
       TS_ASSERT_EQUALS(item.type, "Workspace2D");
       TS_ASSERT_EQUALS(item.size, "0 kB");
@@ -217,20 +231,6 @@ public:
       TS_ASSERT_EQUALS(item.numWindows, 0);
       ++count;
     }
-
-    TS_ASSERT_EQUALS(wsInfo[1].name, "ws1");
-    TS_ASSERT_EQUALS(wsInfo[1].type, "Workspace2D");
-    TS_ASSERT_EQUALS(wsInfo[1].size, "0 kB");
-    TS_ASSERT_EQUALS(wsInfo[1].icon_id, "mantid_matrix_xpm");
-    TS_ASSERT_EQUALS(wsInfo[1].numWindows, 0);
-    TS_ASSERT_EQUALS(wsInfo[1].subWorkspaces.size(), 0);
-
-    TS_ASSERT_EQUALS(wsInfo[2].name, "ws2");
-    TS_ASSERT_EQUALS(wsInfo[2].type, "Workspace2D");
-    TS_ASSERT_EQUALS(wsInfo[2].size, "0 kB");
-    TS_ASSERT_EQUALS(wsInfo[2].icon_id, "mantid_matrix_xpm");
-    TS_ASSERT_EQUALS(wsInfo[2].numWindows, 0);
-    TS_ASSERT_EQUALS(wsInfo[2].subWorkspaces.size(), 0);
 
     WorkspaceCreationHelper::removeWS("ws_group");
   }

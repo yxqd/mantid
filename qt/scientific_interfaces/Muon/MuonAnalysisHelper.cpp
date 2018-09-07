@@ -1040,7 +1040,7 @@ void parseRunLabel(const std::string &label, std::string &instrument,
  */
 std::string generateWorkspaceName(const Muon::DatasetParams &params) {
   std::ostringstream workspaceName;
-  const static std::string sep("; ");
+  const static std::string sep(";");
 
   // Instrument and run number
   if (params.label.empty()) {
