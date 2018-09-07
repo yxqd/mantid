@@ -8,6 +8,14 @@ class GroupingTableModel(object):
     def __init__(self):
         self._groups = {}
 
+    @property
+    def groups(self):
+        return self._groups
+
+    @property
+    def group_names(self):
+        return self._groups.keys()
+
     def add_group(self, group):
         self._groups[group.name] = group
 
@@ -17,3 +25,6 @@ class GroupingTableModel(object):
     def remove_groups_by_name(self, name_list):
         for name in name_list:
             del self._groups[name]
+
+    def clear(self):
+        self._groups = {}
