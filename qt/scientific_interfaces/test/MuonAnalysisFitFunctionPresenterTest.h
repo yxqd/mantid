@@ -154,15 +154,13 @@ public:
   void test_handleFitFinished() {
     m_presenter->setMultiFitState(
         MantidQt::CustomInterfaces::Muon::MultiFitState::Enabled);
-    doTest_HandleFitFinishedOrUndone("MUSR00015189; Pair; long; Asym; 1; #1",
-                                     false);
+    doTest_HandleFitFinishedOrUndone("MUSR00015189;Pair;long;Asym;1;#1", false);
   }
 
   void test_handleFitFinished_multiFitDisabled() {
     m_presenter->setMultiFitState(
         MantidQt::CustomInterfaces::Muon::MultiFitState::Disabled);
-    doTest_HandleFitFinishedOrUndone("MUSR00015189; Pair; long; Asym; 1; #1",
-                                     true);
+    doTest_HandleFitFinishedOrUndone("MUSR00015189;Pair;long;Asym;1;#1", true);
   }
 
   void test_handleFitUndone() {

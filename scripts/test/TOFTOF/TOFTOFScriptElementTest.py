@@ -82,7 +82,7 @@ class TOFTOFScriptElementTest(unittest.TestCase):
 
         # vanadium runs & comment
         scriptElement.vanRuns  = '1:3'
-        scriptElement.vanCmnt  = 'vanadium comment'
+        scriptElement.vanCmnt  = 'vanadium_comment'
         scriptElement.vanTemp  = OptionalFloat(None)
 
         # empty can runs, comment, and factor
@@ -160,8 +160,8 @@ class TOFTOFScriptElementTest(unittest.TestCase):
 
         # data runs: [(runs,comment, temperature), ...]
         self.scriptElement.dataRuns = [
-            [unicode('TOFTOFTestdata.nxs'), unicode('H2O 21C'), OptionalFloat(None)],
-            [unicode('TOFTOFTestdata.nxs'), unicode('H2O 34C'), OptionalFloat(34.0)]
+            [unicode('TOFTOFTestdata.nxs'), unicode('H2O_21C'), OptionalFloat(None)],
+            [unicode('TOFTOFTestdata.nxs'), unicode('H2O_34C'), OptionalFloat(34.0)]
         ]
 
         self.scriptElement.maskDetectors = '1,2'
