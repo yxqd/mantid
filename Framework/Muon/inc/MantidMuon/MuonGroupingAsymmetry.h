@@ -2,6 +2,7 @@
 #define MANTID_MUON_MUONGROUPINGASYMMETRY_H_
 
 #include "MantidAPI/Algorithm.h"
+#include "MantidAPI/MatrixWorkspace.h"
 
 using namespace Mantid::API;
 
@@ -16,16 +17,21 @@ public:
   const std::string name() const override { return "MuonGroupingAsymmetry"; }
   int version() const override { return (1); }
   const std::string category() const override { return "Muon\\DataHandling"; }
-  const std::string summary() const override { return "."; }
+  const std::string summary() const override {
+    return "Apply an estimate of the asymmetry to a particular detector in "
+           "Muon data.";
+  }
   const std::vector<std::string> seeAlso() const override {
     return {"MuonProcess"};
   }
 
 private:
-  /// Initialisation code
   void init() override;
-  /// Execution code
   void exec() override;
+
+  std::map<std::string, std::string> validateInputs();
+
+  void addGroupingAsymmetrySampleLogs(MatrixWorkspace_sptr workspace);
 };
 
 } // namespace Muon

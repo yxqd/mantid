@@ -2,8 +2,11 @@
 #define MANTID_MUON_MUONPREPROCESS_H_
 
 #include "MantidAPI/Algorithm.h"
+#include "MantidAPI/WorkspaceGroup.h"
+#include "MantidDataObjects/TableWorkspace.h"
 
 using namespace Mantid::API;
+using namespace Mantid::DataObjects;
 
 namespace Mantid {
 namespace Muon {
@@ -18,17 +21,37 @@ public:
   const std::string category() const override { return "Muon\\DataHandling"; }
   const std::string summary() const override {
     return "Perform a series of common analysis pre-processing steps on Muon "
-           "data.";
+           "data. Sample logs are modified to record the input parameters.";
   }
   const std::vector<std::string> seeAlso() const override {
     return {"MuonProcess"};
   }
 
 private:
-  /// Initialisation code
   void init() override;
-  /// Execution code
   void exec() override;
+
+  /// Apply a series of corrections ; DTC, offset, rebin, crop
+  WorkspaceGroup_sptr correctWorkspaces(WorkspaceGroup_sptr wsGroup);
+  MatrixWorkspace_sptr correctWorkspace(MatrixWorkspace_sptr ws);
+
+  MatrixWorkspace_sptr applyDTC(MatrixWorkspace_sptr ws,
+                                TableWorkspace_sptr dt);
+
+  MatrixWorkspace_sptr applyTimeOffset(MatrixWorkspace_sptr ws,
+                                       const double &offset);
+
+  MatrixWorkspace_sptr applyCropping(MatrixWorkspace_sptr ws,
+                                     const double &xMin, const double &xMax);
+
+  MatrixWorkspace_sptr applyRebinning(MatrixWorkspace_sptr ws,
+                                      const std::vector<double> &rebinArgs);
+
+  /// Add the correction inputs into the logs
+  void addPreProcessSampleLogs(WorkspaceGroup_sptr group);
+
+  /// Allow WorkspaceGroup property to function correctly.
+  bool checkGroups() override;
 };
 
 } // namespace Muon
