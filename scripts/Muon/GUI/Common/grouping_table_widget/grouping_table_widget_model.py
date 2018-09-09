@@ -4,6 +4,8 @@ from Muon.GUI.Common.grouping_table_widget.grouping_table_widget_presenter impor
 
 
 class GroupingTableModel(object):
+    """Model used when grouping table is not part of the grouping tab. When the
+    grouping table presenter is embedded in the grouping tab, use the GroupingTabModel instead."""
 
     def __init__(self):
         self._groups = {}

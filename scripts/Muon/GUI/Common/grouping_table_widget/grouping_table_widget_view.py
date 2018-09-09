@@ -272,8 +272,6 @@ class GroupingTableView(QtGui.QWidget):
             return
         return
 
-
-
     def on_cell_changed(self, row, col):
         if not self._updating:
             self._on_table_data_changed()
@@ -295,6 +293,7 @@ class GroupingTableView(QtGui.QWidget):
             self.grouping_table.removeRow(row)
 
     def disable_updates(self):
+        print("Disabling updates")
         self._updating = True
 
     def enable_updates(self):

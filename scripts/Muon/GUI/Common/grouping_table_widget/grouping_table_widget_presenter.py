@@ -3,6 +3,8 @@ from __future__ import (absolute_import, division, print_function)
 import six
 import re
 
+from Muon.GUI.Common import run_string_utils as run_utils
+
 
 def detector_list_to_string(detector_list):
     return ",".join([str(i) for i in detector_list])
@@ -91,7 +93,8 @@ class GroupingTablePresenter(object):
             self._view.enable_updates()
             return
 
-        entry = [str(group.name), detector_list_to_string(group.detectors), str(group.n_detectors)]
+        #entry = [str(group.name), detector_list_to_string(group.detectors), str(group.n_detectors)]
+        entry = [str(group.name), run_utils.run_list_to_string(group.detectors), str(group.n_detectors)]
         self._view.add_entry_to_table(entry)
         self._view.enable_updates()
 
@@ -110,6 +113,7 @@ class GroupingTablePresenter(object):
 
     def handle_data_change(self):
         self.update_model_from_view()
+        self.update_view_from_model()
         self._view.notify_data_changed()
 
     def update_model_from_view(self):
@@ -118,14 +122,15 @@ class GroupingTablePresenter(object):
         self._model.clear_groups()
         for entry in table:
             # TODO parse string to list of detectors
-            group = MuonGroup(group_name=str(entry[0]), detector_IDs=str(entry[1]))
+            detector_list = run_utils.run_string_to_list(str(entry[1]))
+            group = MuonGroup(group_name=str(entry[0]), detector_IDs=detector_list)
             self._model.add_group(group)
 
     def update_view_from_model(self):
         self._view.disable_updates()
 
         self._view.clear()
-        for group in self._model.groups:
+        for group in self._model.groups.values():
             self.add_group_to_view(group)
 
         self._view.enable_updates()
