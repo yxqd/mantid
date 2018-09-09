@@ -19,24 +19,20 @@ class PairingTablePresenter(object):
         self._view.on_table_data_changed(self.handle_data_change)
 
     def validate_pair_name(self, text):
-        if sum(text == name for name in self._model.group_and_pair_names) > 1:
+        if sum(text == name for name in self._model.group_names) > 0 or sum(
+                text == name for name in self._model.pair_names) > 1:
             self._view.warning_popup("Groups and pairs must have unique names")
             return False
         if not re.match("^\w+$", text):
-            self._view.warning_popup("Group names should only contain digits, characters and _")
+            self._view.warning_popup("Pair names should only contain digits, characters and _")
             return False
         return True
-
-    @staticmethod
-    def validate_detector_IDs(text):
-        if re.match("^[0-9]*([0-9]+[,-]{0,1})*[0-9]+$", text):
-            return True
-        return False
 
     def show(self):
         self._view.show()
 
     def add_pair(self, pair):
+        print("Pairing : Add pair (no notify)")
         self.add_pair_to_view(pair)
         self._model.add_pair(pair)
 
@@ -48,6 +44,7 @@ class PairingTablePresenter(object):
             self._view.warning_popup("Cannot add more than 20 pairs.")
             self._view.enable_updates()
             return
+
         entry = [str(pair.name), str(pair.group1), str(pair.group2), str(pair.alpha)]
         self._view.add_entry_to_table(entry)
         self._view.enable_updates()
@@ -57,6 +54,7 @@ class PairingTablePresenter(object):
         self.add_pair(pair)
 
     def handle_remove_pair_button_clicked(self):
+        print("Pairing : Remove pair (no notify)")
         pair_names = self._view.get_selected_pair_names()
         if not pair_names:
             self.remove_last_row_in_view_and_model()
@@ -70,8 +68,10 @@ class PairingTablePresenter(object):
         self._model.remove_pairs_by_name([name])
 
     def handle_data_change(self):
+        print("Pairing : Handle data change (not notify)")
         self.update_model_from_view()
         self.update_view_from_model()
+        # self._view.notify_data_changed()
 
     def update_model_from_view(self):
         table = self._view.get_table_contents()
@@ -85,10 +85,8 @@ class PairingTablePresenter(object):
         self._view.disable_updates()
 
         self._view.clear()
-        self.update_group_selections()
-        print(self._view._group_selections)
+        # self.update_group_selections()
         for pair in self._model.pairs:
-            print(pair)
             self.add_pair_to_view(pair)
 
         self._view.enable_updates()

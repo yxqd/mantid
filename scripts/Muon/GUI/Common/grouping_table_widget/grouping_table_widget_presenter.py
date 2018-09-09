@@ -39,6 +39,7 @@ class GroupingTablePresenter(object):
         self._view.show()
 
     def add_group(self, group):
+        print("Grouping : Add group")
         self.add_group_to_view(group)
         self._model.add_group(group)
         self._view.notify_data_changed()
@@ -60,6 +61,7 @@ class GroupingTablePresenter(object):
         self.add_group(group)
 
     def handle_remove_group_button_clicked(self):
+        print("Grouping : Remove group")
         group_names = self._view.get_selected_group_names()
         if not group_names:
             self.remove_last_row_in_view_and_model()
@@ -77,6 +79,7 @@ class GroupingTablePresenter(object):
         self._model.remove_groups_by_name([name])
 
     def handle_data_change(self):
+        print("Grouping : Handle data changed")
         self.update_model_from_view()
         self.update_view_from_model()
         self._view.notify_data_changed()

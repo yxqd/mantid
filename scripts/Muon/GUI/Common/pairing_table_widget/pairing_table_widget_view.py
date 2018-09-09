@@ -5,45 +5,7 @@ from PyQt4.QtCore import pyqtSignal as Signal
 
 from functools import wraps
 
-from Muon.GUI.Common import message_box
-
-
-class PairNameTableItem(QtGui.QTableWidgetItem):
-    """
-    An extension of the QTableWidgetItem class, which modifies the setData method to first check that the enetred
-    text is valid; and only runs setData if the validator returns True
-    """
-
-    @staticmethod
-    def validator_before_set(func, validator):
-        @wraps(func)
-        def wrapper(*args, **kw):
-            if validator(args[1].toString()):
-                res = func(*args, **kw)
-            else:
-                res = None
-            return res
-
-        return wrapper
-
-    @staticmethod
-    def default_validator(text):
-        return True
-
-    def __init__(self, validator=default_validator):
-        """
-        :param validator: A predicate fucntion (returns True/False) taking a single string as argument
-        """
-        super(PairNameTableItem, self).__init__(0)
-        self._validator = validator
-        self._modify_setData()
-
-    def validator(self, text):
-        return self._validator(text)
-
-    def _modify_setData(self):
-        """Modify the setData method"""
-        setattr(self, "setData", self.validator_before_set(self.setData, self.validator))
+from Muon.GUI.Common import message_box, table_utils
 
 
 class PairingTableView(QtGui.QWidget):
@@ -173,7 +135,7 @@ class PairingTableView(QtGui.QWidget):
         for i, entry in enumerate(row_entries):
             item = QtGui.QTableWidgetItem(entry)
             if i == 0:
-                pair_name_widget = PairNameTableItem(self._validate_pair_name_entry)
+                pair_name_widget = table_utils.ValidatedTableItem(self._validate_pair_name_entry)
                 pair_name_widget.setText(entry)
                 self.pairing_table.setItem(row_position, 0, pair_name_widget)
                 continue
@@ -217,7 +179,8 @@ class PairingTableView(QtGui.QWidget):
 
     def remove_last_row(self):
         last_row = self.pairing_table.rowCount() - 1
-        self.pairing_table.removeRow(last_row)
+        if last_row >= 0:
+            self.pairing_table.removeRow(last_row)
 
     def num_rows(self):
         return self.pairing_table.rowCount()
@@ -226,11 +189,10 @@ class PairingTableView(QtGui.QWidget):
         message_box.warning(str(message))
 
     def on_item_changed(self):
-        if not self._updating:
-            return
-        return
+        """Not yet implemented."""
+        pass
 
-    def on_cell_changed(self, row, col):
+    def on_cell_changed(self, _row, _col):
         if not self._updating:
             self._on_table_data_changed()
 
@@ -244,15 +206,16 @@ class PairingTableView(QtGui.QWidget):
                     ret[i][j] = str(self.pairing_table.cellWidget(i, j).currentText())
                 else:
                     ret[i][j] = str(self.pairing_table.item(i, j).text())
-
         return ret
 
     def clear(self):
+        # Go backwards to preserve indices
         for row in reversed(range(self.num_rows())):
             self.pairing_table.removeRow(row)
 
     def notify_data_changed(self):
-        self.dataChanged.emit()
+        if not self._updating:
+            self.dataChanged.emit()
 
     def disable_updates(self):
         self._updating = True

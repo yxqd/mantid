@@ -203,7 +203,8 @@ class GroupingTableView(QtGui.QWidget):
         return ret
 
     def notify_data_changed(self):
-        self.dataChanged.emit()
+        if not self._updating:
+            self.dataChanged.emit()
 
     def clear(self):
         # Go backwards to preserve indices
