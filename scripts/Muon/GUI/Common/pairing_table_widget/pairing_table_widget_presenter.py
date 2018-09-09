@@ -1,49 +1,8 @@
 from __future__ import (absolute_import, division, print_function)
 
-import six
 import re
 
-
-def detector_list_to_string(detector_list):
-    return ",".join([str(i) for i in detector_list])
-
-
-class MuonPair:
-    """Simple struct to store information on a detector group pair.
-
-    The name is set at initialization and after that cannot be changed.
-    The detector list can be modified by passing a list of ints (type checks for this)
-    The number of detetors is stored
-    """
-
-    def __init__(self, pair_name="", group1_name="", group2_name="", alpha=1.0):
-        self._pair_name = pair_name
-        self._group1_name = group1_name
-        self._group2_name = group2_name
-        self._alpha = alpha
-
-    @property
-    def name(self):
-        return self._pair_name
-
-    @property
-    def group1(self):
-        return self._group1_name
-
-    @property
-    def group2(self):
-        return self._group2_name
-
-    @property
-    def alpha(self):
-        return self._alpha
-
-    @alpha.setter
-    def alpha(self, new_alpha):
-        if new_alpha >= 0.0:
-            self._alpha = new_alpha
-        else:
-            raise ValueError("Alpha must be > 0.0.")
+from Muon.GUI.Common.muon_pair import MuonPair
 
 
 class PairingTablePresenter(object):
@@ -60,7 +19,7 @@ class PairingTablePresenter(object):
         self._view.on_table_data_changed(self.handle_data_change)
 
     def validate_pair_name(self, text):
-        if sum(text == name for name in self._model.group_and_pair_names) > 0:
+        if sum(text == name for name in self._model.group_and_pair_names) > 1:
             self._view.warning_popup("Groups and pairs must have unique names")
             return False
         if not re.match("^\w+$", text):

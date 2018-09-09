@@ -1,6 +1,6 @@
 from __future__ import (absolute_import, division, print_function)
 
-from Muon.GUI.Common.pairing_table_widget.pairing_table_widget_presenter import MuonPair
+from Muon.GUI.Common.muon_pair import MuonPair
 
 
 class GroupingTableModel(object):

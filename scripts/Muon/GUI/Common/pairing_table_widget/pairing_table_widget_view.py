@@ -4,9 +4,7 @@ from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import pyqtSignal as Signal
 
 from functools import wraps
-import re
 
-from Muon.GUI.Common import table_utils
 from Muon.GUI.Common import message_box
 
 
@@ -158,7 +156,7 @@ class PairingTableView(QtGui.QWidget):
     def _group_selection_cell_widget(self):
         selector = QtGui.QComboBox(self)
         selector.addItems(self._group_selections)
-        #selector.setStyleSheet("border: 0px solid white;")
+        # selector.setStyleSheet("border: 0px solid white;")
         return selector
 
     def get_index_of_text(self, selector, text):
