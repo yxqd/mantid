@@ -45,6 +45,15 @@ class GroupingTableView(QtGui.QWidget):
                 item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
         self.enable_updates()
 
+    def enable_editing(self):
+        self.grouping_table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
+        self.disable_updates()
+        for i in range(self.num_rows()):
+            for j in range(3):
+                item = self.grouping_table.item(i, j)
+                item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+        self.enable_updates()
+
     def on_user_changes_group_name(self, slot):
         self._validate_group_name_entry = slot
 

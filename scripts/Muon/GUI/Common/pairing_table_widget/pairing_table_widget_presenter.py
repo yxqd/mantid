@@ -31,6 +31,9 @@ class PairingTablePresenter(object):
     def disable_editing(self):
         self._view.disable_editing()
 
+    def enable_editing(self):
+        self._view.enable_editing()
+
     def show(self):
         self._view.show()
 

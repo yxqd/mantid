@@ -48,6 +48,19 @@ class PairingTableView(QtGui.QWidget):
                     item.setEnabled(False)
         self.enable_updates()
 
+    def enable_editing(self):
+        self.pairing_table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
+        self.disable_updates()
+        for i in range(self.num_rows()):
+            for j in range(4):
+                try:
+                    item = self.pairing_table.item(i, j)
+                    item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+                except:
+                    item = self.pairing_table.cellWidget(i, j)
+                    item.setEnabled(True)
+        self.enable_updates()
+
     def update_group_selections(self, group_name_list):
         self._group_selections = group_name_list
 

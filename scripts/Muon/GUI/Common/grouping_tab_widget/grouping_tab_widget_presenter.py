@@ -1,5 +1,10 @@
 from __future__ import (absolute_import, division, print_function)
 
+import time
+
+from Muon.GUI.Common.threading_worker import Worker
+from Muon.GUI.Common.threading_manager import WorkerManager
+
 
 class GroupingTabPresenter(object):
     """
@@ -28,6 +33,7 @@ class GroupingTabPresenter(object):
 
         self._view.on_update_button_clicked(self.disable_editing)
 
+        self.thread_manager = None
 
     def add_pair_from_grouping_table(self, name1, name2):
         """If user requests to add a pair from the grouping table."""
@@ -36,7 +42,7 @@ class GroupingTabPresenter(object):
         self.pairing_table_widget.update_view_from_model()
 
     def text_for_description(self):
-        # TODO :  implement this
+        # TODO :  implement automatic update for decsription.
         text = "EMU longitudinal (?? detectors)"
         return text
 
@@ -44,9 +50,28 @@ class GroupingTabPresenter(object):
         self._view.show()
 
     def disable_editing(self):
-        print("Disbaling editing")
+        print("Disabling editing")
         self.grouping_table_widget.disable_editing()
         self.pairing_table_widget.disable_editing()
+
+        # TODO : Update here using threading
+        if self.thread_manager:
+            self.thread_manager.clear()
+            self.thread_manager.deleteLater()
+            self.thread_manager = None
+        self.thread_manager = WorkerManager(fn=self.timing, num_threads=1,
+                                            callback_on_threads_complete=self.enable_editing, time_s=[2, 2, 2])
+        self.thread_manager.start()
+        #self.enable_editing()
+
+    def timing(self, time_s):
+        time.sleep(time_s)
+        return
+
+    def enable_editing(self):
+        print("Enabling editing")
+        self.grouping_table_widget.enable_editing()
+        self.pairing_table_widget.enable_editing()
 
     def on_clear_requested(self):
         self._model.clear()
