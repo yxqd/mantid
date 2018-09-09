@@ -20,14 +20,14 @@ class GroupingTablePresenter(object):
 
         self._view.on_table_data_changed(self.handle_data_change)
 
-    def _is_edited_name_unique(self, new_name):
+    def _is_edited_name_duplicated(self, new_name):
         is_name_column_being_edited = self._view.grouping_table.currentColumn() == 0
         is_name_unique = (sum(
             [new_name == name for name in self._model.group_and_pair_names]) == 0)
-        return is_name_column_being_edited and is_name_unique
+        return is_name_column_being_edited and not is_name_unique
 
     def validate_group_name(self, text):
-        if self._is_edited_name_unique(text):
+        if self._is_edited_name_duplicated(text):
             self._view.warning_popup("Groups and pairs must have unique names")
             return False
         if not re.match("^\w+$", text):
