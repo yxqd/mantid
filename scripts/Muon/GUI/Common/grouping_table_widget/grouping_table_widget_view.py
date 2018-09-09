@@ -89,6 +89,7 @@ class DetectorTableItem(QtGui.QTableWidgetItem):
 
 class GroupingTableView(QtGui.QWidget):
     dataChanged = Signal()
+    addPairRequested = Signal(str, str)
 
     def __init__(self, parent=None):
         super(GroupingTableView, self).__init__(parent)
@@ -153,8 +154,6 @@ class GroupingTableView(QtGui.QWidget):
         self.vertical_layout.setObjectName("verticalLayout")
         self.vertical_layout.addWidget(self.grouping_table)
         self.vertical_layout.addLayout(self.horizontal_layout)
-        # self.vertical_layout.addWidget(self.add_group_button)
-        # self.vertical_layout.addWidget(self.remove_group_button)
 
         self.setLayout(self.vertical_layout)
 
@@ -180,16 +179,29 @@ class GroupingTableView(QtGui.QWidget):
         vertical_headers.setResizeMode(QtGui.QHeaderView.ResizeToContents)
         vertical_headers.setVisible(True)
 
+    def add_pair_requested(self):
+        selected_names = self.get_selected_group_names()
+        self.addPairRequested.emit(selected_names[0],selected_names[1])
+
     def contextMenuEvent(self, event):
         self.menu = QtGui.QMenu(self)
-        addGroupAction = QtGui.QAction('Add Group', self)
-        addGroupAction.triggered.connect(self.add_group_button.clicked.emit)
 
-        removeGroupAction = QtGui.QAction('Remove Group', self)
-        removeGroupAction.triggered.connect(self.remove_group_button.clicked.emit)
+        add_group_action = QtGui.QAction('Add Group', self)
+        if len(self._get_selected_row_indices()) > 0:
+            add_group_action.setEnabled(False)
+        add_group_action.triggered.connect(self.add_group_button.clicked.emit)
 
-        self.menu.addAction(addGroupAction)
-        self.menu.addAction(removeGroupAction)
+        remove_group_action = QtGui.QAction('Remove Group', self)
+        remove_group_action.triggered.connect(self.remove_group_button.clicked.emit)
+
+        add_pair_action = QtGui.QAction('Add Pair', self)
+        if len(self._get_selected_row_indices()) != 2:
+            add_pair_action.setEnabled(False)
+        add_pair_action.triggered.connect(self.add_pair_requested)
+
+        self.menu.addAction(add_group_action)
+        self.menu.addAction(remove_group_action)
+        self.menu.addAction(add_pair_action)
         # add other required actions
         self.menu.popup(QtGui.QCursor.pos())
 
@@ -293,7 +305,6 @@ class GroupingTableView(QtGui.QWidget):
             self.grouping_table.removeRow(row)
 
     def disable_updates(self):
-        print("Disabling updates")
         self._updating = True
 
     def enable_updates(self):

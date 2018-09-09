@@ -161,6 +161,12 @@ class PairingTableView(QtGui.QWidget):
         #selector.setStyleSheet("border: 0px solid white;")
         return selector
 
+    def get_index_of_text(self, selector, text):
+        for i in range(selector.count()):
+            if str(selector.itemText(i)) == text:
+                return i
+        return 0
+
     def add_entry_to_table(self, row_entries):
         assert len(row_entries) == self.pairing_table.columnCount()
 
@@ -175,10 +181,14 @@ class PairingTableView(QtGui.QWidget):
                 continue
             if i == 1:
                 group1_selector_widget = self._group_selection_cell_widget()
+                index = self.get_index_of_text(group1_selector_widget, entry)
+                group1_selector_widget.setCurrentIndex(index)
                 self.pairing_table.setCellWidget(row_position, 1, group1_selector_widget)
                 continue
             if i == 2:
                 group2_selector_widget = self._group_selection_cell_widget()
+                index = self.get_index_of_text(group2_selector_widget, entry)
+                group2_selector_widget.setCurrentIndex(index)
                 self.pairing_table.setCellWidget(row_position, 2, group2_selector_widget)
                 continue
             if i == 3:
@@ -232,7 +242,11 @@ class PairingTableView(QtGui.QWidget):
         ret = [[None for _ in range(4)] for _ in range(self.num_rows())]
         for i in range(self.num_rows()):
             for j in range(4):
-                ret[i][j] = str(self.pairing_table.item(i, j).text())
+                if j == 1 or j == 2:
+                    ret[i][j] = str(self.pairing_table.cellWidget(i, j).currentText())
+                else:
+                    ret[i][j] = str(self.pairing_table.item(i, j).text())
+
         return ret
 
     def clear(self):

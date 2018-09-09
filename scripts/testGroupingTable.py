@@ -26,17 +26,17 @@ if __name__ == "__main__":
     ui.add_group(testgroup2)
     ui.add_group(testgroup3)
 
-    # pairing_table_view = PairingTableView()
-    # ui2 = PairingTablePresenter(pairing_table_view, model)
-    # testpair1 = MuonPair(pair_name="long1", group1_name="fwd", group2_name="bwd")
-    # testpair2 = MuonPair(pair_name="long2", group1_name="fwd", group2_name="top")
-    # ui2.add_pair(testpair1)
-    # ui2.add_pair(testpair2)
-    #
-    # tabView = GroupingTabView(grouping_table_view, pairing_table_view)
-    # tabPresenter = GroupingTabPresenter(tabView, model, ui, ui2)
+    pairing_table_view = PairingTableView()
+    ui2 = PairingTablePresenter(pairing_table_view, model)
+    testpair1 = MuonPair(pair_name="long1", group1_name="fwd", group2_name="bwd")
+    testpair2 = MuonPair(pair_name="long2", group1_name="fwd", group2_name="top")
+    ui2.add_pair(testpair1)
+    ui2.add_pair(testpair2)
 
-    ui.show()
+    tabView = GroupingTabView(grouping_table_view, pairing_table_view)
+    tabPresenter = GroupingTabPresenter(tabView, model, ui, ui2)
+
+    #ui.show()
     # ui2.show()
-    # tabPresenter.show()
+    tabPresenter.show()
     sys.exit(app.exec_())

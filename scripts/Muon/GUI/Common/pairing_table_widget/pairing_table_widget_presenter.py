@@ -106,6 +106,7 @@ class PairingTablePresenter(object):
 
     def handle_data_change(self):
         self.update_model_from_view()
+        self.update_view_from_model()
 
     def update_model_from_view(self):
         table = self._view.get_table_contents()
@@ -120,7 +121,8 @@ class PairingTablePresenter(object):
 
         self._view.clear()
         self.update_group_selections()
-        for pair in self._model.pairs.values():
+        print(self._view._group_selections)
+        for pair in self._model.pairs:
             print(pair)
             self.add_pair_to_view(pair)
 
