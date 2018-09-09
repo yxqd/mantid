@@ -62,7 +62,6 @@ class GroupingTablePresenter(object):
         self._view.on_table_data_changed(self.handle_data_change)
 
     def validate_group_name(self, text):
-        print(self._model.group_names)
         if sum(text == name for name in self._model.group_names) > 1:
             self._view.warning_popup("Groups must have unique names")
             return False
@@ -82,7 +81,7 @@ class GroupingTablePresenter(object):
     def add_group(self, group):
         self.add_group_to_view(group)
         self._model.add_group(group)
-
+        self._view.notify_data_changed()
 
     def add_group_to_view(self, group):
         self._view.disable_updates()
@@ -107,15 +106,18 @@ class GroupingTablePresenter(object):
         else:
             self._view.remove_selected_groups()
             self._model.remove_groups_by_name(group_names)
+        self._view.notify_data_changed()
 
     def handle_data_change(self):
         self.update_model_from_view()
-        print(self._model._groups)
+        self._view.notify_data_changed()
 
     def update_model_from_view(self):
         table = self._view.get_table_contents()
-        self._model.clear()
+        print("Model update from view : ", table)
+        self._model.clear_groups()
         for entry in table:
+            # TODO parse string to list of detectors
             group = MuonGroup(group_name=str(entry[0]), detector_IDs=str(entry[1]))
             self._model.add_group(group)
 

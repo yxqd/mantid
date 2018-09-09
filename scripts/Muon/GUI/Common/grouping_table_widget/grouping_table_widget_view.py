@@ -1,6 +1,7 @@
 from __future__ import (absolute_import, division, print_function)
 
 from PyQt4 import QtCore, QtGui
+from PyQt4.QtCore import pyqtSignal as Signal
 
 from functools import wraps
 import re
@@ -27,9 +28,9 @@ def decorate_setData_with_regex(function_decorator, regex):
 def regex_before_set(func, regex):
     @wraps(func)
     def wrapper(*args, **kw):
-        print('{} called'.format(func.__name__))
-        print(args[2].toString())
-        print(bool(re.match(regex, args[2].toString())))
+        # print('{} called'.format(func.__name__))
+        # print(args[2].toString())
+        # print(bool(re.match(regex, args[2].toString())))
         if bool(re.match(regex, args[2].toString())):
             res = func(*args, **kw)
         else:
@@ -87,6 +88,7 @@ class DetectorTableItem(QtGui.QTableWidgetItem):
 
 
 class GroupingTableView(QtGui.QWidget):
+    dataChanged = Signal()
 
     def __init__(self, parent=None):
         super(GroupingTableView, self).__init__(parent)
@@ -270,6 +272,8 @@ class GroupingTableView(QtGui.QWidget):
             return
         return
 
+
+
     def on_cell_changed(self, row, col):
         if not self._updating:
             self._on_table_data_changed()
@@ -282,6 +286,9 @@ class GroupingTableView(QtGui.QWidget):
             for j in range(3):
                 ret[i][j] = str(self.grouping_table.item(i, j).text())
         return ret
+
+    def notify_data_changed(self):
+        self.dataChanged.emit()
 
     def clear(self):
         for row in reversed(range(self.num_rows())):
