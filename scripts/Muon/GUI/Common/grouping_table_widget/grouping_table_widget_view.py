@@ -3,14 +3,12 @@ from __future__ import (absolute_import, division, print_function)
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import pyqtSignal as Signal
 
-from functools import wraps
-import re
-
 from Muon.GUI.Common import table_utils
 from Muon.GUI.Common import message_box
 
 
 class GroupingTableView(QtGui.QWidget):
+    # For use by parent widget
     dataChanged = Signal()
     addPairRequested = Signal(str, str)
 
@@ -29,8 +27,6 @@ class GroupingTableView(QtGui.QWidget):
         self._validate_detector_ID_entry = lambda text: True
 
         self._on_table_data_changed = lambda: 0
-
-        self.cached_table = None
 
         # whether the table is updating and therefore
         # we shouldn't respond to signals
@@ -80,15 +76,6 @@ class GroupingTableView(QtGui.QWidget):
 
         self.setLayout(self.vertical_layout)
 
-    def cache_table(self):
-        self.cached_table = self.get_table_contents()
-
-    def restore_cached_state(self):
-        cache = self.cached_table
-        if cache:
-            for i in range(len(cache)):
-                pass
-
     def set_up_table(self):
         self.grouping_table.setColumnCount(3)
         self.grouping_table.setHorizontalHeaderLabels(QtCore.QString("Group Name;Detector IDs;N Detectors").split(";"))
@@ -107,47 +94,31 @@ class GroupingTableView(QtGui.QWidget):
         self.addPairRequested.emit(selected_names[0], selected_names[1])
 
     def contextMenuEvent(self, event):
+        """Overridden method"""
+
         self.menu = QtGui.QMenu(self)
+        selected_rows = self._get_selected_row_indices()
 
         add_group_action = QtGui.QAction('Add Group', self)
-        if len(self._get_selected_row_indices()) > 0:
+        if len(selected_rows) > 0:
             add_group_action.setEnabled(False)
         add_group_action.triggered.connect(self.add_group_button.clicked.emit)
 
         remove_group_action = QtGui.QAction('Remove Group', self)
+        if self.num_rows() == 0:
+            remove_group_action.setEnabled(False)
         remove_group_action.triggered.connect(self.remove_group_button.clicked.emit)
 
         add_pair_action = QtGui.QAction('Add Pair', self)
-        if len(self._get_selected_row_indices()) != 2:
+        if len(selected_rows) != 2:
             add_pair_action.setEnabled(False)
         add_pair_action.triggered.connect(self.add_pair_requested)
 
         self.menu.addAction(add_group_action)
         self.menu.addAction(remove_group_action)
         self.menu.addAction(add_pair_action)
-        # add other required actions
+
         self.menu.popup(QtGui.QCursor.pos())
-
-    def _detector_cell_widget(self):
-        """
-        Create a regex protected LineEdit for the detector entry
-        """
-        edit = QtGui.QLineEdit(self)
-        run_string_regex = "^[0-9]*([0-9]+[,-]{0,1})*[0-9]+$"
-        regex = QtCore.QRegExp(run_string_regex)
-        validator = QtGui.QRegExpValidator(regex)
-        edit.setValidator(validator)
-        edit.setStyleSheet("border: 0px solid white;")
-        return edit
-
-    def _group_name_cell_widget(self):
-        edit = QtGui.QLineEdit(self)
-        run_string_regex = "[0-9,a-z,A-Z]*"
-        regex = QtCore.QRegExp(run_string_regex)
-        validator = QtGui.QRegExpValidator(regex)
-        edit.setValidator(validator)
-        edit.setStyleSheet("border: 0px solid white;")
-        return edit
 
     def add_entry_to_table(self, row_entries):
         assert len(row_entries) == self.grouping_table.columnCount()
