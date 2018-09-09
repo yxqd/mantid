@@ -26,6 +26,8 @@ class GroupingTabPresenter(object):
 
         self._view.set_description_text(self.text_for_description())
 
+        self._view.on_update_button_clicked(self.disable_editing)
+
 
     def add_pair_from_grouping_table(self, name1, name2):
         """If user requests to add a pair from the grouping table."""
@@ -40,6 +42,11 @@ class GroupingTabPresenter(object):
 
     def show(self):
         self._view.show()
+
+    def disable_editing(self):
+        print("Disbaling editing")
+        self.grouping_table_widget.disable_editing()
+        self.pairing_table_widget.disable_editing()
 
     def on_clear_requested(self):
         self._model.clear()

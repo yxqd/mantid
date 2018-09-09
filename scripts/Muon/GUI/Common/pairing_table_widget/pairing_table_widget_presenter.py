@@ -28,6 +28,9 @@ class PairingTablePresenter(object):
             return False
         return True
 
+    def disable_editing(self):
+        self._view.disable_editing()
+
     def show(self):
         self._view.show()
 
@@ -63,9 +66,10 @@ class PairingTablePresenter(object):
             self._model.remove_pairs_by_name(pair_names)
 
     def remove_last_row_in_view_and_model(self):
-        name = self._view.get_table_contents()[-1][0]
-        self._view.remove_last_row()
-        self._model.remove_pairs_by_name([name])
+        if self._view.num_rows() > 0:
+            name = self._view.get_table_contents()[-1][0]
+            self._view.remove_last_row()
+            self._model.remove_pairs_by_name([name])
 
     def handle_data_change(self):
         print("Pairing : Handle data change (not notify)")

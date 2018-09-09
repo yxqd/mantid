@@ -3,13 +3,15 @@ from __future__ import (absolute_import, division, print_function)
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import pyqtSignal as Signal
 
-from functools import wraps
-
 from Muon.GUI.Common import message_box, table_utils
 
 
 class PairingTableView(QtGui.QWidget):
     dataChanged = Signal()
+
+    @staticmethod
+    def warning_popup(message):
+        message_box.warning(str(message))
 
     def __init__(self, parent=None):
         super(PairingTableView, self).__init__(parent)
@@ -26,14 +28,25 @@ class PairingTableView(QtGui.QWidget):
 
         self._on_table_data_changed = lambda: 0
 
-        self.cached_table = None
-
         # The active groups that can be selected from the group combo box
         self._group_selections = []
 
         # whether the table is updating and therefore
         # we shouldn't respond to signals
         self._updating = False
+
+    def disable_editing(self):
+        self.pairing_table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
+        self.disable_updates()
+        for i in range(self.num_rows()):
+            for j in range(4):
+                try:
+                    item = self.pairing_table.item(i, j)
+                    item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+                except:
+                    item = self.pairing_table.cellWidget(i, j)
+                    item.setEnabled(False)
+        self.enable_updates()
 
     def update_group_selections(self, group_name_list):
         self._group_selections = group_name_list
@@ -79,15 +92,6 @@ class PairingTableView(QtGui.QWidget):
 
         self.setLayout(self.vertical_layout)
 
-    def cache_table(self):
-        self.cached_table = self.get_table_contents()
-
-    def restore_cached_state(self):
-        cache = self.cached_table
-        if cache:
-            for i in range(len(cache)):
-                pass
-
     def set_up_table(self):
         self.pairing_table.setColumnCount(4)
         self.pairing_table.setHorizontalHeaderLabels(QtCore.QString("Pair Name;Group 1; Group 2;Alpha").split(";"))
@@ -96,29 +100,44 @@ class PairingTableView(QtGui.QWidget):
         header.setResizeMode(1, QtGui.QHeaderView.Stretch)
         header.setResizeMode(2, QtGui.QHeaderView.Stretch)
         header.setResizeMode(3, QtGui.QHeaderView.ResizeToContents)
-        # table_utils.setTableHeaders(self.grouping_table)
         vertical_headers = self.pairing_table.verticalHeader()
         vertical_headers.setMovable(False)
         vertical_headers.setResizeMode(QtGui.QHeaderView.ResizeToContents)
         vertical_headers.setVisible(True)
 
-    def contextMenuEvent(self, event):
-        self.menu = QtGui.QMenu(self)
-        add_pair_action = QtGui.QAction('Add Pair', self)
-        add_pair_action.triggered.connect(self.add_pair_button.clicked.emit)
+    def _context_menu_add_pair_action(self, slot):
+        add_pair_action = QtGui.QAction('Add Group', self)
+        if len(self._get_selected_row_indices()) > 0:
+            add_pair_action.setEnabled(False)
+        add_pair_action.triggered.connect(slot)
+        return add_pair_action
 
-        remove_pair_action = QtGui.QAction('Remove Pair', self)
-        remove_pair_action.triggered.connect(self.remove_pair_button.clicked.emit)
+    def _context_menu_remove_pair_action(self, slot):
+        if len(self._get_selected_row_indices()) > 1:
+            # use plural if >1 item selected
+            remove_pair_action = QtGui.QAction('Remove Pairs', self)
+        else:
+            remove_pair_action = QtGui.QAction('Remove Pair', self)
+        if self.num_rows() == 0:
+            remove_pair_action.setEnabled(False)
+        remove_pair_action.triggered.connect(slot)
+        return remove_pair_action
+
+    def contextMenuEvent(self, _event):
+        """Overridden method"""
+        self.menu = QtGui.QMenu(self)
+
+        add_pair_action = self._context_menu_add_pair_action(self.add_pair_button.clicked.emit)
+        remove_pair_action = self._context_menu_remove_pair_action(self.remove_pair_button.clicked.emit)
 
         self.menu.addAction(add_pair_action)
         self.menu.addAction(remove_pair_action)
-        # add other required actions
+
         self.menu.popup(QtGui.QCursor.pos())
 
     def _group_selection_cell_widget(self):
         selector = QtGui.QComboBox(self)
         selector.addItems(self._group_selections)
-        # selector.setStyleSheet("border: 0px solid white;")
         return selector
 
     def get_index_of_text(self, selector, text):
@@ -184,9 +203,6 @@ class PairingTableView(QtGui.QWidget):
 
     def num_rows(self):
         return self.pairing_table.rowCount()
-
-    def warning_popup(self, message):
-        message_box.warning(str(message))
 
     def on_item_changed(self):
         """Not yet implemented."""

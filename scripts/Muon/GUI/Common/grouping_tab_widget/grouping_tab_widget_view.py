@@ -97,3 +97,6 @@ class GroupingTabView(QtGui.QWidget):
 
     def on_clear_grouping_button_clicked(self, slot):
         self.clear_grouping_button.clicked.connect(slot)
+
+    def on_update_button_clicked(self,slot):
+        self.update_button.clicked.connect(slot)

@@ -36,6 +36,15 @@ class GroupingTableView(QtGui.QWidget):
         # we shouldn't respond to signals
         self._updating = False
 
+    def disable_editing(self):
+        self.grouping_table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
+        self.disable_updates()
+        for i in range(self.num_rows()):
+            for j in range(3):
+                item = self.grouping_table.item(i, j)
+                item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+        self.enable_updates()
+
     def on_user_changes_group_name(self, slot):
         self._validate_group_name_entry = slot
 
@@ -180,7 +189,8 @@ class GroupingTableView(QtGui.QWidget):
 
     def remove_last_row(self):
         last_row = self.grouping_table.rowCount() - 1
-        self.grouping_table.removeRow(last_row)
+        if last_row >= 0:
+            self.grouping_table.removeRow(last_row)
 
     def num_rows(self):
         return self.grouping_table.rowCount()
