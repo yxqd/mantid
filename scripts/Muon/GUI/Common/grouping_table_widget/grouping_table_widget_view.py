@@ -10,83 +10,6 @@ from Muon.GUI.Common import table_utils
 from Muon.GUI.Common import message_box
 
 
-def decorate_setData_with_regex(function_decorator, regex):
-    def decorator(cls):
-        if "setData" in dir(cls):
-            obj = getattr(cls, "setData")
-            print("Decorator obj is : ", obj)
-            try:
-                obj = obj.__func__  # unwrap Python 2 unbound method
-            except AttributeError:
-                pass  # not needed in Python 3
-            setattr(cls, "setData", function_decorator(obj, regex))
-        return cls
-
-    return decorator
-
-
-def regex_before_set(func, regex):
-    @wraps(func)
-    def wrapper(*args, **kw):
-        # print('{} called'.format(func.__name__))
-        # print(args[2].toString())
-        # print(bool(re.match(regex, args[2].toString())))
-        if bool(re.match(regex, args[2].toString())):
-            res = func(*args, **kw)
-        else:
-            res = None
-        return res
-
-    return wrapper
-
-
-class GroupNameTableItem(QtGui.QTableWidgetItem):
-    """
-    An extension of the QTableWidgetItem class, which modifies the setData method to first check that the enetred
-    text is valid; and only runs setData if the validator returns True
-    """
-
-    @staticmethod
-    def validator_before_set(func, validator):
-        @wraps(func)
-        def wrapper(*args, **kw):
-            if validator(args[1].toString()):
-                res = func(*args, **kw)
-            else:
-                res = None
-            return res
-
-        return wrapper
-
-    @staticmethod
-    def default_validator(text):
-        return True
-
-    def __init__(self, validator=default_validator):
-        """
-        :param validator: A predicate fucntion (returns True/False) taking a single string as argument
-        """
-        super(GroupNameTableItem, self).__init__(0)
-        self._validator = validator
-        self._modify_setData()
-
-    def validator(self, text):
-        return self._validator(text)
-
-    def _modify_setData(self):
-        """Modify the setData method"""
-        setattr(self, "setData", self.validator_before_set(self.setData, self.validator))
-
-
-@decorate_setData_with_regex(regex_before_set, "^[0-9]*([0-9]+[,-]{0,1})*[0-9]+$")
-class DetectorTableItem(QtGui.QTableWidgetItem):
-
-    def __init__(self, validator=lambda text: True):
-        super(DetectorTableItem, self).__init__(0)
-
-        self.validator = validator
-
-
 class GroupingTableView(QtGui.QWidget):
     dataChanged = Signal()
     addPairRequested = Signal(str, str)
@@ -181,7 +104,7 @@ class GroupingTableView(QtGui.QWidget):
 
     def add_pair_requested(self):
         selected_names = self.get_selected_group_names()
-        self.addPairRequested.emit(selected_names[0],selected_names[1])
+        self.addPairRequested.emit(selected_names[0], selected_names[1])
 
     def contextMenuEvent(self, event):
         self.menu = QtGui.QMenu(self)
@@ -234,12 +157,12 @@ class GroupingTableView(QtGui.QWidget):
         for i, entry in enumerate(row_entries):
             item = QtGui.QTableWidgetItem(entry)
             if i == 0:
-                group_name_widget = GroupNameTableItem(self._validate_group_name_entry)
+                group_name_widget = table_utils.ValidatedTableItem(self._validate_group_name_entry)
                 group_name_widget.setText(entry)
                 self.grouping_table.setItem(row_position, 0, group_name_widget)
                 continue
             if i == 1:
-                detector_widget = DetectorTableItem()  # self._detector_cell_widget()
+                detector_widget = table_utils.ValidatedTableItem(self._validate_detector_ID_entry)
                 detector_widget.setText(entry)
                 self.grouping_table.setItem(row_position, 1, detector_widget)
                 continue

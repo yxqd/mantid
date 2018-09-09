@@ -99,10 +99,17 @@ class PairingTablePresenter(object):
     def handle_remove_pair_button_clicked(self):
         pair_names = self._view.get_selected_pair_names()
         if not pair_names:
-            self._view.remove_last_row()
+            self.remove_last_row_in_view_and_model()
         else:
             self._view.remove_selected_pairs()
             self._model.remove_pairs_by_name(pair_names)
+
+
+
+    def remove_last_row_in_view_and_model(self):
+        name = self._view.get_table_contents()[-1][0]
+        self._view.remove_last_row()
+        self._model.remove_pairs_by_name([name])
 
     def handle_data_change(self):
         self.update_model_from_view()
