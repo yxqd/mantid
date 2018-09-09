@@ -29,30 +29,46 @@ class GroupingTableView(QtGui.QWidget):
 
         self._validate_group_name_entry = lambda text: True
         self._validate_detector_ID_entry = lambda text: True
-
         self._on_table_data_changed = lambda: 0
 
         # whether the table is updating and therefore
         # we shouldn't respond to signals
         self._updating = False
+        self._disabled = False
 
     def disable_editing(self):
-        self.grouping_table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.disable_updates()
-        for i in range(self.num_rows()):
-            for j in range(3):
-                item = self.grouping_table.item(i, j)
-                item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+        self._disabled = True
+        self.add_group_button.setEnabled(False)
+        self.remove_group_button.setEnabled(False)
+        self._disable_all_table_items()
         self.enable_updates()
 
+    def _disable_all_table_items(self):
+        for row in range(self.num_rows()):
+            for col in range(3):
+                item = self.grouping_table.item(row, col)
+                item.setFlags(QtCore.Qt.ItemIsSelectable |
+                              QtCore.Qt.ItemIsEnabled)
+
     def enable_editing(self):
-        self.grouping_table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.disable_updates()
-        for i in range(self.num_rows()):
-            for j in range(3):
-                item = self.grouping_table.item(i, j)
-                item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+        self._disabled = False
+        self.add_group_button.setEnabled(True)
+        self.remove_group_button.setEnabled(True)
+        self._enable_all_table_items()
         self.enable_updates()
+
+    def _enable_all_table_items(self):
+        for row in range(self.num_rows()):
+            for col in range(3):
+                item = self.grouping_table.item(row, col)
+                if col != 2:
+                    item.setFlags(QtCore.Qt.ItemIsSelectable |
+                                  QtCore.Qt.ItemIsEditable |
+                                  QtCore.Qt.ItemIsEnabled)
+                else:
+                    item.setFlags(QtCore.Qt.ItemIsSelectable)
 
     def on_user_changes_group_name(self, slot):
         self._validate_group_name_entry = slot
@@ -146,6 +162,11 @@ class GroupingTableView(QtGui.QWidget):
         add_group_action = self._context_menu_add_group_action(self.add_group_button.clicked.emit)
         remove_group_action = self._context_menu_remove_group_action(self.remove_group_button.clicked.emit)
         add_pair_action = self._context_menu_add_pair_action(self.add_pair_requested)
+
+        if self._disabled:
+            add_group_action.setEnabled(False)
+            remove_group_action.setEnabled(False)
+            add_pair_action.setEnabled(False)
 
         self.menu.addAction(add_group_action)
         self.menu.addAction(remove_group_action)

@@ -25,6 +25,7 @@ class PairingTableView(QtGui.QWidget):
         self.pairing_table.cellChanged.connect(self.on_cell_changed)
 
         self._validate_pair_name_entry = lambda text: True
+        self._validate_alpha = lambda text: True
 
         self._on_table_data_changed = lambda: 0
 
@@ -35,9 +36,14 @@ class PairingTableView(QtGui.QWidget):
         # we shouldn't respond to signals
         self._updating = False
 
+        # Flag for context menus
+        self._disabled = False
+
     def disable_editing(self):
-        self.pairing_table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.disable_updates()
+        self._disabled = True
+        self.add_pair_button.setEnabled(False)
+        self.remove_pair_button.setEnabled(False)
         for i in range(self.num_rows()):
             for j in range(4):
                 try:
@@ -49,13 +55,15 @@ class PairingTableView(QtGui.QWidget):
         self.enable_updates()
 
     def enable_editing(self):
-        self.pairing_table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.disable_updates()
+        self._disabled = False
+        self.add_pair_button.setEnabled(True)
+        self.remove_pair_button.setEnabled(True)
         for i in range(self.num_rows()):
             for j in range(4):
                 try:
                     item = self.pairing_table.item(i, j)
-                    item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+                    item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled)
                 except:
                     item = self.pairing_table.cellWidget(i, j)
                     item.setEnabled(True)
@@ -66,6 +74,9 @@ class PairingTableView(QtGui.QWidget):
 
     def on_user_changes_pair_name(self, slot):
         self._validate_pair_name_entry = slot
+
+    def on_user_changes_alpha(self, slot):
+        self._validate_alpha = slot
 
     def setup_interface_layout(self):
         self.setObjectName("PairingTableView")
@@ -143,6 +154,10 @@ class PairingTableView(QtGui.QWidget):
         add_pair_action = self._context_menu_add_pair_action(self.add_pair_button.clicked.emit)
         remove_pair_action = self._context_menu_remove_pair_action(self.remove_pair_button.clicked.emit)
 
+        if self._disabled:
+            add_pair_action.setEnabled(False)
+            remove_pair_action.setEnabled(False)
+
         self.menu.addAction(add_pair_action)
         self.menu.addAction(remove_pair_action)
 
@@ -184,8 +199,12 @@ class PairingTableView(QtGui.QWidget):
                 self.pairing_table.setCellWidget(row_position, 2, group2_selector_widget)
                 continue
             if i == 3:
-                item.setFlags(QtCore.Qt.ItemIsEnabled)
-                item.setFlags(QtCore.Qt.ItemIsSelectable)
+                alpha_widget = table_utils.ValidatedTableItem(self._validate_alpha)
+                alpha_widget.setText(entry)
+                self.pairing_table.setItem(row_position, 3, alpha_widget)
+                continue
+                #item.setFlags(QtCore.Qt.ItemIsEnabled)
+                #item.setFlags(QtCore.Qt.ItemIsSelectable)
             self.pairing_table.setItem(row_position, i, item)
 
     def on_add_pair_button_clicked(self, slot):

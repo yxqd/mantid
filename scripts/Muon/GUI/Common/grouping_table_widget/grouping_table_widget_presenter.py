@@ -20,8 +20,14 @@ class GroupingTablePresenter(object):
 
         self._view.on_table_data_changed(self.handle_data_change)
 
+    def _is_edited_name_unique(self, new_name):
+        is_name_column_being_edited = self._view.grouping_table.currentColumn() == 0
+        is_name_unique = (sum(
+            [new_name == name for name in self._model.group_and_pair_names]) == 0)
+        return is_name_column_being_edited and is_name_unique
+
     def validate_group_name(self, text):
-        if sum(text == name for name in self._model.group_and_pair_names) > 0:
+        if self._is_edited_name_unique(text):
             self._view.warning_popup("Groups and pairs must have unique names")
             return False
         if not re.match("^\w+$", text):
@@ -29,10 +35,10 @@ class GroupingTablePresenter(object):
             return False
         return True
 
-    @staticmethod
-    def validate_detector_IDs(text):
+    def validate_detector_IDs(self, text):
         if re.match("^[0-9]*([0-9]+[,-]{0,1})*[0-9]+$", text):
             return True
+        self._view.warning_popup("Invalid detector list.")
         return False
 
     def disable_editing(self):

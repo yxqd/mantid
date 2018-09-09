@@ -15,6 +15,7 @@ class PairingTablePresenter(object):
         self._view.on_remove_pair_button_clicked(self.handle_remove_pair_button_clicked)
 
         self._view.on_user_changes_pair_name(self.validate_pair_name)
+        self._view.on_user_changes_alpha(self.validate_alpha)
 
         self._view.on_table_data_changed(self.handle_data_change)
 
@@ -25,6 +26,12 @@ class PairingTablePresenter(object):
             return False
         if not re.match("^\w+$", text):
             self._view.warning_popup("Pair names should only contain digits, characters and _")
+            return False
+        return True
+
+    def validate_alpha(self, alpha_text):
+        if not re.match("[+]?\d*\.\d+|\d+", alpha_text) or float(alpha_text < 0.0):
+            self._view.warning_popup("Alpha must be > 0")
             return False
         return True
 
