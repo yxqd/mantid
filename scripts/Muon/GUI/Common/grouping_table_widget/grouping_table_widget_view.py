@@ -12,6 +12,10 @@ class GroupingTableView(QtGui.QWidget):
     dataChanged = Signal()
     addPairRequested = Signal(str, str)
 
+    @staticmethod
+    def warning_popup(message):
+        message_box.warning(str(message))
+
     def __init__(self, parent=None):
         super(GroupingTableView, self).__init__(parent)
 
@@ -83,7 +87,6 @@ class GroupingTableView(QtGui.QWidget):
         header.setResizeMode(0, QtGui.QHeaderView.Stretch)
         header.setResizeMode(1, QtGui.QHeaderView.Stretch)
         header.setResizeMode(2, QtGui.QHeaderView.ResizeToContents)
-        # table_utils.setTableHeaders(self.grouping_table)
         vertical_headers = self.grouping_table.verticalHeader()
         vertical_headers.setMovable(False)
         vertical_headers.setResizeMode(QtGui.QHeaderView.ResizeToContents)
@@ -93,26 +96,38 @@ class GroupingTableView(QtGui.QWidget):
         selected_names = self.get_selected_group_names()
         self.addPairRequested.emit(selected_names[0], selected_names[1])
 
-    def contextMenuEvent(self, event):
-        """Overridden method"""
-
-        self.menu = QtGui.QMenu(self)
-        selected_rows = self._get_selected_row_indices()
-
+    def _context_menu_add_group_action(self, slot):
         add_group_action = QtGui.QAction('Add Group', self)
-        if len(selected_rows) > 0:
+        if len(self._get_selected_row_indices()) > 0:
             add_group_action.setEnabled(False)
-        add_group_action.triggered.connect(self.add_group_button.clicked.emit)
+        add_group_action.triggered.connect(slot)
+        return add_group_action
 
-        remove_group_action = QtGui.QAction('Remove Group', self)
+    def _context_menu_remove_group_action(self, slot):
+        if len(self._get_selected_row_indices()) > 1:
+            # use plural if >1 item selected
+            remove_group_action = QtGui.QAction('Remove Groups', self)
+        else:
+            remove_group_action = QtGui.QAction('Remove Group', self)
         if self.num_rows() == 0:
             remove_group_action.setEnabled(False)
-        remove_group_action.triggered.connect(self.remove_group_button.clicked.emit)
+        remove_group_action.triggered.connect(slot)
+        return remove_group_action
 
+    def _context_menu_add_pair_action(self, slot):
         add_pair_action = QtGui.QAction('Add Pair', self)
-        if len(selected_rows) != 2:
+        if len(self._get_selected_row_indices()) != 2:
             add_pair_action.setEnabled(False)
-        add_pair_action.triggered.connect(self.add_pair_requested)
+        add_pair_action.triggered.connect(slot)
+        return add_pair_action
+
+    def contextMenuEvent(self, _event):
+        """Overridden method"""
+        self.menu = QtGui.QMenu(self)
+
+        add_group_action = self._context_menu_add_group_action(self.add_group_button.clicked.emit)
+        remove_group_action = self._context_menu_remove_group_action(self.remove_group_button.clicked.emit)
+        add_pair_action = self._context_menu_add_pair_action(self.add_pair_requested)
 
         self.menu.addAction(add_group_action)
         self.menu.addAction(remove_group_action)
@@ -170,15 +185,11 @@ class GroupingTableView(QtGui.QWidget):
     def num_rows(self):
         return self.grouping_table.rowCount()
 
-    def warning_popup(self, message):
-        message_box.warning(str(message))
-
     def on_item_changed(self):
-        if not self._updating:
-            return
-        return
+        """Not yet implemented."""
+        pass
 
-    def on_cell_changed(self, row, col):
+    def on_cell_changed(self, _row, _col):
         if not self._updating:
             self._on_table_data_changed()
 
@@ -195,6 +206,7 @@ class GroupingTableView(QtGui.QWidget):
         self.dataChanged.emit()
 
     def clear(self):
+        # Go backwards to preserve indices
         for row in reversed(range(self.num_rows())):
             self.grouping_table.removeRow(row)
 

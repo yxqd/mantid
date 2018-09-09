@@ -60,12 +60,13 @@ class PairingTablePresenter(object):
         self._view.on_table_data_changed(self.handle_data_change)
 
     def validate_pair_name(self, text):
-        if sum(text == name for name in self._model.pair_names) > 1:
-            self._view.warning_popup("Pairs and groups must have unique names")
+        if sum(text == name for name in self._model.group_and_pair_names) > 0:
+            self._view.warning_popup("Groups and pairs must have unique names")
             return False
-        if re.match("^\w+$", text):
-            return True
-        return False
+        if not re.match("^\w+$", text):
+            self._view.warning_popup("Group names should only contain digits, characters and _")
+            return False
+        return True
 
     @staticmethod
     def validate_detector_IDs(text):
@@ -103,8 +104,6 @@ class PairingTablePresenter(object):
         else:
             self._view.remove_selected_pairs()
             self._model.remove_pairs_by_name(pair_names)
-
-
 
     def remove_last_row_in_view_and_model(self):
         name = self._view.get_table_contents()[-1][0]

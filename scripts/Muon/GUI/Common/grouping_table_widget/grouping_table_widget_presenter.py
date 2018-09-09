@@ -6,10 +6,6 @@ import re
 from Muon.GUI.Common import run_string_utils as run_utils
 
 
-def detector_list_to_string(detector_list):
-    return ",".join([str(i) for i in detector_list])
-
-
 class MuonGroup:
     """Simple struct to store information on a detector group.
 
@@ -64,12 +60,13 @@ class GroupingTablePresenter(object):
         self._view.on_table_data_changed(self.handle_data_change)
 
     def validate_group_name(self, text):
-        if sum(text == name for name in self._model.group_names) > 1:
-            self._view.warning_popup("Groups must have unique names")
+        if sum(text == name for name in self._model.group_and_pair_names) > 0:
+            self._view.warning_popup("Groups and pairs must have unique names")
             return False
-        if re.match("^\w+$", text):
-            return True
-        return False
+        if not re.match("^\w+$", text):
+            self._view.warning_popup("Group names should only contain digits, characters and _")
+            return False
+        return True
 
     @staticmethod
     def validate_detector_IDs(text):
@@ -93,7 +90,6 @@ class GroupingTablePresenter(object):
             self._view.enable_updates()
             return
 
-        # entry = [str(group.name), detector_list_to_string(group.detectors), str(group.n_detectors)]
         entry = [str(group.name), run_utils.run_list_to_string(group.detectors), str(group.n_detectors)]
         self._view.add_entry_to_table(entry)
         self._view.enable_updates()
@@ -126,10 +122,8 @@ class GroupingTablePresenter(object):
 
     def update_model_from_view(self):
         table = self._view.get_table_contents()
-        print("Model update from view : ", table)
         self._model.clear_groups()
         for entry in table:
-            # TODO parse string to list of detectors
             detector_list = run_utils.run_string_to_list(str(entry[1]))
             group = MuonGroup(group_name=str(entry[0]), detector_IDs=detector_list)
             self._model.add_group(group)

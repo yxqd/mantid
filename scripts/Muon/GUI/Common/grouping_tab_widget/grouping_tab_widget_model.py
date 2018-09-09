@@ -35,6 +35,10 @@ class GroupingTabModel(object):
     def pair_names(self):
         return self._pairs.keys()
 
+    @property
+    def group_and_pair_names(self):
+        return self._groups.keys() + self._pairs.keys()
+
     def clear_groups(self):
         self._groups = OrderedDict()
 

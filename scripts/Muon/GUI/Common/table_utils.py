@@ -31,11 +31,14 @@ class ValidatedTableItem(QtGui.QTableWidgetItem):
     def validator_before_set(func, validator):
         @wraps(func)
         def wrapper(*args, **kw):
-            if validator(args[1].toString()):
-                res = func(*args, **kw)
-            else:
-                res = None
-            return res
+            try:
+                if validator(args[1].toString()):
+                    res = func(*args, **kw)
+                else:
+                    res = None
+                return res
+            except Exception as e:
+                print("EXCEPTION FROM ValidatedTableItem : ", e.args[0])
 
         return wrapper
 
