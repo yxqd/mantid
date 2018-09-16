@@ -65,7 +65,7 @@ class GroupingTabModel(object):
         for name in name_list:
             del self._pairs[name]
 
-    def construct_empty_group(self, group_index):
+    def construct_empty_group(self, _group_index):
         group_index = 0
         new_group_name = "group_" + str(group_index)
         while new_group_name in self.group_names:
@@ -73,19 +73,25 @@ class GroupingTabModel(object):
             new_group_name = "group_" + str(group_index)
         return MuonGroup(group_name=new_group_name, detector_IDs=[1])
 
-    def construct_empty_pair(self, pair_index):
+    def construct_empty_pair(self, _pair_index):
         pair_index = 0
         new_pair_name = "pair_" + str(pair_index)
         while new_pair_name in self.pair_names:
             pair_index += 1
             new_pair_name = "pair_" + str(pair_index)
-        group1 = self.group_names[0]
-        group2 = self.group_names[1]
+        if len(self.group_names) == 0:
+            group1 = None
+            group2 = None
+        if len(self.group_names) == 1:
+            group1 = self.group_names[0]
+            group2 = self.group_names[0]
+        if len(self.group_names) >= 2:
+            group1 = self.group_names[0]
+            group2 = self.group_names[1]
         return MuonPair(pair_name=new_pair_name,
                         group1_name=group1, group2_name=group2, alpha=1.0)
 
     def construct_empty_pair_with_group_names(self, name1, name2):
-        print("EMPTY PAIR")
         pair_index = 0
         new_pair_name = "pair_" + str(pair_index)
         while new_pair_name in self.pair_names:

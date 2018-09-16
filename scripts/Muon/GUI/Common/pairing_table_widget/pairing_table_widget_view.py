@@ -47,7 +47,7 @@ class PairingTableView(QtGui.QWidget):
     def _disable_all_table_items(self):
         for row in range(self.num_rows()):
             for col in range(self.num_cols()):
-                if col == 1 or col == 2:
+                if col == 1 or col == 2 or col == 4:
                     item = self.pairing_table.cellWidget(row, col)
                     item.setEnabled(False)
                 else:
@@ -68,7 +68,7 @@ class PairingTableView(QtGui.QWidget):
     def _enable_all_table_items(self):
         for row in range(self.num_rows()):
             for col in range(self.num_cols()):
-                if col == 1 or col == 2:
+                if col == 1 or col == 2 or col == 4:
                     item = self.pairing_table.cellWidget(row, col)
                     item.setEnabled(True)
                 else:
@@ -129,13 +129,14 @@ class PairingTableView(QtGui.QWidget):
         self.setLayout(self.vertical_layout)
 
     def set_up_table(self):
-        self.pairing_table.setColumnCount(4)
-        self.pairing_table.setHorizontalHeaderLabels(QtCore.QString("Pair Name;Group 1; Group 2;Alpha").split(";"))
+        self.pairing_table.setColumnCount(5)
+        self.pairing_table.setHorizontalHeaderLabels(QtCore.QString("Pair Name;Group 1; Group 2;Alpha;Guess Alpha").split(";"))
         header = self.pairing_table.horizontalHeader()
         header.setResizeMode(0, QtGui.QHeaderView.Stretch)
         header.setResizeMode(1, QtGui.QHeaderView.Stretch)
         header.setResizeMode(2, QtGui.QHeaderView.Stretch)
-        header.setResizeMode(3, QtGui.QHeaderView.ResizeToContents)
+        header.setResizeMode(3, QtGui.QHeaderView.Stretch)
+        header.setResizeMode(4, QtGui.QHeaderView.ResizeToContents)
         vertical_headers = self.pairing_table.verticalHeader()
         vertical_headers.setMovable(False)
         vertical_headers.setResizeMode(QtGui.QHeaderView.ResizeToContents)
@@ -180,6 +181,11 @@ class PairingTableView(QtGui.QWidget):
         selector.addItems(self._group_selections)
         return selector
 
+    def _guess_alpha_button(self):
+        guess_alpha = QtGui.QPushButton(self)
+        guess_alpha.setText("Guess")
+        return guess_alpha
+
     def get_index_of_text(self, selector, text):
         for i in range(selector.count()):
             if str(selector.itemText(i)) == text:
@@ -187,7 +193,7 @@ class PairingTableView(QtGui.QWidget):
         return 0
 
     def add_entry_to_table(self, row_entries):
-        assert len(row_entries) == self.pairing_table.columnCount()
+        assert len(row_entries) == self.pairing_table.columnCount() - 1
 
         row_position = self.pairing_table.rowCount()
         self.pairing_table.insertRow(row_position)
@@ -216,6 +222,10 @@ class PairingTableView(QtGui.QWidget):
                 self.pairing_table.setItem(row_position, 3, alpha_widget)
                 continue
             self.pairing_table.setItem(row_position, i, item)
+        # guess alpha button
+        guess_alpha_widget = self._guess_alpha_button()
+        self.pairing_table.setCellWidget(row_position, 4, guess_alpha_widget)
+
 
     def on_add_pair_button_clicked(self, slot):
         self.add_pair_button.clicked.connect(slot)
@@ -267,6 +277,8 @@ class PairingTableView(QtGui.QWidget):
                 if col == 1 or col == 2:
                     # columns with widgets
                     ret[row][col] = str(self.pairing_table.cellWidget(row, col).currentText())
+                elif col == 4:
+                    ret[row][col] = "Guess"
                 else:
                     # columns without widgets
                     ret[row][col] = str(self.pairing_table.item(row, col).text())

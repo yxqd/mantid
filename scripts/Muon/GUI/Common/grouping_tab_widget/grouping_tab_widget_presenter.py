@@ -2,38 +2,47 @@ from __future__ import (absolute_import, division, print_function)
 
 import time
 
-from Muon.GUI.Common.threading_worker import Worker
 from Muon.GUI.Common.threading_manager import WorkerManager
 
 
 class GroupingTabPresenter(object):
     """
-
-    The grouping tab presenter is responsible for synchronizing the group and pair tables.
+    The grouping tab presenter is responsible for synchronizing the group and pair tables. It also maintains
+    functionality which covers both groups/pairs ; e.g. loading/saving/updating data.
     """
 
-    def __init__(self, view, model,
-                 grouping_table_widget=None,
-                 pairing_table_widget=None):
+    @staticmethod
+    def text_for_description():
+        # TODO :  implement automatic update for decsription.
+        text = "EMU longitudinal (?? detectors)"
+        return text
+
+    @staticmethod
+    def timing(time_s):
+        time.sleep(time_s)
+        return
+
+    def __init__(self, view, model, grouping_table_widget=None, pairing_table_widget=None):
         self._view = view
         self._model = model
 
         self.grouping_table_widget = grouping_table_widget
         self.pairing_table_widget = pairing_table_widget
 
-        self._view.on_clear_grouping_button_clicked(self.on_clear_requested)
-
         # Synchronize the two tables
         self._view.on_grouping_table_changed(self.pairing_table_widget.update_view_from_model)
         self._view.on_pairing_table_changed(self.grouping_table_widget.update_view_from_model)
 
-        self._view.on_add_pair_requested(self.add_pair_from_grouping_table)
-
         self._view.set_description_text(self.text_for_description())
-
+        self._view.on_add_pair_requested(self.add_pair_from_grouping_table)
+        self._view.on_clear_grouping_button_clicked(self.on_clear_requested)
         self._view.on_update_button_clicked(self.disable_editing)
 
+        # multi-threading
         self.thread_manager = None
+
+    def show(self):
+        self._view.show()
 
     def add_pair_from_grouping_table(self, name1, name2):
         """If user requests to add a pair from the grouping table."""
@@ -41,16 +50,7 @@ class GroupingTabPresenter(object):
         self._model.add_pair(pair)
         self.pairing_table_widget.update_view_from_model()
 
-    def text_for_description(self):
-        # TODO :  implement automatic update for decsription.
-        text = "EMU longitudinal (?? detectors)"
-        return text
-
-    def show(self):
-        self._view.show()
-
     def disable_editing(self):
-        print("Disabling editing")
         self.grouping_table_widget.disable_editing()
         self.pairing_table_widget.disable_editing()
 
@@ -62,14 +62,9 @@ class GroupingTabPresenter(object):
         self.thread_manager = WorkerManager(fn=self.timing, num_threads=1,
                                             callback_on_threads_complete=self.enable_editing, time_s=[2, 2, 2])
         self.thread_manager.start()
-        #self.enable_editing()
 
-    def timing(self, time_s):
-        time.sleep(time_s)
-        return
 
     def enable_editing(self):
-        print("Enabling editing")
         self.grouping_table_widget.enable_editing()
         self.pairing_table_widget.enable_editing()
 
