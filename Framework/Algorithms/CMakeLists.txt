@@ -158,6 +158,7 @@ set ( SRC_FILES
 	src/GetEiMonDet2.cpp
 	src/GetQsInQENSData.cpp
 	src/GetTimeSeriesLogInformation.cpp
+	src/Gravity.cpp
 	src/GravitySANSHelper.cpp
 	src/GroupWorkspaces.cpp
 	src/HRPDSlabCanAbsorption.cpp
@@ -488,6 +489,7 @@ set ( INC_FILES
 	inc/MantidAlgorithms/GetEiMonDet2.h
 	inc/MantidAlgorithms/GetQsInQENSData.h
 	inc/MantidAlgorithms/GetTimeSeriesLogInformation.h
+	inc/MantidAlgorithms/Gravity.h
 	inc/MantidAlgorithms/GravitySANSHelper.h
 	inc/MantidAlgorithms/GroupWorkspaces.h
 	inc/MantidAlgorithms/HRPDSlabCanAbsorption.h
