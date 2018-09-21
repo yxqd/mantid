@@ -3,6 +3,8 @@
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/TextAxis.h"
 
+#include <iostream>
+
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
 
@@ -27,6 +29,40 @@ double const m_neutron = 1.67e-27;
 double const lam_to_speed = h_plank / m_neutron;
 double const G = 9.80665;
 
+//----------------------------------------------------------------------------------------------
+/// Fill in a spectrum of a MatrixWorkspace
+template <typename Generator>
+void fillSpectrum(MatrixWorkspace &ws, size_t index, double t0, double t1, Generator gen) {
+    auto &x = ws.mutableX(index);
+    auto &y = ws.mutableY(index);
+    auto nBins = ws.blocksize();
+    auto dt = (t1 - t0) / (nBins - 1);
+    for(size_t i = 0; i < nBins; ++i) {
+      auto t = t0 + double(i) * dt;
+      x[i] = gen.x(t);
+      y[i] = gen.y(t);
+    }
+}
+
+struct Plane {
+  double xm, ym, theta;
+  double x(double t) const { return t; }
+  double y(double t) const { return (t - xm) * tan(theta) + ym; }
+};
+
+struct Vertical {
+  double xm;
+  double x(double t) const { return xm; }
+  double y(double t) const { return t; }
+};
+
+struct FreeFall {
+  double x0, y0, vx, vy;
+  double x(double t) const { return x0 + vx * t; }
+  double y(double t) const { return y0 + t * (vy - G * t / 2.0); }
+};
+
+//----------------------------------------------------------------------------------------------
 
 /// Calculate time that a particle takes to hit an infinte line. The line passes through point (0, 0) and
 ///    inclined to the horizon at some angle.
@@ -111,102 +147,97 @@ Path calcPath(const Path &p, double xm) {
   return calcPath(p.x1, p.y1, p.v1x, p.v1y, xm);
 }
 
-/// Fill in a spectrum of a MatrixWorkspace
-template <typename Generator>
-void fillSpectrum(MatrixWorkspace &ws, size_t index, double t0, double t1, Generator gen) {
-    auto &x = ws.mutableX(index);
-    auto &y = ws.mutableY(index);
-    auto nBins = ws.blocksize();
-    auto dt = (t1 - t0) / (nBins - 1);
-    for(size_t i = 0; i < nBins; ++i) {
-      auto t = t0 + double(i) * dt;
-      x[i] = gen.x(t);
-      y[i] = gen.y(t);
-    }
-}
-
-struct Plane {
-  double xm, ym, theta;
-  double x(double t) const { return t; }
-  double y(double t) const { return (t - xm) * tan(theta) + ym; }
-};
-
-struct Vertical {
-  double xm;
-  double x(double t) const { return xm; }
-  double y(double t) const { return t; }
-};
-
-struct FreeFall {
-  double x0, y0, vx, vy;
-  double x(double t) const { return x0 + vx * t; }
-  double y(double t) const { return y0 + t * (vy - G * t / 2.0); }
-};
-
-} // namespace
-//----------------------------------------------------------------------------------------------
-void Gravity::init() {
-  declareProperty("X0", -1.0, "Source x position in m");
-  declareProperty("Y0", 0.0, "Source y position in m");
-
-  declareProperty("Xm1", 0.0, "Mirror x position in m");
-  declareProperty("Ym1", 0.0, "Mirror y position in m");
-  declareProperty("Theta1", 0.3, "Angle of the mirror in degrees");
-
-  declareProperty("Xd", 1.0, "Position of a linear detector in m");
-  declareProperty("Lambda", 1.0, "Particle's wavelength in Angstrom");
-  declareProperty("BeamDiv", 0.00001, "Beam divergence angle in degrees (angle with the horizontal)");
-
-  declareProperty("Theta", 0.3, "Angle of the sample in degrees");
-  
-  declareProperty(make_unique<WorkspaceProperty<API::MatrixWorkspace>>(
-                      "OutputWorkspace", "", Direction::Output),
-                  "The output workspace.");
-}
-
-//----------------------------------------------------------------------------------------------
-void Gravity::exec() {
-
-  double const x0 = getProperty("X0");
-  double const y0 = getProperty("Y0");
-  double const lam = getProperty("Lambda");
-  double const beamDiv = double(getProperty("BeamDiv")) * M_PI / 180.0;
-
-  double const xm1 = getProperty("Xm1");
-  double const ym1 = getProperty("Ym1");
-  double const theta1 = double(getProperty("Theta1")) * M_PI / 180.0;
-
-  double const xd = getProperty("Xd");
-  double const theta = double(getProperty("Theta")) * M_PI / 180.0;
-
+std::pair<double, double> calcVs(double lam, double beamDiv) {
   double const v = lam_to_speed / lam * 1e10;
   auto const vx = v * cos(beamDiv);
   auto const vy = v * sin(beamDiv);
+  return std::make_pair(vx, vy);
+}
 
+std::pair<double, double> calcReflections(double lam, double beamDiv, double x0,
+                                          double y0, double xm, double ym,
+                                          double theta1, double xd,
+                                          double theta) {
+  double vx, vy;
+  std::tie(vx, vy) = calcVs(lam, beamDiv);
+  std::vector<Path> paths;
+  Path p1{0, x0, y0, vx, vy, x0, y0, vx, vy};
+  try {
+    p1 = calcPath(x0, y0, vx, vy, xm, ym, theta1);
+  } catch (std::runtime_error &) {
+  }
+  Path p2;
+  try {
+    p2 = calcPath(p1, 0, 0, theta);
+  } catch (std::runtime_error &) {
+    p2 = p1;
+  }
+  Path p3 = calcPath(p2, xd);
+  std::cerr << p3.vx << ' ' << p3.vy << ' ' << atan(p3.vy / p3.vx) << std::endl;
+  auto const trueTheta = (atan(p3.vy / p3.vx) - theta) * 180.0 / M_PI;
+  return std::make_pair(p3.y1, trueTheta);
+}
+
+//----------------------------------------------------------------------------------------------
+
+MatrixWorkspace_sptr makeTrueTheta(double beamDiv, double x0,
+                                   double y0, double xm, double ym,
+                                   double theta1, double xd, double theta,
+                                   Logger &logger) {
+  size_t const nBins = 100;
+  auto out =
+      WorkspaceFactory::Instance().create("Workspace2D", 2, nBins, nBins);
+  auto &X0 = out->mutableX(0);
+  auto &Y0 = out->mutableY(0);
+  auto &X1 = out->mutableX(1);
+  auto &Y1 = out->mutableY(1);
+  auto dt = (10.0 - 1.0) / (nBins - 1);
+  double yd, trueTheta;
+  for(size_t i = 0; i < nBins; ++i) {
+    auto lam = 1.0 + double(i) * dt;
+    std::tie(yd, trueTheta) =
+        calcReflections(lam, beamDiv, x0, y0, xm, ym, theta1, xd, theta);
+    X0[i] = yd;
+    Y0[i] = trueTheta;
+    X1[i] = lam;
+    Y1[i] = trueTheta;
+  }
+  return out;
+}
+
+//----------------------------------------------------------------------------------------------
+
+MatrixWorkspace_sptr makeSimulation(double lam, double beamDiv, double x0,
+                                    double y0, double xm, double ym,
+                                    double theta1, double xd, double theta,
+                                    Logger &logger) {
   size_t nSpec = 3;
   size_t const nBins = 100;
   Path p1, p2, p3;
 
+  double vx, vy;
+  std::tie(vx, vy) = calcVs(lam, beamDiv);
+
   try {
-    p1 = calcPath(x0, y0, vx, vy, xm1, ym1, theta1);
+    p1 = calcPath(x0, y0, vx, vy, xm, ym, theta1);
     ++nSpec;
-    g_log.warning() << "t1 = " << p1.t << std::endl;
-    g_log.warning() << "x1 = " << p1.x1 << std::endl;
-    g_log.warning() << "y1 = " << p1.y1 << std::endl;
+    logger.warning() << "t1 = " << p1.t << std::endl;
+    logger.warning() << "x1 = " << p1.x1 << std::endl;
+    logger.warning() << "y1 = " << p1.y1 << std::endl;
 
     p2 = calcPath(p1, 0, 0, theta);
     ++nSpec;
-    g_log.warning() << "t2 = " << p2.t << std::endl;
-    g_log.warning() << "x2 = " << p2.x1 << std::endl;
-    g_log.warning() << "y2 = " << p2.y1 << std::endl;
+    logger.warning() << "t2 = " << p2.t << std::endl;
+    logger.warning() << "x2 = " << p2.x1 << std::endl;
+    logger.warning() << "y2 = " << p2.y1 << std::endl;
   
     p3 = calcPath(p2, xd);
     ++nSpec;
-    g_log.warning() << "t3 = " << p3.t << std::endl;
-    g_log.warning() << "x3 = " << p3.x1 << std::endl;
-    g_log.warning() << "y3 = " << p3.y1 << std::endl;
+    logger.warning() << "t3 = " << p3.t << std::endl;
+    logger.warning() << "x3 = " << p3.x1 << std::endl;
+    logger.warning() << "y3 = " << p3.y1 << std::endl;
   } catch (std::runtime_error &e) {
-    g_log.warning() << "Path" << (nSpec - 2) << ": " << e.what() << std::endl;
+    logger.warning() << "Path" << (nSpec - 2) << ": " << e.what() << std::endl;
   }
 
   auto out =
@@ -215,7 +246,7 @@ void Gravity::exec() {
   if (nSpec > 0) {
     axis->setLabel(0, "Mirror");
     double x1 = nSpec > 3 ? p1.x1 * 2 - x0 : xd;
-    fillSpectrum(*out, 0, x0, x1, Plane{xm1, ym1, theta1});
+    fillSpectrum(*out, 0, x0, x1, Plane{xm, ym, theta1});
   }
   if (nSpec > 1) {
     axis->setLabel(1, "Sample");
@@ -239,8 +270,53 @@ void Gravity::exec() {
     fillSpectrum(*out, 5, 0, p3.t, p3);
   }
   out->replaceAxis(1, axis);
+  return out;
+}
 
-  setProperty("OutputWorkspace", out);
+} // namespace
+//----------------------------------------------------------------------------------------------
+void Gravity::init() {
+  declareProperty("X0", -23.0, "Source x position in m");
+  declareProperty("Y0", 0.0, "Source y position in m");
+
+  declareProperty("Xm1", -10.0, "Mirror x position in m");
+  declareProperty("Ym1", 0.0, "Mirror y position in m");
+  declareProperty("Theta1", -0.01, "Angle of the mirror in degrees");
+
+  declareProperty("Xd", 1.0, "Position of a linear detector in m");
+  declareProperty("Lambda", 10.0, "Particle's wavelength in Angstrom");
+  declareProperty("BeamDiv", 0.2, "Beam divergence angle in degrees (angle with the horizontal)");
+
+  declareProperty("Theta", 0.3, "Angle of the sample in degrees");
+  
+  declareProperty(make_unique<WorkspaceProperty<API::MatrixWorkspace>>(
+                      "PathWorkspace", "", Direction::Output),
+                  "The output workspace.");
+  
+  declareProperty(make_unique<WorkspaceProperty<API::MatrixWorkspace>>(
+                      "ThetaWorkspace", "", Direction::Output),
+                  "The output workspace.");
+}
+
+//----------------------------------------------------------------------------------------------
+void Gravity::exec() {
+
+  double const x0 = getProperty("X0");
+  double const y0 = getProperty("Y0");
+  double const lam = getProperty("Lambda");
+  double const beamDiv = double(getProperty("BeamDiv")) * M_PI / 180.0;
+
+  double const xm1 = getProperty("Xm1");
+  double const ym1 = getProperty("Ym1");
+  double const theta1 = double(getProperty("Theta1")) * M_PI / 180.0;
+
+  double const xd = getProperty("Xd");
+  double const theta = double(getProperty("Theta")) * M_PI / 180.0;
+
+  auto pathWS = makeSimulation(lam, beamDiv, x0, y0, xm1, ym1, theta1, xd, theta, g_log);
+  setProperty("PathWorkspace", pathWS);
+  auto thetaWS = makeTrueTheta(beamDiv, x0, y0, xm1, ym1, theta1, xd, theta, g_log);
+  setProperty("ThetaWorkspace", thetaWS);
 
 
 }
