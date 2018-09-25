@@ -190,75 +190,69 @@ Path calcPathThrough2Points(double x0, double y0, double x1, double y1, double v
   auto const vx = v / (tg*tg + 1.0);
   auto const vy = vx * tg;
   auto path = calcPath(x0, y0, vx, vy, x1);
-  if (fabs(path.y1 - y1) > 1e-5) {
+  if (fabs(path.y1 - y1) > 1e-4) {
     throw std::runtime_error("Error in calculating path throught 2 points: " + std::to_string(path.y1) + " " + std::to_string(y1));
   }
   return path;
 }
 
-std::pair<double, double> calcVs(double lam, double beamDiv) {
-  double const v = lam_to_speed / lam * 1e10;
-  auto const vx = v * cos(beamDiv);
-  auto const vy = v * sin(beamDiv);
-  return std::make_pair(vx, vy);
-}
-
-std::pair<double, double> calcReflections(double lam, double beamDiv, double x0,
-                                          double y0, double xm, double ym,
-                                          double theta1, double xd,
-                                          double theta) {
-  double vx, vy;
-  std::tie(vx, vy) = calcVs(lam, beamDiv);
-  std::vector<Path> paths;
-  Path p1{0, x0, y0, vx, vy, x0, y0, vx, vy};
-  try {
-    p1 = calcPath(x0, y0, vx, vy, xm, ym, theta1);
-  } catch (std::runtime_error &) {
-  }
-  Path p2;
-  try {
-    p2 = calcPath(p1, 0, 0, theta);
-  } catch (std::runtime_error &) {
-    p2 = p1;
-  }
-  Path p3 = calcPath(p2, xd);
-  auto const trueTheta = (atan(p3.vy / p3.vx) - theta) * 180.0 / M_PI;
-  return std::make_pair(p3.y1, trueTheta);
-}
+//----------------------------------------------------------------------------------------------
+struct Setup {
+  double x0;
+  double y0;
+  double x1;
+  double y1;
+  double ys;
+  double theta;
+  double xd;
+};
 
 //----------------------------------------------------------------------------------------------
 
-MatrixWorkspace_sptr makeTwoSlitSimulation(double v, double x0, double y0,
-                                           double x1, double y1, double ys,
-                                           double theta, double xd, Logger &logger) {
-  auto path1 = calcPathThrough2Points(x0, y0, x1, y1, v);
-  logger.warning() << "p1 " << path1.v1x << ' ' << path1.v1y << std::endl;
-  auto path2 = calcPath(path1, 0, ys, theta);
-  logger.warning() << "p2 " << path2.v1x << ' ' << path2.v1y << ' ' << path2.x1 << std::endl;
+Trajectory calcTwoSlitTrajectory(Setup const &s, double v) {
+  Trajectory traj;
+  auto path1 = calcPathThrough2Points(s.x0, s.y0, s.x1, s.y1, v);
+  traj.push_back(path1);
+  auto path2 = calcPath(path1, 0, s.ys, s.theta);
   Path path3;
-  if (path2.x1 > xd) {
-    path3 = calcPath(path1, xd);
+  if (path2.x1 > s.xd) {
+    path3 = calcPath(path1, s.xd);
   } else {
-    path3 = calcPath(path2, xd);
+    path3 = calcPath(path2, s.xd);
+    traj.push_back(path2);
   }
-  logger.warning() << "p3 " << path3.vx << ' ' << path3.vy << std::endl;
-  logger.warning() << "y3 " << path3.y1 << std::endl;
+  traj.push_back(path3);
+  return traj;
+}
 
-  size_t nSpec = 3;
+//----------------------------------------------------------------------------------------------
+MatrixWorkspace_sptr makeTwoSlitSimulation(Setup const &s, double v, Logger &logger) {
+  auto traj = calcTwoSlitTrajectory(s, v);
+  logger.warning() << "y3 " << traj.back().y1 << std::endl;
+
+  size_t nSpec = traj.size();
   size_t const nBins = 100;
   auto out =
       WorkspaceFactory::Instance().create("Workspace2D", nSpec, nBins, nBins);
-  fillSpectrum(*out, 0, 0.0, path1.t, path1);
-  fillSpectrum(*out, 1, 0.0, path2.t, path2);
-  fillSpectrum(*out, 2, 0.0, path3.t, path3);
+  size_t i = 0;
+  for(auto &&path: traj) {
+    fillSpectrum(*out, i, 0.0, path.t, path);
+    ++i;
+  }
   return out;
 }
+
+//----------------------------------------------------------------------------------------------
+std::pair<double, double> calcReflections(Setup const &s, double v) {
+  auto traj = calcTwoSlitTrajectory(s, v);
+  auto const& path = traj.back();
+  auto const trueTheta = (atan(path.vy / path.vx) - s.theta);
+  return std::make_pair(path.y1, trueTheta);
+}
+
 //----------------------------------------------------------------------------------------------
 
-MatrixWorkspace_sptr makeTrueTheta(double beamDiv, double x0,
-                                   double y0, double xm, double ym,
-                                   double theta1, double xd, double theta,
-                                   Logger &logger) {
+MatrixWorkspace_sptr makeTrueTheta(Setup const &s, Logger &logger) {
   size_t const nBins = 100;
   auto out =
       WorkspaceFactory::Instance().create("Workspace2D", 3, nBins, nBins);
@@ -272,88 +266,20 @@ MatrixWorkspace_sptr makeTrueTheta(double beamDiv, double x0,
   double yd, trueTheta;
   for(size_t i = 0; i < nBins; ++i) {
     auto lam = 1.0 + double(i) * dt;
-    std::tie(yd, trueTheta) =
-        calcReflections(lam, beamDiv, x0, y0, xm, ym, theta1, xd, theta);
-    auto j = nBins - 1 - i;
-    X0[j] = yd;
-    Y0[j] = trueTheta;
+    auto v = lam_to_speed / lam * 1e10;
+    std::tie(yd, trueTheta) = calcReflections(s, v);
+    trueTheta *= 180.0 / M_PI;
+    //auto j = nBins - 1 - i;
+    X0[i] = yd;
+    Y0[i] = trueTheta;
     X1[i] = lam;
     Y1[i] = trueTheta;
-    X2[i] = lam * (xd - x0) / lam_to_speed * 1e-10 * 1e6;
+    X2[i] = lam;
     Y2[i] = yd;
   }
   return out;
 }
 
-//----------------------------------------------------------------------------------------------
-
-MatrixWorkspace_sptr makeSimulation(double lam, double beamDiv, double x0,
-                                    double y0, double xm, double ym,
-                                    double theta1, double xd, double theta,
-                                    Logger &logger) {
-  size_t nSpec = 3;
-  size_t const nBins = 100;
-  Path p1, p2, p3;
-
-  double vx, vy;
-  std::tie(vx, vy) = calcVs(lam, beamDiv);
-
-  try {
-    p1 = calcPath(x0, y0, vx, vy, xm, ym, theta1);
-    ++nSpec;
-    logger.warning() << "t1 = " << p1.t << std::endl;
-    logger.warning() << "x1 = " << p1.x1 << std::endl;
-    logger.warning() << "y1 = " << p1.y1 << std::endl;
-
-    p2 = calcPath(p1, 0, 0, theta);
-    ++nSpec;
-    logger.warning() << "t2 = " << p2.t << std::endl;
-    logger.warning() << "x2 = " << p2.x1 << std::endl;
-    logger.warning() << "y2 = " << p2.y1 << std::endl;
-  
-    p3 = calcPath(p2, xd);
-    ++nSpec;
-    logger.warning() << "t3 = " << p3.t << std::endl;
-    logger.warning() << "x3 = " << p3.x1 << std::endl;
-    logger.warning() << "y3 = " << p3.y1 << std::endl;
-    auto const trueTheta = (atan(p3.vy / p3.vx) - theta) * 180.0 / M_PI;
-    logger.warning() << "th = " << trueTheta << std::endl;
-  } catch (std::runtime_error &e) {
-    logger.warning() << "Path" << (nSpec - 2) << ": " << e.what() << std::endl;
-  }
-
-  auto out =
-      WorkspaceFactory::Instance().create("Workspace2D", nSpec, nBins, nBins);
-  auto axis = new TextAxis(nSpec);
-  if (nSpec > 0) {
-    axis->setLabel(0, "Mirror");
-    double x1 = nSpec > 3 ? p1.x1 * 2 - x0 : xd;
-    fillSpectrum(*out, 0, x0, x1, Plane{xm, ym, theta1});
-  }
-  if (nSpec > 1) {
-    axis->setLabel(1, "Sample");
-    double x1 = nSpec > 4 ? p2.x1 * 2 : xd;
-    fillSpectrum(*out, 1, 0, x1, Plane{0, 0, theta});
-  }
-  if (nSpec > 2) {
-    axis->setLabel(2, "Detector");
-    fillSpectrum(*out, 2, -0.1, 0.5, Vertical{xd});
-  }
-  if (nSpec > 3) {
-    axis->setLabel(3, "Path1");
-    fillSpectrum(*out, 3, 0, p1.t, p1);
-  }
-  if (nSpec > 4) {
-    axis->setLabel(4, "Path2");
-    fillSpectrum(*out, 4, 0, p2.t, p2);
-  }
-  if (nSpec > 5) {
-    axis->setLabel(5, "Path3");
-    fillSpectrum(*out, 5, 0, p3.t, p3);
-  }
-  out->replaceAxis(1, axis);
-  return out;
-}
 
 } // namespace
 //----------------------------------------------------------------------------------------------
@@ -378,9 +304,9 @@ void Gravity::init() {
                       "PathWorkspace", "", Direction::Output),
                   "The output workspace.");
   
-  //declareProperty(make_unique<WorkspaceProperty<API::MatrixWorkspace>>(
-  //                    "ThetaWorkspace", "", Direction::Output),
-  //                "The output workspace.");
+  declareProperty(make_unique<WorkspaceProperty<API::MatrixWorkspace>>(
+                      "ThetaWorkspace", "", Direction::Output),
+                  "The output workspace.");
 }
 
 //----------------------------------------------------------------------------------------------
@@ -401,8 +327,12 @@ void Gravity::exec() {
   double const ys = getProperty("Ys");
   double const theta = double(getProperty("Theta")) * M_PI / 180.0;
 
-  auto pathWS = makeTwoSlitSimulation(v, x0, y0, x1, y1, ys, theta, xd, g_log);
+  Setup const s{x0, y0, x1, y1, ys, theta, xd};
+  auto pathWS = makeTwoSlitSimulation(s, v, g_log);
   setProperty("PathWorkspace", pathWS);
+
+  auto thetaWS = makeTrueTheta(s, g_log);
+  setProperty("ThetaWorkspace", thetaWS);
 
 
 }
