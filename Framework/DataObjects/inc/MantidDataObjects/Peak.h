@@ -166,7 +166,7 @@ public:
   void setPeakShape(Mantid::Geometry::PeakShape *shape);
 
   /// Set the PeakShape
-  void setPeakShape(Mantid::Geometry::PeakShape_const_sptr shape);
+  void setPeakShape(std::unique_ptr<const Mantid::Geometry::PeakShape> shape);
 
   /// Assignment
   Peak &operator=(const Peak &other);
@@ -252,9 +252,9 @@ private:
   std::set<int> m_detIDs;
 
   /// Peak shape
-  Mantid::Geometry::PeakShape_const_sptr m_peakShape;
-
+  std::unique_ptr<const Mantid::Geometry::PeakShape> m_peakShape;
   /// Static logger
+
   static Mantid::Kernel::Logger g_log;
 
   // ki-kf for Inelastic convention; kf-ki for Crystallography convention

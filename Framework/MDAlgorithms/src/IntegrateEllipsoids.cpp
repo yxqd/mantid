@@ -464,14 +464,14 @@ void IntegrateEllipsoids::exec() {
       PeakRadiusVector[i] = adaptiveRadius;
       BackgroundInnerRadiusVector[i] = adaptiveBack_inner_radius;
       BackgroundOuterRadiusVector[i] = adaptiveBack_outer_radius;
-      Mantid::Geometry::PeakShape_const_sptr shape =
+      std::unique_ptr<const Mantid::Geometry::PeakShape> shape =
           integrator.ellipseIntegrateEvents(
               E1Vec, peak_q, specify_size, adaptiveRadius,
               adaptiveBack_inner_radius, adaptiveBack_outer_radius, axes_radii,
               inti, sigi);
       peaks[i].setIntensity(inti);
       peaks[i].setSigmaIntensity(sigi);
-      peaks[i].setPeakShape(shape);
+      peaks[i].setPeakShape(std::move(shape));
       if (axes_radii.size() == 3) {
         if (inti / sigi > cutoffIsigI || cutoffIsigI == EMPTY_DBL()) {
           principalaxis1.push_back(axes_radii[0]);

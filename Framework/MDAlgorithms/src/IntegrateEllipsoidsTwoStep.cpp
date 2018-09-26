@@ -239,7 +239,7 @@ void IntegrateEllipsoidsTwoStep::exec() {
     ++index;
   }
 
-  std::vector<std::pair<boost::shared_ptr<const Geometry::PeakShape>,
+  std::vector<std::pair<std::unique_ptr<const Geometry::PeakShape>,
                         std::tuple<double, double, double>>>
       shapeLibrary;
 
@@ -250,13 +250,13 @@ void IntegrateEllipsoidsTwoStep::exec() {
     double inti, sigi;
 
     IntegrationParameters params = makeIntegrationParameters(q);
-    const auto result = integrator.integrateStrongPeak(params, q, inti, sigi);
-    shapeLibrary.push_back(result);
+    auto result = integrator.integrateStrongPeak(params, q, inti, sigi);
+    shapeLibrary.push_back(std::move(result));
 
     auto &peak = peak_ws->getPeak(index);
     peak.setIntensity(inti);
     peak.setSigmaIntensity(sigi);
-    peak.setPeakShape(std::get<0>(result));
+    peak.setPeakShape(std::move(std::get<0>(result)));
   }
 
   std::vector<Eigen::Vector3d> points;
@@ -296,12 +296,12 @@ void IntegrateEllipsoidsTwoStep::exec() {
     g_log.notice() << "Weak peak will be adjusted by " << frac << "\n";
     IntegrationParameters params =
         makeIntegrationParameters(strongPeak.getQLabFrame());
-    const auto weakShape = integrator.integrateWeakPeak(
+    auto weakShape = integrator.integrateWeakPeak(
         params, shape, libShape.second, q, inti, sigi);
 
     peak.setIntensity(inti);
     peak.setSigmaIntensity(sigi);
-    peak.setPeakShape(weakShape);
+    peak.setPeakShape(std::move(weakShape));
   }
 
   // This flag is used by the PeaksWorkspace to evaluate whether it has been

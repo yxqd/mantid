@@ -74,7 +74,7 @@ void Integrate3DEvents::addEvents(
   }
 }
 
-std::pair<boost::shared_ptr<const Geometry::PeakShape>,
+std::pair<std::unique_ptr<const Geometry::PeakShape>,
           std::tuple<double, double, double>>
 Integrate3DEvents::integrateStrongPeak(const IntegrationParameters &params,
                                        const V3D &peak_q, double &inti,
@@ -84,13 +84,11 @@ Integrate3DEvents::integrateStrongPeak(const IntegrationParameters &params,
   sigi = 0.0; // is wrong with the peak.
   auto result = getEvents(peak_q);
   if (!result)
-    return std::make_pair(boost::make_shared<NoShape>(),
-                          make_tuple(0., 0., 0.));
+    return std::make_pair(std::make_unique<NoShape>(), make_tuple(0., 0., 0.));
 
   const auto &events = *result;
   if (events.empty())
-    return std::make_pair(boost::make_shared<NoShape>(),
-                          make_tuple(0., 0., 0.));
+    return std::make_pair(std::make_unique<NoShape>(), make_tuple(0., 0., 0.));
 
   DblMatrix cov_matrix(3, 3);
   makeCovarianceMatrix(events, cov_matrix, params.regionRadius);
@@ -109,13 +107,11 @@ Integrate3DEvents::integrateStrongPeak(const IntegrationParameters &params,
       });
 
   if (invalid_peak)
-    return std::make_pair(boost::make_shared<NoShape>(),
-                          make_tuple(0., 0., 0.));
+    return std::make_pair(std::make_unique<NoShape>(), make_tuple(0., 0., 0.));
 
   const auto max_sigma = *std::max_element(sigmas.begin(), sigmas.end());
   if (max_sigma == 0)
-    return std::make_pair(boost::make_shared<NoShape>(),
-                          make_tuple(0., 0., 0.));
+    return std::make_pair(std::make_unique<NoShape>(), make_tuple(0., 0., 0.));
 
   auto rValues = calculateRadiusFactors(params, max_sigma);
   auto &r1 = std::get<0>(rValues), r2 = std::get<1>(rValues),
@@ -134,7 +130,7 @@ Integrate3DEvents::integrateStrongPeak(const IntegrationParameters &params,
                               abcBackgroundInnerRadii, abcBackgroundOuterRadii);
 
   if (!isPeakOnDetector)
-    return std::make_pair(boost::make_shared<NoShape>(),
+    return std::make_pair(std::make_unique<NoShape>(),
                           make_tuple(0.0, 0.0, 0.));
 
   const auto backgrd = numInEllipsoidBkg(
@@ -157,17 +153,18 @@ Integrate3DEvents::integrateStrongPeak(const IntegrationParameters &params,
       sqrt(peak * pow(df_ds_core, 2) + core * pow(df_ds_peak, 2));
 
   // create the peaks shape for the strong peak
-  const auto shape = boost::make_shared<const PeakShapeEllipsoid>(
+  auto shape = std::make_unique<const PeakShapeEllipsoid>(
       eigen_vectors, peakRadii, abcBackgroundInnerRadii,
       abcBackgroundOuterRadii, Mantid::Kernel::QLab,
       "IntegrateEllipsoidsTwoStep");
 
-  return std::make_pair(shape, std::make_tuple(frac, fracError, max_sigma));
+  return std::make_pair(std::move(shape),
+                        std::make_tuple(frac, fracError, max_sigma));
 }
 
-boost::shared_ptr<const Geometry::PeakShape>
-Integrate3DEvents::integrateWeakPeak(
-    const IntegrationParameters &params, PeakShapeEllipsoid_const_sptr shape,
+std::unique_ptr<const Geometry::PeakShape> Integrate3DEvents::integrateWeakPeak(
+    const IntegrationParameters &params,
+    std::unique_ptr<const PeakShapeEllipsoid> shape,
     const std::tuple<double, double, double> &libPeak, const V3D &center,
     double &inti, double &sigi) {
 
@@ -176,7 +173,7 @@ Integrate3DEvents::integrateWeakPeak(
 
   auto result = getEvents(center);
   if (!result)
-    return boost::make_shared<NoShape>();
+    return std::make_unique<NoShape>();
 
   const auto &events = *result;
 
@@ -224,7 +221,7 @@ Integrate3DEvents::integrateWeakPeak(
     abcBackgroundOuterRadii[i] *= frac;
   }
 
-  return boost::make_shared<const PeakShapeEllipsoid>(
+  return std::make_unique<const PeakShapeEllipsoid>(
       shape->directions(), abcRadii, abcBackgroundInnerRadii,
       abcBackgroundOuterRadii, Mantid::Kernel::QLab,
       "IntegrateEllipsoidsTwoStep");
@@ -370,7 +367,7 @@ bool Integrate3DEvents::correctForDetectorEdges(
  *                            of the net integrated intensity
  *
  */
-Mantid::Geometry::PeakShape_const_sptr
+std::unique_ptr<const Mantid::Geometry::PeakShape>
 Integrate3DEvents::ellipseIntegrateEvents(
     std::vector<Kernel::V3D> E1Vec, V3D const &peak_q, bool specify_size,
     double peak_radius, double back_inner_radius, double back_outer_radius,
@@ -380,19 +377,19 @@ Integrate3DEvents::ellipseIntegrateEvents(
 
   int64_t hkl_key = getHklKey(peak_q);
   if (hkl_key == 0) {
-    return boost::make_shared<NoShape>();
+    return std::make_unique<NoShape>();
   }
 
   auto pos = m_event_lists.find(hkl_key);
   if (m_event_lists.end() == pos)
-    return boost::make_shared<NoShape>();
+    return std::make_unique<NoShape>();
   ;
 
   std::vector<std::pair<double, V3D>> &some_events = pos->second;
 
   if (some_events.size() < 3) // if there are not enough events to
   {                           // find covariance matrix, return
-    return boost::make_shared<NoShape>();
+    return std::make_unique<NoShape>();
   }
 
   DblMatrix cov_matrix(3, 3);
@@ -413,7 +410,7 @@ Integrate3DEvents::ellipseIntegrateEvents(
 
   if (invalid_peak)                       // if data collapses to a line or
   {                                       // to a plane, the volume of the
-    return boost::make_shared<NoShape>(); // ellipsoids will be zero.
+    return std::make_unique<NoShape>();   // ellipsoids will be zero.
   }
 
   return ellipseIntegrateEvents(E1Vec, peak_q, some_events, eigen_vectors,
@@ -743,7 +740,8 @@ void Integrate3DEvents::addEvent(std::pair<double, V3D> event_Q,
  *                            of the net integrated intensity
  *
  */
-PeakShapeEllipsoid_const_sptr Integrate3DEvents::ellipseIntegrateEvents(
+std::unique_ptr<const PeakShapeEllipsoid>
+Integrate3DEvents::ellipseIntegrateEvents(
     std::vector<Kernel::V3D> E1Vec, V3D const &peak_q,
     std::vector<std::pair<double, Mantid::Kernel::V3D>> const &ev_list,
     std::vector<Mantid::Kernel::V3D> const &directions,
@@ -806,7 +804,7 @@ PeakShapeEllipsoid_const_sptr Integrate3DEvents::ellipseIntegrateEvents(
     double h1 = 1.0 - detectorQ(E1Vec, peak_q, axes_radii);
     // Do not use peak if edge of detector is inside integration radius
     if (h1 > 0.0)
-      return boost::make_shared<const PeakShapeEllipsoid>(
+      return std::make_unique<const PeakShapeEllipsoid>(
           directions, abcRadii, abcBackgroundInnerRadii,
           abcBackgroundOuterRadii, Mantid::Kernel::QLab, "IntegrateEllipsoids");
     r3 *= m3;
@@ -832,7 +830,7 @@ PeakShapeEllipsoid_const_sptr Integrate3DEvents::ellipseIntegrateEvents(
   sigi = sqrt(peak_w_back + ratio * ratio * backgrd);
 
   // Make the shape and return it.
-  return boost::make_shared<const PeakShapeEllipsoid>(
+  return std::make_unique<const PeakShapeEllipsoid>(
       directions, abcRadii, abcBackgroundInnerRadii, abcBackgroundOuterRadii,
       Mantid::Kernel::QLab, "IntegrateEllipsoids");
 }

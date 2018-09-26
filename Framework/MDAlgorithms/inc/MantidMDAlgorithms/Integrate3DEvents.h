@@ -86,24 +86,23 @@ public:
             bool hkl_integ);
 
   /// Find the net integrated intensity of a peak, using ellipsoidal volumes
-  boost::shared_ptr<const Mantid::Geometry::PeakShape> ellipseIntegrateEvents(
+  std::unique_ptr<const Mantid::Geometry::PeakShape> ellipseIntegrateEvents(
       std::vector<Kernel::V3D> E1Vec, Mantid::Kernel::V3D const &peak_q,
       bool specify_size, double peak_radius, double back_inner_radius,
       double back_outer_radius, std::vector<double> &axes_radii, double &inti,
       double &sigi);
 
   /// Find the net integrated intensity of a peak, using ellipsoidal volumes
-  std::pair<boost::shared_ptr<const Mantid::Geometry::PeakShape>,
+  std::pair<std::unique_ptr<const Mantid::Geometry::PeakShape>,
             std::tuple<double, double, double>>
   integrateStrongPeak(const IntegrationParameters &params,
                       const Kernel::V3D &peak_q, double &inti, double &sigi);
 
-  boost::shared_ptr<const Geometry::PeakShape>
-  integrateWeakPeak(const IntegrationParameters &params,
-                    Mantid::DataObjects::PeakShapeEllipsoid_const_sptr shape,
-                    const std::tuple<double, double, double> &libPeak,
-                    const Mantid::Kernel::V3D &peak_q, double &inti,
-                    double &sigi);
+  std::unique_ptr<const Geometry::PeakShape> integrateWeakPeak(
+      const IntegrationParameters &params,
+      std::unique_ptr<const Mantid::DataObjects::PeakShapeEllipsoid> shape,
+      const std::tuple<double, double, double> &libPeak,
+      const Mantid::Kernel::V3D &peak_q, double &inti, double &sigi);
 
   double estimateSignalToNoiseRatio(const IntegrationParameters &params,
                                     const Mantid::Kernel::V3D &center);
@@ -158,7 +157,7 @@ private:
   void addEvent(std::pair<double, Mantid::Kernel::V3D> event_Q, bool hkl_integ);
 
   /// Find the net integrated intensity of a list of Q's using ellipsoids
-  boost::shared_ptr<const Mantid::DataObjects::PeakShapeEllipsoid>
+  std::unique_ptr<const Mantid::DataObjects::PeakShapeEllipsoid>
   ellipseIntegrateEvents(
       std::vector<Kernel::V3D> E1Vec, Kernel::V3D const &peak_q,
       std::vector<std::pair<double, Mantid::Kernel::V3D>> const &ev_list,
