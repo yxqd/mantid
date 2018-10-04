@@ -292,13 +292,13 @@ public:
    * rank()-4. i,j,k and l are its indeces.
    *            The rank of the data must be 4
    */
-  void load(const int blocksize = 1, int i = -1, int j = -1, int k = -1,
-            int l = -1) override {
+  void load(const int64_t blocksize = 1, int64_t i = -1, int64_t j = -1, int64_t k = -1,
+            int64_t l = -1) { // override {
     if (rank() > 4) {
       throw std::runtime_error("Cannot load dataset of rank greater than 4");
     }
-    int n = 0;
-    int start[4];
+    int64_t n = 0;
+    int64_t start[4];
     if (rank() == 4) {
       if (i < 0) // load all data
       {
@@ -443,7 +443,7 @@ private:
   /** Allocates memory for the data buffer
    *  @param n :: The number of elements to allocate.
    */
-  void alloc(int n) {
+  void alloc(int64_t n) {
     if (n <= 0) {
       throw std::runtime_error("Attempt to load from an empty dataset " +
                                path());
@@ -465,8 +465,8 @@ private:
     throw std::range_error("Nexus dataset range error");
   }
   boost::shared_array<T> m_data; ///< The data buffer
-  int m_size[4];                 ///< The sizes of the loaded data
-  int m_n;                       ///< The buffer size
+  int64_t m_size[4];                 ///< The sizes of the loaded data
+  int64_t m_n;                       ///< The buffer size
 };
 
 /// The integer dataset type
