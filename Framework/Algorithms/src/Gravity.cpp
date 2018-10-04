@@ -6,12 +6,15 @@
 #include "MantidKernel/MersenneTwister.h"
 #include "MantidKernel/PseudoRandomNumberGenerator.h"
 #include "MantidKernel/normal_distribution.h"
+#include "MantidGeometry/Instrument.h"
+#include "MantidGeometry/Instrument/DetectorInfo.h"
 #include <Eigen/LU>
 
 #include <iostream>
 
-using namespace Mantid::Kernel;
 using namespace Mantid::API;
+using namespace Mantid::Geometry;
+using namespace Mantid::Kernel;
 
 namespace Mantid {
 namespace Algorithms {
@@ -221,14 +224,20 @@ struct Setup {
   double ys;
   double theta;
   double xd;
+  double deltaS;
 };
+
+std::ostream &operator<<(std::ostream &ostr, Setup const &s) {
+  ostr << "Setup: " << s.x0 << ' ' << s.y0 << ' ' << s.xd ;
+  return ostr;
+}
 
 //----------------------------------------------------------------------------------------------
 
 Trajectory calcTwoSlitTrajectory(Setup const &s, double v, double dy0=0.0, double dy1=0.0, bool can_miss_sample=true) {
   Trajectory traj;
-  if (s.y0 + dy0 < 0) throw TrajectoryError("Slit 1 is below 0.");
-  if (s.y1 + dy1 < 0) throw TrajectoryError("Slit 2 is below 0.");
+  if (s.y0 + dy0 - s.x0*tan(s.theta) < 0) throw TrajectoryError("Slit 1 is below 0.");
+  if (s.y1 + dy1 - s.x1*tan(s.theta) < 0) throw TrajectoryError("Slit 2 is below 0.");
   auto path1 = calcPathThrough2Points(s.x0, s.y0 + dy0, s.x1, s.y1 + dy1, v);
   traj.push_back(path1);
   auto path2 = calcPath(path1, 0, s.ys, s.theta);
@@ -286,6 +295,42 @@ double calcLevel(Setup const &setup, double v, double h, double a, double b) {
   return path.y1 - h;
 }
 
+//----------------------------------------------------------------------------------------------
+std::pair<double, double> calcYTheta(Setup const &s, double v, double ds2=0.0) {
+
+  auto ds20 = - s.deltaS / 2;
+  auto const ds21 = s.deltaS / 2;
+  if (s.y1 + ds20 < s.x1 * tan(s.theta)) {
+    ds20 = 0.9 * (- s.y1 + s.x1 * tan(s.theta));
+  }
+  double const sigma = 0.001;
+  double const da = 1e-5;
+  double y0, theta0;
+  std::tie(y0, theta0) = calcReflections(s, v, 0, ds2);
+
+  auto const dy1 = (calcLevel(s, v, 0.0, da, ds2) - y0) / da;
+  auto const dy2 = (calcLevel(s, v, 0.0, 0, ds2 + da) - y0) / da;
+  auto const K = -dy1 / dy2;
+  double yd, theta;
+  std::tie(yd, theta) = calcReflections(s, v, da, ds2 + K * da);
+  double const R = (theta - theta0) / da;
+  auto a0 = ds20;
+  if (ds2 + K * a0 < ds20) {
+    a0 =  (ds20 - ds2) / K;
+  }
+  auto a1 = ds21;
+  if (ds2 + K * a1 > ds21) {
+    a1 = (ds21 - ds2) / K;
+  }
+  auto th0 = theta0 + R * a0;
+  auto th1 = theta0 + R * a1;
+  // More realistic but doesn't fit by a quadratic
+  //auto trueTheta = (th0 + th1) / 2;
+  auto trueTheta = theta0;
+  return std::make_pair(y0, trueTheta);
+}
+
+//----------------------------------------------------------------------------------------------
 double findAtLevel(Setup const &setup, double v, double h, double a, double b00) {
   double const tol = 1e-5;
   auto fun = [&](double b){return calcLevel(setup, v, h, a, b);};
@@ -392,29 +437,47 @@ MatrixWorkspace_sptr makeTrueTheta(Setup const &s, double lam0, Logger &logger) 
 }
 
 //----------------------------------------------------------------------------------------------
-MatrixWorkspace_sptr makeCalcStuff(Setup const &setup, double deltaS, double yd0, double yd1) {
+struct ThetaVsLamY {
+  double p0, p1, p2, p3, p4, p5;
+  double operator() (double lam, double y) {
+    return p0 + p1*y + ((p2 + p3*y) + (p4 + p5*y)*lam)*lam;
+  }
+};
+
+std::ostream &operator<<(std::ostream &ostr, ThetaVsLamY const &s) {
+  ostr << "Func: " << s.p0 << ' ' << s.p1 << ' ' << s.p2 << ' ' << s.p3 << ' ' << s.p4 << ' ' << s.p5 ;
+  return ostr;
+}
+
+ThetaVsLamY makeThetaFunction(Setup const &setup, double lam1, double lam3) {
   Eigen::Matrix<double, 6, 6> M;
   Eigen::Matrix<double, 6, 1> b;
-  double const lam1(1.0),  lam2(6.5), lam3(13.0);
-  double const s1(0.0), s2(1e-6);
+  double const lam2 = (lam1 + lam3) / 2.0;
+  double const s1(0.0), s2(1e-3);
   auto v = [](double lam) {return lam_to_speed / lam * 1e10;};
   double yd, theta;
   size_t row = 0;
   for (auto lam : {lam1, lam2, lam3}) {
     for (auto s : {s1, s2}) {
-      std::tie(yd, theta) = calcReflections(setup, v(lam), 0, s);
+      std::tie(yd, theta) = calcYTheta(setup, v(lam), s);
       M(row, 0) = 1.0;
       M(row, 1) = yd;
       M(row, 2) = lam;
       M(row, 3) = yd * lam;
       M(row, 4) = lam * lam;
       M(row, 5) = yd * lam * lam;
-      b(row) = theta / M_PI * 180.0;
+      b(row) = theta;
       ++row;
     }
   }
   Eigen::Matrix<double, 1, 6> x = M.fullPivLu().solve(b);
-  auto calcTheta = [&x](double lam, double y) {return x(0) + x(1)*y + (x(2) + x(3)*y)*lam + (x(4) + x(5)*y)*lam*lam;};
+  std::cerr << x << std::endl;
+  return ThetaVsLamY{x(0), x(1), x(2), x(3), x(4), x(5)};
+}
+
+MatrixWorkspace_sptr makeCalcStuff(Setup const &setup, double deltaS, double yd0, double yd1) {
+  double const lam1(1.0),  lam3(13.0);
+  auto calcTheta = makeThetaFunction(setup, lam1, lam3);
 
   size_t const ny = 20;
   size_t const nlam = 20;
@@ -432,7 +495,7 @@ MatrixWorkspace_sptr makeCalcStuff(Setup const &setup, double deltaS, double yd0
     axis1->setValue(j, lam);
     for(size_t i = 0; i < ny; ++i) {
       X[i] = yd0 + double(i) * dy;
-      Y[i] = calcTheta(lam, X[i]);
+      Y[i] = calcTheta(lam, X[i]) / M_PI * 180.0;
       E[i] = 0;
     }}
   return out;
@@ -451,8 +514,8 @@ MatrixWorkspace_sptr makeStuff(Setup const &s, double deltaS, double &yd0, doubl
 
   auto ds20 = - deltaS / 2;
   auto const ds21 = deltaS / 2;
-  if (s.y1 + ds20 < 0.0) {
-    ds20 = - 0.9 * s.y1;
+  if (s.y1 + ds20 < s.x1 * tan(s.theta)) {
+    ds20 = 0.9 * (- s.y1 + s.x1 * tan(s.theta));
   }
   double const ds = (ds21 - ds20) / (ns - 1);
   double const dlam = (13.0 - 1.0) / (nlam - 1);
@@ -469,29 +532,11 @@ MatrixWorkspace_sptr makeStuff(Setup const &s, double deltaS, double &yd0, doubl
     for(size_t i = 0; i < ns; ++i) {
       double const ds2 = ds20 + ds * double(i);
       try {
-        auto const y0 = calcLevel(s, v, 0.0, 0, ds2);
-        auto const dy1 = (calcLevel(s, v, 0.0, da, ds2) - y0) / da;
-        auto const dy2 = (calcLevel(s, v, 0.0, 0, ds2 + da) - y0) / da;
-        auto const K = -dy1 / dy2;
-        double yd, theta, theta0;
-        std::tie(yd, theta0) = calcReflections(s, v, 0, ds2);
-        std::tie(yd, theta) = calcReflections(s, v, da, ds2 + K * da);
-        double const R = (theta - theta0) / da;
-        auto a = ds2 / (1.0 - K);
-        auto a0 = ds20;
-        if (ds2 + K * a0 < ds20) {
-          a0 = ds2 + K * ds20;
-        }
-        auto a1 = ds21;
-        if (ds2 + K * a1 > ds21) {
-          a1 = ds2 + K * ds21;
-        }
-        X[i] = y0 - s.xd * tan(s.theta);
-        auto th0 = (theta0 + R * a0) / M_PI * 180.0;
-        auto th1 = (theta0 + R * a1) / M_PI * 180.0;
-        // Y[i] = (th0 + th1) / 2;
+        double y0, theta0;
+        std::tie(y0, theta0) = calcYTheta(s, v, ds2);
+        X[i] = y0;// - s.xd * tan(s.theta);
         Y[i] = theta0 / M_PI * 180.0;
-        E[i] = fabs(th0 - th1) / 2;
+        //E[i] = fabs(th0 - th1) / 2;
       } catch (TrajectoryError &) {
         X[i] = 0.0;
         Y[i] = 0.0;
@@ -508,9 +553,6 @@ MatrixWorkspace_sptr makeStuff(Setup const &s, double deltaS, double &yd0, doubl
         auto theta_ill_0 = - atan((sy0 - sy1)/(s.x0 - s.x1)) / M_PI * 180.0;
         //Y[i] = - atan((sy0 - sy1)/(s.x0 - s.x1)) / M_PI * 180.0; // No correction
         Y[i] = theta_ill; // ILL correction
-        if (j == 0) {
-          std::cerr << X[i] << ' ' << theta_ill << ' ' << theta_ill_0 << ' ' << x0 << std::endl;
-        }
       }
     }
     if (X.front() > X.back()) {
@@ -535,8 +577,9 @@ MatrixWorkspace_sptr makeStuff(Setup const &s, double deltaS, double &yd0, doubl
 }
 
 //----------------------------------------------------------------------------------------------
-MatrixWorkspace_sptr makeTwoSlitSimulation(Setup const &s, double deltaS, double const yd0, double const yd1) {
-  double const sigma = 0.001;
+MatrixWorkspace_sptr makeTwoSlitSimulation(Setup const &s, double const yd0, double const yd1) {
+  double deltaS = s.deltaS;
+  double const sigma = 0.01;
   size_t const ny = 300;
   size_t const nlam = 20;
   auto out =
@@ -556,15 +599,16 @@ MatrixWorkspace_sptr makeTwoSlitSimulation(Setup const &s, double deltaS, double
     std::vector<double> N(E.size());
     axis1->setValue(j, lam);
     for(size_t i = 0; i < ny; ++i) {
-      X[i] = yd0 + double(i) * dy - s.xd * tan(s.theta);
+      X[i] = yd0 + double(i) * dy;// - s.xd * tan(s.theta);
       Y[i] = 0;
       E[i] = 0;
     }
     for (size_t k = 0; k < 100000; ++k) {
-      auto const b = std::uniform_real_distribution<double>(-deltaS / 2, deltaS / 2)(rng);
+      //auto const b = std::uniform_real_distribution<double>(-deltaS / 2, deltaS / 2)(rng);
       auto const a = std::uniform_real_distribution<double>(-deltaS / 2, deltaS / 2)(rng);
-      //auto const x = Kernel::normal_distribution<double>(0.0, std::abs(sigma))(rng);
-      //auto const b = a - x;
+      auto const x = Kernel::normal_distribution<double>(0.0, std::abs(sigma))(rng);
+      auto const b = a - x;
+      if (b < -deltaS / 2 || b > deltaS / 2) continue;
       double y, theta;
       try {
         std::tie(y, theta) = calcReflections(s, v, a, b);
@@ -574,13 +618,85 @@ MatrixWorkspace_sptr makeTwoSlitSimulation(Setup const &s, double deltaS, double
       theta /= M_PI / 180.0;
       auto const i = static_cast<size_t>((y - yd0) / dy);
       if (i < ny) {
-        auto av = N[i] * Y[i];
         N[i] += 1.0;
-        Y[i] = (theta + av) / N[i];
+        Y[i] += theta;
       }
+    }
+    for(size_t i = 0; i < ny; ++i) {
+      if (N[i] > 0)
+        Y[i] /= N[i];
+      E[i] = atan(X[i]/s.xd)/2 / M_PI * 180.0;
     }
   }
   return out;
+}
+//----------------------------------------------------------------------------------------------
+MatrixWorkspace_sptr applyGravityCorrection(MatrixWorkspace_sptr inputWS, double theta, double deltaS) {
+  if (inputWS->getAxis(0)->unit()->unitID() != "Wavelength") {
+    throw std::runtime_error(
+        "Input workspace is expected to be in wavelength, found " +
+        inputWS->getAxis(0)->unit()->unitID());
+  }
+  auto ws = MatrixWorkspace_sptr(inputWS->clone());
+  Instrument_const_sptr instrument = ws->getInstrument();
+  IComponent_const_sptr slit1 = instrument->getComponentByName("slit1");
+  IComponent_const_sptr slit2 = instrument->getComponentByName("slit2");
+  IComponent_const_sptr linearDetector = instrument->getComponentByName("LinearDetector");
+  auto tg = tan(theta);
+  auto x0 = slit1->getPos().Z();
+  auto y0 = fabs(x0) * tg;
+  auto x1 = slit2->getPos().Z();
+  auto y1 = fabs(x1) * tg;
+  double const ys = 0.0;
+  auto xd = linearDetector->getPos().Z();
+  auto const detInfo = ws->detectorInfo();
+  size_t nd = 0;
+  double yMin = std::numeric_limits<double>::max();
+  double yMax = - yMin;
+  size_t n_spec = ws->getNumberHistograms();
+  std::vector<double> yd(n_spec);
+  std::vector<bool> isGood(n_spec, false);
+  for(size_t index = 0; index < n_spec; ++index) {
+    if (detInfo.isMonitor(index)) continue;
+    auto const pos = detInfo.position(index);
+    if (pos.Z() != xd) continue;
+    auto const y = pos.Y();
+    yd[index] = y;
+    isGood[index] = true;
+    if (y < yMin) yMin = y;
+    if (y > yMax) yMax = y;
+    ++nd;
+  }
+  auto dy = (yMax - yMin) / (nd - 1);
+  std::cerr << nd << ' ' << dy << std::endl;
+  Setup const s{x0, 0, x1, 0, ys, theta, xd, deltaS};
+  std::cerr << s << std::endl;
+  auto calcTheta = makeThetaFunction(s, 0.1, 16.0);
+  std::cerr << calcTheta << std::endl;
+  for(size_t i = 0; i < ws->getNumberHistograms(); ++i) {
+    if (!isGood[i]) continue;
+    auto points = ws->points(i);
+    auto const &Y = ws->y(i);
+    //for(auto const lam : points) {
+      auto lam = points.front();
+      auto twoTheta = 2.0*calcTheta(lam, yd[i]);
+      std::cerr << yd[i] << ' ' << twoTheta / M_PI * 180.0 / 2 << ' ' << detInfo.twoTheta(i) / M_PI * 180.0 / 2 << std::endl;
+      //{
+      //  auto detTheta = detInfo.twoTheta(i) / 2;
+      //  auto v = lam_to_speed / lam * 1e10;
+      //  auto k = G / 2 / (v*v);
+      //  auto sy0 = fabs(s.x0) * tan(detTheta);
+      //  auto sy1 = fabs(s.x1) * tan(detTheta);
+      //  auto x0 = (k *(s.x0 * s.x0 - s.x1 * s.x1) + (sy0 - sy1)) / (2*k*(s.x0 - s.x1));
+      //  auto y0 = sy0 + k * pow(s.x0 - x0, 2);
+      //  auto theta_ill = - atan(2*k*x0) / M_PI * 180.0;
+      //  auto dTheta = Y[i] - theta_ill;
+      //  auto theta_ill_0 = - atan((sy0 - sy1)/(s.x0 - s.x1)) / M_PI * 180.0;
+      //  std::cerr << "     " << theta_ill << std::endl;
+      //}
+    //}
+  }
+  return ws;
 }
 
 } // namespace
@@ -602,6 +718,17 @@ void Gravity::init() {
 
   declareProperty("Ys", 0.0, "Vertical position of the sample in m");
   declareProperty("Theta", 0.0, "Angle of the sample in degrees (to the hirizon).");
+
+  declareProperty("YSIM0", 0.0, "");
+  declareProperty("YSIM1", 0.4, "");
+
+  declareProperty(make_unique<WorkspaceProperty<API::MatrixWorkspace>>(
+                      "InputWorkspace", "", Direction::Input, PropertyMode::Optional),
+                  "The input workspace.");
+
+  declareProperty(make_unique<WorkspaceProperty<API::MatrixWorkspace>>(
+                      "OutputWorkspace", "", Direction::Output, PropertyMode::Optional),
+                  "The output workspace.");
 
   declareProperty(make_unique<WorkspaceProperty<API::MatrixWorkspace>>(
                       "PathWorkspace", "", Direction::Output, PropertyMode::Optional),
@@ -647,7 +774,13 @@ void Gravity::exec() {
   double const ys = getProperty("Ys");
   double const theta = double(getProperty("Theta")) * M_PI / 180.0;
 
-  Setup const s{x0, y0, x1, y1, ys, theta, xd};
+  Setup const s{x0, y0, x1, y1, ys, theta, xd, ds};
+
+  if (!isDefault("InputWorkspace")) {
+    MatrixWorkspace_sptr inputWS = getProperty("InputWorkspace");
+    auto ws = applyGravityCorrection(inputWS, theta, ds);
+    setProperty("OutputWorkspace", ws);
+  }
 
   if (!isDefault("PathWorkspace")) {
     auto pathWS = makeTwoSlitTrajectory(s, v, g_log);
@@ -672,7 +805,9 @@ void Gravity::exec() {
       setProperty("CalcWorkspace", ws);
     }
     if (!isDefault("SimulationWorkspace")) {
-      auto ws = makeTwoSlitSimulation(s, ds, yd0, yd1);
+      double const ySim0 = getProperty("YSIM0");
+      double const ySim1 = getProperty("YSIM1");
+      auto ws = makeTwoSlitSimulation(s, ySim0, ySim1);
       setProperty("SimulationWorkspace", ws);
     }
     if (!isDefault("ILLSurfaceWorkspace")) {
