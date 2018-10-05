@@ -667,34 +667,52 @@ MatrixWorkspace_sptr applyGravityCorrection(MatrixWorkspace_sptr inputWS, double
     if (y > yMax) yMax = y;
     ++nd;
   }
+  for (size_t i = 0; i < n_spec; ++i) {
+    if (!isGood[i])
+      continue;
+    auto &Y = ws->mutableY(i);
+    Y.assign(Y.size(), 0.0);
+  }
   auto dy = (yMax - yMin) / (nd - 1);
   std::cerr << nd << ' ' << dy << std::endl;
   Setup const s{x0, 0, x1, 0, ys, theta, xd, deltaS};
   std::cerr << s << std::endl;
   auto calcTheta = makeThetaFunction(s, 0.1, 16.0);
   std::cerr << calcTheta << std::endl;
-  for(size_t i = 0; i < ws->getNumberHistograms(); ++i) {
+  for(size_t i = 0; i < n_spec; ++i) {
     if (!isGood[i]) continue;
     auto points = ws->points(i);
-    auto const &Y = ws->y(i);
-    //for(auto const lam : points) {
-      auto lam = points.front();
-      auto twoTheta = 2.0*calcTheta(lam, yd[i]);
-      std::cerr << yd[i] << ' ' << twoTheta / M_PI * 180.0 / 2 << ' ' << detInfo.twoTheta(i) / M_PI * 180.0 / 2 << std::endl;
-      //{
-      //  auto detTheta = detInfo.twoTheta(i) / 2;
-      //  auto v = lam_to_speed / lam * 1e10;
-      //  auto k = G / 2 / (v*v);
-      //  auto sy0 = fabs(s.x0) * tan(detTheta);
-      //  auto sy1 = fabs(s.x1) * tan(detTheta);
-      //  auto x0 = (k *(s.x0 * s.x0 - s.x1 * s.x1) + (sy0 - sy1)) / (2*k*(s.x0 - s.x1));
-      //  auto y0 = sy0 + k * pow(s.x0 - x0, 2);
-      //  auto theta_ill = - atan(2*k*x0) / M_PI * 180.0;
-      //  auto dTheta = Y[i] - theta_ill;
-      //  auto theta_ill_0 = - atan((sy0 - sy1)/(s.x0 - s.x1)) / M_PI * 180.0;
-      //  std::cerr << "     " << theta_ill << std::endl;
-      //}
-    //}
+    //auto &Y = ws->mutableY(i);
+    auto const &Y0 = inputWS->y(i);
+    auto y0 = yd[i];
+    for(size_t j = 0; j < points.size(); ++j) {
+      auto lam = points[j];
+      auto twoTheta = 2.0*calcTheta(lam, y0);
+      double y = xd * tan(twoTheta);
+      //std::cerr << yd[i] << ' ' << twoTheta / M_PI * 180.0 / 2 << ' ' << detInfo.twoTheta(i) / M_PI * 180.0 / 2 << std::endl;
+      double dyd = fabs(y0 - y);
+      size_t k = i + 1;
+      while(k < n_spec && dyd > fabs(y0 - yd[k])){
+        //std::cerr << k << ' ' << dyd << ' ' << fabs(y0 - yd[k]) << std::endl;
+        ++k;
+      }
+      if (k != n_spec && dyd <= fabs(y0 - yd[k])) {
+        ws->mutableY(k)[j] = Y0[j];
+        //std::cerr << y0 << ' ' << y << ' ' << dyd << ' ' << yd[k] << std::endl;
+      } else if (i > 0) {
+        k = i - 1;
+        while(k >= 1 && dyd > fabs(y0 - yd[k])) {
+          --k;
+        }
+        if (dyd <= fabs(y0 - yd[k])) {
+          ws->mutableY(k)[j] = Y0[j];
+        } else {
+          ws->mutableY(i)[j] = Y0[j];
+        }
+      } else {
+        ws->mutableY(i)[j] = Y0[j];
+      }
+    }
   }
   return ws;
 }
