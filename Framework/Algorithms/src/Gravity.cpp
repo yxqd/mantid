@@ -679,38 +679,43 @@ MatrixWorkspace_sptr applyGravityCorrection(MatrixWorkspace_sptr inputWS, double
   std::cerr << s << std::endl;
   auto calcTheta = makeThetaFunction(s, 0.1, 16.0);
   std::cerr << calcTheta << std::endl;
+  double yc, thetaC;
+  std::tie(yc, thetaC) = calcReflections(s, lam_to_speed * 1e10 / ws->x(0).front());
+  std::cerr << "Central det: " << yc / dy << ' ' << thetaC / M_PI * 180.0 << std::endl;
   for(size_t i = 0; i < n_spec; ++i) {
     if (!isGood[i]) continue;
     auto points = ws->points(i);
-    //auto &Y = ws->mutableY(i);
     auto const &Y0 = inputWS->y(i);
     auto y0 = yd[i];
     for(size_t j = 0; j < points.size(); ++j) {
       auto lam = points[j];
       auto twoTheta = 2.0*calcTheta(lam, y0);
       double y = xd * tan(twoTheta);
-      //std::cerr << yd[i] << ' ' << twoTheta / M_PI * 180.0 / 2 << ' ' << detInfo.twoTheta(i) / M_PI * 180.0 / 2 << std::endl;
-      double dyd = fabs(y0 - y);
-      size_t k = i + 1;
-      while(k < n_spec && dyd > fabs(y0 - yd[k])){
-        //std::cerr << k << ' ' << dyd << ' ' << fabs(y0 - yd[k]) << std::endl;
-        ++k;
+      //y += y0 - yc;
+      if (y > yMax || y < yMin) {
+        continue;
       }
-      if (k != n_spec && dyd <= fabs(y0 - yd[k])) {
-        ws->mutableY(k)[j] = Y0[j];
-        //std::cerr << y0 << ' ' << y << ' ' << dyd << ' ' << yd[k] << std::endl;
-      } else if (i > 0) {
-        k = i - 1;
-        while(k >= 1 && dyd > fabs(y0 - yd[k])) {
-          --k;
+      double const dyd = fabs(y0 - y);
+      double dydMin = dyd;
+      size_t k = i;
+      for(size_t m = 0; m < n_spec; ++m) {
+        auto const d = fabs(y - yd[m]);
+        if (d < dydMin) {
+          dydMin = d;
+          k = m;
         }
-        if (dyd <= fabs(y0 - yd[k])) {
-          ws->mutableY(k)[j] = Y0[j];
-        } else {
-          ws->mutableY(i)[j] = Y0[j];
-        }
-      } else {
-        ws->mutableY(i)[j] = Y0[j];
+      }
+      if (y == yd[k])
+        ws->mutableY(k)[j] += Y0[j];
+      else if (y < yd[k]) {
+        ws->mutableY(k)[j] += Y0[j] * (1.0 - dydMin/dy);
+        if (k > 0)
+          ws->mutableY(k-1)[j] += Y0[j] * dydMin/dy;
+      }
+      else {
+        ws->mutableY(k)[j] += Y0[j] * (1.0 - dydMin/dy);
+        if (k < n_spec)
+          ws->mutableY(k+1)[j] += Y0[j] * dydMin/dy;
       }
     }
   }
