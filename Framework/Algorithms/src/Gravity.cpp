@@ -225,6 +225,22 @@ struct Setup {
   double theta;
   double xd;
   double deltaS;
+  double getSlit1Low() const {return x0*tan(theta);}
+  double getSlit2Low() const {return x1*tan(theta);}
+  double getSlit1LowestShift(double s) const {
+    if (y0 + s < getSlit1Low()) {
+      return getSlit1Low() * 0.9 - y0;
+    } else {
+      return s;
+    }
+  }
+  double getSlit2LowestShift(double s) const {
+    if (y1 + s < getSlit2Low()) {
+      return getSlit2Low() * 0.9 - y1;
+    } else {
+      return s;
+    }
+  }
 };
 
 std::ostream &operator<<(std::ostream &ostr, Setup const &s) {
@@ -236,15 +252,21 @@ std::ostream &operator<<(std::ostream &ostr, Setup const &s) {
 
 Trajectory calcTwoSlitTrajectory(Setup const &s, double v, double dy0=0.0, double dy1=0.0, bool can_miss_sample=true) {
   Trajectory traj;
-  if (s.y0 + dy0 - s.x0*tan(s.theta) < 0) throw TrajectoryError("Slit 1 is below 0.");
-  if (s.y1 + dy1 - s.x1*tan(s.theta) < 0) throw TrajectoryError("Slit 2 is below 0.");
+  if (s.y0 + dy0 < s.getSlit1Low()) {
+    throw TrajectoryError("Point in slit 1 is below sample surface.");
+  }
+  if (s.y1 + dy1 < s.getSlit2Low()) {
+    throw TrajectoryError("Point in slit 2 is below sample surface.");
+  }
   auto path1 = calcPathThrough2Points(s.x0, s.y0 + dy0, s.x1, s.y1 + dy1, v);
   traj.push_back(path1);
   auto path2 = calcPath(path1, 0, s.ys, s.theta);
   Path path3;
   if (path2.x1 > s.xd) {
     if (!can_miss_sample) {
-      throw TrajectoryError("Particle missed the sample: " + std::to_string(path2.x1) + " > " + std::to_string(s.xd));
+      std::string msg("Particle missed the sample: x1(" + std::to_string(path2.x1) + ") > xd(" + std::to_string(s.xd) + ")\n");
+      msg.append("Slit heights: " + std::to_string(s.y0 + dy0) + ", " + std::to_string(s.y1 + dy1));
+      throw TrajectoryError(msg);
     }
     path3 = calcPath(path1, s.xd);
   } else {
@@ -297,33 +319,29 @@ double calcLevel(Setup const &setup, double v, double h, double a, double b) {
 
 //----------------------------------------------------------------------------------------------
 std::pair<double, double> calcYTheta(Setup const &s, double v, double ds2=0.0) {
-
-  auto ds20 = - s.deltaS / 2;
+  auto const ds20 = s.getSlit2LowestShift(- s.deltaS / 2);
   auto const ds21 = s.deltaS / 2;
-  if (s.y1 + ds20 < s.x1 * tan(s.theta)) {
-    ds20 = 0.9 * (- s.y1 + s.x1 * tan(s.theta));
-  }
   double const sigma = 0.001;
-  double const da = 1e-5;
+  double const da = -1e-5;
   double y0, theta0;
   std::tie(y0, theta0) = calcReflections(s, v, 0, ds2);
 
-  auto const dy1 = (calcLevel(s, v, 0.0, da, ds2) - y0) / da;
-  auto const dy2 = (calcLevel(s, v, 0.0, 0, ds2 + da) - y0) / da;
-  auto const K = -dy1 / dy2;
-  double yd, theta;
-  std::tie(yd, theta) = calcReflections(s, v, da, ds2 + K * da);
-  double const R = (theta - theta0) / da;
-  auto a0 = ds20;
-  if (ds2 + K * a0 < ds20) {
-    a0 =  (ds20 - ds2) / K;
-  }
-  auto a1 = ds21;
-  if (ds2 + K * a1 > ds21) {
-    a1 = (ds21 - ds2) / K;
-  }
-  auto th0 = theta0 + R * a0;
-  auto th1 = theta0 + R * a1;
+  //auto const dy1 = (calcLevel(s, v, 0.0, da, ds2) - y0) / da;
+  //auto const dy2 = (calcLevel(s, v, 0.0, 0, ds2 + da) - y0) / da;
+  //auto const K = -dy1 / dy2;
+  //double yd, theta;
+  //std::tie(yd, theta) = calcReflections(s, v, da, ds2 + K * da);
+  //double const R = (theta - theta0) / da;
+  //auto a0 = ds20;
+  //if (ds2 + K * a0 < ds20) {
+  //  a0 =  (ds20 - ds2) / K;
+  //}
+  //auto a1 = ds21;
+  //if (ds2 + K * a1 > ds21) {
+  //  a1 = (ds21 - ds2) / K;
+  //}
+  //auto th0 = theta0 + R * a0;
+  //auto th1 = theta0 + R * a1;
   // More realistic but doesn't fit by a quadratic
   //auto trueTheta = (th0 + th1) / 2;
   auto trueTheta = theta0;
@@ -355,14 +373,17 @@ MatrixWorkspace_sptr makeYSurface(Setup const &s, double v, Logger &logger) {
       WorkspaceFactory::Instance().create("Workspace2D", nBins, nBins, nBins);
   auto axis1 = new NumericAxis(nBins);
   out->replaceAxis(1, axis1);
-  auto da = (0.1 - -0.1) / (nBins - 1);
+  double const a0(s.getSlit1LowestShift(-0.1));
+  double const b0(s.getSlit1LowestShift(-0.1));
+  auto da = (0.1 - a0) / (nBins - 1);
+  auto db = (0.1 - b0) / (nBins - 1);
   for(size_t i = 0; i < nBins; ++i) {
-    auto b = -0.1 + double(i) * da;
+    auto b = b0 + double(i) * db;
     axis1->setValue(i, b);
     auto &X = out->mutableX(i);
     auto &Y = out->mutableY(i);
     for(size_t j = 0; j < nBins; ++j) {
-      auto a = -0.1 + double(j) * da;
+      auto a = a0 + double(j) * da;
       X[j] = a;
       Y[j] = calcLevel(s, v, 0.0, a, b);
     }
@@ -453,7 +474,7 @@ ThetaVsLamY makeThetaFunction(Setup const &setup, double lam1, double lam3) {
   Eigen::Matrix<double, 6, 6> M;
   Eigen::Matrix<double, 6, 1> b;
   double const lam2 = (lam1 + lam3) / 2.0;
-  double const s1(0.0), s2(1e-3);
+  double const s1(0.0), s2(setup.getSlit2LowestShift(-1e-3));
   auto v = [](double lam) {return lam_to_speed / lam * 1e10;};
   double yd, theta;
   size_t row = 0;
