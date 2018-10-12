@@ -322,9 +322,8 @@ def pcolorfast(axes, workspace, *args, **kwargs):
             kwargs['pcolortype'] = 'fast'
             return _pcolorpieces(axes, workspace, distribution, *args, **kwargs)
         else:
-            (x, y, z) = get_matrix_2d_data(workspace, distribution, histogram2D=True)
+            (x, y, z) = get_matrix_2d_data_pcolorfast(workspace, distribution)
     return axes.pcolorfast(x, y, z, *args, **kwargs)
-
 
 def pcolormesh(axes, workspace, *args, **kwargs):
     '''

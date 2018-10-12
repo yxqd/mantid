@@ -259,6 +259,53 @@ def common_x(arr):
     """
     return numpy.all(arr == arr[0, :], axis=(1, 0))
 
+def get_matrix_2d_data_pcolorfast(workspace, distribution):
+    '''
+    Get all data from a Matrix workspace that has the same number of bins
+    in every spectrum. It is used for 2D plots
+
+    :param workspace: Matrix workspace to extract the data from
+    :param distribution: if False, and the workspace contains histogram data,
+        the intensity will be divided by the x bin width
+
+    Returns x,y,z 2D arrays
+    '''
+    try:
+        _ = workspace.blocksize()
+    except RuntimeError:
+        raise ValueError('The spectra are not the same length. Try using pcolor, pcolorfast, or pcolormesh instead')
+    x = workspace.extractX()
+    xMin = workspace.getAxis(0).getMin()
+    assert(xMin == x[0][0])
+    xMax = workspace.getAxis(0).getMax()
+    assert(xMax = x[0][-1])
+    xLen = workspace.getAxis(0).length()
+    assert(xLen == x.shape()[0])
+    y = workspace.getAxis(1).extractValues()
+    z = workspace.extractY()
+
+    if workspace.isHistogramData():
+        if not distribution:
+            z /= x[:, 1:] - x[:, 0:-1]
+        if len(y) == z.shape[0]:
+            y = boundaries_from_points(y)
+        x = numpy.vstack((x, x[-1]))
+    else:
+        if histogram2D:
+            if common_x(x):
+                x = numpy.tile(boundaries_from_points(x[0]), z.shape[0]+1).reshape(z.shape[0]+1, -1)
+            else:
+                x = numpy.vstack((x, x[-1]))
+                x = numpy.array([boundaries_from_points(xi) for xi in x])
+            if len(y) == z.shape[0]:
+                y = boundaries_from_points(y)
+        else:
+            if len(y) == z.shape[0]+1:
+                y = points_from_boundaries(y)
+    y = numpy.tile(y, x.shape[1]).reshape(x.shape[1], x.shape[0]).transpose()
+    z = numpy.ma.masked_invalid(z)
+    return x, y, z
+
 
 def get_matrix_2d_data(workspace, distribution, histogram2D=False):
     '''
