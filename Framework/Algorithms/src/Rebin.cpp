@@ -120,6 +120,8 @@ void Rebin::init() {
       "FullBinsOnly", false,
       "Omit the final bin if it's width is smaller than the step size");
 
+  declareProperty("SkipError", false, "skip calculating the error.");
+
   declareProperty("IgnoreBinErrors", false,
                   "Ignore errors related to "
                   "zero/negative bin widths in "
@@ -184,7 +186,7 @@ void Rebin::exec() {
 
       // Initialize progress reporting.
       Progress prog(this, 0.0, 1.0, histnumber);
-
+      bool skipError = getProperty("SkipError");
       // Go through all the histograms and set the data
       PARALLEL_FOR_IF(Kernel::threadSafe(*inputWS, *outputWS))
       for (int i = 0; i < histnumber; ++i) {
@@ -193,7 +195,7 @@ void Rebin::exec() {
         const EventList &el = eventInputWS->getSpectrum(i);
         MantidVec y_data, e_data;
         // The EventList takes care of histogramming.
-        el.generateHistogram(XValues_new.rawData(), y_data, e_data);
+        el.generateHistogram(XValues_new.rawData(), y_data, e_data, skipError);
 
         // Copy the data over.
         outputWS->mutableY(i) = std::move(y_data);
