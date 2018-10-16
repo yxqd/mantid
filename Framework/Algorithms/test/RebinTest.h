@@ -247,7 +247,7 @@ public:
   }
 
   void do_test_EventWorkspace(EventType eventType, bool inPlace,
-                              bool PreserveEvents, bool expectOutputEvent) {
+                              bool PreserveEvents, bool expectOutputEvent, bool skipError) {
     // Two events per bin
     EventWorkspace_sptr test_in =
         WorkspaceCreationHelper::createEventWorkspace2(50, 100);
@@ -265,6 +265,7 @@ public:
     rebin.setPropertyValue("OutputWorkspace", outName);
     rebin.setPropertyValue("Params", "0.0,4.0,100");
     rebin.setProperty("PreserveEvents", PreserveEvents);
+    rebin.setProperty("SkipError", skipError);
     TS_ASSERT(rebin.execute());
     TS_ASSERT(rebin.isExecuted());
 
@@ -304,8 +305,13 @@ public:
     TS_ASSERT_DELTA(Y[2], 8.0, 1e-5);
 
     TS_ASSERT_EQUALS(E.size(), 25);
-    TS_ASSERT_DELTA(E[0], sqrt(8.0), 1e-5);
-    TS_ASSERT_DELTA(E[1], sqrt(8.0), 1e-5);
+    if(skipError && eventType == TOF && PreserveEvents == false) {
+      TS_ASSERT_DELTA(E[0], 0.0, 1e-5);
+      TS_ASSERT_DELTA(E[1], 0.0, 1e-5);
+    } else {
+      TS_ASSERT_DELTA(E[0], sqrt(8.0), 1e-5);
+      TS_ASSERT_DELTA(E[1], sqrt(8.0), 1e-5);
+    }
 
     // Test the axes are of the correct type
     TS_ASSERT_EQUALS(outWS->axes(), 2);
@@ -317,51 +323,99 @@ public:
   }
 
   void testEventWorkspace_InPlace_PreserveEvents() {
-    do_test_EventWorkspace(TOF, true, true, true);
+    do_test_EventWorkspace(TOF, true, true, true, false);
   }
 
   void testEventWorkspace_InPlace_PreserveEvents_weighted() {
-    do_test_EventWorkspace(WEIGHTED, true, true, true);
+    do_test_EventWorkspace(WEIGHTED, true, true, true, false);
   }
 
   void testEventWorkspace_InPlace_PreserveEvents_weightedNoTime() {
-    do_test_EventWorkspace(WEIGHTED_NOTIME, true, true, true);
+    do_test_EventWorkspace(WEIGHTED_NOTIME, true, true, true, false);
   }
 
   void testEventWorkspace_InPlace_NoPreserveEvents() {
-    do_test_EventWorkspace(TOF, true, false, false);
+    do_test_EventWorkspace(TOF, true, false, false, false);
   }
 
   void testEventWorkspace_InPlace_NoPreserveEvents_weighted() {
-    do_test_EventWorkspace(WEIGHTED, true, false, false);
+    do_test_EventWorkspace(WEIGHTED, true, false, false, false);
   }
 
   void testEventWorkspace_InPlace_NoPreserveEvents_weightedNoTime() {
-    do_test_EventWorkspace(WEIGHTED_NOTIME, true, false, false);
+    do_test_EventWorkspace(WEIGHTED_NOTIME, true, false, false, false);
   }
 
   void testEventWorkspace_NotInPlace_NoPreserveEvents() {
-    do_test_EventWorkspace(TOF, false, false, false);
+    do_test_EventWorkspace(TOF, false, false, false, false);
   }
 
   void testEventWorkspace_NotInPlace_NoPreserveEvents_weighted() {
-    do_test_EventWorkspace(WEIGHTED, false, false, false);
+    do_test_EventWorkspace(WEIGHTED, false, false, false, false);
   }
 
   void testEventWorkspace_NotInPlace_NoPreserveEvents_weightedNoTime() {
-    do_test_EventWorkspace(WEIGHTED_NOTIME, false, false, false);
+    do_test_EventWorkspace(WEIGHTED_NOTIME, false, false, false, false);
   }
 
   void testEventWorkspace_NotInPlace_PreserveEvents() {
-    do_test_EventWorkspace(TOF, false, true, true);
+    do_test_EventWorkspace(TOF, false, true, true, false);
   }
 
   void testEventWorkspace_NotInPlace_PreserveEvents_weighted() {
-    do_test_EventWorkspace(WEIGHTED, false, true, true);
+    do_test_EventWorkspace(WEIGHTED, false, true, true, false);
   }
 
   void testEventWorkspace_NotInPlace_PreserveEvents_weightedNoTime() {
-    do_test_EventWorkspace(WEIGHTED_NOTIME, false, true, true);
+    do_test_EventWorkspace(WEIGHTED_NOTIME, false, true, true, false);
+  }
+
+  void testEventWorkspace_InPlace_PreserveEvents_SkipError() {
+    do_test_EventWorkspace(TOF, true, true, true, true);
+  }
+
+  void testEventWorkspace_InPlace_PreserveEvents_weighted_SkipError() {
+    do_test_EventWorkspace(WEIGHTED, true, true, true, true);
+  }
+
+  void testEventWorkspace_InPlace_PreserveEvents_weightedNoTime_SkipError() {
+    do_test_EventWorkspace(WEIGHTED_NOTIME, true, true, true, true);
+  }
+
+  void testEventWorkspace_InPlace_NoPreserveEvents_SkipError() {
+    do_test_EventWorkspace(TOF, true, false, false, true);
+  }
+
+  void testEventWorkspace_InPlace_NoPreserveEvents_weighted_SkipError() {
+    do_test_EventWorkspace(WEIGHTED, true, false, false, true);
+  }
+
+  void testEventWorkspace_InPlace_NoPreserveEvents_weightedNoTime_SkipError() {
+    do_test_EventWorkspace(WEIGHTED_NOTIME, true, false, false, true);
+  }
+
+  void testEventWorkspace_NotInPlace_NoPreserveEvents_SkipError() {
+    do_test_EventWorkspace(TOF, false, false, false, true);
+  }
+
+  void testEventWorkspace_NotInPlace_NoPreserveEvents_weighted_SkipError() {
+    do_test_EventWorkspace(WEIGHTED, false, false, false, true);
+  }
+
+  void testEventWorkspace_NotInPlace_NoPreserveEvents_weightedNoTime_SkipError() {
+    do_test_EventWorkspace(WEIGHTED_NOTIME, false, false, false, true);
+  }
+
+  void testEventWorkspace_NotInPlace_PreserveEvents_SkipError() {
+    do_test_EventWorkspace(TOF, false, true, true, true);
+  }
+
+  void testEventWorkspace_NotInPlace_PreserveEvents_weighted_SkipError() {
+    do_test_EventWorkspace(WEIGHTED, false, true, true, true);
+  }
+
+  void testEventWorkspace_NotInPlace_PreserveEvents_weightedNoTime_SkipError() {
+    do_test_EventWorkspace(WEIGHTED_NOTIME, false, true, true, true);
   }
 
   void testRebinPointData() {

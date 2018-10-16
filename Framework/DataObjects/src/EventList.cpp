@@ -2077,8 +2077,11 @@ void EventList::generateHistogram(const MantidVec &X, MantidVec &Y,
   case TOF:
     // Make the single ones
     this->generateCountsHistogram(X, Y);
-    if (!skipError)
+    if (!skipError) {
       this->generateErrorsHistogram(Y, E);
+    } else {
+      E.resize(Y.size(), 0.);
+    }
     break;
 
   case WEIGHTED:
@@ -2331,7 +2334,7 @@ void EventList::generateCountsHistogram(const MantidVec &X,
 void EventList::generateErrorsHistogram(const MantidVec &Y,
                                         MantidVec &E) const {
   // Fill the vector for the errors, containing sqrt(count)
-  E.resize(Y.size(), 0);
+  E.resize(Y.size(), 0.0);
 
   // windows can get confused about std::sqrt
   std::transform(Y.begin(), Y.end(), E.begin(),
