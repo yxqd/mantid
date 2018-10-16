@@ -93,11 +93,14 @@ double calc_t1(double vx, double vy, double g, double c, double s, double x0, do
   double const r = c*vy - s*vx;
   auto const t1 = (r - sqrt(d))/(c*g);
   auto const t2 = (r + sqrt(d))/(c*g);
-  if (t1 < t2 && t1 > 0) {
+  if (t2 > 0 && t1 > 0) {
+    return t1 < t2 ? t1 : t2;
+  } else if (t1 > 0) {
     return t1;
-  } else {
+  } else if (t2 > 0) {
     return t2;
   }
+  throw TrajectoryError("Particle cannot hit the plane.");
 }
 
 /// A path of a free falling particle
@@ -115,6 +118,7 @@ struct Path {
   double t, x0, y0, vx, vy, x1, y1, v1x, v1y;
   double x(double tt) const { return x0 + vx * tt; }
   double y(double tt) const { return y0 + tt * (vy - G * tt / 2.0); }
+  double displacementLength2() const {return (x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0);}
 };
 
 class Trajectory: public std::vector<Path> {
@@ -147,6 +151,7 @@ Path calcPath(double x0, double y0, double vx, double vy, double xm, double ym, 
   auto const s = sin(theta);
 
   auto t1 = calc_t1(vx, vy, G, c, s, x0, y0, xm, ym);
+
 
   double const x1 = x0 + vx*t1;
   double const y1 = y0 + t1 * (vy - G * t1 / 2.0);
@@ -213,22 +218,38 @@ Path calcPathThrough2Points(double x0, double y0, double x1, double y1, double v
 
 //----------------------------------------------------------------------------------------------
 struct Setup {
-  Setup(double _x1, double _y1, double _x2, double _y2, double _theta,
-        double _xd, double _yd, double _thetaD, double _deltaS)
-      : x1(_x1), y1(_y1), x2(_x2), y2(_y2), theta(_theta), xd(_xd), yd(_yd),
-        thetaD(_thetaD), deltaS(_deltaS) {}
-
+  Setup(double _x1, double _y1, double _x2, double _y2, double _ys,
+        double _theta, double _xd, double _yd, double _thetaD)
+      : x1(_x1), y1(_y1), x2(_x2), y2(_y2), ys(_ys), theta(_theta), xd(_xd),
+        yd(_yd), thetaD(_thetaD) {}
+  Setup(Instrument const &instrument, double const slitTheta, double const totalTheta) {
+    IComponent_const_sptr slit1 = instrument.getComponentByName("slit1");
+    IComponent_const_sptr slit2 = instrument.getComponentByName("slit2");
+    IComponent_const_sptr linearDetector = instrument.getComponentByName("LinearDetector");
+  
+    auto tg = tan(slitTheta);
+    x1 = slit1->getPos().Z();
+    y1 = fabs(x1) * tg;
+    x2 = slit2->getPos().Z();
+    y2 = fabs(x2) * tg;
+    ys = 0.0;
+    theta = totalTheta - slitTheta;
+    auto r = linearDetector->getPos().Z();
+    xd = r * cos(slitTheta);
+    yd = r * sin(slitTheta);
+    thetaD = slitTheta/2 - M_PI/2;
+  }
   double x1;
   double y1;
   double x2;
   double y2;
+  double ys;
   double theta;
   double xd;
   double yd;
   double thetaD;
-  double deltaS;
-  double getSlit1Low() const {return x1*tan(theta);}
-  double getSlit2Low() const {return x2*tan(theta);}
+  double getSlit1Low() const {return ys + x1*tan(theta);}
+  double getSlit2Low() const {return ys + x2*tan(theta);}
   double getSlit1LowestShift(double s) const {
     if (y1 + s < getSlit1Low()) {
       return getSlit1Low() * 0.9 - y1;
@@ -249,6 +270,7 @@ std::ostream &operator<<(std::ostream &ostr, Setup const &s) {
   ostr << "Setup:\n";
   ostr << "    slit1: (" << s.x1 << ',' << s.y1 << ")\n";
   ostr << "    slit2: (" << s.x2 << ',' << s.y2 << ")\n";
+  ostr << "       ys: " << s.ys << '\n';
   ostr << "    theta: " << s.theta / M_PI * 180 << '\n';
   ostr << "      det: (" << s.xd << ',' << s.yd << ")\n";
   ostr << "   thetaD: " << s.thetaD / M_PI * 180 << '\n';
@@ -269,20 +291,19 @@ Trajectory calcTwoSlitTrajectory(Setup const &s, double v, double dy1=0.0, doubl
     if (angle == 0.0) {
       return calcPath(path, xd);
     } else {
-      return calcPath(path, xd, yd, angle - M_PI/2);
+      return calcPath(path, xd, yd, angle);
     }
   };
   auto path1 = calcPathThrough2Points(s.x1, s.y1 + dy1, s.x2, s.y2 + dy2, v);
   traj.push_back(path1);
-  auto path2 = calcPath(path1, 0, 0, s.theta);
-  Path path3;
-  if (s.thetaD == 0.0 && path2.x1 > s.xd || path2.y1 > s.yd - tan(s.thetaD)*(path2.x1 - s.yd)) {
+  auto path2 = calcPath(path1, 0, s.ys, s.theta);
+  Path path3 = calcPath3(path1, s.xd, s.yd, s.thetaD);
+  if (pow(path3.x1 - path1.x1, 2) + pow(path3.y1 - path1.y1, 2) < pow(path2.x1 - path1.x1, 2) + pow(path2.y1 - path1.y1, 2)) {
     if (!can_miss_sample) {
       std::string msg("Particle missed the sample: x1(" + std::to_string(path2.x1) + ") > xd(" + std::to_string(s.xd) + ")\n");
       msg.append("Slit heights: " + std::to_string(s.y1 + dy1) + ", " + std::to_string(s.y2 + dy2));
       throw TrajectoryError(msg);
     }
-    path3 = calcPath3(path1, s.xd, s.yd, s.thetaD);
   } else {
     path3 = calcPath3(path2, s.xd, s.yd, s.thetaD);
     traj.push_back(path2);
@@ -299,16 +320,22 @@ double getTheta(Setup const &s, Trajectory const& traj) {
 }
 
 //----------------------------------------------------------------------------------------------
-MatrixWorkspace_sptr makeTwoSlitTrajectory(Setup const &s, double v, Logger &logger) {
-  auto traj = calcTwoSlitTrajectory(s, v);
-  logger.warning() << "y3 " << traj.back().y1 << std::endl;
-  logger.warning() << "th " << getTheta(s, traj) << std::endl;
+MatrixWorkspace_sptr makeTwoSlitTrajectory(Setup const &s, double v, bool can_miss_sample=true) {
+  auto traj = calcTwoSlitTrajectory(s, v, 0, 0, can_miss_sample);
+  std::cerr << "y3 " << traj.back().y1 << std::endl;
+  std::cerr << "th " << getTheta(s, traj) << std::endl;
 
-  size_t nSpec = traj.size();
+  size_t nSpec = traj.size() + 2;
   size_t const nBins = 100;
   auto out =
       WorkspaceFactory::Instance().create("Workspace2D", nSpec, nBins, nBins);
   size_t i = 0;
+  fillSpectrum(*out, i++, -1.0, 1.0, Plane{0, s.ys, s.theta});
+  if (s.thetaD != 0) {
+    fillSpectrum(*out, i++, 2.0, 4.0, Plane{s.xd, s.yd, s.thetaD});
+  } else {
+    fillSpectrum(*out, i++, -1.0, 1.0, Vertical{s.xd});
+  }
   for(auto &&path: traj) {
     fillSpectrum(*out, i, 0.0, path.t, path);
     ++i;
@@ -323,36 +350,37 @@ struct Reflection {
 };
 
 //----------------------------------------------------------------------------------------------
-Reflection calcReflections(Setup const &s, double v, double dy0=0.0, double dy1=0.0) {
-  auto traj = calcTwoSlitTrajectory(s, v, dy0, dy1, false);
+Reflection calcReflections(Setup const &s, double v, double dy0=0.0, double dy1=0.0, bool can_miss_sample=false) {
+  auto traj = calcTwoSlitTrajectory(s, v, dy0, dy1, can_miss_sample);
   auto const& path = traj.back();
   auto const trueTheta = (atan(path.vy / path.vx) - s.theta);
   return Reflection{path.x1, path.y1, trueTheta};
 }
 
 //----------------------------------------------------------------------------------------------
-double calcLevel(Setup const &setup, double v, double h, double a, double b) {
-  auto traj = calcTwoSlitTrajectory(setup, v, a, b, false);
+double calcLevel(Setup const &setup, double v, double h, double a, double b, bool can_miss_sample=false) {
+  auto traj = calcTwoSlitTrajectory(setup, v, a, b, can_miss_sample);
   auto const& path = traj.back();
   return path.y1 - h;
 }
 
 //----------------------------------------------------------------------------------------------
 double getDetectorToSampleAngle(Setup const &s, double yd) {
-  auto detY = yd * cos(s.thetaD) + s.yd;
-  auto detX = - yd * sin(s.thetaD) + s.xd;
+  auto detY = yd * fabs(sin(s.thetaD)) + s.yd;
+  auto detX = yd * fabs(cos(s.thetaD)) + s.xd;
   return atan(detY/detX) - s.theta;
 }
 
 //----------------------------------------------------------------------------------------------
-std::pair<double, double> calcYTheta(Setup const &s, double v, double ds1=0.0, double ds2=0.0) {
+std::pair<double, double> calcYTheta(Setup const &s, double v, double ds1=0.0, double ds2=0.0, bool can_miss_sample=false) {
   //auto const ds20 = s.getSlit2LowestShift(- s.deltaS / 2);
   //auto const ds21 = s.deltaS / 2;
   //double const da = -1e-5;
 
-  auto refl = calcReflections(s, v, ds1, ds2);
+  auto refl = calcReflections(s, v, ds1, ds2, can_miss_sample);
   auto trueTheta = refl.theta;
-  double y = (refl.y - s.yd) / cos(s.thetaD);
+  auto sinThetaD = fabs(sin(s.thetaD));
+  double y = sinThetaD > 0.0 ? (refl.y - s.yd) / sinThetaD : refl.x - s.xd;
   return std::make_pair(y, trueTheta);
 
   //auto const dy1 = (calcLevel(s, v, 0.0, da, ds2) - y0) / da;
@@ -376,7 +404,7 @@ std::pair<double, double> calcYTheta(Setup const &s, double v, double ds1=0.0, d
 }
 
 //----------------------------------------------------------------------------------------------
-MatrixWorkspace_sptr makeTwoSlitSimulationCounts(double theta, double const slit1Gap, double const slit2Gap, double const sigma = 0.001) {
+MatrixWorkspace_sptr makeTwoSlitSimulationCounts(double ys, double theta, double const slit1Gap, double const slit2Gap, double const sigma = 0.001) {
   auto loader = FrameworkManager::Instance().createAlgorithm("LoadEmptyInstrument");
   loader->setChild(true);
   loader->setProperty("Filename", "D:\\Work\\mantid_stuff\\Reflectometry\\FakeFacility\\instruments\\REFL_Definition_0.xml");
@@ -399,25 +427,10 @@ MatrixWorkspace_sptr makeTwoSlitSimulationCounts(double theta, double const slit
   ws = rebin->getProperty("OutputWorkspace");
 
   Instrument_const_sptr instrument = ws->getInstrument();
-  IComponent_const_sptr slit1 = instrument->getComponentByName("slit1");
-  IComponent_const_sptr slit2 = instrument->getComponentByName("slit2");
-  IComponent_const_sptr linearDetector = instrument->getComponentByName("LinearDetector");
   double const slitTheta = 2.3 / 180.0 * M_PI;
-  
-  auto tg = tan(slitTheta);
-  auto xs1 = slit1->getPos().Z();
-  auto ys1 = fabs(xs1) * tg;
-  auto xs2 = slit2->getPos().Z();
-  auto ys2 = fabs(xs2) * tg;
-  auto r = linearDetector->getPos().Z();
-  auto xd0 = r * cos(slitTheta);
-  auto yd0 = r * sin(slitTheta);
-  double const sampleTheta = theta - slitTheta;
-
-  Setup const s(xs1, ys1, xs2, ys2, sampleTheta, xd0, yd0, slitTheta, slit1Gap);
+  Setup const s(*instrument, slitTheta, theta);
 
   size_t const ny = ws->getNumberHistograms();
-
   std::vector<double> yd(ny);
   auto detInfo = ws->detectorInfo();
   double yMin = std::numeric_limits<double>::max();
@@ -435,7 +448,7 @@ MatrixWorkspace_sptr makeTwoSlitSimulationCounts(double theta, double const slit
   std::tie(yc, thetaC) = calcYTheta(s, lam_to_speed);
   auto shift = yc - (yMin + yMax) / 2.0;
   std::transform(yd.begin(), yd.end(), yd.begin(), [shift](double a){return a + shift;});
-  std::cerr << "yc: " << yc << " theta: " << thetaC << std::endl;
+  std::cerr << "yc: " << yc << " theta: " << thetaC / M_PI * 180.0 << std::endl;
   std::cerr << s << std::endl;
 
   auto wavelengths = ws->points(0);
@@ -501,7 +514,7 @@ Setup getSlitPos(Setup const &s, double v, double tg2) {
   return s1;
 }
 
-MatrixWorkspace_sptr applyGravityCorrection(MatrixWorkspace_sptr inputWS, double theta, double deltaS, std::string const &detctorName) {
+MatrixWorkspace_sptr applyGravityCorrection(MatrixWorkspace_sptr inputWS, double theta, std::string const &detctorName) {
   if (inputWS->getAxis(0)->unit()->unitID() != "Wavelength") {
     throw std::runtime_error(
         "Input workspace is expected to be in wavelength, found " +
@@ -509,20 +522,9 @@ MatrixWorkspace_sptr applyGravityCorrection(MatrixWorkspace_sptr inputWS, double
   }
   auto ws = MatrixWorkspace_sptr(inputWS->clone());
   Instrument_const_sptr instrument = ws->getInstrument();
-  IComponent_const_sptr slit1 = instrument->getComponentByName("slit1");
-  IComponent_const_sptr slit2 = instrument->getComponentByName("slit2");
-  IComponent_const_sptr linearDetector = instrument->getComponentByName(detctorName);
   double const slitTheta = 2.3 / 180.0 * M_PI;
-  
-  auto tg = tan(slitTheta);
-  auto xs1 = slit1 ? slit1->getPos().Z() : -5.0;
-  auto ys1 = fabs(xs1) * tg;
-  auto xs2 = slit2 ? slit2->getPos().Z() : -0.4;
-  auto ys2 = fabs(xs2) * tg;
-  auto r = linearDetector->getPos().Z();
-  auto xd0 = r * cos(slitTheta);
-  auto yd0 = r * sin(slitTheta);
-  double const sampleTheta = theta - slitTheta;
+  Setup const s(*instrument, slitTheta, theta);
+  auto r = sqrt(s.xd*s.xd + s.yd*s.yd);
 
   auto const detInfo = ws->detectorInfo();
   size_t nd = 0;
@@ -534,7 +536,7 @@ MatrixWorkspace_sptr applyGravityCorrection(MatrixWorkspace_sptr inputWS, double
   for(size_t index = 0; index < n_spec; ++index) {
     if (detInfo.isMonitor(index)) continue;
     auto const pos = detInfo.position(index);
-    if (pos.Z() != r) continue;
+    if (fabs(pos.Z() - r) > 1e-4) continue;
     auto const y = pos.Y();
     yd[index] = y;
     isGood[index] = true;
@@ -550,9 +552,7 @@ MatrixWorkspace_sptr applyGravityCorrection(MatrixWorkspace_sptr inputWS, double
   }
   auto dy = (yMax - yMin) / (nd - 1);
 
-  Setup const s(xs1, ys1, xs2, ys2, sampleTheta, xd0, yd0, slitTheta, deltaS);
   std::cerr << s << std::endl;
-  std::cerr << "v: " << lam_to_speed / ws->x(0).front() << std::endl;
   double yc, thetaC;
   std::tie(yc, thetaC) = calcYTheta(s, lam_to_speed / ws->x(0).front());
   std::cerr << "Central det: " << yc << ' '  << (yc - yMin) / dy << ' ' << thetaC / M_PI * 180.0 << std::endl;
@@ -572,6 +572,8 @@ MatrixWorkspace_sptr applyGravityCorrection(MatrixWorkspace_sptr inputWS, double
   auto const shift = - dy / 2;
   std::transform(yd.begin(), yd.end(), yd.begin(), [shift](double a){return a + shift;});
   yd.push_back(yd.back() + dy);
+  std::cerr << yMin << ' ' << yMax << std::endl;
+  std::cerr << yd.front() << ' ' << yd.back() << std::endl;
 
   for(size_t i = 0; i < n_spec; ++i) {
     if (!isGood[i]) continue;
@@ -633,7 +635,6 @@ void Gravity::init() {
 
   declareProperty("X1", -0.313, "Slit2 x position in m");
   declareProperty("Y1", 0.0126, "Slit2 y position in m");
-  declareProperty("DS", 0.01, "Slit2 width in m");
 
   declareProperty("Xm1", -10.0, "Mirror x position in m");
   declareProperty("Ym1", 0.0, "Mirror y position in m");
@@ -644,8 +645,6 @@ void Gravity::init() {
   declareProperty("DetectorName", "LinearDetector", "Name of the detector");
   declareProperty("THETA_D", 0.0, "Position of a linear detector in m");
   declareProperty("Lambda", 10.0, "Particle's wavelength in Angstrom");
-  declareProperty("MoveDetector", false, "Option to move detector...");
-  declareProperty("Option", 2, "Version...");
 
   declareProperty("Ys", 0.0, "Vertical position of the sample in m");
   declareProperty("Theta", 0.0, "Angle of the sample in degrees (to the hirizon).");
@@ -683,7 +682,6 @@ void Gravity::exec() {
 
   double const xm1 = getProperty("Xm1");
   double const ym1 = getProperty("Ym1");
-  double const ds = getProperty("DS");
   double const theta1 = double(getProperty("Theta1")) * M_PI / 180.0;
 
   double const xd = getProperty("Xd");
@@ -691,21 +689,20 @@ void Gravity::exec() {
   double const thetaD = double(getProperty("THETA_D")) * M_PI / 180.0;
 
   double const ys = getProperty("Ys");
-  bool const moveDetector = getProperty("MoveDetector");
   double const theta = double(getProperty("Theta")) * M_PI / 180.0;
 
-  Setup const s{x0, y0, x1, y1, theta, xd, yd, thetaD, ds};
+  Setup const s{x0, y0, x1, y1, ys, theta, xd, yd, thetaD};
 
   if (!isDefault("InputWorkspace")) {
     MatrixWorkspace_sptr inputWS = getProperty("InputWorkspace");
     std::string detectorName = getProperty("DetectorName");
-    MatrixWorkspace_sptr ws = applyGravityCorrection(inputWS, theta, ds, detectorName);
+    MatrixWorkspace_sptr ws = applyGravityCorrection(inputWS, theta, detectorName);
     setProperty("OutputWorkspace", ws);
   }
 
   if (!isDefault("PathWorkspace")) {
     std::cerr << s << std::endl;
-    auto pathWS = makeTwoSlitTrajectory(s, v, g_log);
+    auto pathWS = makeTwoSlitTrajectory(s, v);
     setProperty("PathWorkspace", pathWS);
   }
 
@@ -713,7 +710,7 @@ void Gravity::exec() {
     double const ySim0 = getProperty("YSIM0");
     double const ySim1 = getProperty("YSIM1");
     double const sigma = getProperty("SIGMA");
-    auto ws = makeTwoSlitSimulationCounts(theta, ySim0, ySim1, sigma);
+    auto ws = makeTwoSlitSimulationCounts(ys, theta, ySim0, ySim1, sigma);
     setProperty("SimulationWorkspace", ws);
   }
 }
