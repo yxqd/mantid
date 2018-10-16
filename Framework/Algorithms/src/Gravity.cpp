@@ -9,6 +9,7 @@
 #include "MantidKernel/normal_distribution.h"
 #include "MantidGeometry/Instrument.h"
 #include "MantidGeometry/Instrument/DetectorInfo.h"
+#include "MantidGeometry/Instrument/CompAssembly.h"
 #include <Eigen/LU>
 
 #include <iostream>
@@ -621,7 +622,7 @@ MatrixWorkspace_sptr makeStuff(Setup const &s, double deltaS, double &yd0, doubl
 }
 
 //----------------------------------------------------------------------------------------------
-MatrixWorkspace_sptr makeTwoSlitSimulation(Setup const &s, double const yd0, double const yd1) {
+MatrixWorkspace_sptr makeTwoSlitSimulationTheta(Setup const &s, double const yd0, double const yd1) {
   double deltaS = s.deltaS;
   double const sigma = 0.01;
   size_t const ny = 300;
@@ -673,6 +674,104 @@ MatrixWorkspace_sptr makeTwoSlitSimulation(Setup const &s, double const yd0, dou
     }
   }
   return out;
+}
+
+//----------------------------------------------------------------------------------------------
+MatrixWorkspace_sptr makeTwoSlitSimulationCounts(double theta, double const slit1Gap, double const slit2Gap) {
+  auto loader = FrameworkManager::Instance().createAlgorithm("LoadEmptyInstrument");
+  loader->setChild(true);
+  loader->setProperty("Filename", "D:\\Work\\mantid_stuff\\Reflectometry\\FakeFacility\\instruments\\REFL_Definition_0.xml");
+  loader->setProperty("OutputWorkspace", "dummy");
+  loader->execute();
+  MatrixWorkspace_sptr ws = loader->getProperty("OutputWorkspace");
+  ws->getAxis(0)->setUnit("Wavelength");
+  for(size_t i = 0; i < ws->getNumberHistograms(); ++i) {
+    auto &X = ws->mutableX(i);
+    X.front() = 1.0;
+    X.back() = 16.0;
+    ws->mutableY(i).front() = 0.0;
+  }
+  auto rebin = FrameworkManager::Instance().createAlgorithm("Rebin");
+  rebin->setChild(true);
+  rebin->setProperty("InputWorkspace", ws);
+  rebin->setProperty("Params", "1, 0.1, 16");
+  rebin->setProperty("OutputWorkspace", "dummy");
+  rebin->execute();
+  ws = rebin->getProperty("OutputWorkspace");
+
+  Instrument_const_sptr instrument = ws->getInstrument();
+  IComponent_const_sptr slit1 = instrument->getComponentByName("slit1");
+  IComponent_const_sptr slit2 = instrument->getComponentByName("slit2");
+  IComponent_const_sptr linearDetector = instrument->getComponentByName("LinearDetector");
+  double const slitTheta = 2.3 / 180.0 * M_PI;
+  
+  auto tg = tan(slitTheta);
+  auto xs1 = slit1->getPos().Z();
+  auto ys1 = fabs(xs1) * tg;
+  auto xs2 = slit2->getPos().Z();
+  auto ys2 = fabs(xs2) * tg;
+  auto r = linearDetector->getPos().Z();
+  auto xd0 = r * cos(slitTheta);
+  auto yd0 = r * sin(slitTheta);
+  double const sampleTheta = theta - slitTheta;
+
+  Setup const s(xs1, ys1, xs2, ys2, sampleTheta, xd0, yd0, slitTheta, slit1Gap);
+  //double deltaS = s.deltaS;
+  double const sigma = 0.001;
+  size_t const ny = ws->getNumberHistograms();
+
+  std::vector<double> yd(ny);
+  auto detInfo = ws->detectorInfo();
+  double yMin = std::numeric_limits<double>::max();
+  double yMax = -yMin;
+  for(size_t i = 0; i < ny; ++i) {
+    if (!detInfo.isMonitor(i)) {
+      auto y = detInfo.position(i).Y();
+      yd[i] = y;
+      if (y < yMin) yMin = y;
+      if (y > yMax) yMax = y;
+    }
+  }
+
+  double yc, thetaC;
+  std::tie(yc, thetaC) = calcYTheta(s, lam_to_speed);
+  auto shift = yc - (yMin + yMax) / 2.0;
+  std::transform(yd.begin(), yd.end(), yd.begin(), [shift](double a){return a + shift;});
+  std::cerr << "yc: " << yc << " theta: " << thetaC << std::endl;
+  std::cerr << s << std::endl;
+
+  auto wavelengths = ws->points(0);
+  for(size_t j = 0; j < wavelengths.size(); ++j) {
+    auto lam = wavelengths[j];
+    double const v = lam_to_speed / lam;
+    for (size_t k = 0; k < 10000; ++k) {
+      //auto const b = std::uniform_real_distribution<double>(-slit2Gap / 2, slit2Gap / 2)(rng);
+      auto const a = std::uniform_real_distribution<double>(-slit1Gap / 2, slit1Gap / 2)(rng);
+      auto const x = Kernel::normal_distribution<double>(0.0, std::abs(sigma))(rng);
+      auto const b = a - x;
+      if (b < -slit2Gap / 2 || b > slit2Gap / 2) continue;
+      double y, theta;
+      try {
+        std::tie(y, theta) = calcYTheta(s, v, a, b);
+        //std::cerr << a << ' ' << b << ' ' << y << std::endl;
+      } catch(TrajectoryError&) {
+        continue;
+      }
+      double yMin = std::numeric_limits<double>::max();
+      size_t ii = ny;
+      for(size_t i = 0; i < ny; ++i) {
+        auto dy = fabs(yd[i] - y);
+        if (dy < yMin) {
+          yMin = dy;
+          ii = i;
+        }
+      }
+      if (ii < ny) {
+        ws->mutableY(ii)[j] += 1.0;
+      }
+    }
+  }
+  return ws;
 }
 //----------------------------------------------------------------------------------------------
 MatrixWorkspace_sptr applyGravityCorrection(MatrixWorkspace_sptr inputWS, double theta, double deltaS, bool shouldMoveDetector=false) {
@@ -810,7 +909,7 @@ Setup getSlitPos(Setup const &s, double v, double tg2) {
   return s1;
 }
 
-MatrixWorkspace_sptr applyGravityCorrection2(MatrixWorkspace_sptr inputWS, double theta, double deltaS, bool moveDetector=false) {
+MatrixWorkspace_sptr applyGravityCorrection2(MatrixWorkspace_sptr inputWS, double theta, double deltaS, std::string const &detctorName) {
   if (inputWS->getAxis(0)->unit()->unitID() != "Wavelength") {
     throw std::runtime_error(
         "Input workspace is expected to be in wavelength, found " +
@@ -820,13 +919,13 @@ MatrixWorkspace_sptr applyGravityCorrection2(MatrixWorkspace_sptr inputWS, doubl
   Instrument_const_sptr instrument = ws->getInstrument();
   IComponent_const_sptr slit1 = instrument->getComponentByName("slit1");
   IComponent_const_sptr slit2 = instrument->getComponentByName("slit2");
-  IComponent_const_sptr linearDetector = instrument->getComponentByName("LinearDetector");
+  IComponent_const_sptr linearDetector = instrument->getComponentByName(detctorName);
   double const slitTheta = 2.3 / 180.0 * M_PI;
   
   auto tg = tan(slitTheta);
-  auto xs1 = slit1->getPos().Z();
+  auto xs1 = slit1 ? slit1->getPos().Z() : -5.0;
   auto ys1 = fabs(xs1) * tg;
-  auto xs2 = slit2->getPos().Z();
+  auto xs2 = slit2 ? slit2->getPos().Z() : -0.4;
   auto ys2 = fabs(xs2) * tg;
   auto r = linearDetector->getPos().Z();
   auto xd0 = r * cos(slitTheta);
@@ -865,7 +964,7 @@ MatrixWorkspace_sptr applyGravityCorrection2(MatrixWorkspace_sptr inputWS, doubl
   double yc, thetaC;
   std::tie(yc, thetaC) = calcYTheta(s, lam_to_speed / ws->x(0).front());
   std::cerr << "Central det: " << yc << ' '  << (yc - yMin) / dy << ' ' << thetaC / M_PI * 180.0 << std::endl;
-  if (moveDetector) {
+  {
     auto const shift = yc - (yMin + yMax) / 2.0;
     auto alg =
         FrameworkManager::Instance().createAlgorithm("MoveInstrumentComponent");
@@ -950,6 +1049,7 @@ void Gravity::init() {
 
   declareProperty("Xd", 3.6, "Position of a linear detector in m");
   declareProperty("Yd", 0.0, "Position of a linear detector in m");
+  declareProperty("DetectorName", "LinearDetector", "Name of the detector");
   declareProperty("THETA_D", 0.0, "Position of a linear detector in m");
   declareProperty("Lambda", 10.0, "Particle's wavelength in Angstrom");
   declareProperty("MoveDetector", false, "Option to move detector...");
@@ -958,8 +1058,8 @@ void Gravity::init() {
   declareProperty("Ys", 0.0, "Vertical position of the sample in m");
   declareProperty("Theta", 0.0, "Angle of the sample in degrees (to the hirizon).");
 
-  declareProperty("YSIM0", 0.0, "");
-  declareProperty("YSIM1", 0.4, "");
+  declareProperty("YSIM0", 0.001, "");
+  declareProperty("YSIM1", 0.001, "");
 
   declareProperty(make_unique<WorkspaceProperty<API::MatrixWorkspace>>(
                       "InputWorkspace", "", Direction::Input, PropertyMode::Optional),
@@ -1022,7 +1122,8 @@ void Gravity::exec() {
     if (version == 1) {
       ws = applyGravityCorrection(inputWS, theta, ds, moveDetector);
     } else {
-      ws = applyGravityCorrection2(inputWS, theta, ds, moveDetector);
+      std::string detectorName = getProperty("DetectorName");
+      ws = applyGravityCorrection2(inputWS, theta, ds, detectorName);
     }
     setProperty("OutputWorkspace", ws);
   }
@@ -1053,11 +1154,15 @@ void Gravity::exec() {
     if (!isDefault("SimulationWorkspace")) {
       double const ySim0 = getProperty("YSIM0");
       double const ySim1 = getProperty("YSIM1");
-      auto ws = makeTwoSlitSimulation(s, ySim0, ySim1);
+      auto ws = makeTwoSlitSimulationTheta(s, ySim0, ySim1);
       setProperty("SimulationWorkspace", ws);
     }
+  } else if (!isDefault("SimulationWorkspace")) {
+    double const ySim0 = getProperty("YSIM0");
+    double const ySim1 = getProperty("YSIM1");
+    auto ws = makeTwoSlitSimulationCounts(theta, ySim0, ySim1);
+    setProperty("SimulationWorkspace", ws);
   }
-
 }
 
 } // namespace Algorithms
