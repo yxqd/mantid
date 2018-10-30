@@ -8,14 +8,23 @@ sys.path.insert(0, "/opt/Mantid/bin")
 sys.path.append("/isis/NDXWISH/user/scripts/autoreduction")
 
 
-def Wish_Run(input, cal_directory, user_directory, outputfolder, deleteWorkspace):
-    __name__ = input
-    print("Running")
-    cal_dir = cal_directory
-    use_folder = user_directory
-    out_fold = outputfolder
+class Wish:
+    
+    def __init__(self, input, cal_directory, user_directory, outputfolder, deleteWorkspace):
+        self.name = input
+        self.cal_dir = cal_directory
+        self.use_folder = user_directory
+        self.out_fold = outputfolder
+        self.deleteWorkspace = deleteWorkspace
+        self.username = None
+        self.wish_datadir = None
+        self.wish_userdir = None
+        self.wish_datafile = None
+        self.userdatadir = None
+        self.userdataprocessed = None
+        self.mtdplt = None
 
-    def validate(input_file, output_dir):
+    def validate(self, input_file, output_dir):
         """
         Autoreduction validate Function
         -------------------------------
@@ -35,31 +44,104 @@ def Wish_Run(input, cal_directory, user_directory, outputfolder, deleteWorkspace
         print("Validation successful")
 
     # Get the run number from the input data path
-    def get_run_number(data_path):
+    def get_run_number(self, data_path):
         data_path = data_path.split('/')[-1]  # Get the file name
         data_path = data_path.split('.')[0]  # Remove the extension
         data_path = data_path[4:]  # Remove the WISH prefix
         return int(data_path)
 
+    def WISH_setuser(self, usern):
+        self.username = usern
+
     # Get the valid wavelength range, i.e. excluding regions where choppers cut
-    def WISH_getlambdarange():
+    def WISH_getlambdarange(self):
         return 0.7, 10.35
 
-    def WISH_setuser(usern):
-        global username
-        username = usern
+    def WISH_setdatadir(self, directory="/archive/ndxwish/Instrument/data/cycle_09_5/"):
+        self.wish_datadir = directory
 
-    def WISH_setdatadir(directory="/archive/ndxwish/Instrument/data/cycle_09_5/"):
-        global wish_datadir
-        wish_datadir = directory
+    def WISH_setuserdir(self, directory):
+        self.wish_userdir = directory
 
-    def WISH_setuserdir(directory):
-        global wish_userdir
-        wish_userdir = directory
+    def WISH_setdatafile(self, filename):
+        self.wish_datafile = filename
 
-    def WISH_setdatafile(filename):
-        global wish_datafile
-        wish_datafile = filename
+    def WISH_startup(self, usern, cycle='14_3'):
+        sys.path.append('/home/' + usern + '/Scripts/')
+        userdatadir = self.use_folder
+        self.WISH_setdatadir(userdatadir)
+        print "Raw Data in :   ", userdatadir
+        userdataprocessed = self.out_folder
+        self.WISH_setuserdir(directory=userdataprocessed)
+        print "Processed Data in :   ", userdataprocessed
+
+    # Returns the calibration filename
+    def WISH_cal(self):
+        return self.cal_dir + "WISH_cycle_10_3_noends_10to10.cal"
+        # return "/home/mp43/Desktop/Si_Mar15/test_detOffsets_SiMar15_noends.cal"
+        # return "/home/ryb18365/Desktop/WISH_cycle_10_3_noends_10to10_dodgytubesremoved.cal"
+
+    # Returns the grouping filename
+    def WISH_group(self):
+        return self.cal_dir + "WISH_cycle_10_3_noends_10to10.cal"
+        # return "/home/mp43/Desktop/Si_Mar15/test_detOffsets_SiMar15_noends.cal"
+        # return "/home/ryb18365/Desktop/WISH_cycle_10_3_noends_10to10_dodgytubesremoved.cal"
+
+    def WISH_getvana(self, panel, SE="candlestick", cycle="09_4"):
+        vana_string = {
+                "09_2": self.cal_dir + "vana318-" + str(panel) + "foc-rmbins-smooth50.nx5",
+                "09_3": self.cal_dir + "vana935-" + str(panel) + "foc-SS.nx5",
+                "09_4": self.cal_dir + "vana3123-" + str(panel) + "foc-SS.nx5",
+                "09_5": self.cal_dir + "vana3123-" + str(panel) + "foc-SS.nx5",
+                "11_1": self.cal_dir + "vana17718-" + str(panel) + "foc-SS.nxs",
+                "11_2": self.cal_dir + "vana16812-" + str(panel) + "foc-SS.nx5",
+                "11_3": self.cal_dir + "vana18590-" + str(panel) + "foc-SS-new.nxs",
+                "11_4": self.cal_dir + "vana38428-" + str(panel) + "foc-SF-SS.nxs",
+                "18_2": self.cal_dir + "WISHvana41865-" + str(panel) + "foc.nxs"
+        }
+        return vana_string.get(cycle)
+
+    def split_string(self, t):
+        indxp = 0
+        for i in range(0, len(t)):
+            if (t[i] == "+"):
+                indxp = i
+        if (indxp != 0):
+            return int(t[0:indxp]), int(t[indxp + 1:len(t)])
+
+    def WISH_getempty(self, panel, SE="WISHcryo", cycle="09_4"):
+        if (SE == "WISHcryo"):
+            empty_string = {
+                "09_2": self.cal_dir + "emptycryo322-" + str(panel) + "-smooth50.nx5",
+                "09_3": self.cal_dir + "emptycryo1725-" + str(panel) + "foc.nx5",
+                "09_4": self.cal_dir + "emptycryo3307-" + str(panel) + "foc.nx5",
+                "09_5": self.cal_dir + "emptycryo16759-" + str(panel) + "foc.nx5",
+                "11_1": self.cal_dir + "emptycryo17712-" + str(panel) + "foc-SS.nxs",
+                "11_2": self.cal_dir + "emptycryo16759-" + str(panel) + "foc-SS.nx5",
+                "11_3": self.cal_dir + "emptycryo17712-" + str(panel) + "foc-SS-new.nxs",
+                "11_4": self.cal_dir + "empty_mag20620-" + str(panel) + "foc-HR-SF.nxs"
+
+            }
+            return empty_string.get(cycle)
+
+        if (SE == "candlestick"):
+            empty_string = {
+                "09_3": self.cal_dir + "emptyinst1726-" + str(panel) + "foc-monitor.nxs",
+                "09_4": self.cal_dir + "emptyinst3120-" + str(panel) + "foc.nxs",
+                "11_4": self.cal_dir + "emptyinst19618-" + str(panel) + "foc-SF-S.nxs",
+                "17_1": self.cal_dir + "emptyinst38581-" + str(panel) + "foc.nxs"
+            }
+            return empty_string.get(cycle)
+
+def Wish_Run(input, cal_directory, user_directory, outputfolder, deleteWorkspace):
+    name = input
+    print("Running")
+    cal_dir = cal_directory
+    use_folder = user_directory
+    out_fold = outputfolder
+
+
+
 
     def WISH_getdatafile():
         return wish_datafile
@@ -76,106 +158,9 @@ def Wish_Run(input, cal_directory, user_directory, outputfolder, deleteWorkspace
     # def WISH_setcalibration(directory):
         # wish_userdir = cal_dir
 
-    #   This is no longer needed unless run manually
-    def WISH_startup(usern, cycle='14_3'):
-        global userdatadir
-        global userdataprocessed
-        global mtdplt
-        import sys
-        sys.path.append('/home/' + usern + '/Scripts/')
-        # import Mantid_plotting as mtdplt
-        # userdatadir="/home/rawdata/"
-        # userdatadir = "/archive/ndxwish/Instrument/data/cycle_" + cycle + '/'
-        userdatadir = use_folder
-        WISH_setdatadir(userdatadir)
-        print "Raw Data in :   ", userdatadir
-        # userdataprocessed =  r"/home/sjenkins/Documents/WISH"
-        userdataprocessed = out_fold
-        WISH_setuserdir(directory=userdataprocessed)
-        print "Processed Data in :   ", userdataprocessed
-        return
 
-    # Returns the calibration filename
-    def WISH_cal(panel):
-        return WISH_getcalibration() + "WISH_cycle_10_3_noends_10to10.cal"
-        # return "/home/mp43/Desktop/Si_Mar15/test_detOffsets_SiMar15_noends.cal"
-        # return "/home/ryb18365/Desktop/WISH_cycle_10_3_noends_10to10_dodgytubesremoved.cal"
 
-    # Returns the grouping filename
-    def WISH_group():
-        return WISH_getcalibration() + "WISH_cycle_10_3_noends_10to10.cal"
-        # return "/home/mp43/Desktop/Si_Mar15/test_detOffsets_SiMar15_noends.cal"
-        # return "/home/ryb18365/Desktop/WISH_cycle_10_3_noends_10to10_dodgytubesremoved.cal"
 
-    def WISH_getvana(panel, SE="candlestick", cycle="09_4"):
-        if (SE == "candlestick"):
-            if (cycle == "09_2"):
-                return WISH_getcalibration() + "vana318-" + str(panel) + "foc-rmbins-smooth50.nx5"
-            if (cycle == "09_3"):
-                return WISH_getcalibration(cycle) + "vana935-" + str(panel) + "foc-SS.nx5"
-            if (cycle == "09_4"):
-                return WISH_getcalibration(cycle) + "vana3123-" + str(panel) + "foc-SS.nx5"
-            if (cycle == "09_5"):
-                return WISH_getcalibration(cycle) + "vana3123-" + str(panel) + "foc-SS.nx5"
-            if (cycle == "11_4"):
-                return WISH_getcalibration(cycle) + "vana38428-" + str(panel) + "foc-SF-SS.nxs"
-            if (cycle == "18_2"):
-                return WISH_getcalibration(cycle) + "WISHvana41865-" + str(panel) + "foc.nxs"
-        if (SE == "WISHcryo"):
-            if (cycle == "09_2"):
-                return WISH_getcalibration() + "vana318-" + str(panel) + "foc-rmbins-smooth50.nx5"
-            if (cycle == "09_3"):
-                return WISH_getcalibration(cycle) + "vana935-" + str(panel) + "foc-SS.nx5"
-            if (cycle == "09_4"):
-                return WISH_getcalibration(cycle) + "vana3123-" + str(panel) + "foc-SS.nx5"
-            if (cycle == "11_1"):
-                return WISH_getcalibration(cycle) + "vana17718-" + str(panel) + "foc-SS.nxs"
-            if (cycle == "11_2"):
-                return WISH_getcalibration(cycle) + "vana16812-" + str(panel) + "foc-SS.nx5"
-            if (cycle == "11_3"):
-                return WISH_getcalibration(cycle) + "vana18590-" + str(panel) + "foc-SS-new.nxs"
-            if (cycle == "18_2"):
-                return WISH_getcalibration(cycle) + "WISHvana41865-" + str(panel) + "foc.nxs"
-
-    def split_string(t):
-        indxp = 0
-        for i in range(0, len(t)):
-            if (t[i] == "+"):
-                indxp = i
-        if (indxp != 0):
-            return int(t[0:indxp]), int(t[indxp + 1:len(t)])
-
-    def WISH_getemptyinstrument(panel, cycle="09_4"):
-        if (cycle == "09_4"):
-            return WISH_getcalibration(cycle) + "emptyinst3120-" + str(panel) + "foc.nx5"
-
-    def WISH_getempty(panel, SE="WISHcryo", cycle="09_4"):
-        if (SE == "WISHcryo"):
-            if (cycle == "09_2"):
-                return WISH_getcalibration(cycle) + "emptycryo322-" + str(panel) + "-smooth50.nx5"
-            if (cycle == "09_3"):
-                return WISH_getcalibration(cycle) + "emptycryo1725-" + str(panel) + "foc.nx5"
-            if (cycle == "09_4"):
-                return WISH_getcalibration(cycle) + "emptycryo3307-" + str(panel) + "foc.nx5"
-            if (cycle == "09_5"):
-                return WISH_getcalibration(cycle) + "emptycryo16759-" + str(panel) + "foc.nx5"
-            if (cycle == "11_1"):
-                return WISH_getcalibration(cycle) + "emptycryo17712-" + str(panel) + "foc-SS.nxs"
-            if (cycle == "11_2"):
-                return WISH_getcalibration(cycle) + "emptycryo16759-" + str(panel) + "foc-SS.nx5"
-            if (cycle == "11_3"):
-                return WISH_getcalibration(cycle) + "emptycryo17712-" + str(panel) + "foc-SS-new.nxs"
-            if (cycle == "11_4"):
-                return WISH_getcalibration(cycle) + "empty_mag20620-" + str(panel) + "foc-HR-SF.nxs"
-        if (SE == "candlestick"):
-            if (cycle == "09_4"):
-                return WISH_getcalibration(cycle) + "emptyinst3120-" + str(panel) + "foc.nxs"
-            if (cycle == "09_3"):
-                return WISH_getcalibration(cycle) + "emptyinst1726-" + str(panel) + "foc-monitor.nxs"
-            if (cycle == "11_4"):
-                return WISH_getcalibration(cycle) + "emptyinst19618-" + str(panel) + "foc-SF-S.nxs"
-            if (cycle == "17_1"):
-                return WISH_getcalibration(cycle) + "emptyinst38581-" + str(panel) + "foc.nxs"
 
     def WISH_getfilename(run_number, ext):
         if (ext[0] != 's'):
@@ -906,7 +891,7 @@ def Wish_Run(input, cal_directory, user_directory, outputfolder, deleteWorkspace
             mantid.SaveNexusProcessed("w41865-" + str(j) + "foc",
                                       os.path.join(WISH_userdir(), ("vana41865-" + str(j) + "foc.nxs")))
 
-    if __name__ == "__main__":
+    if name == "__main__":
         # WISH_startup("ffv81422", "17_1")
         # WISH_setdatafile(WISH_getfilename(38581, "nxs"))
         # for i in range(1, 11):
