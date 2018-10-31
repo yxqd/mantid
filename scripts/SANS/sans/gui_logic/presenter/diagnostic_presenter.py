@@ -78,8 +78,7 @@ class DiagnosticsPagePresenter(object):
         range = self._view.horizontal_range
         listener = DiagnosticsPagePresenter.IntegralListener(self)
         detector = get_detector_from_gui_selection(self._view.detector)
-        self._work_handler.process(listener, self.run_integral, range, mask, IntegralEnum.Horizontal,
-                                   detector, state)
+        self._work_handler.process(listener, self.run_integral, range, mask, IntegralEnum.Horizontal, state)
 
     def on_vertical_clicked(self):
         input_file = self._view.run_input
@@ -90,8 +89,7 @@ class DiagnosticsPagePresenter(object):
         range = self._view.vertical_range
         listener = DiagnosticsPagePresenter.IntegralListener(self)
         detector = get_detector_from_gui_selection(self._view.detector)
-        self._work_handler.process(listener, self.run_integral, range, mask, IntegralEnum.Vertical,
-                                   detector, state)
+        self._work_handler.process(listener, self.run_integral, range, mask, IntegralEnum.Vertical, state)
 
     def on_time_clicked(self):
         input_file = self._view.run_input
@@ -102,8 +100,7 @@ class DiagnosticsPagePresenter(object):
         range = self._view.time_range
         listener = DiagnosticsPagePresenter.IntegralListener(self)
         detector = get_detector_from_gui_selection(self._view.detector)
-        self._work_handler.process(listener, self.run_integral, range, mask, IntegralEnum.Time,
-                                   detector, state)
+        self._work_handler.process(listener, self.run_integral, range, mask, IntegralEnum.Time, state)
 
     def on_processing_finished_integral(self, result):
         pass
