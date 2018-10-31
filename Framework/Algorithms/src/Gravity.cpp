@@ -391,7 +391,7 @@ double calcY(Setup const &s, Reflection const &refl, bool isCorrected=false) {
   auto rx = refl.x;
   if (isCorrected) {
     double const tgd = tan(s.thetaD);
-    double const vrr = tan(refl.theta);
+    double const vrr = tan(refl.theta + s.theta);
     rx = (tgd*s.xd - s.yd)/(tgd - vrr);
     ry = vrr * rx;
   }
