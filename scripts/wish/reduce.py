@@ -516,80 +516,39 @@ class Wish:
         self.validate()
         print(self.wish_user_directory)
         print(self.wish_datafile)
-
         i = get_run_number(self.wish_datafile)
-        for j in range(1, 11):
-            self.process(i, j, "raw", "candlestick", "17_1", "18_2", absorb=False, nd=0.0, xs=0.0, xa=0.0, h=4.0, r=0.4)
-        for j in range(1, 11):
-            wout = self.process(i, j, "raw", "candlestick", "17_1", "18_2", absorb=False, nd=0.0, xs=0.0, xa=0.0, h=4.0,
-                                r=0.4)
-            mantid.ConvertUnits(InputWorkspace=wout, OutputWorkspace=wout + "-d", Target="dSpacing", EMode="Elastic")
+        for panel in range(1, 11):
+            output_workspace = self.process(i, panel, "raw", "candlestick", "17_1", "18_2", absorb=False, nd=0.0,
+                                            xs=0.0, xa=0.0, h=4.0, r=0.4)
+            mantid.ConvertUnits(InputWorkspace=output_workspace, OutputWorkspace=output_workspace + "-d",
+                                Target="dSpacing", EMode="Elastic")
+        for panel in range(1, 6):
+            self.save_combined_panel(i, panel)
 
-            mantid.RebinToWorkspace(WorkspaceToRebin="w" + str(i) + "-6foc", WorkspaceToMatch="w" + str(i) + "-5foc",
-                                    OutputWorkspace="w" + str(i) + "-6foc", PreserveEvents='0')
-            mantid.Plus(LHSWorkspace="w" + str(i) + "-5foc", RHSWorkspace="w" + str(i) + "-6foc",
-                        OutputWorkspace="w" + str(i) + "-5_6foc")
-            mantid.ConvertUnits(InputWorkspace="w" + str(i) + "-5_6foc",
-                                OutputWorkspace="w" + str(i) + "-5_6foc" + "-d",
-                                Target="dSpacing", EMode="Elastic")
-            mantid.SaveGSS("w" + str(i) + "-5_6foc", os.path.join(self.wish_user_directory, (str(i) + "-5_6raw"
-                                                                                             + ".gss")), Append=False,
-                           Bank=1)
-            mantid.SaveFocusedXYE("w" + str(i) + "-5_6foc", os.path.join(self.wish_user_directory, (str(i) + "-5_6raw"
-                                                                                                    + ".dat")))
-            mantid.SaveNexusProcessed("w" + str(i) + "-5_6foc",
-                                      os.path.join(self.wish_user_directory, (str(i) + "-5_6raw" + ".nxs")))
-            mantid.RebinToWorkspace(WorkspaceToRebin="w" + str(i) + "-7foc", WorkspaceToMatch="w" + str(i)
-                                    + "-4foc", OutputWorkspace="w" + str(i) + "-7foc", PreserveEvents='0')
-            mantid.Plus(LHSWorkspace="w" + str(i) + "-4foc", RHSWorkspace="w" + str(i) + "-7foc",
-                        OutputWorkspace="w" + str(i) + "-4_7foc")
-            mantid.ConvertUnits(InputWorkspace="w" + str(i) + "-4_7foc",
-                                OutputWorkspace="w" + str(i) + "-4_7foc" + "-d",
-                                Target="dSpacing", EMode="Elastic")
-            mantid.SaveGSS("w" + str(i) + "-4_7foc", os.path.join(self.wish_user_directory, (str(i) + "-4_7raw"
-                                                                                             + ".gss")), Append=False,
-                           Bank=1)
-            mantid.SaveFocusedXYE("w" + str(i) + "-4_7foc", os.path.join(self.wish_user_directory, (str(i) + "-4_7raw"
-                                                                                                    + ".dat")))
-            mantid.SaveNexusProcessed("w" + str(i) + "-4_7foc",
-                                      os.path.join(self.wish_user_directory, (str(i) + "-4_7raw" + ".nxs")))
-        mantid.RebinToWorkspace(WorkspaceToRebin="w" + str(i) + "-8foc", WorkspaceToMatch="w" + str(i) + "-3foc",
-                                OutputWorkspace="w" + str(i) + "-8foc", PreserveEvents='0')
-        mantid.Plus(LHSWorkspace="w" + str(i) + "-3foc", RHSWorkspace="w" + str(i) + "-8foc",
-                    OutputWorkspace="w" + str(i) + "-3_8foc")
-        mantid.ConvertUnits(InputWorkspace="w" + str(i) + "-3_8foc", OutputWorkspace="w" + str(i) + "-3_8foc" + "-d",
+    def save_combined_panel(self, run, panel):
+        panel_combination = {
+            5: 6,
+            4: 7,
+            3: 8,
+            2: 9,
+            1: 10
+        }
+        combined_panel = str(panel) + "_" + str(panel_combination.get(panel))
+        input_workspace1 = "w" + str(run) + "-" + str(panel) + "foc"
+        input_workspace2 = "w" + str(run) + "-" + str(panel_combination.get(panel)) + "foc"
+        combined_workspace = "w" + str(run) + "-" + combined_panel + "foc"
+        mantid.RebinToWorkspace(WorkspaceToRebin=input_workspace2, WorkspaceToMatch=input_workspace1,
+                                OutputWorkspace=input_workspace2, PreserveEvents='0')
+        mantid.Plus(LHSWorkspace=input_workspace1, RHSWorkspace=input_workspace2, OutputWorkspace=combined_workspace)
+        mantid.ConvertUnits(InputWorkspace=combined_workspace, OutputWorkspace=combined_workspace + "-d",
                             Target="dSpacing", EMode="Elastic")
-        mantid.SaveGSS("w" + str(i) + "-3_8foc", os.path.join(self.wish_user_directory, (str(i) + "-3_8raw" + ".gss")),
+        mantid.SaveGSS(combined_workspace, os.path.join(self.wish_user_directory,
+                                                        (str(run) + "-" + combined_panel + "raw" + ".gss")),
                        Append=False, Bank=1)
-        mantid.SaveFocusedXYE("w" + str(i) + "-3_8foc", os.path.join(self.wish_user_directory, (str(i) + "-3_8raw"
-                                                                                                + ".dat")))
-        mantid.SaveNexusProcessed("w" + str(i) + "-3_8foc", os.path.join(self.wish_user_directory, (str(i) + "-3_8raw"
-                                                                                                    + ".nxs")))
-        mantid.RebinToWorkspace(WorkspaceToRebin="w" + str(i) + "-9foc", WorkspaceToMatch="w" + str(i) + "-2foc",
-                                OutputWorkspace="w" + str(i) + "-9foc", PreserveEvents='0')
-        mantid.Plus(LHSWorkspace="w" + str(i) + "-2foc", RHSWorkspace="w" + str(i) + "-9foc",
-                    OutputWorkspace="w" + str(i) + "-2_9foc")
-        mantid.ConvertUnits(InputWorkspace="w" + str(i) + "-2_9foc", OutputWorkspace="w" + str(i) + "-2_9foc" + "-d",
-                            Target="dSpacing", EMode="Elastic")
-        mantid.SaveGSS("w" + str(i) + "-2_9foc", os.path.join(self.wish_user_directory, (str(i) + "-2_9raw" + ".gss")),
-                       Append=False, Bank=1)
-        mantid.SaveFocusedXYE("w" + str(i) + "-2_9foc", os.path.join(self.wish_user_directory, (str(i) + "-2_9raw"
-                                                                                                + ".dat")))
-        mantid.SaveNexusProcessed("w" + str(i) + "-2_9foc", os.path.join(self.wish_user_directory, (str(i) + "-2_9raw"
-                                                                                                    + ".nxs")))
-        mantid.RebinToWorkspace(WorkspaceToRebin="w" + str(i) + "-10foc", WorkspaceToMatch="w" + str(i) + "-1foc",
-                                OutputWorkspace="w" + str(i) + "-10foc", PreserveEvents='0')
-        mantid.Plus(LHSWorkspace="w" + str(i) + "-1foc", RHSWorkspace="w" + str(i) + "-10foc",
-                    OutputWorkspace="w" + str(i) + "-1_10foc")
-        mantid.ConvertUnits(InputWorkspace="w" + str(i) + "-1_10foc", OutputWorkspace="w" + str(i) + "-1_10foc" + "-d",
-                            Target="dSpacing", EMode="Elastic")
-        mantid.SaveGSS("w" + str(i) + "-1_10foc", os.path.join(self.wish_user_directory, (str(i) + "-1_10raw"
-                                                                                          + ".gss")),
-                       Append=False, Bank=1)
-        mantid.SaveFocusedXYE("w" + str(i) + "-1_10foc", os.path.join(self.wish_user_directory, (str(i) + "-1_10raw"
-                                                                                                 + ".dat")))
-        mantid.SaveNexusProcessed("w" + str(i) + "-1_10foc",
-                                  os.path.join(self.wish_user_directory, (str(i) + "-1_10raw" + ".nxs")))
+        mantid.SaveFocusedXYE(combined_workspace, os.path.join(self.wish_user_directory,
+                                                               (str(run) + "-" + combined_panel + "raw" + ".dat")))
+        mantid.SaveNexusProcessed(combined_workspace, os.path.join(self.wish_user_directory,
+                                                                   (str(run) + "-" + combined_panel + "raw" + ".nxs")))
 
     def create_vanadium(self):
         # ######### use the lines below to process a LoadRawvanadium run                               #################
@@ -598,7 +557,7 @@ class Wish:
             mantid.CropWorkspace(InputWorkspace="w41865-" + str(j) + "foc", OutputWorkspace="w41865-" + str(j) + "foc",
                                  XMin='0.35',
                                  XMax='5.0')
-            Removepeaks_spline_smooth_vana("w41865-" + str(j) + "foc", j, debug=False)
+            remove_peaks_spline_smooth_empty("w41865-" + str(j) + "foc", j)
             mantid.SaveNexusProcessed("w41865-" + str(j) + "foc",
                                       os.path.join(self.wish_user_directory, ("vana41865-" + str(j) + "foc.nxs")))
 
