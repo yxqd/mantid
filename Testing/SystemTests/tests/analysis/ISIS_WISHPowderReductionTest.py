@@ -1,5 +1,5 @@
 from stresstesting import MantidStressTest
-from wish.reduce import Wish_Run
+from wish.reduce import Wish
 
 from mantid import config
 import mantid.simpleapi as mantid
@@ -48,7 +48,8 @@ class WISHPowderReductionTest(MantidStressTest):
 
     def runTest(self):
         os.makedirs(output_dir)
-        Wish_Run("__main__", calibration_dir+"/", input_dir, output_dir, True)
+        wish_test = Wish("__main__", calibration_dir+"/", input_dir, output_dir, True)
+        wish_test.run_script()
         self.clearWorkspaces()
 
     def validate(self):
