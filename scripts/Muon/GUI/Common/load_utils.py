@@ -13,7 +13,6 @@ from mantid.api import ITableWorkspace
 from mantid.simpleapi import mtd
 from mantid import api
 from mantid.kernel import ConfigServiceImpl
-import mantid.kernel as kernel
 import xml.etree.ElementTree as ET
 import Muon.GUI.Common.run_string_utils as run_string_utils
 import Muon.GUI.Common.muon_file_utils as file_utils
@@ -126,7 +125,6 @@ def run_LoadInstrument(parameter_dict):
     alg = mantid.AlgorithmManager.create("LoadInstrument")
     alg.initialize()
     alg.setAlwaysStoreInADS(False)
-    # alg.setProperty("Workspace", "__notUsed")
     alg.setProperties(parameter_dict)
     alg.execute()
     return alg.getProperty("Workspace").value
@@ -156,7 +154,7 @@ DEFAULT_OUTPUTS = ["OutputWorkspace",
                    "MainFieldDirection"]
 # List of default values for the DEFAULT_OUTPUTS list
 DEFAULT_OUTPUT_VALUES = [__default_workspace(),
-                         None,  # api.WorkspaceFactoryImpl.Instance().createTable("TableWorkspace"),
+                         None,
                          api.WorkspaceFactoryImpl.Instance().createTable("TableWorkspace"),
                          0.0,
                          0.0, "Unknown direction"]
