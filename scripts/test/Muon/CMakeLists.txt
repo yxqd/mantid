@@ -23,6 +23,7 @@ set ( TEST_PY_FILES
    utilities/thread_model_test.py
    utilities/muon_workspace_wrapper_test.py
    utilities/muon_workspace_wrapper_directory_test.py
+   utilities/load_utils_test.py
    subplotObject_test.py
 )
 
