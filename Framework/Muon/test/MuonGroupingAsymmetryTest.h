@@ -276,13 +276,25 @@ public:
   void
   test_grouping_asymmetry_with_subtracted_multiple_periods_gives_correct_values() {
 
-	  //std::vector<double> xvals = { 0.0, 0.1, 0.2, 0.3, 0.4, 0.5 };
-	  //auto i = std::lower_bound(xvals.begin(), xvals.end(), 0.0);
+    auto ws = createMultiPeriodAsymmetryData(3, 2, 10, "group_asym");
+    std::vector<int> detectors = {1};
+    auto alg =
+        setUpAlgorithmWithoutOptionalProperties(ws, "group_asym", detectors);
 
-	  std::vector<double> xvals = { 0.0, 0.1, 0.2, 0.3, 0.4, 0.5 };
-	  auto upper = std::lower_bound(xvals.begin(), xvals.end(), 0.05);
+    std::vector<int> summedPeriods = {1,2};
+    std::vector<int> subtractedPeriods = {3};
+    alg->setProperty("SummedPeriods", summedPeriods);
+    alg->setProperty("SubtractedPeriods", subtractedPeriods);
+    alg->execute();
 
-	  size_t i = std::distance(xvals.begin(), upper + 1);
+    auto wsOut = getOutputWorkspace(alg);
+	  // //std::vector<double> xvals = { 0.0, 0.1, 0.2, 0.3, 0.4, 0.5 };
+	  // //auto i = std::lower_bound(xvals.begin(), xvals.end(), 0.0);
+
+	  // std::vector<double> xvals = { 0.0, 0.1, 0.2, 0.3, 0.4, 0.5 };
+	  // auto upper = std::lower_bound(xvals.begin(), xvals.end(), 0.05);
+
+	  // size_t i = std::distance(xvals.begin(), upper + 1);
   }
 
   void
