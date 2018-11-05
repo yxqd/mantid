@@ -30,23 +30,6 @@ public:
   static constexpr const char *inputWSName = "inputData";
 };
 
-// Set sensible default algorithm properties
-IAlgorithm_sptr algorithmWithPropertiesSet(const std::string &inputWSName) {
-  std::vector<int> group = {1};
-
-  auto alg = boost::make_shared<MuonGroupingAsymmetry>();
-  alg->initialize();
-  alg->setProperty("InputWorkspace", inputWSName);
-  alg->setProperty("GroupName", "fwd");
-  alg->setProperty("Grouping", group);
-  alg->setProperty("AsymmetryTimeMin", 0.0);
-  alg->setProperty("AsymmetryTimeMax", 30.0);
-  alg->setProperty("SummedPeriods", std::to_string(1));
-  alg->setProperty("SubtractedPeriods", "");
-  alg->setLogging(false);
-  return alg;
-}
-
 // Set only mandatory fields; input and output workspace
 IAlgorithm_sptr
 algorithmWithWorkspacePropertiesSet(const std::string &inputWSName) {
@@ -225,6 +208,28 @@ public:
     TS_ASSERT_THROWS(alg->execute(), std::runtime_error);
   }
 
+  void test_algorithm_fails_if_summed_periods_has_negative_entry() {
+    auto ws = createMultiPeriodWorkspaceGroup(2, 3, 10, "group");
+    std::vector<int> detectors = {1, 2, 3};
+    auto alg = setUpAlgorithmWithoutOptionalProperties(ws, "group", detectors);
+
+    std::vector<int> summedPeriods = {-1};
+    alg->setProperty("SummedPeriods", summedPeriods);
+
+    TS_ASSERT_THROWS(alg->execute(), std::runtime_error);
+  }
+
+  void test_algorithm_fails_if_subtracted_periods_has_negative_entry() {
+    auto ws = createMultiPeriodWorkspaceGroup(2, 3, 10, "group");
+    std::vector<int> detectors = {1, 2, 3};
+    auto alg = setUpAlgorithmWithoutOptionalProperties(ws, "group", detectors);
+
+    std::vector<int> subtractedPeriods = {-1};
+    alg->setProperty("SubtractedPeriods", subtractedPeriods);
+
+    TS_ASSERT_THROWS(alg->execute(), std::runtime_error);
+  }
+
   // --------------------------------------------------------------------------
   // Correct output
   // --------------------------------------------------------------------------
@@ -277,41 +282,54 @@ public:
   test_grouping_asymmetry_with_subtracted_multiple_periods_gives_correct_values() {
 
     auto ws = createMultiPeriodAsymmetryData(3, 2, 10, "group_asym");
-    std::vector<int> detectors = {1};
+    std::vector<int> detectors = {1, 2};
     auto alg =
         setUpAlgorithmWithoutOptionalProperties(ws, "group_asym", detectors);
 
-    std::vector<int> summedPeriods = {1,2};
-    std::vector<int> subtractedPeriods = {3};
+    std::vector<int> summedPeriods = {1};
+    std::vector<int> subtractedPeriods = {2, 3};
     alg->setProperty("SummedPeriods", summedPeriods);
     alg->setProperty("SubtractedPeriods", subtractedPeriods);
     alg->execute();
 
     auto wsOut = getOutputWorkspace(alg);
-	  // //std::vector<double> xvals = { 0.0, 0.1, 0.2, 0.3, 0.4, 0.5 };
-	  // //auto i = std::lower_bound(xvals.begin(), xvals.end(), 0.0);
 
-	  // std::vector<double> xvals = { 0.0, 0.1, 0.2, 0.3, 0.4, 0.5 };
-	  // auto upper = std::lower_bound(xvals.begin(), xvals.end(), 0.05);
+    TS_ASSERT_DELTA(wsOut->readX(0)[0], 0.000, 0.001);
+    TS_ASSERT_DELTA(wsOut->readX(0)[4], 0.400, 0.001);
+    TS_ASSERT_DELTA(wsOut->readX(0)[9], 0.900, 0.001);
 
-	  // size_t i = std::distance(xvals.begin(), upper + 1);
+    TS_ASSERT_DELTA(wsOut->readY(0)[0], -0.90039, 0.001);
+    TS_ASSERT_DELTA(wsOut->readY(0)[1], -0.21643, 0.001);
+
+    TS_ASSERT_DELTA(wsOut->readE(0)[0], 0.0002351, 0.00001);
+    TS_ASSERT_DELTA(wsOut->readE(0)[1], 0.0002460, 0.00001);
   }
 
   void
-  test_grouping_asymmetry_with_summed_multiple_periods_gives_correct_values() {}
+  test_grouping_asymmetry_with_summed_multiple_periods_gives_correct_values() {
+    auto ws = createMultiPeriodAsymmetryData(3, 2, 10, "group_asym");
+    std::vector<int> detectors = {1, 2};
+    auto alg =
+        setUpAlgorithmWithoutOptionalProperties(ws, "group_asym", detectors);
 
-  // void test_algorithm_fails_if_summed_periods_has_negative_entry() {}
+    std::vector<int> summedPeriods = {3, 2};
+    std::vector<int> subtractedPeriods = {1};
+    alg->setProperty("SummedPeriods", summedPeriods);
+    alg->setProperty("SubtractedPeriods", subtractedPeriods);
+    alg->execute();
 
-  // void test_algorithm_fails_if_subtracted_periods_has_negative_entry() {}
+    auto wsOut = getOutputWorkspace(alg);
 
-  // void test_algorithm_fails_if_summed_periods_exceed_periods_in_workspace()
-  // {}
+    TS_ASSERT_DELTA(wsOut->readX(0)[0], 0.000, 0.001);
+    TS_ASSERT_DELTA(wsOut->readX(0)[4], 0.400, 0.001);
+    TS_ASSERT_DELTA(wsOut->readX(0)[9], 0.900, 0.001);
 
-  // void
-  // test_algorithm_fails_if_suubtracted_periods_exceed_periods_in_workspace()
-  // {}
+    TS_ASSERT_DELTA(wsOut->readY(0)[0], 0.90039, 0.001);
+    TS_ASSERT_DELTA(wsOut->readY(0)[1], 0.21643, 0.001);
 
-  // void test_algorithm_fails_if_no_periods_given() {}
+    TS_ASSERT_DELTA(wsOut->readE(0)[0], 0.0002351, 0.00001);
+    TS_ASSERT_DELTA(wsOut->readE(0)[1], 0.0002460, 0.00001);
+  }
 };
 
 #endif /* MANTID_MUON_MUONGROUPINGASYMMETRYTEST_H_ */
