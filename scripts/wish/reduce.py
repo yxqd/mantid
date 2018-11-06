@@ -272,6 +272,7 @@ class Wish:
     def process(self, number, panel, ext, se_sample="WISHcryo", empty_se_cycle="09_4", cycle_vanadium="09_4",
                 absorb=False, nd=0.0, xs=0.0, xa=0.0, h=0.0, r=0.0):
         w = self.read_wish_file(number, panel, ext)
+        self.focus(w, panel)
         print "file read and normalized"
         if absorb:
             mantid.ConvertUnits(InputWorkspace=w, OutputWorkspace=w, Target="Wavelength", EMode="Elastic")
@@ -283,7 +284,7 @@ class Wish:
             mantid.Divide(LHSWorkspace=w, RHSWorkspace="T", OutputWorkspace=w)
             mantid.DeleteWorkspace("T")
             mantid.ConvertUnits(InputWorkspace=w, OutputWorkspace=w, Target="TOF", EMode="Elastic")
-        self.focus(w, panel)
+
         print "focussing done!"
         if type(number) is int:
             focused_workspace_name = "w" + str(number) + "-" + str(panel) + "foc"

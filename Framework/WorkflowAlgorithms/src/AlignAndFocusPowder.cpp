@@ -15,6 +15,7 @@
 #include "MantidDataObjects/OffsetsWorkspace.h"
 #include "MantidDataObjects/TableWorkspace.h"
 #include "MantidDataObjects/Workspace2D.h"
+#include "MantidDataObjects/WorkspaceCreation.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/ConfigService.h"
@@ -379,7 +380,8 @@ void AlignAndFocusPowder::exec() {
   } else {
     // workspace2D
     if (m_outputW != m_inputW) {
-      m_outputW = WorkspaceFactory::Instance().create(m_inputW);
+      m_outputW = m_inputW->clone();
+      
     }
   }
 
