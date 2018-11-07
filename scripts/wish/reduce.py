@@ -68,7 +68,7 @@ class Wish:
     def set_data_file(self, filename):
         self.wish_datafile = filename
 
-    def startup(self, username):
+    def startup(self):
        # sys.path.append('/home/' + username + '/Scripts/')
         user_data_directory = self.use_folder
         self.set_data_directory(user_data_directory)
@@ -408,11 +408,11 @@ class Wish:
     # save a a nexus processed file.
     # It looks like smoothing of 100 works quite well
     def create_normalised_vanadium(self, van, empty, panel, vh, vr, cycle_van="18_2", cycle_empty="17_1"):
-        self.startup("ffv81422")
+        self.startup()
         self.set_data_file(self.get_file_name(41870, "nxs"))
         self.set_data_directory("/archive/ndxwish/Instrument/data/cycle_" + cycle_van + "/")
         wish_van = self.read_wish_file(van, panel, "nxs_event")
-        self.startup("ffv81422")
+        self.startup()
         self.set_data_file(self.get_file_name(38581, "nxs"))
         self.set_data_directory("/archive/ndxwish/Instrument/data/cycle_" + cycle_empty + "/")
         wish_empty = self.read_wish_file(empty, panel, "nxs_event")
@@ -562,7 +562,7 @@ class Wish:
 
     def run_script(self,run):
         if self.name == "__main__":
-            self.startup("ffv81422")
+            self.startup()
             self.set_data_file(self.get_file_name(run, "nxs"))
 
             self.main()
