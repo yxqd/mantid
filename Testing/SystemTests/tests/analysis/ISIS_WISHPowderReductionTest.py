@@ -1,5 +1,5 @@
 from stresstesting import MantidStressTest
-from wish import Wish
+from wish.reduce import Wish
 
 from mantid import config
 import mantid.simpleapi as mantid
@@ -49,14 +49,14 @@ class WISHPowderReductionTest(MantidStressTest):
     def runTest(self):
         os.makedirs(output_dir)
         wish_test = Wish("__main__", calibration_dir+"/", input_dir, output_dir, True)
-        wish_test.run_script()
+        wish_test.run_script(41870)
         self.clearWorkspaces()
 
     def validate(self):
-        return "w41870_2-9foc", "WISH41870-2_9raw.nxs", \
-               "w41870_3-8foc", "WISH41870-3_8raw.nxs", \
-               "w41870_4-7foc", "WISH41870-4_7raw.nxs", \
-               "w41870_5-6foc", "WISH41870-5_6raw.nxs"
+        return "w41870_2-9foc", "WISH41870_2-9raw.nxs", \
+               "w41870_3-8foc", "WISH41870_3-8raw.nxs", \
+               "w41870_4-7foc", "WISH41870_4-7raw.nxs", \
+               "w41870_5-6foc", "WISH41870_5-6raw.nxs"
 
     def clearWorkspaces(self):
         deletews = ["w41870_" + str(i) + "foc" for i in range(1, 11)]

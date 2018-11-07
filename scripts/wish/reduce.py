@@ -11,7 +11,7 @@ sys.path.append("/isis/NDXWISH/user/scripts/autoreduction")
 
 class Wish:
 
-    def __init__(self, input_mode, cal_directory, user_directory, output_folder, delete_workspace):
+    def __init__(self, input_mode, cal_directory, user_directory, output_folder, delete_workspace): #username):
         self.name = input_mode
         self.cal_dir = cal_directory
         self.use_folder = user_directory
@@ -69,7 +69,7 @@ class Wish:
         self.wish_datafile = filename
 
     def startup(self, username):
-        sys.path.append('/home/' + username + '/Scripts/')
+       # sys.path.append('/home/' + username + '/Scripts/')
         user_data_directory = self.use_folder
         self.set_data_directory(user_data_directory)
         print "Raw Data in :   ", user_data_directory
@@ -560,10 +560,10 @@ class Wish:
             mantid.SaveNexusProcessed("w41865-" + str(j) + "foc",
                                       os.path.join(self.wish_user_directory, ("vana41865-" + str(j) + "foc.nxs")))
 
-    def run_script(self):
+    def run_script(self,run):
         if self.name == "__main__":
             self.startup("ffv81422")
-            self.set_data_file(self.get_file_name(41870, "nxs"))
+            self.set_data_file(self.get_file_name(run, "nxs"))
 
             self.main()
 
