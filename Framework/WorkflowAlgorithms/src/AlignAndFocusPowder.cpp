@@ -126,6 +126,10 @@ void AlignAndFocusPowder::init() {
                   "EventWorkspace, this will preserve "
                   "the full event list (warning: this "
                   "will use much more memory!).");
+  declareProperty("RunRebin", true,
+                  "If set to false "
+                  "prevents rebin from running "
+                  "during this algorithm.");                
   declareProperty("RemovePromptPulseWidth", 0.,
                   "Width of events (in "
                   "microseconds) near the prompt "
@@ -298,6 +302,7 @@ void AlignAndFocusPowder::exec() {
   tmin = getProperty("TMin");
   tmax = getProperty("TMax");
   m_preserveEvents = getProperty("PreserveEvents");
+  m_runRebin = getProperty("RunRebin");
   m_resampleX = getProperty("ResampleX");
   // determine some bits about d-space and binning
   if (m_resampleX != 0) {
@@ -511,7 +516,7 @@ void AlignAndFocusPowder::exec() {
   }
   m_progress->report();
 
-  if (!dspace)
+  if ((!dspace)&&m_runRebin)
     m_outputW = rebin(m_outputW);
   m_progress->report();
 
@@ -633,7 +638,7 @@ void AlignAndFocusPowder::exec() {
   }
   m_progress->report();
 
-  if (dspace) {
+  if (dspace&& m_runRebin) {
     m_outputW = rebin(m_outputW);
     if (m_processLowResTOF)
       m_lowResW = rebin(m_lowResW);

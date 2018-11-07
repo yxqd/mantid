@@ -10,7 +10,7 @@ sys.path.append("/isis/NDXWISH/user/scripts/autoreduction")
 
 
 class Wish:
-    
+
     def __init__(self, input_mode, cal_directory, user_directory, output_folder, delete_workspace):
         self.name = input_mode
         self.cal_dir = cal_directory
@@ -155,7 +155,7 @@ class Wish:
             print "will be reading filename..." + filename
             panel_min, panel_max = self.return_panel.get(panel)
             if panel != 0:
-                output = "w" + str(number) + "-" + str(panel)
+                output = "w" + str(number) + "_" + str(panel)
             else:
                 output = "w" + str(number)
             self.shared_load_files(ext, filename, output, panel_max, panel_min, False)
@@ -163,7 +163,7 @@ class Wish:
                 mantid.LoadEventNexus(Filename=filename, OutputWorkspace=output, LoadMonitors='1')
                 mantid.RenameWorkspace(output + "_monitors", "w" + str(number) + "_monitors")
                 mantid.Rebin(InputWorkspace=output, OutputWorkspace=output, Params='6000,-0.00063,110000')
-                mantid.ConvertToMatrixWorkspace(output, output)
+                #mantid.ConvertToMatrixWorkspace(output, output)
                 panel_min, panel_max = self.return_panel.get(panel)
                 mantid.CropWorkspace(InputWorkspace=output, OutputWorkspace=output, StartWorkspaceIndex=panel_min - 6,
                                      EndWorkspaceIndex=panel_max - 6)
@@ -187,7 +187,7 @@ class Wish:
 
                 print "renaming monitors done!"
                 mantid.Rebin(InputWorkspace=output, OutputWorkspace=output, Params='6000,-0.00063,110000')
-                mantid.ConvertToMatrixWorkspace(output, output)
+                #mantid.ConvertToMatrixWorkspace(output, output)
                 panel_min, panel_max = self.return_panel.get(panel)
                 mantid.CropWorkspace(InputWorkspace=output, OutputWorkspace=output, StartWorkspaceIndex=panel_min - 6,
                                      EndWorkspaceIndex=panel_max - 6)
@@ -255,10 +255,24 @@ class Wish:
 
     # Focus data set for a given panel and return the workspace
     def focus_one_panel(self, work, focus, panel):
-        mantid.AlignDetectors(InputWorkspace=work, OutputWorkspace=work, CalibrationFile=self.get_cal())
-        mantid.DiffractionFocussing(InputWorkspace=work, OutputWorkspace=focus, GroupingFileName=self.get_group_file())
-        if panel == 5 or panel == 6:
-            mantid.CropWorkspace(InputWorkspace=focus, OutputWorkspace=focus, XMin=0.3)
+        panel_crop = {
+            1: (0.8, 53.3),
+            2: (0.5, 13.1),
+            3: (0.5, 7.77),
+            4: (0.4, 5.86),
+            5: (0.35, 4.99),
+            6: (0.35, 4.99),
+            7: (0.4, 5.86),
+            8: (0.5, 7.77),
+            9: (0.5, 13.1),
+            10: (0.8, 53.3)
+        }
+        d_min, d_max = panel_crop.get(panel)
+        # mantid.ConvertToMatrixWorkspace(InputWorkspace=work, OutputWorkspace=work)
+        mantid.AlignAndFocusPowder(InputWorkspace=work, OutputWorkspace=focus, GroupFileName=self.get_group_file(),
+                                   CalFileName=self.get_cal(), RunRebin=False)
+        mantid.ConvertUnits(InputWorkspace=focus, OutputWorkspace=focus, Target="dSpacing", EMode="Elastic")
+        mantid.CropWorkspace(InputWorkspace=focus, OutputWorkspace=focus, XMin=d_min,XMax=d_max)
         return focus
 
     def focus(self, work, panel):
@@ -272,9 +286,11 @@ class Wish:
     def process(self, number, panel, ext, se_sample="WISHcryo", empty_se_cycle="09_4", cycle_vanadium="09_4",
                 absorb=False, nd=0.0, xs=0.0, xa=0.0, h=0.0, r=0.0):
         w = self.read_wish_file(number, panel, ext)
-        self.focus(w, panel)
         print "file read and normalized"
+        self.focus(w, panel)
+        print "focussing done!"
         if absorb:
+            print absorb
             mantid.ConvertUnits(InputWorkspace=w, OutputWorkspace=w, Target="Wavelength", EMode="Elastic")
             mantid.CylinderAbsorption(InputWorkspace=w, OutputWorkspace="T",
                                       CylinderSampleHeight=h, CylinderSampleRadius=r, AttenuationXSection=xa,
@@ -283,57 +299,41 @@ class Wish:
                                       ExpMethod="Normal")
             mantid.Divide(LHSWorkspace=w, RHSWorkspace="T", OutputWorkspace=w)
             mantid.DeleteWorkspace("T")
-            mantid.ConvertUnits(InputWorkspace=w, OutputWorkspace=w, Target="TOF", EMode="Elastic")
+            mantid.ConvertUnits(InputWorkspace=w, OutputWorkspace=w, Target="dSpacing", EMode="Elastic")
+            print "absorb done"
 
-        print "focussing done!"
         if type(number) is int:
-            focused_workspace_name = "w" + str(number) + "-" + str(panel) + "foc"
+            focused_workspace_name = "w" + str(number) + "_" + str(panel) + "foc"
             if len(ext) > 9:
                 label, tmin, tmax = split_string_event(ext)
-                focused_workspace_name = "w" + str(number) + "-" + str(panel) + "_" + label + "foc"
+                focused_workspace_name = "w" + str(number) + "_" + str(panel) + "_" + label + "foc"
         else:
             n1, n2 = split_string(number)
-            focused_workspace_name = "w" + str(n1) + "_" + str(n2) + "-" + str(panel) + "foc"
+            focused_workspace_name = "w" + str(n1) + "_" + str(n2) + "_" + str(panel) + "foc"
         if self.deleteWorkspace:
             mantid.DeleteWorkspace(w)
-        panel_crop = {
-            1: (0.8, 53.3),
-            2: (0.5, 13.1),
-            3: (0.5, 7.77),
-            4: (0.4, 5.86),
-            5: (0.35, 4.99),
-            6: (0.35, 4.99),
-            7: (0.4, 5.86),
-            8: (0.5, 7.77),
-            9: (0.5, 13.1),
-            10: (0.8, 53.3)
-        }
-        x_min, x_max = panel_crop.get(panel)
-        mantid.CropWorkspace(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name, XMin=x_min,
-                             XMax=x_max)
-        if panel == 0:
-            for i in range(1, 11):
-                focused_workspace_name = "w" + str(number) + "-" + str(i) + "foc"
-                mantid.CropWorkspace(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
-                                     XMin=0.80, XMax=53.3)
-                mantid.CropWorkspace(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
-                                     XMin=0.50, XMax=13.1)
-                mantid.CropWorkspace(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
-                                     XMin=0.50, XMax=7.77)
-                mantid.CropWorkspace(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
-                                     XMin=0.40, XMax=5.86)
-                mantid.CropWorkspace(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
-                                     XMin=0.35, XMax=4.99)
-                mantid.CropWorkspace(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
-                                     XMin=0.35, XMax=4.99)
-                mantid.CropWorkspace(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
-                                     XMin=0.40, XMax=5.86)
-                mantid.CropWorkspace(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
-                                     XMin=0.50, XMax=7.77)
-                mantid.CropWorkspace(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
-                                     XMin=0.50, XMax=13.1)
-                mantid.CropWorkspace(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
-                                     XMin=0.80, XMax=53.3)
+        # panel_crop = {
+        #     1: (0.8, 53.3),
+        #     2: (0.5, 13.1),
+        #     3: (0.5, 7.77),
+        #     4: (0.4, 5.86),
+        #     5: (0.35, 4.99),
+        #     6: (0.35, 4.99),
+        #     7: (0.4, 5.86),
+        #     8: (0.5, 7.77),
+        #     9: (0.5, 13.1),
+        #     10: (0.8, 53.3)
+        # }
+        # x_min, x_max = panel_crop.get(panel)
+        # mantid.CropWorkspace(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name, XMin=x_min,
+        #                      XMax=x_max)
+        # if panel == 0:
+        #     for i in range(1, 11):
+        #         focused_workspace_name = "w" + str(number) + "-" + str(i) + "foc"
+        #         x_min, x_max = panel_crop.get(i)
+        #         mantid.CropWorkspace(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
+        #                              XMin=x_min,
+        #                              XMax=x_max)
         # print "will try to load an empty with the name:"
         print panel
         print se_sample
@@ -341,7 +341,7 @@ class Wish:
         print self.get_empty(panel, se_sample, empty_se_cycle)
         if panel == 0:
             for i in range(1, 11):
-                focused_workspace_name = "w" + str(number) + "-" + str(i) + "foc"
+                focused_workspace_name = "w" + str(number) + "_" + str(i) + "foc"
                 mantid.LoadNexusProcessed(Filename=self.get_empty(i, se_sample, empty_se_cycle),
                                           OutputWorkspace="empty")
                 mantid.RebinToWorkspace(WorkspaceToRebin="empty", WorkspaceToMatch=focused_workspace_name,
@@ -429,10 +429,7 @@ class Wish:
         mantid.Divide(LHSWorkspace=wish_van, RHSWorkspace="T", OutputWorkspace=wish_van)
         mantid.DeleteWorkspace("T")
         mantid.ConvertUnits(InputWorkspace=wish_van, OutputWorkspace=wish_van, Target="TOF", EMode="Elastic")
-        # vanfoc = WISH_focus(wish_van, panel)
         mantid.DeleteWorkspace(wish_van)
-        # StripPeaks(vanfoc,vanfoc)
-        # SmoothData(vanfoc,vanfoc,str(smoothing))
         return
 
     def create_empty(self, empty, panel):
@@ -529,16 +526,16 @@ class Wish:
 
     def save_combined_panel(self, run, panel):
         panel_combination = {
-            5: 6,
-            4: 7,
-            3: 8,
-            2: 9,
-            1: 10
+            5: "6",
+            4: "7",
+            3: "8",
+            2: "9",
+            1: "10"
         }
-        combined_panel = str(panel) + "_" + str(panel_combination.get(panel))
-        input_workspace1 = "w" + str(run) + "-" + str(panel) + "foc"
-        input_workspace2 = "w" + str(run) + "-" + str(panel_combination.get(panel)) + "foc"
-        combined_workspace = "w" + str(run) + "-" + combined_panel + "foc"
+        combined_panel = str(panel) + "-" + panel_combination.get(panel)
+        input_workspace1 = "w" + str(run) + "_" + str(panel) + "foc"
+        input_workspace2 = "w" + str(run) + "_" + panel_combination.get(panel) + "foc"
+        combined_workspace = "w" + str(run) + "_" + combined_panel + "foc"
         mantid.RebinToWorkspace(WorkspaceToRebin=input_workspace2, WorkspaceToMatch=input_workspace1,
                                 OutputWorkspace=input_workspace2, PreserveEvents='0')
         mantid.Plus(LHSWorkspace=input_workspace1, RHSWorkspace=input_workspace2, OutputWorkspace=combined_workspace)

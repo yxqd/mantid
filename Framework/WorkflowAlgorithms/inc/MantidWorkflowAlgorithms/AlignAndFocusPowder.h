@@ -124,6 +124,7 @@ private:
   double tmin{0.0};
   double tmax{0.0};
   bool m_preserveEvents{false};
+  bool m_runRebin{false};
   void doSortEvents(Mantid::API::Workspace_sptr ws);
 
   /// Low resolution TOF matrix workspace
