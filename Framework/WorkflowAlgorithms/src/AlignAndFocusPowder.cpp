@@ -129,7 +129,7 @@ void AlignAndFocusPowder::init() {
   declareProperty("RunRebin", true,
                   "If set to false "
                   "prevents rebin from running "
-                  "during this algorithm.");                
+                  "during this algorithm.");
   declareProperty("RemovePromptPulseWidth", 0.,
                   "Width of events (in "
                   "microseconds) near the prompt "
@@ -386,7 +386,6 @@ void AlignAndFocusPowder::exec() {
     // workspace2D
     if (m_outputW != m_inputW) {
       m_outputW = m_inputW->clone();
-      
     }
   }
 
@@ -516,7 +515,7 @@ void AlignAndFocusPowder::exec() {
   }
   m_progress->report();
 
-  if ((!dspace)&&m_runRebin)
+  if ((!dspace) && m_runRebin)
     m_outputW = rebin(m_outputW);
   m_progress->report();
 
@@ -638,7 +637,7 @@ void AlignAndFocusPowder::exec() {
   }
   m_progress->report();
 
-  if (dspace&& m_runRebin) {
+  if (dspace && m_runRebin) {
     m_outputW = rebin(m_outputW);
     if (m_processLowResTOF)
       m_lowResW = rebin(m_lowResW);
