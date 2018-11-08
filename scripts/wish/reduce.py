@@ -80,26 +80,22 @@ class Wish:
     # Returns the calibration filename
     def get_cal(self):
         return self.cal_dir + "WISH_cycle_10_3_noends_10to10.cal"
-        # return "/home/mp43/Desktop/Si_Mar15/test_detOffsets_SiMar15_noends.cal"
-        # return "/home/ryb18365/Desktop/WISH_cycle_10_3_noends_10to10_dodgytubesremoved.cal"
 
     # Returns the grouping filename
     def get_group_file(self):
         return self.cal_dir + "WISH_cycle_10_3_noends_10to10.cal"
-        # return "/home/mp43/Desktop/Si_Mar15/test_detOffsets_SiMar15_noends.cal"
-        # return "/home/ryb18365/Desktop/WISH_cycle_10_3_noends_10to10_dodgytubesremoved.cal"
 
     def get_vanadium(self, panel, cycle="09_4"):
         vanadium_string = {
-                "09_2": "vana318-" + str(panel) + "foc-rmbins-smooth50.nx5",
-                "09_3": "vana935-" + str(panel) + "foc-SS.nx5",
-                "09_4": "vana3123-" + str(panel) + "foc-SS.nx5",
-                "09_5": "vana3123-" + str(panel) + "foc-SS.nx5",
-                "11_1": "vana17718-" + str(panel) + "foc-SS.nxs",
-                "11_2": "vana16812-" + str(panel) + "foc-SS.nx5",
-                "11_3": "vana18590-" + str(panel) + "foc-SS-new.nxs",
-                "11_4": "vana38428-" + str(panel) + "foc-SF-SS.nxs",
-                "18_2": "WISHvana41865-" + str(panel) + "foc.nxs"
+            "09_2": "vana318-" + str(panel) + "foc-rmbins-smooth50.nx5",
+            "09_3": "vana935-" + str(panel) + "foc-SS.nx5",
+            "09_4": "vana3123-" + str(panel) + "foc-SS.nx5",
+            "09_5": "vana3123-" + str(panel) + "foc-SS.nx5",
+            "11_1": "vana17718-" + str(panel) + "foc-SS.nxs",
+            "11_2": "vana16812-" + str(panel) + "foc-SS.nx5",
+            "11_3": "vana18590-" + str(panel) + "foc-SS-new.nxs",
+            "11_4": "vana38428-" + str(panel) + "foc-SF-SS.nxs",
+            "18_2": "WISHvana41865-" + str(panel) + "foc.nxs"
         }
         return self.cal_dir + vanadium_string.get(cycle)
 
@@ -127,17 +123,10 @@ class Wish:
             }
             return self.cal_dir + empty_string.get(cycle)
 
-    def generate_name_from_run(self, run_number, ext):
-        filename = "WISH"+str(run_number)
-        filename = filename+"."+ext
-        print filename
-        return filename
-
     def get_file_name(self, run_number, ext):
         if ext[0] != 's':
             data_dir = self.data_directory
         else:
-            # data_dir="/datad/ndxwish/"
             data_dir = self.data_directory
         digit = len(str(run_number))
         filename = os.path.join(data_dir, "WISH")
@@ -156,8 +145,6 @@ class Wish:
             filename = self.datafile  # Changed as full path is set in main now
             ext = filename.split('.')[-1]  # Get the extension from the inputted filename
             print "Extension is: " + ext
-            # if (ext[:10]=="nxs_event"):
-            #    filename=WISH_getfilename(number,"nxs")
             print "will be reading filename..." + filename
             panel_min, panel_max = self.return_panel.get(panel)
             if panel != 0:
@@ -172,7 +159,7 @@ class Wish:
                 panel_min, panel_max = self.return_panel.get(panel)
                 mantid.CropWorkspace(InputWorkspace=output, OutputWorkspace=output, StartWorkspaceIndex=panel_min - 6,
                                      EndWorkspaceIndex=panel_max - 6)
-                mantid.MaskBins(InputWorkspace=output,  OutputWorkspace=output, XMin=99900, XMax=106000)
+                mantid.MaskBins(InputWorkspace=output, OutputWorkspace=output, XMin=99900, XMax=106000)
 
                 print "full nexus event file loaded"
             if ext[:10] == "nxs_event_":
@@ -195,7 +182,8 @@ class Wish:
                 panel_min, panel_max = self.return_panel.get(panel)
                 mantid.CropWorkspace(InputWorkspace=output, OutputWorkspace=output, StartWorkspaceIndex=panel_min
                                      - Wish.NUM_MONITORS, EndWorkspaceIndex=panel_max - Wish.NUM_MONITORS)
-                mantid.MaskBins(InputWorkspace=output,  OutputWorkspace=output, XMin=99900, XMax=106000)
+                mantid.MaskBins(InputWorkspace=output, OutputWorkspace=output, XMin=99900, XMax=106000)
+
                 print "nexus event file chopped"
 
         else:
@@ -267,20 +255,13 @@ class Wish:
                 absorb=False, nd=0.0, xs=0.0, xa=0.0, h=0.0, r=0.0):
         w = self.read_file(number, panel, ext)
         print "file read and normalized"
+        if absorb:
+            absorption_corrections(height=h, number_density=nd, radius=r, input_workspace=w, attenuation_x=xa,
+                                   scattering_x=xs)
+            mantid.ConvertUnits(InputWorkspace=w, OutputWorkspace=w, Target="TOF",
+                                EMode="Elastic")
         self.focus(w, panel)
         print "focussing done!"
-        if absorb:
-            print absorb
-            mantid.ConvertUnits(InputWorkspace=w, OutputWorkspace=w, Target="Wavelength", EMode="Elastic")
-            mantid.CylinderAbsorption(InputWorkspace=w, OutputWorkspace="T",
-                                      CylinderSampleHeight=h, CylinderSampleRadius=r, AttenuationXSection=xa,
-                                      ScatteringXSection=xs, SampleNumberDensity=nd,
-                                      NumberOfSlices="10", NumberOfAnnuli="10", NumberOfWavelengthPoints="25",
-                                      ExpMethod="Normal")
-            mantid.Divide(LHSWorkspace=w, RHSWorkspace="T", OutputWorkspace=w)
-            mantid.DeleteWorkspace("T")
-            mantid.ConvertUnits(InputWorkspace=w, OutputWorkspace=w, Target="dSpacing", EMode="Elastic")
-            print "absorb done"
 
         if type(number) is int:
             focused_workspace_name = "w" + str(number) + "_" + str(panel) + "foc"
@@ -292,99 +273,65 @@ class Wish:
             focused_workspace_name = "w" + str(n1) + "_" + str(n2) + "_" + str(panel) + "foc"
         if self.deleteWorkspace:
             mantid.DeleteWorkspace(w)
-        print panel
-        print se_sample
-        print empty_se_cycle
-        print self.get_empty(panel, se_sample, empty_se_cycle)
         if panel == 0:
             for i in range(1, Wish.NUM_PANELS):
                 focused_workspace_name = "w" + str(number) + "_" + str(i) + "foc"
-                mantid.LoadNexusProcessed(Filename=self.get_empty(i, se_sample, empty_se_cycle),
-                                          OutputWorkspace="empty")
-                mantid.RebinToWorkspace(WorkspaceToRebin="empty", WorkspaceToMatch=focused_workspace_name,
-                                        OutputWorkspace="empty")
-                mantid.Minus(LHSWorkspace=focused_workspace_name, RHSWorkspace="empty",
-                             OutputWorkspace=focused_workspace_name)
-                mantid.DeleteWorkspace("empty")
-                print "will try to load a vanadium with the name:" + self.get_vanadium(i, cycle_vanadium)
-                mantid.LoadNexusProcessed(Filename=self.get_vanadium(i, cycle_vanadium), OutputWorkspace="vana")
-                mantid.RebinToWorkspace(WorkspaceToRebin="vana", WorkspaceToMatch=focused_workspace_name,
-                                        OutputWorkspace="vana")
-                mantid.Divide(LHSWorkspace=focused_workspace_name, RHSWorkspace="vana",
-                              OutputWorkspace=focused_workspace_name)
-                mantid.DeleteWorkspace("vana")
-                mantid.ConvertUnits(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
-                                    Target="TOF", EMode="Elastic")
-                mantid.ReplaceSpecialValues(InputWorkspace=focused_workspace_name,
-                                            OutputWorkspace=focused_workspace_name, NaNValue=0.0,
-                                            NaNError=0.0,
-                                            InfinityValue=0.0, InfinityError=0.0)
-                mantid.SaveGSS(InputWorkspace=focused_workspace_name,
-                               Filename=os.path.join(self.user_directory, (str(number) + "-" + str(i) + ext
-                                                     + ".gss")),
-                               Append=False, Bank=1)
-                mantid.SaveFocusedXYE(focused_workspace_name,
-                                      os.path.join(self.user_directory, (str(number) + "-" + str(i) + ext
-                                                   + ".dat")))
-                mantid.SaveNexusProcessed(focused_workspace_name,
-                                          os.path.join(self.user_directory, (str(number) + "-" + str(i) + ext
-                                                       + ".nxs")))
+                self.empty_and_van_correction(cycle_vanadium, empty_se_cycle, ext, focused_workspace_name, number, i,
+                                              se_sample)
         else:
-            mantid.LoadNexusProcessed(Filename=self.get_empty(panel, se_sample, empty_se_cycle),
-                                      OutputWorkspace="empty")
-            mantid.RebinToWorkspace(WorkspaceToRebin="empty", WorkspaceToMatch=focused_workspace_name,
-                                    OutputWorkspace="empty")
-            mantid.Minus(LHSWorkspace=focused_workspace_name, RHSWorkspace="empty",
-                         OutputWorkspace=focused_workspace_name)
-            mantid.DeleteWorkspace("empty")
-            print "will try to load a vanadium with the name:" + self.get_vanadium(panel, cycle_vanadium)
-            mantid.LoadNexusProcessed(Filename=self.get_vanadium(panel, cycle_vanadium), OutputWorkspace="vana")
-            mantid.RebinToWorkspace(WorkspaceToRebin="vana", WorkspaceToMatch=focused_workspace_name,
-                                    OutputWorkspace="vana")
-            mantid.Divide(LHSWorkspace=focused_workspace_name, RHSWorkspace="vana",
-                          OutputWorkspace=focused_workspace_name)
-            mantid.DeleteWorkspace("vana")
-            mantid.ConvertUnits(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
-                                Target="TOF", EMode="Elastic")
-            mantid.ReplaceSpecialValues(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
-                                        NaNValue=0.0, NaNError=0.0,
-                                        InfinityValue=0.0, InfinityError=0.0)
-            mantid.SaveGSS(InputWorkspace=focused_workspace_name,
-                           Filename=os.path.join(self.user_directory, (str(number) + "-" + str(panel) + ext
-                                                 + ".gss")),
-                           Append=False, Bank=1)
-            mantid.SaveFocusedXYE(focused_workspace_name,
-                                  os.path.join(self.user_directory, (str(number) + "-" + str(panel) + ext
-                                               + ".dat")))
-            mantid.SaveNexusProcessed(focused_workspace_name,
-                                      os.path.join(self.user_directory, (str(number) + "-" + str(panel) + ext
-                                                   + ".nxs")))
+            self.empty_and_van_correction(cycle_vanadium, empty_se_cycle, ext, focused_workspace_name, number, panel,
+                                          se_sample)
         return focused_workspace_name
+
+    def empty_and_van_correction(self, cycle_vanadium, empty_se_cycle, ext, focused_workspace_name, number, panel,
+                                 se_sample):
+        mantid.LoadNexusProcessed(Filename=self.get_empty(panel, se_sample, empty_se_cycle),
+                                  OutputWorkspace="empty")
+        mantid.RebinToWorkspace(WorkspaceToRebin="empty", WorkspaceToMatch=focused_workspace_name,
+                                OutputWorkspace="empty")
+        mantid.Minus(LHSWorkspace=focused_workspace_name, RHSWorkspace="empty",
+                     OutputWorkspace=focused_workspace_name)
+        mantid.DeleteWorkspace("empty")
+        print "will try to load a vanadium with the name:" + self.get_vanadium(panel, cycle_vanadium)
+        mantid.LoadNexusProcessed(Filename=self.get_vanadium(panel, cycle_vanadium), OutputWorkspace="vana")
+        mantid.RebinToWorkspace(WorkspaceToRebin="vana", WorkspaceToMatch=focused_workspace_name,
+                                OutputWorkspace="vana")
+        mantid.Divide(LHSWorkspace=focused_workspace_name, RHSWorkspace="vana",
+                      OutputWorkspace=focused_workspace_name)
+        mantid.DeleteWorkspace("vana")
+        mantid.ConvertUnits(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
+                            Target="TOF", EMode="Elastic")
+        mantid.ReplaceSpecialValues(InputWorkspace=focused_workspace_name, OutputWorkspace=focused_workspace_name,
+                                    NaNValue=0.0, NaNError=0.0,
+                                    InfinityValue=0.0, InfinityError=0.0)
+        mantid.SaveGSS(InputWorkspace=focused_workspace_name,
+                       Filename=os.path.join(self.user_directory, (str(number) + "-" + str(panel) + ext
+                                                                   + ".gss")),
+                       Append=False, Bank=1)
+        mantid.SaveFocusedXYE(focused_workspace_name,
+                              os.path.join(self.user_directory, (str(number) + "-" + str(panel) + ext
+                                                                 + ".dat")))
+        mantid.SaveNexusProcessed(focused_workspace_name,
+                                  os.path.join(self.user_directory, (str(number) + "-" + str(panel) + ext
+                                                                     + ".nxs")))
 
     # Create a corrected vanadium (normalise,corrected for attenuation and empty, strip peaks) and
     # save a a nexus processed file.
     # It looks like smoothing of 100 works quite well
     def create_normalised_vanadium(self, van, empty, panel, vh, vr, cycle_van="18_2", cycle_empty="17_1"):
         self.startup()
-        self.set_data_file(self.generate_name_from_run(van, "nxs"))
+        self.set_data_file(generate_name_from_run(van, "nxs"))
         self.set_data_directory("/archive/ndxwish/Instrument/data/cycle_" + cycle_van + "/")
         van = self.read_file(van, panel, "nxs_event")
         self.startup()
-        self.set_data_file(self.generate_name_from_run(empty, "nxs"))
+        self.set_data_file(generate_name_from_run(empty, "nxs"))
         self.set_data_directory("/archive/ndxwish/Instrument/data/cycle_" + cycle_empty + "/")
         empty = self.read_file(empty, panel, "nxs_event")
         mantid.Minus(LHSWorkspace=van, RHSWorkspace=empty, OutputWorkspace=van)
         print "read van and empty"
         mantid.DeleteWorkspace(empty)
-        mantid.ConvertUnits(InputWorkspace=van, OutputWorkspace=van, Target="Wavelength", EMode="Elastic")
-        mantid.CylinderAbsorption(InputWorkspace=van, OutputWorkspace="T",
-                                  CylinderSampleHeight=str(vh), CylinderSampleRadius=str(vr),
-                                  AttenuationXSection="4.8756",
-                                  ScatteringXSection="5.16", SampleNumberDensity="0.07118",
-                                  NumberOfSlices="10", NumberOfAnnuli="10", NumberOfWavelengthPoints="25",
-                                  ExpMethod="Normal")
-        mantid.Divide(LHSWorkspace=van, RHSWorkspace="T", OutputWorkspace=van)
-        mantid.DeleteWorkspace("T")
+        absorption_corrections(height=vh, number_density=0.07118, radius=vr, input_workspace=van, attenuation_x=4.8756,
+                               scattering_x=5.16)
         mantid.ConvertUnits(InputWorkspace=van, OutputWorkspace=van, Target="TOF", EMode="Elastic")
         self.focus(van, panel)
         mantid.DeleteWorkspace(van)
@@ -503,11 +450,11 @@ class Wish:
         # ######### use the lines below to process a LoadRawvanadium run                               #################
         for j in range(1, Wish.NUM_PANELS):
             self.create_normalised_vanadium(vanadium_run, empty_run, j, 4.0, 0.15, cycle_van="18_2", cycle_empty="17_1")
-            vanadium_workspace = str(vanadium_run)+"_"+str(j)+"foc"
-            mantid.CropWorkspace(InputWorkspace="w"+vanadium_workspace, OutputWorkspace="w"+vanadium_workspace,
+            vanadium_workspace = str(vanadium_run) + "_" + str(j) + "foc"
+            mantid.CropWorkspace(InputWorkspace="w" + vanadium_workspace, OutputWorkspace="w" + vanadium_workspace,
                                  XMin='0.35', XMax='5.0')
-            remove_peaks_spline_smooth_empty("w"+vanadium_workspace, j)
-            mantid.SaveNexusProcessed("w"+vanadium_workspace,
+            remove_peaks_spline_smooth_empty("w" + vanadium_workspace, j)
+            mantid.SaveNexusProcessed("w" + vanadium_workspace,
                                       os.path.join(self.user_directory, ("vana" + vanadium_workspace + ".nxs")))
 
     def run_script(self, run):
@@ -516,6 +463,28 @@ class Wish:
             self.set_data_file(self.get_file_name(run, "nxs"))
 
             self.main()
+
+
+def absorption_corrections(height, number_density, radius, input_workspace, attenuation_x, scattering_x):
+    mantid.ConvertUnits(InputWorkspace=input_workspace, OutputWorkspace=input_workspace, Target="Wavelength",
+                        EMode="Elastic")
+    mantid.CylinderAbsorption(InputWorkspace=input_workspace, OutputWorkspace="T",
+                              CylinderSampleHeight=height, CylinderSampleRadius=radius,
+                              AttenuationXSection=attenuation_x,
+                              ScatteringXSection=scattering_x, SampleNumberDensity=number_density,
+                              NumberOfSlices="10", NumberOfAnnuli="10", NumberOfWavelengthPoints="25",
+                              ExpMethod="Normal")
+    mantid.Divide(LHSWorkspace=input_workspace, RHSWorkspace="T", OutputWorkspace=input_workspace)
+    mantid.DeleteWorkspace("T")
+
+    print "absorb done"
+
+
+def generate_name_from_run(run_number, ext):
+    filename = "WISH" + str(run_number)
+    filename = filename + "." + ext
+    print filename
+    return filename
 
 
 # Get the run number from the input data path
@@ -568,6 +537,7 @@ def split_string(number):
             index_p = i
     if index_p != 0:
         return int(number[:index_p]), int(number[index_p + 1:len(number)])
+
 
 
 def split_string_event(name):
