@@ -319,14 +319,14 @@ class Wish:
                                             InfinityValue=0.0, InfinityError=0.0)
                 mantid.SaveGSS(InputWorkspace=focused_workspace_name,
                                Filename=os.path.join(self.user_directory, (str(number) + "-" + str(i) + ext
-                                                                                + ".gss")),
+                                                     + ".gss")),
                                Append=False, Bank=1)
                 mantid.SaveFocusedXYE(focused_workspace_name,
                                       os.path.join(self.user_directory, (str(number) + "-" + str(i) + ext
-                                                                              + ".dat")))
+                                                   + ".dat")))
                 mantid.SaveNexusProcessed(focused_workspace_name,
                                           os.path.join(self.user_directory, (str(number) + "-" + str(i) + ext
-                                                                                  + ".nxs")))
+                                                       + ".nxs")))
         else:
             mantid.LoadNexusProcessed(Filename=self.get_empty(panel, se_sample, empty_se_cycle),
                                       OutputWorkspace="empty")
@@ -506,7 +506,7 @@ class Wish:
                                  XMin='0.35', XMax='5.0')
             remove_peaks_spline_smooth_empty("w"+vanadium_workspace, j)
             mantid.SaveNexusProcessed("w"+vanadium_workspace,
-                                      os.path.join(self.user_directory, ("vana41865-" + str(j) + "foc.nxs")))#"vana" + vanadium_workspace + ".nxs")))
+                                      os.path.join(self.user_directory, ("vana" + vanadium_workspace + ".nxs")))
 
     def run_script(self, run):
         if self.name == "__main__":
