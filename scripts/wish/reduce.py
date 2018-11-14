@@ -41,7 +41,6 @@ class Wish:
         Function to ensure that the files we want to use in reduction exist.
         Please add any files/directories to the required_files/dirs lists.
         """
-        print("Running validation")
         required_files = [self.datafile]
         required_dirs = [self.user_directory]
         for file_path in required_files:
@@ -131,7 +130,6 @@ class Wish:
         return filename
 
     def return_panel(self, panel):
-        print panel
         return self.return_panel.get(panel)
 
     # Reads a wish data file return a workspace with a short name
@@ -156,7 +154,6 @@ class Wish:
                                      EndWorkspaceIndex=panel_max - 6)
                 mantid.MaskBins(InputWorkspace=output, OutputWorkspace=output, XMin=99900, XMax=106000)
 
-                print "full nexus event file loaded"
             if extension[:10] == "nxs_event_":
                 label, time_min, time_max = split_string_event(extension)
                 output = output + "_" + label
@@ -172,14 +169,12 @@ class Wish:
                                           FilterMonByTimeStop=time_max)
                     mantid.RenameWorkspace(output + "_monitors", "w{}_monitors".format(number))
 
-                print "renaming monitors done!"
                 mantid.Rebin(InputWorkspace=output, OutputWorkspace=output, Params='6000,-0.00063,110000')
                 panel_min, panel_max = self.return_panel.get(panel)
                 mantid.CropWorkspace(InputWorkspace=output, OutputWorkspace=output, StartWorkspaceIndex=panel_min
                                      - Wish.NUM_MONITORS, EndWorkspaceIndex=panel_max - Wish.NUM_MONITORS)
                 mantid.MaskBins(InputWorkspace=output, OutputWorkspace=output, XMin=99900, XMax=106000)
 
-                print "nexus event file chopped"
 
         else:
             first_number, second_number = split_string(number)
@@ -258,7 +253,7 @@ class Wish:
             mantid.ConvertUnits(InputWorkspace=workspace_to_focus, OutputWorkspace=workspace_to_focus, Target="TOF",
                                 EMode="Elastic")
         self.focus(workspace_to_focus, panel)
-        print "focussing done!"
+        print "focusing done!"
 
         if type(number) is int:
             focused_workspace_name = "w{0}_{1}foc".format(number, panel)
@@ -325,7 +320,7 @@ class Wish:
         self.set_data_directory(directories.format(cycle_empty))
         empty = self.read_file(empty, panel, "nxs_event")
         mantid.Minus(LHSWorkspace=van, RHSWorkspace=empty, OutputWorkspace=van)
-        print "read van and empty"
+        print "read vanadium and empty"
         mantid.DeleteWorkspace(empty)
         absorption_corrections(height=vanadium_height, number_density=0.07118, radius=vanadium_radius,
                                input_workspace=van, attenuation_x=4.8756, scattering_x=5.16)
@@ -392,8 +387,6 @@ class Wish:
 
     def main(self):
         self.validate()
-        print(self.user_directory)
-        print(self.datafile)
         i = get_run_number(self.datafile)
         for panel in range(1, Wish.NUM_PANELS):
             output_workspace = self.process(i, panel, "raw", "candlestick", "17_1", "18_2", absorb=False,
@@ -463,13 +456,11 @@ def absorption_corrections(height, number_density, radius, input_workspace, atte
                               ExpMethod="Normal")
     mantid.Divide(LHSWorkspace=input_workspace, RHSWorkspace="T", OutputWorkspace=input_workspace)
     mantid.DeleteWorkspace("T")
-    print "absorb done"
 
 
 def generate_name_from_run(run_number, extension):
     filename = "WISH" + str(run_number)
     filename = filename + "." + extension
-    print filename
     return filename
 
 
@@ -536,7 +527,7 @@ def split_string_event(input_string):
 
 def split_workspace(focus_ws):
     for workspace_index in range(Wish.NUM_PANELS):
-        out = focus_ws[:len(focus_ws) - 3] + "-" + str(workspace_index + 1) + "foc"
+        out = "{0}-{1}foc".format(focus_ws[:len(focus_ws) - 3], workspace_index+1)
         mantid.ExtractSingleSpectrum(InputWorkspace=focus_ws, OutputWorkspace=out, WorkspaceIndex=workspace_index)
         mantid.DeleteWorkspace(focus_ws)
     return
