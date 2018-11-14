@@ -421,7 +421,7 @@ class Wish:
         mantid.RebinToWorkspace(WorkspaceToRebin=input_workspace2, WorkspaceToMatch=input_workspace1,
                                 OutputWorkspace=input_workspace2, PreserveEvents='0')
         mantid.Plus(LHSWorkspace=input_workspace1, RHSWorkspace=input_workspace2, OutputWorkspace="w"+combined)
-        mantid.ConvertUnits(InputWorkspace=combined_ws, OutputWorkspace=combined_ws+"-d",Target="dSpacing",
+        mantid.ConvertUnits(InputWorkspace=combined_ws, OutputWorkspace=combined_ws+"-d", Target="dSpacing",
                             EMode="Elastic")
 
         mantid.SaveGSS(combined_ws, os.path.join(self.user_directory, combined_save.format("raw.gss")), Append=False,
