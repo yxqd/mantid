@@ -339,18 +339,6 @@ class Wish:
         self.focus(empty, panel)
         return
 
-    # Have made no changes here as not called (may not work in future though)
-    def monitors(self, rb, extension):
-        # data_dir = WISH_dir()
-        filename = self.get_file_name(rb, extension)
-        workspace_out = "w" + str(rb)
-        print "reading File..." + filename
-        mantid.LoadRaw(Filename=filename, OutputWorkspace=workspace_out, SpectrumMin=str(1), SpectrumMax=str(5),
-                       LoadLogFiles="0")
-        mantid.NormaliseByCurrent(InputWorkspace=workspace_out, OutputWorkspace=workspace_out)
-        mantid.ConvertToDistribution(workspace_out)
-        return workspace_out
-
     def process_incident_monitor(self, number, extension):
         print("process monitor")
         if type(number) is int:
@@ -426,17 +414,20 @@ class Wish:
         }
         input_workspace1 = "w{0}_{1}foc".format(run, panel)
         input_workspace2 = "w{0}_{1}foc".format(run, panel_combination.get(panel))
-        combined = "{0}_{1}-{2}foc".format(run, panel, panel_combination.get(panel))
+        combined = "{0}{1}_{2}-{3}{4}".format("{0}", run, panel, panel_combination.get(panel), "{1}")
+        combined_save = combined.format("", "{0}")
+        combined_ws = combined.format("w", "")
 
         mantid.RebinToWorkspace(WorkspaceToRebin=input_workspace2, WorkspaceToMatch=input_workspace1,
                                 OutputWorkspace=input_workspace2, PreserveEvents='0')
         mantid.Plus(LHSWorkspace=input_workspace1, RHSWorkspace=input_workspace2, OutputWorkspace="w"+combined)
-        mantid.ConvertUnits(InputWorkspace="w"+combined, OutputWorkspace="w"+combined+"-d", Target="dSpacing",
+        mantid.ConvertUnits(InputWorkspace=combined_ws, OutputWorkspace=combined_ws+"-d",Target="dSpacing",
                             EMode="Elastic")
 
-        mantid.SaveGSS(combined, os.path.join(self.user_directory, (combined + "raw.gss")), Append=False, Bank=1)
-        mantid.SaveFocusedXYE(combined, os.path.join(self.user_directory, (combined + "raw.dat")))
-        mantid.SaveNexusProcessed(combined, os.path.join(self.user_directory, (combined + "raw.nxs")))
+        mantid.SaveGSS(combined_ws, os.path.join(self.user_directory, combined_save.format("raw.gss")), Append=False,
+                       Bank=1)
+        mantid.SaveFocusedXYE(combined_ws, os.path.join(self.user_directory, combined_save.format("raw.dat")))
+        mantid.SaveNexusProcessed(combined_ws, os.path.join(self.user_directory, combined_save.format("raw.nxs")))
 
     # test vanadium is 41870 test empty is 38581
     def create_vanadium(self, vanadium_run, empty_run):
