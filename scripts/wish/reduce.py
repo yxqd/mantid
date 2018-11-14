@@ -82,41 +82,41 @@ class Wish:
 
     def get_vanadium(self, panel, cycle="09_4"):
         vanadium_string = {
-            "09_2": "vana318-{0}foc-rmbins-smooth50.nx5",
-            "09_3": "vana935-{0}foc-SS.nx5",
-            "09_4": "vana3123-{0}foc-SS.nx5",
-            "09_5": "vana3123-{0}foc-SS.nx5",
-            "11_1": "vana17718-{0}foc-SS.nxs",
-            "11_2": "vana16812-{0}foc-SS.nx5",
-            "11_3": "vana18590-{0}foc-SS-new.nxs",
-            "11_4": "vana38428-{0}foc-SF-SS.nxs",
-            "18_2": "WISHvana41865-{0}foc.nxs"
+            "09_2": "vana318-{}foc-rmbins-smooth50.nx5",
+            "09_3": "vana935-{}foc-SS.nx5",
+            "09_4": "vana3123-{}foc-SS.nx5",
+            "09_5": "vana3123-{}foc-SS.nx5",
+            "11_1": "vana17718-{}foc-SS.nxs",
+            "11_2": "vana16812-{}foc-SS.nx5",
+            "11_3": "vana18590-{}foc-SS-new.nxs",
+            "11_4": "vana38428-{}foc-SF-SS.nxs",
+            "18_2": "WISHvana41865-{}foc.nxs"
         }
-        return self.cal_dir + vanadium_string.get(cycle).format(str(panel))
+        return self.cal_dir + vanadium_string.get(cycle).format(panel)
 
     def get_empty(self, panel, se="WISHcryo", cycle="09_4"):
         if se == "WISHcryo":
             empty_string = {
-                "09_2": "emptycryo322-{0}-smooth50.nx5",
-                "09_3": "emptycryo1725-{0}foc.nx5",
-                "09_4": "emptycryo3307-{0}foc.nx5",
-                "09_5": "emptycryo16759-{0}foc.nx5",
-                "11_1": "emptycryo17712-{0}foc-SS.nxs",
-                "11_2": "emptycryo16759-{0}foc-SS.nx5",
-                "11_3": "emptycryo17712-{0}foc-SS-new.nxs",
-                "11_4": "empty_mag20620-{0}foc-HR-SF.nxs"
+                "09_2": "emptycryo322-{}-smooth50.nx5",
+                "09_3": "emptycryo1725-{}foc.nx5",
+                "09_4": "emptycryo3307-{}foc.nx5",
+                "09_5": "emptycryo16759-{}foc.nx5",
+                "11_1": "emptycryo17712-{}foc-SS.nxs",
+                "11_2": "emptycryo16759-{}foc-SS.nx5",
+                "11_3": "emptycryo17712-{}foc-SS-new.nxs",
+                "11_4": "empty_mag20620-{}foc-HR-SF.nxs"
 
             }
-            return self.cal_dir + empty_string.get(cycle).format(str(panel))
+            return self.cal_dir + empty_string.get(cycle).format(panel)
 
         if se == "candlestick":
             empty_string = {
-                "09_3": "emptyinst1726-{0}foc-monitor.nxs",
-                "09_4": "emptyinst3120-{0}foc.nxs",
-                "11_4": "emptyinst19618-{0}foc-SF-S.nxs",
-                "17_1": "emptyinst38581-{0}foc.nxs"
+                "09_3": "emptyinst1726-{}foc-monitor.nxs",
+                "09_4": "emptyinst3120-{}foc.nxs",
+                "11_4": "emptyinst19618-{}foc-SF-S.nxs",
+                "17_1": "emptyinst38581-{}foc.nxs"
             }
-            return self.cal_dir + empty_string.get(cycle).format(str(panel))
+            return self.cal_dir + empty_string.get(cycle).format(panel)
 
     def get_file_name(self, run_number, extension):
         if extension[0] != 's':
@@ -145,11 +145,11 @@ class Wish:
             if panel != 0:
                 output = "w{0}_{1}".format(number, panel)
             else:
-                output = "w{0}".format(number)
+                output = "w{}".format(number)
             shared_load_files(extension, filename, output, str(panel_max), str(panel_min), False)
             if extension == "nxs_event":
                 mantid.LoadEventNexus(Filename=filename, OutputWorkspace=output, LoadMonitors='1')
-                mantid.RenameWorkspace(output + "_monitors", "w{0}_monitors".format(number))
+                mantid.RenameWorkspace(output + "_monitors", "w{}_monitors".format(number))
                 mantid.Rebin(InputWorkspace=output, OutputWorkspace=output, Params='6000,-0.00063,110000')
                 panel_min, panel_max = self.return_panel.get(panel)
                 mantid.CropWorkspace(InputWorkspace=output, OutputWorkspace=output, StartWorkspaceIndex=panel_min - 6,
@@ -170,7 +170,7 @@ class Wish:
                                           FilterByTimeStop=time_max,
                                           LoadMonitors='1', MonitorsAsEvents='1', FilterMonByTimeStart=time_min,
                                           FilterMonByTimeStop=time_max)
-                    mantid.RenameWorkspace(output + "_monitors", "w{0}_monitors".format(number))
+                    mantid.RenameWorkspace(output + "_monitors", "w{}_monitors".format(number))
 
                 print "renaming monitors done!"
                 mantid.Rebin(InputWorkspace=output, OutputWorkspace=output, Params='6000,-0.00063,110000')
@@ -347,8 +347,8 @@ class Wish:
             if shared_load_files(extension, filename, works, 4, 4, True):
                 works = "monitor" + str(number)
             if extension[:9] == "nxs_event":
-                temp = "w" + str(number) + "_monitors"
-                works = "w" + str(number) + "_monitor4"
+                temp = "w{}_monitors".format(number)
+                works = "w{}_monitor4".format(number)
                 mantid.Rebin(InputWorkspace=temp, OutputWorkspace=temp, Params='6000,-0.00063,110000',
                              PreserveEvents=False)
                 mantid.ExtractSingleSpectrum(InputWorkspace=temp, OutputWorkspace=works, WorkspaceIndex=3)
@@ -356,10 +356,10 @@ class Wish:
             n1, n2 = split_string(number)
             works = "monitor{0}_{1}".format(n1, n2)
             filename = self.get_file_name(n1, extension)
-            works1 = "monitor{0}".format(n1)
+            works1 = "monitor{}".format(n1)
             mantid.LoadRaw(Filename=filename, OutputWorkspace=works1, SpectrumMin=4, SpectrumMax=4, LoadLogFiles="0")
             filename = self.get_file_name(n2, extension)
-            works2 = "monitor{0}".format(n2)
+            works2 = "monitor{}".format(n2)
             mantid.LoadRaw(Filename=filename, OutputWorkspace=works2, SpectrumMin=4, SpectrumMax=4, LoadLogFiles="0")
             mantid.MergeRuns(InputWorkspaces=[works1, works2], OutputWorkspace=works)
             mantid.DeleteWorkspace(works1)
@@ -415,7 +415,7 @@ class Wish:
         input_workspace1 = "w{0}_{1}foc".format(run, panel)
         input_workspace2 = "w{0}_{1}foc".format(run, panel_combination.get(panel))
         combined = "{0}{1}_{2}-{3}{4}".format("{0}", run, panel, panel_combination.get(panel), "{1}")
-        combined_save = combined.format("", "{0}")
+        combined_save = combined.format("", "{}")
         combined_ws = combined.format("w", "")
 
         mantid.RebinToWorkspace(WorkspaceToRebin=input_workspace2, WorkspaceToMatch=input_workspace1,
@@ -435,12 +435,14 @@ class Wish:
         for panel in range(1, Wish.NUM_PANELS):
             self.create_normalised_vanadium(vanadium_run, empty_run, panel, 4.0, 0.15, cycle_van="18_2",
                                             cycle_empty="17_1")
-            vanadium_workspace = "{0}_{1}foc".format(vanadium_run, panel)
-            mantid.CropWorkspace(InputWorkspace="w" + vanadium_workspace, OutputWorkspace="w" + vanadium_workspace,
+            vanadium = "{0}{1}_{2}foc{3}"
+            vanadium_workspace = vanadium.format("w", vanadium_run, panel, "")
+            vanadium_save = vanadium.format("vana", vanadium_run, panel, ".nxs")
+            mantid.CropWorkspace(InputWorkspace=vanadium_workspace, OutputWorkspace=vanadium_workspace,
                                  XMin='0.35', XMax='5.0')
             remove_peaks_spline_smooth_empty("w" + vanadium_workspace, panel)
-            mantid.SaveNexusProcessed("w" + vanadium_workspace,
-                                      os.path.join(self.user_directory, ("vana" + vanadium_workspace + ".nxs")))
+            mantid.SaveNexusProcessed(vanadium_workspace,
+                                      os.path.join(self.user_directory, vanadium_save))
 
     def run_script(self, run):
         if self.name == "__main__":
