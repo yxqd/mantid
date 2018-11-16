@@ -175,7 +175,6 @@ class Wish:
                                      - Wish.NUM_MONITORS, EndWorkspaceIndex=panel_max - Wish.NUM_MONITORS)
                 mantid.MaskBins(InputWorkspace=output, OutputWorkspace=output, XMin=99900, XMax=106000)
 
-
         else:
             first_number, second_number = split_string(number)
             output = "w{0}_{1}-{2}".format(first_number, second_number, panel)
