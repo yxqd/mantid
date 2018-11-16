@@ -407,13 +407,13 @@ class Wish:
         }
         input_workspace1 = "w{0}_{1}foc".format(run, panel)
         input_workspace2 = "w{0}_{1}foc".format(run, panel_combination.get(panel))
-        combined = "{0}{1}_{2}-{3}{4}".format("{0}", run, panel, panel_combination.get(panel), "{1}")
+        combined = "{0}{1}_{2}-{3}foc{4}".format("{0}", run, panel, panel_combination.get(panel), "{1}")
         combined_save = combined.format("", "{}")
         combined_ws = combined.format("w", "")
 
         mantid.RebinToWorkspace(WorkspaceToRebin=input_workspace2, WorkspaceToMatch=input_workspace1,
                                 OutputWorkspace=input_workspace2, PreserveEvents='0')
-        mantid.Plus(LHSWorkspace=input_workspace1, RHSWorkspace=input_workspace2, OutputWorkspace="w"+combined)
+        mantid.Plus(LHSWorkspace=input_workspace1, RHSWorkspace=input_workspace2, OutputWorkspace=combined_ws)
         mantid.ConvertUnits(InputWorkspace=combined_ws, OutputWorkspace=combined_ws+"-d", Target="dSpacing",
                             EMode="Elastic")
 
