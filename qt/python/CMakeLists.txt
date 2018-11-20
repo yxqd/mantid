@@ -69,6 +69,8 @@ endif ()
     mantidqt/dialogs/test/test_algorithm_dialog.py
     mantidqt/dialogs/test/test_spectraselectiondialog.py
 
+    mantidqt/project/test/test_workspacesaverloader.py
+
     mantidqt/utils/test/test_async.py
     mantidqt/utils/test/test_modal_tester.py
     mantidqt/utils/test/test_qt_utils.py
