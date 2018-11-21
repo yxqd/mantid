@@ -13,7 +13,7 @@ from mantid.simpleapi import SaveMask, SaveMD, SaveNexusProcessed
 
 
 # Static method to get all workspaces to save
-def _get_workspaces_to_save():
+def _get_all_workspaces_to_save():
     """
     Get's all the workspaces that should be saved (Allows further expansion later)
     :return: List; Workspaces
@@ -22,7 +22,7 @@ def _get_workspaces_to_save():
 
 
 class WorkspaceSaver(object):
-    def __init__(self, directory, workspaces_to_save=None):
+    def __init__(self, directory, workspaces_to_save=None, save_all=False):
         """
 
         :param directory:
@@ -31,6 +31,7 @@ class WorkspaceSaver(object):
         self.directory = directory
         self.output_list = []
         self.workspaces_to_save = workspaces_to_save
+        self.save_all = save_all
 
     def save_workspaces(self):
         """
@@ -38,8 +39,13 @@ class WorkspaceSaver(object):
         to the directory that was passed at object creation time, it will also add each of them to the output_list
         private instance variable on the WorkspaceSaver class.
         """
-        if self.workspaces_to_save is None:
-            self.workspaces_to_save = _get_workspaces_to_save()
+
+        # Handle getting here and nothing has been given to save all of them
+        if self.workspaces_to_save is None and self.save_all:
+            self.workspaces_to_save = _get_all_workspaces_to_save()
+        elif self.workspaces_to_save is None:
+            return
+
         for workspace_name in self.workspaces_to_save:
             # Get the workspace from the ADS
             workspace = ADS.retrieve(workspace_name)
@@ -48,9 +54,6 @@ class WorkspaceSaver(object):
             if isinstance(workspace, MDHistoWorkspace) or isinstance(workspace, IMDEventWorkspace):
                 # Save normally using SaveMD
                 SaveMD(InputWorkspace=workspace_name, Filename=place_to_save_workspace)
-            elif isinstance(workspace, MaskWorkspace):
-                # Save normally using SaveMask
-                SaveMask(InputWorkspace=workspace_name, OutputFile=place_to_save_workspace)
             else:
                 # Save normally using SaveNexusProcessed
                 SaveNexusProcessed(InputWorkspace=workspace_name, Filename=place_to_save_workspace)
