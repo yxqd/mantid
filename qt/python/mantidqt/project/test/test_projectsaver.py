@@ -19,6 +19,7 @@ from mantidqt.project import projectsaver
 
 working_directory = expanduser("~") + "/project_saver_test"
 
+
 class ProjectSaverTest(unittest.TestCase):
     def tearDown(self):
         ADS.clear()
@@ -28,11 +29,11 @@ class ProjectSaverTest(unittest.TestCase):
     def test_only_one_workspace_saving(self):
         ws1_name = "ws1"
         ADS.addOrReplace(ws1_name, CreateSampleWorkspace(OutputWorkspace=ws1_name))
-        project_saver = projectsaver.ProjectSaver(save_location=working_directory, save_all=True)
+        project_saver = projectsaver.ProjectSaver(save_location=working_directory)
         file_name = working_directory + "/" + projectsaver.ENCODED_FILE_NAME
-        saved_file = "[]\n[\"ws1\"]"
+        saved_file = "{\"Interfaces\": {}, \"Workspaces\": [\"ws1\"]}"
 
-        project_saver.save_project()
+        project_saver.save_project(workspace_to_save=[ws1_name])
 
         # Check project file is saved correctly
         f = open(file_name, "r")
@@ -41,12 +42,62 @@ class ProjectSaverTest(unittest.TestCase):
         # Check workspace is saved
         list_of_files = listdir(working_directory)
         self.assertEqual(len(list_of_files), 2)
-        self.assertEqual(list_of_files[0], projectsaver.ENCODED_FILE_NAME)
-        self.assertEqual(list_of_files[1], ws1_name)
+        self.assertTrue(projectsaver.ENCODED_FILE_NAME in list_of_files)
+        self.assertTrue(ws1_name in list_of_files)
 
-    #def test_only_multiple_workspaces_saving(self):
+    def test_only_multiple_workspaces_saving(self):
+        ws1_name = "ws1"
+        ws2_name = "ws2"
+        ws3_name = "ws3"
+        ws4_name = "ws4"
+        ws5_name = "ws5"
+        CreateSampleWorkspace(OutputWorkspace=ws1_name)
+        CreateSampleWorkspace(OutputWorkspace=ws2_name)
+        CreateSampleWorkspace(OutputWorkspace=ws3_name)
+        CreateSampleWorkspace(OutputWorkspace=ws4_name)
+        CreateSampleWorkspace(OutputWorkspace=ws5_name)
+        project_saver = projectsaver.ProjectSaver(save_location=working_directory)
+        file_name = working_directory + "/" + projectsaver.ENCODED_FILE_NAME
+        saved_file = "{\"Interfaces\": {}, \"Workspaces\": [\"ws1\", \"ws2\", \"ws3\", \"ws4\", \"ws5\"]}"
 
-    #def test_only_saving_one_workspace_when_multiple_are_present_in_the_ADS(self):
+        project_saver.save_project(workspace_to_save=[ws1_name, ws2_name, ws3_name, ws4_name, ws5_name])
+
+        # Check project file is saved correctly
+        f = open(file_name, "r")
+        self.assertEqual(f.read(), saved_file)
+
+        # Check workspace is saved
+        list_of_files = listdir(working_directory)
+        self.assertEqual(len(list_of_files), 6)
+        self.assertTrue(projectsaver.ENCODED_FILE_NAME in list_of_files)
+        self.assertTrue(ws1_name in list_of_files)
+        self.assertTrue(ws2_name in list_of_files)
+        self.assertTrue(ws3_name in list_of_files)
+        self.assertTrue(ws4_name in list_of_files)
+        self.assertTrue(ws5_name in list_of_files)
+
+    def test_only_saving_one_workspace_when_multiple_are_present_in_the_ADS(self):
+        ws1_name = "ws1"
+        ws2_name = "ws2"
+        ws3_name = "ws3"
+        CreateSampleWorkspace(OutputWorkspace=ws1_name)
+        CreateSampleWorkspace(OutputWorkspace=ws2_name)
+        CreateSampleWorkspace(OutputWorkspace=ws3_name)
+        project_saver = projectsaver.ProjectSaver(save_location=working_directory)
+        file_name = working_directory + "/" + projectsaver.ENCODED_FILE_NAME
+        saved_file = "{\"Interfaces\": {}, \"Workspaces\": [\"ws1\"]}"
+
+        project_saver.save_project(workspace_to_save=[ws1_name])
+
+        # Check project file is saved correctly
+        f = open(file_name, "r")
+        self.assertEqual(f.read(), saved_file)
+
+        # Check workspace is saved
+        list_of_files = listdir(working_directory)
+        self.assertEqual(len(list_of_files), 2)
+        self.assertTrue(projectsaver.ENCODED_FILE_NAME in list_of_files)
+        self.assertTrue(ws1_name in list_of_files)
 
     #def test_only_one_interface_saving(self):
 
@@ -69,57 +120,51 @@ class ProjectWriterTest(unittest.TestCase):
         if isdir(working_directory):
             rmtree(working_directory)
 
-    def test_create_out_string_on_small_dict(self):
-        small_dict = {"interface1" :{"value1" : 2, "value2" : 3}, "interface2" : {"value3" : 4, "value4" : 5}}
-        json_dict = "{\"interface1\": {\"value2\": 3, \"value1\": 2}, \"interface2\": {\"value4\": 5, \"value3\": 4}}"
-        project_writer = projectsaver.ProjectWriter(small_dict, working_directory, [])
+    def test_create_out_string_on_smaller_number_of_interfaces(self):
+        small_dict = {"Workspaces": {}, "Interfaces": {"interface1": {"value1": 2, "value2": 3},
+                                                       "interface2": {"value3": 4, "value4": 5}}}
+        json_dict = "{\"Interfaces\": {\"interface1\": {\"value2\": 3, \"value1\": 2}, \"interface2\": {\"value4\":" \
+                    " 5, \"value3\": 4}}, \"Workspaces\": {}}"
 
-        output = project_writer._create_out_string()
+        output = projectsaver._create_out_string_json(small_dict)
         self.assertEqual(output, json_dict)
 
-    def test_create_out_string_on_larger_dict(self):
-        large_dict = {"interface1": {"value1": 2, "value2": 3}, "interface2": {"value3": 4, "value4": 5},
-                      "interface3": {"value1": 2, "value2": 3}, "interface4": {"value3": 4, "value4": 5},
-                      "interface5": {"value1": 2, "value2": 3}, "interface6": {"value3": 4, "value4": 5}}
-        json_dict = "{\"interface1\": {\"value2\": 3, \"value1\": 2}, \"interface3\": {\"value2\": 3, \"value1\": 2}, "\
-                    "\"interface2\": {\"value4\": 5, \"value3\": 4}, \"interface5\": {\"value2\": 3, \"value1\": 2}, "\
-                    "\"interface4\": {\"value4\": 5, \"value3\": 4}, \"interface6\": {\"value4\": 5, \"value3\": 4}}"
-        project_writer = projectsaver.ProjectWriter(large_dict, working_directory, [])
+    def test_create_out_string_on_larger_number_of_interfaces(self):
+        large_dict = {"Workspaces": {}, "Interfaces": {"interface1": {"value1": 2, "value2": 3},
+                                                       "interface2": {"value3": 4, "value4": 5},
+                                                       "interface3": {"value1": 2, "value2": 3},
+                                                       "interface4": {"value3": 4, "value4": 5},
+                                                       "interface5": {"value1": 2, "value2": 3},
+                                                       "interface6": {"value3": 4, "value4": 5}}}
+        json_dict = "{\"Interfaces\": {\"interface1\": {\"value2\": 3, \"value1\": 2}, \"interface3\": {\"value2\": " \
+                    "3, \"value1\": 2}, \"interface2\": {\"value4\": 5, \"value3\": 4}, \"interface5\": {\"value2\":" \
+                    " 3, \"value1\": 2}, \"interface4\": {\"value4\": 5, \"value3\": 4}, \"interface6\": {\"value4\":" \
+                    " 5, \"value3\": 4}}, \"Workspaces\": {}}"
 
-        output = project_writer._create_out_string()
+        output = projectsaver._create_out_string_json(large_dict)
         self.assertEqual(output, json_dict)
 
     def test_create_out_string_on_empty_dict(self):
-        empty_dict = {}
-        json_dict = "{}"
-        project_writer = projectsaver.ProjectWriter(empty_dict, working_directory, [])
+        empty_dict = {"Workspaces": {}, "Interfaces": {}}
+        json_dict = "{\"Interfaces\": {}, \"Workspaces\": {}}"
 
-        output = project_writer._create_out_string()
+        output = projectsaver._create_out_string_json(empty_dict)
         self.assertEqual(output, json_dict)
 
-    def test_create_workspace_json_string(self):
-        workspace_list = {"workspace_names" : ["ws1", "ws2", "ws3", "ws4"]}
-        json_list = "{\"workspace_names\": [\"ws1\", \"ws2\", \"ws3\", \"ws4\"]}"
-        project_writer = projectsaver.ProjectWriter({}, working_directory, workspace_list)
+    def test_create_workspace_only_json_string(self):
+        workspaces_dict = {"Workspaces": ["ws1", "ws2", "ws3", "ws4"], "Interfaces": {}}
+        json_list = "{\"Interfaces\": {}, \"Workspaces\": [\"ws1\", \"ws2\", \"ws3\", \"ws4\"]}"
 
-        output = project_writer._create_workspace_json_string()
-        self.assertEqual(output, json_list)
-
-    def test_create_workspace_json_string_with_no_workspaces(self):
-        workspace_list = {"workspace_names": []}
-        json_list = "{\"workspace_names\": []}"
-        project_writer = projectsaver.ProjectWriter({}, working_directory, workspace_list)
-
-        output = project_writer._create_workspace_json_string()
+        output = projectsaver._create_out_string_json(workspaces_dict)
         self.assertEqual(output, json_list)
 
     def test_write_out_on_just_dicts(self):
-        workspace_list = {"workspace_names": []}
+        workspace_list = []
         small_dict = {"interface1": {"value1": 2, "value2": 3}, "interface2": {"value3": 4, "value4": 5}}
         project_writer = projectsaver.ProjectWriter(small_dict, working_directory, workspace_list)
         file_name = working_directory + "/" + projectsaver.ENCODED_FILE_NAME
-        saved_file = "{\"interface1\": {\"value2\": 3, \"value1\": 2}, \"interface2\": {\"value4\": 5, \"value3\": 4}" \
-                     "}\n{\"workspace_names\": []}"
+        saved_file = "{\"Interfaces\": {\"interface1\": {\"value2\": 3, \"value1\": 2}, \"interface2\": {\"value4\"" \
+                     ": 5, \"value3\": 4}}, \"Workspaces\": []}"
 
         project_writer.write_out()
 
@@ -127,11 +172,11 @@ class ProjectWriterTest(unittest.TestCase):
         self.assertEqual(f.read(), saved_file)
 
     def test_write_out_on_just_workspaces(self):
-        workspace_list = {"workspace_names": ["ws1", "ws2", "ws3", "ws4"]}
+        workspace_list = ["ws1", "ws2", "ws3", "ws4"]
         small_dict = {}
         project_writer = projectsaver.ProjectWriter(small_dict, working_directory, workspace_list)
         file_name = working_directory + "/" + projectsaver.ENCODED_FILE_NAME
-        saved_file = "{}\n{\"workspace_names\": [\"ws1\", \"ws2\", \"ws3\", \"ws4\"]}"
+        saved_file = "{\"Interfaces\": {}, \"Workspaces\": [\"ws1\", \"ws2\", \"ws3\", \"ws4\"]}"
 
         project_writer.write_out()
 
@@ -139,13 +184,12 @@ class ProjectWriterTest(unittest.TestCase):
         self.assertEqual(f.read(), saved_file)
 
     def test_write_out_on_both_workspaces_and_dicts(self):
-        workspace_list = {"workspace_names": ["ws1", "ws2", "ws3", "ws4"]}
+        workspace_list = ["ws1", "ws2", "ws3", "ws4"]
         small_dict = {"interface1": {"value1": 2, "value2": 3}, "interface2": {"value3": 4, "value4": 5}}
         project_writer = projectsaver.ProjectWriter(small_dict, working_directory, workspace_list)
         file_name = working_directory + "/" + projectsaver.ENCODED_FILE_NAME
-        saved_file = "{\"interface1\": {\"value2\": 3, \"value1\": 2}, \"interface2\": {\"value4\": 5, \"value3\": 4}" \
-                     "}\n{\"workspace_names\": [\"ws1\", \"ws2\", \"ws3\", \"ws4\"]}"
-
+        saved_file = "{\"Interfaces\": {\"interface1\": {\"value2\": 3, \"value1\": 2}, \"interface2\": {\"value4\":" \
+                     " 5, \"value3\": 4}}, \"Workspaces\": [\"ws1\", \"ws2\", \"ws3\", \"ws4\"]}"
         project_writer.write_out()
 
         f = open(file_name, "r")

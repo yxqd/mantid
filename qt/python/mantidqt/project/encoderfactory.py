@@ -6,13 +6,13 @@
 # SPDX - License - Identifier: GPL - 3.0 +
 #  This file is part of the mantidqt package
 #
-import mantidqt.project.coders
 from mantidqt.project.coders import interfaces
+from scripts.TofConverter import tofconverterio
 
 
 class EncoderFactory(object):
     def __init__(self):
-        self.list_of_encoders = []
+        self.list_of_encoders = [tofconverterio.ToFConverterEncoder()]
 
     def find_encoder(self, encoder_tag):
         """

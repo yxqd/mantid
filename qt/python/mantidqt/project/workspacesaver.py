@@ -22,31 +22,27 @@ def _get_all_workspaces_to_save():
 
 
 class WorkspaceSaver(object):
-    def __init__(self, directory, workspaces_to_save=None, save_all=False):
+    def __init__(self, directory):
         """
 
         :param directory:
-        :param workspaces_to_save:
         """
         self.directory = directory
         self.output_list = []
-        self.workspaces_to_save = workspaces_to_save
-        self.save_all = save_all
 
-    def save_workspaces(self):
+    def save_workspaces(self, workspaces_to_save=None):
         """
         Use the private method _get_workspaces_to_save to get a list of workspaces that are present in the ADS to save
         to the directory that was passed at object creation time, it will also add each of them to the output_list
         private instance variable on the WorkspaceSaver class.
+        :param workspaces_to_save:
         """
 
-        # Handle getting here and nothing has been given to save all of them
-        if self.workspaces_to_save is None and self.save_all:
-            self.workspaces_to_save = _get_all_workspaces_to_save()
-        elif self.workspaces_to_save is None:
+        # Handle getting here and nothing has been given passed
+        if workspaces_to_save is None:
             return
 
-        for workspace_name in self.workspaces_to_save:
+        for workspace_name in workspaces_to_save:
             # Get the workspace from the ADS
             workspace = ADS.retrieve(workspace_name)
             place_to_save_workspace = self.directory + '/' + workspace_name

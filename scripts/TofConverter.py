@@ -12,6 +12,7 @@ from gui_helper import get_qapplication
 app, within_mantid = get_qapplication()
 
 reducer = converterGUI.MainWindow()#the main ui class in this file is called MainWindow
+
 reducer.show()
 if not within_mantid:
     app.exec_()

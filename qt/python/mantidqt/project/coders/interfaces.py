@@ -12,14 +12,14 @@ class Encoder(object):
     """
     This is an abstract class to be implemented to allow integration with the encoder factory
     """
-    def encode(self):
+    def encode(self, obj):
         """
-        This is the method that should encode the
-        :return:
+        This is the method that should encode the interface
+        :return: Return a dictionary of information relevant to the class
         """
         raise NotImplementedError("Class %s doesn't implement encode()" % self.__class__.__name__)
 
-    def get_tags(self):
+    def get_interface_keys(self):
         """
 
         :return:
@@ -31,10 +31,10 @@ class Decoder(object):
     """
     This is an abstract class to be implemented to allow integration with the decoder factory
     """
-    def decode(self):
+    def decode(self, obj):
         raise NotImplementedError("Class %s doesn't implement decode()" % self.__class__.__name__)
 
-    def get_tags(self):
+    def get_interface_keys(self):
         raise NotImplementedError("Class %s doesn't implement get_tags()" % self.__class__.__name__)
 
 
@@ -42,11 +42,7 @@ class InterfaceAttributes(object):
     """
     This is an abstract class to be implemented to allow common data to be shared between the decoder and the encoder
     """
-    def __init__(self):
-        # These tags should be the names that your GUI has gone by
-        self.tags = [""]
-
-    def get_tags(self):
+    def get_interface_keys(self):
         """
 
         :return:

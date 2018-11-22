@@ -32,31 +32,19 @@ class WorkspaceSaverTest(unittest.TestCase):
         if isdir(working_directory):
             rmtree(working_directory)
 
-    def test_getting_workspaces_from_the_ADS(self):
-        ws1 = CreateSampleWorkspace()
-        ADS.addOrReplace("ws1", ws1)
-
-        ws_list = workspacesaver._get_all_workspaces_to_save()
-        self.assertEqual(ws_list[0], "ws1")
-        self.assertEqual(len(ws_list), 1)
-
-    def test_not_saving_all_with_single_workspace(self):
-        #TODO: Implement this
-        self.assertEqual(True, True)
-
-    def test_when_single_workspace_in_ADS(self):
+    def test_saving_single_workspace(self):
         ws_saver = workspacesaver.WorkspaceSaver(working_directory)
         ws1 = CreateSampleWorkspace()
         ws1_name = "ws1"
 
         ADS.addOrReplace(ws1_name, ws1)
-        ws_saver.save_workspaces()
+        ws_saver.save_workspaces([ws1_name])
 
         list_of_files = listdir(working_directory)
         self.assertEqual(len(list_of_files), 1)
         self.assertEqual(list_of_files[0], ws1_name)
 
-    def test_when_multiple_workspaces_are_in_ADS(self):
+    def test_saving_multiple_workspaces(self):
         ws_saver = workspacesaver.WorkspaceSaver(working_directory)
         ws1 = CreateSampleWorkspace()
         ws1_name = "ws1"
@@ -65,7 +53,7 @@ class WorkspaceSaverTest(unittest.TestCase):
 
         ADS.addOrReplace(ws1_name, ws1)
         ADS.addOrReplace(ws2_name, ws2)
-        ws_saver.save_workspaces()
+        ws_saver.save_workspaces([ws1_name, ws2_name])
 
         list_of_files = listdir(working_directory)
         self.assertEqual(len(list_of_files), 2)
@@ -80,7 +68,7 @@ class WorkspaceSaverTest(unittest.TestCase):
         ws1_name = "ws1"
 
         ADS.addOrReplace(ws1_name, ws1)
-        ws_saver.save_workspaces()
+        ws_saver.save_workspaces([ws1_name])
 
         list_of_files = listdir(working_directory)
         self.assertEqual(len(list_of_files), 1)
