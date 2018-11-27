@@ -44,6 +44,8 @@ Improvements
   maximum of 18 plots.
 - The WorkspaceIndex and Q value in the FitPropertyBrowser are now updated when the Plot Spectrum number is changed. 
   This improvement can be seen in ConvFit when functions which depend on Q value are selected.
+- Chi_squared can now be found in the bottom row of the result workspaces of an MSD Fit, Iqt Fit, Conv Fit or F(Q)Fit.
+  This chi_squared can also now be plotted in the output options.
 
 Bugfixes
 ########
