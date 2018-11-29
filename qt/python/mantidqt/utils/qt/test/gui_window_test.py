@@ -8,12 +8,14 @@
 #
 #
 from __future__ import print_function
+
 import inspect
 from unittest import TestCase
 
+from qtpy.QtCore import QMetaObject, Qt
+from qtpy.QtWidgets import QAction, QApplication, QMenu, QPushButton
+
 from mantidqt.utils.qt.test.gui_test_runner import open_in_window
-from qtpy.QtWidgets import QPushButton, QMenu, QAction, QApplication
-from qtpy.QtCore import Qt, QMetaObject
 
 
 class GuiTestBase(object):
@@ -92,6 +94,27 @@ class GuiTestBase(object):
     def click_button(self, name):
         button = self.get_button(name)
         QMetaObject.invokeMethod(button, 'click', Qt.QueuedConnection)
+
+    def get_button_by_text(self, text):
+        for child in self.widget.children():
+            if hasattr(child, 'text') and child.text() == text:
+                return child
+
+        raise RuntimeError("Widget doesn't have children of type {0} with text {1}.".format(QPushButton.__name__,
+                                                                                            text))
+
+    def click_button_by_text(self, text):
+        button = self.get_button_by_text(text)
+        QMetaObject.invokeMethod(button, 'click', Qt.QueuedConnection)
+
+    def get_child_by_text(self, child_class, text):
+        children = self.widget.findChildren(child_class, '')
+
+        for child in children:
+            if hasattr(child, 'text') and child.text() == text:
+                return child
+        raise RuntimeError("Widget doesn't have children of type {0} with text {1}.".format(child_class.__name__,
+                                                                                            text))
 
 
 def is_test_method(value):

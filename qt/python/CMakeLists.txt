@@ -83,6 +83,7 @@ endif ()
     mantidqt/widgets/codeeditor/test/test_multifileinterpreter.py
     mantidqt/widgets/workspacewidget/test/test_workspacetreewidget.py
 
+    mantidqt/widgets/test/test_algorithmdialog.py
     mantidqt/widgets/test/test_jupyterconsole.py
     mantidqt/widgets/test/test_messagedisplay.py
     mantidqt/widgets/test/test_fitpropertybrowser.py
