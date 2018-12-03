@@ -24,23 +24,23 @@ using namespace testing;
 
 namespace {
 
-	struct TableItem {
-		TableItem(std::string const &value) : m_str(value), m_dbl(0.0) {}
-		TableItem(double const &value)
-			: m_str(QString::number(value, 'g', 16).toStdString()), m_dbl(value) {}
+struct TableItem {
+  TableItem(std::string const &value) : m_str(value), m_dbl(0.0) {}
+  TableItem(double const &value)
+      : m_str(QString::number(value, 'g', 16).toStdString()), m_dbl(value) {}
 
-		std::string const &asString() const { return m_str; }
-		QString asQString() const { return QString::fromStdString(m_str); }
-		double const &asDouble() const { return m_dbl; }
+  std::string const &asString() const { return m_str; }
+  QString asQString() const { return QString::fromStdString(m_str); }
+  double const &asDouble() const { return m_dbl; }
 
-		bool operator==(std::string const &value) const {
-			return this->asString() == value;
-		}
+  bool operator==(std::string const &value) const {
+    return this->asString() == value;
+  }
 
-	private:
-		std::string m_str;
-		double m_dbl;
-	};
+private:
+  std::string m_str;
+  double m_dbl;
+};
 
 } // namespace
 
@@ -162,7 +162,7 @@ public:
 
   void
   test_that_the_cellChanged_signal_will_set_the_models_startX_in_every_row_when_the_relevant_column_is_changed() {
-		TableItem const startX(1.5);
+    TableItem const startX(1.5);
 
     m_table->item(0, START_X_COLUMN)->setText(startX.asQString());
 
@@ -171,7 +171,7 @@ public:
 
   void
   test_that_the_cellChanged_signal_will_set_the_models_endX_in_every_row_when_the_relevant_column_is_changed() {
-		TableItem const endX(2.5);
+    TableItem const endX(2.5);
 
     m_table->item(0, END_X_COLUMN)->setText(endX.asQString());
 
@@ -275,7 +275,7 @@ public:
   void
   test_that_setGlobalFittingRange_will_set_the_excludeRegion_when_passed_true() {
     std::size_t const index(0);
-		TableItem const excludeRegion("1-2");
+    TableItem const excludeRegion("1-2");
 
     ON_CALL(*m_model, getExcludeRegion(index, 0)).WillByDefault(Return("1-2"));
 
@@ -349,22 +349,23 @@ private:
     return table;
   }
 
-	void assertValueIsGlobal(int column, TableItem const &value) const {
-		for (auto row = 0; row < m_table->rowCount(); ++row)
-			TS_ASSERT_EQUALS(value, getTableItem(row, column));
-	}
+  void assertValueIsGlobal(int column, TableItem const &value) const {
+    for (auto row = 0; row < m_table->rowCount(); ++row)
+      TS_ASSERT_EQUALS(value, getTableItem(row, column));
+  }
 
-	void assertValueIsNotGlobal(int valueRow, int column, TableItem const &value) const {
-		TS_ASSERT_EQUALS(value.asString(), getTableItem(valueRow, column));
+  void assertValueIsNotGlobal(int valueRow, int column,
+                              TableItem const &value) const {
+    TS_ASSERT_EQUALS(value.asString(), getTableItem(valueRow, column));
 
-		for (auto row = 0; row < m_table->rowCount(); ++row)
-			if (row != valueRow)
-			  TS_ASSERT_DIFFERS(value, getTableItem(row, column));
-	}
+    for (auto row = 0; row < m_table->rowCount(); ++row)
+      if (row != valueRow)
+        TS_ASSERT_DIFFERS(value, getTableItem(row, column));
+  }
 
-	std::string getTableItem(int row, int column) const {
-		return m_table->item(row, column)->text().toStdString();
-	}
+  std::string getTableItem(int row, int column) const {
+    return m_table->item(row, column)->text().toStdString();
+  }
 
   std::unique_ptr<QTableWidget> m_table;
   std::unique_ptr<MockIndirectDataTableModel> m_model;
