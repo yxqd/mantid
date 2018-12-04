@@ -76,7 +76,7 @@ public:
 
   void setUp() override {
     m_model = std::make_unique<NiceMock<MockIndirectDataTableModel>>();
-    createEmptyTableWidget(5, 5);
+    m_table = createEmptyTableWidget(5, 5);
     m_presenter = std::make_unique<IndirectDataTablePresenter>(
         std::move(m_model.get()), std::move(m_table.get()));
 
@@ -109,12 +109,10 @@ public:
 
   void
   test_that_invoking_setStartX_will_alter_the_relevant_column_in_the_table() {
-    int const startXColumn(2);
-
     m_presenter->setStartX(2.2, 0, 0);
 
     for (auto row = 0; row < m_table->rowCount(); ++row)
-      TS_ASSERT_EQUALS(m_table->item(row, startXColumn)->text().toStdString(),
+      TS_ASSERT_EQUALS(m_table->item(row, START_X_COLUMN)->text().toStdString(),
                        "2.2")
   }
 
@@ -124,62 +122,47 @@ public:
 
   void
   test_that_the_cellChanged_signal_will_set_the_models_startX_when_the_relevant_column_is_changed() {
-    int const startXColumn(2);
-
     EXPECT_CALL(*m_model, setStartX(2.0, 0, 0)).Times(1);
-
-    m_table->item(0, startXColumn)->setText("2.0");
+    m_table->item(0, START_X_COLUMN)->setText("2.0");
   }
 
   void
   test_that_the_cellChanged_signal_will_set_the_models_endX_when_the_relevant_column_is_changed() {
-    int const endXColumn(3);
-
     EXPECT_CALL(*m_model, setEndX(2.0, 0, 0)).Times(1);
-
-    m_table->item(0, endXColumn)->setText("2.0");
+    m_table->item(0, END_X_COLUMN)->setText("2.0");
   }
 
   void
   test_that_the_cellChanged_signal_will_set_the_models_excludeRegion_when_the_relevant_column_is_changed() {
-    int const excludeRegionColumn(4);
-
     EXPECT_CALL(*m_model, setExcludeRegion("0-4", 0, 0)).Times(1);
-
-    m_table->item(0, excludeRegionColumn)->setText("0-4");
+    m_table->item(0, EXCLUDE_REGION_COLUMN)->setText("0-4");
   }
 
   void
   test_that_the_cellChanged_signal_will_set_the_models_startX_in_every_row_when_the_relevant_column_is_changed() {
-    int const startXColumn(2);
-
-    m_table->item(0, startXColumn)->setText("1.5");
+    m_table->item(0, START_X_COLUMN)->setText("1.5");
 
     for (auto row = 0; row < m_table->rowCount(); ++row)
-      TS_ASSERT_EQUALS(m_table->item(row, startXColumn)->text().toStdString(),
+      TS_ASSERT_EQUALS(m_table->item(row, START_X_COLUMN)->text().toStdString(),
                        "1.5")
   }
 
   void
   test_that_the_cellChanged_signal_will_set_the_models_endX_in_every_row_when_the_relevant_column_is_changed() {
-    int const endXColumn(3);
-
-    m_table->item(0, endXColumn)->setText("2.5");
+    m_table->item(0, END_X_COLUMN)->setText("2.5");
 
     for (auto row = 0; row < m_table->rowCount(); ++row)
-      TS_ASSERT_EQUALS(m_table->item(row, endXColumn)->text().toStdString(),
+      TS_ASSERT_EQUALS(m_table->item(row, END_X_COLUMN)->text().toStdString(),
                        "2.5")
   }
 
   void
   test_that_the_cellChanged_signal_will_set_the_models_excludeRegion_in_every_row_when_the_relevant_column_is_changed() {
-    int const excludeRegionColumn(4);
-
-    m_table->item(0, excludeRegionColumn)->setText("2-4");
+    m_table->item(0, EXCLUDE_REGION_COLUMN)->setText("2-4");
 
     for (auto row = 0; row < m_table->rowCount(); ++row)
       TS_ASSERT_EQUALS(
-          m_table->item(row, excludeRegionColumn)->text().toStdString(), "2-4")
+          m_table->item(row, EXCLUDE_REGION_COLUMN)->text().toStdString(), "2-4")
   }
 
   ///----------------------------------------------------------------------
@@ -225,42 +208,34 @@ public:
 
   void
   test_that_the_setStartX_slot_will_alter_the_relevant_startX_column_in_the_table() {
-    int const startXColumn(2);
-
     m_presenter->setStartX(1.1, 0);
 
     for (auto row = 0; row < m_table->rowCount(); ++row)
-      TS_ASSERT_EQUALS(m_table->item(row, startXColumn)->text().toStdString(),
+      TS_ASSERT_EQUALS(m_table->item(row, START_X_COLUMN)->text().toStdString(),
                        "1.1")
   }
 
   void
   test_that_the_setEndX_slot_will_alter_the_relevant_endX_column_in_the_table() {
-    int const endXColumn(3);
-
     m_presenter->setEndX(1.1, 0);
 
     for (auto row = 0; row < m_table->rowCount(); ++row)
-      TS_ASSERT_EQUALS(m_table->item(row, endXColumn)->text().toStdString(),
+      TS_ASSERT_EQUALS(m_table->item(row, END_X_COLUMN)->text().toStdString(),
                        "1.1")
   }
 
   void
   test_that_the_setExcludeRegion_slot_will_alter_the_relevant_excludeRegion_column_in_the_table() {
-    int const excludeRegionColumn(4);
-
     m_presenter->setExcludeRegion("2-3", 0);
 
     for (auto row = 0; row < m_table->rowCount(); ++row)
       TS_ASSERT_EQUALS(
-          m_table->item(row, excludeRegionColumn)->text().toStdString(), "2-3")
+          m_table->item(row, EXCLUDE_REGION_COLUMN)->text().toStdString(), "2-3")
   }
 
   void
   test_that_setGlobalFittingRange_will_set_the_startX_and_endX_taken_from_the_fitting_range() {
     std::size_t const index(0);
-    int const startXColumn(2);
-    int const endXColumn(3);
     auto const range = std::make_pair(1.0, 2.0);
 
     ON_CALL(*m_model, getFittingRange(index, 0)).WillByDefault(Return(range));
@@ -270,15 +245,14 @@ public:
     m_presenter->setGlobalFittingRange(true);
 
     for (auto row = 0; row < m_table->rowCount(); ++row) {
-      TS_ASSERT_EQUALS(m_table->item(row, startXColumn)->text().toDouble(), 1.0)
-      TS_ASSERT_EQUALS(m_table->item(row, endXColumn)->text().toDouble(), 2.0)
+      TS_ASSERT_EQUALS(m_table->item(row, START_X_COLUMN)->text().toDouble(), 1.0)
+      TS_ASSERT_EQUALS(m_table->item(row, END_X_COLUMN)->text().toDouble(), 2.0)
     }
   }
 
   void
   test_that_setGlobalFittingRange_will_set_the_excludeRegion_when_passed_true() {
     std::size_t const index(0);
-    int const excludeRegionColumn(4);
 
     ON_CALL(*m_model, getExcludeRegion(index, 0)).WillByDefault(Return("1-2"));
 
@@ -288,61 +262,59 @@ public:
 
     for (auto row = 0; row < m_table->rowCount(); ++row)
       TS_ASSERT_EQUALS(
-          m_table->item(row, excludeRegionColumn)->text().toStdString(), "1-2");
+          m_table->item(row, EXCLUDE_REGION_COLUMN)->text().toStdString(), "1-2");
   }
 
   void
   test_that_setGlobalFittingRange_will_connect_the_cellChanged_signal_to_updateAllFittingRangeFrom_when_passed_true() {
-    int const startXColumn(2);
-
     m_presenter->setGlobalFittingRange(true);
-    m_table->item(0, startXColumn)->setText("1.5");
+    m_table->item(0, START_X_COLUMN)->setText("1.5");
 
     for (auto row = 0; row < m_table->rowCount(); ++row)
-      TS_ASSERT_EQUALS(m_table->item(row, startXColumn)->text().toStdString(),
+      TS_ASSERT_EQUALS(m_table->item(row, START_X_COLUMN)->text().toStdString(),
                        "1.5")
   }
 
   void
   test_that_setGlobalFittingRange_will_disconnect_the_cellChanged_signal_when_passed_false_so_that_startX_is_not_global() {
-    int const startXColumn(2);
     std::string const startX("2.5");
 
     m_presenter->setGlobalFittingRange(false);
-    m_table->item(0, startXColumn)->setText(QString::fromStdString(startX));
+    m_table->item(0, START_X_COLUMN)->setText(QString::fromStdString(startX));
 
-    TS_ASSERT_EQUALS(m_table->item(0, startXColumn)->text().toStdString(),
+    TS_ASSERT_EQUALS(m_table->item(0, START_X_COLUMN)->text().toStdString(),
                      startX);
     for (auto row = 1; row < m_table->rowCount(); ++row)
-      TS_ASSERT_DIFFERS(m_table->item(row, startXColumn)->text().toStdString(),
+      TS_ASSERT_DIFFERS(m_table->item(row, START_X_COLUMN)->text().toStdString(),
                         startX)
   }
 
   void
   test_that_setGlobalFittingRange_will_disconnect_the_cellChanged_signal_when_passed_false_so_that_endX_is_not_global() {
-    int const endXColumn(3);
     std::string const endX("2.5");
 
     m_presenter->setGlobalFittingRange(false);
-    m_table->item(0, endXColumn)->setText(QString::fromStdString(endX));
+    m_table->item(0, END_X_COLUMN)->setText(QString::fromStdString(endX));
 
-    TS_ASSERT_EQUALS(m_table->item(0, endXColumn)->text().toStdString(), endX);
+    TS_ASSERT_EQUALS(m_table->item(0, END_X_COLUMN)->text().toStdString(), endX);
     for (auto row = 1; row < m_table->rowCount(); ++row)
-      TS_ASSERT_DIFFERS(m_table->item(row, endXColumn)->text().toStdString(),
+      TS_ASSERT_DIFFERS(m_table->item(row, END_X_COLUMN)->text().toStdString(),
                         endX)
   }
 
   void test_the_enableTable_slot_will_enable_the_table() {
     m_presenter->disableTable();
-    m_presenter->enableTable();
+		TS_ASSERT(!m_table->isEnabled());
 
+    m_presenter->enableTable();
     TS_ASSERT(m_table->isEnabled());
   }
 
   void test_the_disableTable_slot_will_enable_the_table() {
     m_presenter->enableTable();
-    m_presenter->disableTable();
+		TS_ASSERT(m_table->isEnabled());
 
+    m_presenter->disableTable();
     TS_ASSERT(!m_table->isEnabled());
   }
 
@@ -353,11 +325,12 @@ public:
 
 private:
   /// Used in setup
-  void createEmptyTableWidget(int columns, int rows) {
-    m_table = std::make_unique<QTableWidget>(columns, rows);
+	std::unique_ptr<QTableWidget> createEmptyTableWidget(int columns, int rows) {
+    auto table = std::make_unique<QTableWidget>(columns, rows);
     for (auto column = 0; column < columns; ++column)
       for (auto row = 0; row < rows; ++row)
-        m_table->setItem(row, column, new QTableWidgetItem("item"));
+				table->setItem(row, column, new QTableWidgetItem("item"));
+		return table;
   }
 
   std::unique_ptr<QTableWidget> m_table;
