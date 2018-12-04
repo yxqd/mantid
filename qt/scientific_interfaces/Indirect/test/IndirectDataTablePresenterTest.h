@@ -162,7 +162,8 @@ public:
 
     for (auto row = 0; row < m_table->rowCount(); ++row)
       TS_ASSERT_EQUALS(
-          m_table->item(row, EXCLUDE_REGION_COLUMN)->text().toStdString(), "2-4")
+          m_table->item(row, EXCLUDE_REGION_COLUMN)->text().toStdString(),
+          "2-4")
   }
 
   ///----------------------------------------------------------------------
@@ -230,7 +231,8 @@ public:
 
     for (auto row = 0; row < m_table->rowCount(); ++row)
       TS_ASSERT_EQUALS(
-          m_table->item(row, EXCLUDE_REGION_COLUMN)->text().toStdString(), "2-3")
+          m_table->item(row, EXCLUDE_REGION_COLUMN)->text().toStdString(),
+          "2-3")
   }
 
   void
@@ -245,7 +247,8 @@ public:
     m_presenter->setGlobalFittingRange(true);
 
     for (auto row = 0; row < m_table->rowCount(); ++row) {
-      TS_ASSERT_EQUALS(m_table->item(row, START_X_COLUMN)->text().toDouble(), 1.0)
+      TS_ASSERT_EQUALS(m_table->item(row, START_X_COLUMN)->text().toDouble(),
+                       1.0)
       TS_ASSERT_EQUALS(m_table->item(row, END_X_COLUMN)->text().toDouble(), 2.0)
     }
   }
@@ -262,7 +265,8 @@ public:
 
     for (auto row = 0; row < m_table->rowCount(); ++row)
       TS_ASSERT_EQUALS(
-          m_table->item(row, EXCLUDE_REGION_COLUMN)->text().toStdString(), "1-2");
+          m_table->item(row, EXCLUDE_REGION_COLUMN)->text().toStdString(),
+          "1-2");
   }
 
   void
@@ -285,8 +289,8 @@ public:
     TS_ASSERT_EQUALS(m_table->item(0, START_X_COLUMN)->text().toStdString(),
                      startX);
     for (auto row = 1; row < m_table->rowCount(); ++row)
-      TS_ASSERT_DIFFERS(m_table->item(row, START_X_COLUMN)->text().toStdString(),
-                        startX)
+      TS_ASSERT_DIFFERS(
+          m_table->item(row, START_X_COLUMN)->text().toStdString(), startX)
   }
 
   void
@@ -296,7 +300,8 @@ public:
     m_presenter->setGlobalFittingRange(false);
     m_table->item(0, END_X_COLUMN)->setText(QString::fromStdString(endX));
 
-    TS_ASSERT_EQUALS(m_table->item(0, END_X_COLUMN)->text().toStdString(), endX);
+    TS_ASSERT_EQUALS(m_table->item(0, END_X_COLUMN)->text().toStdString(),
+                     endX);
     for (auto row = 1; row < m_table->rowCount(); ++row)
       TS_ASSERT_DIFFERS(m_table->item(row, END_X_COLUMN)->text().toStdString(),
                         endX)
@@ -304,7 +309,7 @@ public:
 
   void test_the_enableTable_slot_will_enable_the_table() {
     m_presenter->disableTable();
-		TS_ASSERT(!m_table->isEnabled());
+    TS_ASSERT(!m_table->isEnabled());
 
     m_presenter->enableTable();
     TS_ASSERT(m_table->isEnabled());
@@ -312,7 +317,7 @@ public:
 
   void test_the_disableTable_slot_will_enable_the_table() {
     m_presenter->enableTable();
-		TS_ASSERT(m_table->isEnabled());
+    TS_ASSERT(m_table->isEnabled());
 
     m_presenter->disableTable();
     TS_ASSERT(!m_table->isEnabled());
@@ -325,12 +330,12 @@ public:
 
 private:
   /// Used in setup
-	std::unique_ptr<QTableWidget> createEmptyTableWidget(int columns, int rows) {
+  std::unique_ptr<QTableWidget> createEmptyTableWidget(int columns, int rows) {
     auto table = std::make_unique<QTableWidget>(columns, rows);
     for (auto column = 0; column < columns; ++column)
       for (auto row = 0; row < rows; ++row)
-				table->setItem(row, column, new QTableWidgetItem("item"));
-		return table;
+        table->setItem(row, column, new QTableWidgetItem("item"));
+    return table;
   }
 
   std::unique_ptr<QTableWidget> m_table;
