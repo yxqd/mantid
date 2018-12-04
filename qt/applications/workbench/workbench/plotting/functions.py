@@ -195,6 +195,13 @@ def pcolormesh_from_names(names, fig=None):
         LOGGER.warning(format(str(exc)))
         return None
 
+def use_imshow(workspace)
+    aligned = False
+    try:
+        _ = workspace.blocksize()
+    except RuntimeError:
+        aligned = True    
+    return aligned
 
 def pcolormesh(workspaces, fig=None):
     """
@@ -218,7 +225,16 @@ def pcolormesh(workspaces, fig=None):
         if subplot_idx < workspaces_len:
             ws = workspaces[subplot_idx]
             ax.set_title(ws.name())
-            pcm = ax.pcolormesh(ws, cmap=DEFAULT_CMAP)
+        try:
+             _ = workspace.blocksize()
+         except RuntimeError:
+        aligned = True
+    return aligned, kwargs
+
+            if ws.isCommonBins():
+                pcm = ax.imshow(ws, cmap=DEFAULT_CMAP, aspect='auto')
+            else:
+                pcm = ax.pcolormesh(ws, cmap=DEFAULT_CMAP)
             for lbl in ax.get_xticklabels():
                 lbl.set_rotation(45)
             if col_idx < ncols - 1:
