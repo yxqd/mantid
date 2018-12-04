@@ -5,7 +5,7 @@
 %endif
 
 Name:           mantid-developer
-Version:        1.29
+Version:        1.30
 Release:        1%{?dist}
 Summary:        Meta Package to install dependencies for Mantid Development
 
