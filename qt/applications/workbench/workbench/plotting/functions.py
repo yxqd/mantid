@@ -195,13 +195,13 @@ def pcolormesh_from_names(names, fig=None):
         LOGGER.warning(format(str(exc)))
         return None
 
-def use_imshow(workspace)
-    aligned = False
+def use_imshow(ws):
+    compatible = ws.isCommonBins()
     try:
-        _ = workspace.blocksize()
+        _ = ws.blocksize()
     except RuntimeError:
-        aligned = True    
-    return aligned
+        compatible = False
+    return compatible
 
 def pcolormesh(workspaces, fig=None):
     """
@@ -225,13 +225,7 @@ def pcolormesh(workspaces, fig=None):
         if subplot_idx < workspaces_len:
             ws = workspaces[subplot_idx]
             ax.set_title(ws.name())
-        try:
-             _ = workspace.blocksize()
-         except RuntimeError:
-        aligned = True
-    return aligned, kwargs
-
-            if ws.isCommonBins():
+            if use_imshow(ws):
                 pcm = ax.imshow(ws, cmap=DEFAULT_CMAP, aspect='auto')
             else:
                 pcm = ax.pcolormesh(ws, cmap=DEFAULT_CMAP)
