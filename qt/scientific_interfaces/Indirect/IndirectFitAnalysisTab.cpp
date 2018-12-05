@@ -721,7 +721,7 @@ void IndirectFitAnalysisTab::updateSingleFitOutput(bool error) {
  * and completed within this interface.
  */
 void IndirectFitAnalysisTab::fitAlgorithmComplete(bool error) {
-  setRunIsRunning(false);
+	enableFitAnalysisButtons(true);
   enablePlotResult(error);
   setSaveResultEnabled(!error);
   updateParameterValues();
@@ -962,8 +962,13 @@ bool IndirectFitAnalysisTab::validate() {
  * Called when the 'Run' button is called in the IndirectTab.
  */
 void IndirectFitAnalysisTab::run() {
-  setRunIsRunning(true);
+	enableFitAnalysisButtons(false);
   runFitAlgorithm(m_fittingModel->getFittingAlgorithm());
+}
+
+void IndirectFitAnalysisTab::enableFitAnalysisButtons(bool enable) {
+	setRunIsRunning(!enable);
+	m_fitPropertyBrowser->setFitEnabled(enable);
 }
 
 void IndirectFitAnalysisTab::setAlgorithmProperties(
