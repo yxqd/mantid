@@ -197,10 +197,12 @@ def pcolormesh_from_names(names, fig=None):
 
 def use_imshow(ws):
     compatible = ws.isCommonBins()
+    #print("compatible? ",compatible)
     try:
         _ = ws.blocksize()
     except RuntimeError:
         compatible = False
+    #print("compatible? ",compatible)
     return compatible
 
 def pcolormesh(workspaces, fig=None):
