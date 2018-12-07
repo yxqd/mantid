@@ -161,7 +161,6 @@ signals:
   void functionChanged();
   void parameterChanged(const Mantid::API::IFunction *);
   void customBoolChanged(const QString &key, bool value);
-  void updateFitTypes();
 
 protected slots:
 
@@ -213,9 +212,6 @@ protected slots:
 
   void updateResultOptions();
   void saveResult();
-
-private slots:
-  void emitUpdateFitTypes();
 
 private:
   /// Overidden by child class.

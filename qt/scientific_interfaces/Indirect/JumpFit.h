@@ -40,11 +40,10 @@ protected:
   void setRunIsRunning(bool running) override;
 
 private slots:
-  void updateParameterFitTypes();
+  void updateAvailableFitTypes();
 
 private:
-  void addEISFFunctionsToFitTypeComboBox();
-  void addWidthFunctionsToFitTypeComboBox();
+	void addFunctions(std::vector<std::string> const &functions);
 
   void setRunEnabled(bool enabled);
   void setFitSingleSpectrumEnabled(bool enabled);
