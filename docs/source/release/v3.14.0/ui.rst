@@ -64,6 +64,7 @@ Bugfixes
 - Project recovery will now successfully recover live data, it will however be unable to recover any data that was up at the time, but will start the live data streams again from scratch.
 - If an empty group workspace is present in the ADS it will no longer crash the save thread of project recovery and instead will delete it from the ADS and ignore it.
 - A bug has been fixed in Indirect I(Q,t) interface when analyzing IN16B reduced data.
+- Made a crash less likely when operating with workspace groups, where a workspace has the same name as the group workspaces in the ADS.
 
 MantidPlot
 ----------

@@ -92,6 +92,7 @@ Bugfixes
 - Fixed a bug in `SetGoniometer <algm-SetGoniometer>` where it would use the mean log value rather than the time series average value for goniometer angles.
 - `ConvertToMD <algm-ConvertToMD>` now uses the time-average value for logs when using them as ``OtherDimensions``
 - The input validator is fixed in :ref:`MostLikelyMean <algm-MostLikelyMean>` avoiding a segmentation fault.
+- :ref:`GroupWorkspaces <algm-GroupWorkspaces>` Now, no longer accepts an input workspace to be the same as the output workspace.
 
 Python
 ------
