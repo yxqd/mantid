@@ -43,7 +43,7 @@ private slots:
   void updateAvailableFitTypes();
 
 private:
-	void addFunctions(std::vector<std::string> const &functions);
+  void addFunctions(std::vector<std::string> const &functions);
 
   void setRunEnabled(bool enabled);
   void setFitSingleSpectrumEnabled(bool enabled);
