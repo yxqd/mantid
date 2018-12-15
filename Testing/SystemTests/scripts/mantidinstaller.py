@@ -308,6 +308,7 @@ class CondaInstaller(MantidInstaller):
     def __init__(self, package_dir, do_install=True):
         filepattern = "mantid-framework*.tar.bz2"
         MantidInstaller.__init__(self, package_dir, filepattern, do_install)
+        # self.mantidInstaller is the full path of the conda package tar ball
         package = os.path.basename(self.mantidInstaller)
         self.conda_prefix = os.path.expanduser('~/jenkins-systemtests-opt/miniconda2')
         self.conda_mantid_env_prefix = install_prefix = os.path.join(self.conda_prefix, 'envs', 'mantid')
@@ -319,12 +320,25 @@ class CondaInstaller(MantidInstaller):
         """
         thisdir = os.path.dirname(__file__)
         script = os.path.join(thisdir, 'install_conda_mantid.sh')
-        run('%s %s' % (script, self.mantidInstaller))
+        version = self._getVersion()
+        run('%s %s %s' % (script, self.mantidInstaller, version))
 
     def do_uninstall(self):
         """Removes the debian package
         """
         # run('rm -rf %s' % self.conda_mantid_env_prefix)
+
+    def _getVersion(self):
+        # get version number from tarball path
+        # get filename like "mantid-framework-3.13.testconda-py27hdbff3b2_0.tar.bz2"
+        fn = os.path.basename(self.mantidInstaller)
+        pkgname = 'mantid-framework'
+        prefix = pkgname + '-'
+        if not fn.startswith(prefix):
+            raise RuntimeError("Expecting %s tar ball, got %r" % (pkgname, fn))
+        remained = fn[len(prefix):]
+        return remained.split('-')[0]
+                
 
 
 #-------------------------------------------------------------------------------

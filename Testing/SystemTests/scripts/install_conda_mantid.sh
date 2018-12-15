@@ -4,6 +4,8 @@
 # * create env "mantid"
 # * install mantid-framework from "jenkins" channel
 
+set -x
+
 wget --no-verbose http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh
 
 unset PYTHONPATH
@@ -31,7 +33,7 @@ conda env list
 cat ~/.condarc
 conda remove mantid-framework
 conda search mantid-framework
-conda install --yes -c mantid/label/jenkins mantid-framework
+conda install --yes -c mantid/label/jenkins mantid-framework=$2
 conda list
 which python
 python -c "import numpy"
