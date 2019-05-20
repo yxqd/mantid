@@ -77,9 +77,11 @@ file ( WRITE ${_scripts_pth_install} "${_pth_list_install}\n" )
 install ( FILES ${_scripts_pth_install} DESTINATION ${BIN_DIR}
   RENAME mantid-scripts.pth
 )
+if(ENABLE_WORKBENCH)
 install ( FILES ${_scripts_pth_install} DESTINATION ${WORKBENCH_BIN_DIR}
   RENAME mantid-scripts.pth
 )
+endif(ENABLE_WORKBENCH)
 
 # --------------------------------------------------------------------
 # Testing
