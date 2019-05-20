@@ -682,5 +682,7 @@ configure_file ( ../Properties/Mantid.properties.template
 install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/Mantid.properties.install
           DESTINATION ${BIN_DIR} RENAME Mantid.properties )
 
+if(ENABLE_WORKBENCH)
 install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/Mantid.properties.install
           DESTINATION ${WORKBENCH_BIN_DIR} RENAME Mantid.properties )
+endif(ENABLE_WORKBENCH)
