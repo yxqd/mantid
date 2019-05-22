@@ -122,6 +122,8 @@ install ( DIRECTORY plugins/ DESTINATION ${PLUGINS_DIR}/python
           PATTERN "*.pyc" EXCLUDE
           PATTERN ".svn" EXCLUDE )
 
+if (ENABLE_WORKBENCH)
 install ( DIRECTORY plugins/ DESTINATION ${WORKBENCH_PLUGINS_DIR}/python
           PATTERN "*.pyc" EXCLUDE
           PATTERN ".svn" EXCLUDE )
+endif ()
