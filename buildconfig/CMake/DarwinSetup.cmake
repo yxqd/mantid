@@ -103,6 +103,7 @@ set ( WORKBENCH_BIN_DIR bin )
 set ( ETC_DIR etc )
 set ( LIB_DIR lib )
 set ( PLUGINS_DIR plugins )
+set ( WORKBENCH_PLUGINS_DIR plugins )
 
 ###########################################################################
 # Mac-specific installation setup
